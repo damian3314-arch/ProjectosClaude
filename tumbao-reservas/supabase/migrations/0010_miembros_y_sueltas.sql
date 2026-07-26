@@ -217,7 +217,9 @@ begin
       'mensaje', 'El archivo no trajo filas. No se toca nada.');
   end if;
 
-  delete from membresias;
+  -- "where true" por la extension safeupdate de Supabase, que rechaza
+  -- cualquier DELETE sin WHERE en las conexiones de PostgREST.
+  delete from membresias where true;
 
   insert into membresias (afiliado, membresia, hora, tipo, documento,
                           celular, correo, inicio, fin)

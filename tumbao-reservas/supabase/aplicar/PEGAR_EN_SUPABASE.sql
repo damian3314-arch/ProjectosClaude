@@ -9,6 +9,7 @@
 --
 --   Cuando termine, abajo aparece una tabla con TU TOKEN.
 --   Cópialo de una: no se puede volver a ver.
+--   (Si ya emitiste uno antes, te lo dice y no emite otro.)
 --
 --   Se puede correr las veces que quieras. No duplica nada.
 --
@@ -170,7 +171,10 @@ begin
   end if;
 
   create temp table if not exists _cand (id uuid, puntaje numeric) on commit drop;
-  delete from _cand;
+  -- El "where true" no sobra: Supabase carga la extension safeupdate en
+  -- las conexiones de PostgREST, y ahi un DELETE sin WHERE revienta con
+  -- "DELETE requires a WHERE clause". Aplica hasta a las tablas temporales.
+  delete from _cand where true;
 
   insert into _cand (id, puntaje)
   select r.id, similitud_nombre(r.nombre, p_remitente)
@@ -718,7 +722,9 @@ begin
       'mensaje', 'El archivo no trajo filas. No se toca nada.');
   end if;
 
-  delete from membresias;
+  -- "where true" por la extension safeupdate de Supabase, que rechaza
+  -- cualquier DELETE sin WHERE en las conexiones de PostgREST.
+  delete from membresias where true;
 
   insert into membresias (afiliado, membresia, hora, tipo, documento,
                           celular, correo, inicio, fin)
@@ -1353,7 +1359,7 @@ grant execute on function recalcular_cupos()                  to service_role;
 -- ═══════════════════════════════════════════════════════════════
 
 create temp table if not exists _tumbao_resultado (paso text, detalle text);
-delete from _tumbao_resultado;
+delete from _tumbao_resultado where true;
 
 do $$
 declare
@@ -1370,10 +1376,14 @@ begin
 
   -- ── cupos ──────────────────────────────────────────────────
   select recalcular_cupos() into v_r;
+  select count(*) into v_n from membresias;
   insert into _tumbao_resultado
     values ('2. Cupos',
-      'Calculados. Por ahora salen del aforo porque todavia no se ha ' ||
-      'importado el listado de afiliados; el workflow de n8n los ajusta esta noche.');
+      case when v_n = 0
+        then 'Calculados desde el aforo. Todavia no se ha importado el listado ' ||
+             'de afiliados; el workflow de n8n lo hace esta noche.'
+        else v_n || ' afiliados activos. Cupos de clase suelta ya ajustados.'
+      end);
 
   -- ── token del panel ────────────────────────────────────────
   -- Solo se emite si no hay ninguno activo, para que re-correr este
@@ -1381,7 +1391,7 @@ begin
   if exists (select 1 from admin_tokens where activo) then
     insert into _tumbao_resultado
       values ('3. Token del panel',
-        'Ya habias emitido uno. Si lo perdiste, corre aparte:  ' ||
+        'Ya habias emitido uno y sigue sirviendo. Si lo perdiste, corre aparte:  ' ||
         'select crear_token_admin(''Tania'');');
   else
     select crear_token_admin('Tania') into v_r;

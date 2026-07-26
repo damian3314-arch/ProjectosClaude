@@ -70,7 +70,10 @@ begin
   end if;
 
   create temp table if not exists _cand (id uuid, puntaje numeric) on commit drop;
-  delete from _cand;
+  -- El "where true" no sobra: Supabase carga la extension safeupdate en
+  -- las conexiones de PostgREST, y ahi un DELETE sin WHERE revienta con
+  -- "DELETE requires a WHERE clause". Aplica hasta a las tablas temporales.
+  delete from _cand where true;
 
   insert into _cand (id, puntaje)
   select r.id, similitud_nombre(r.nombre, p_remitente)

@@ -8,7 +8,16 @@ const norm = (s) => String(s == null ? "" : s)
   .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
   .trim().toLowerCase();
 
-const filas = $input.all().map(i => Object.values(i.json).map(v => v == null ? "" : String(v)));
+// El nodo "Extract From File" con headerRow:false devuelve cada fila como
+// { row: [celda, celda, ...] } — un objeto con UNA llave. Con Object.values
+// eso da [[...]], y al pasarlo por String() la fila entera se convierte en
+// un solo texto pegado por comas, asi que nunca se encuentra la cabecera.
+// Se acepta tambien la forma de objeto plano por si cambia el nodo.
+const filas = $input.all().map(i => {
+  const j = i.json || {};
+  const celdas = Array.isArray(j.row) ? j.row : Object.values(j);
+  return celdas.map(v => v == null ? "" : String(v));
+});
 
 let iCab = -1;
 for (let i = 0; i < filas.length && i < 10; i++) {
