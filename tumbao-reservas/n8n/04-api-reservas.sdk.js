@@ -18,6 +18,7 @@ const traerClases = node({
   type: 'n8n-nodes-base.httpRequest', version: 4.2,
   config: {
     name: 'Supabase: clases activas',
+    alwaysOutputData: true,
     parameters: {
       method: 'GET',
       url: 'https://fobpccreihcylpsullhu.supabase.co/rest/v1/clases',
@@ -117,6 +118,7 @@ const marcarVerificando = node({
   type: 'n8n-nodes-base.httpRequest', version: 4.2,
   config: {
     name: 'Supabase: pasa a verificando',
+    alwaysOutputData: true,
     parameters: {
       method: 'PATCH', url: 'https://fobpccreihcylpsullhu.supabase.co/rest/v1/reservas',
       authentication: 'predefinedCredentialType', nodeCredentialType: 'supabaseApi',
