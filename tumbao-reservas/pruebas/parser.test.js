@@ -51,6 +51,13 @@ const INGRESOS = [
            'en tu cuenta *4471 el 26/07/2026 a las 19:40.',
     espera: { valor_cop: 30000, remitente: 'LAURA MARTINEZ' },
   },
+  {
+    nombre: 'Bre-B recibido REAL (monto con coma de miles)',
+    texto: PRE + 'Damian, recibiste una transferencia de Damian Antonio Barragan Campo ' +
+           'por $1,000.00 en tu cuenta *8621 conectada a la llave 3015373964 el ' +
+           '26/07/26 a las 15:27. Con llaves es de una y gratis.',
+    espera: { valor_cop: 1000, ultimos_4: '8621', llave: '3015373964' },
+  },
 ];
 
 // ── SALIDAS: el dinero salió. Registrarlas confirmaría reservas falsas.
@@ -79,6 +86,10 @@ const SALIDAS = [
   { nombre: 'aviso de extracto',
     texto: '¡Toc-toc! Llegó tu extracto del mes. Ya está disponible tu extracto ' +
            'para el producto Cuenta de Ahorros.' },
+  { nombre: 'Boton Bancolombia (encabezado distinto)',
+    texto: 'Notificación Transaccional Bancolombia: Transferiste $13000.00 por ' +
+           'Boton Bancolombia a PARTNERS TELECOM COLOMBIA SAS desde producto ' +
+           '*8621. 26/07/2026 08:46:34' },
   { nombre: 'cuerpo vacío', texto: '' },
 ];
 
@@ -103,17 +114,26 @@ for (const c of SALIDAS) {
 }
 
 console.log('\n── Montos ──');
+// Bancolombia mezcla TRES notaciones en los mismos correos. La de coma
+// como separador de miles salió de un correo Bre-B real: el cuerpo trae
+// "$1,000.00" aunque el snippet de Gmail muestre "$1000.00".
 const MONTOS = [
-  ['15000',        15000],
-  ['15000.00',     15000],
-  ['14.000,00',    14000],
-  ['1.500.000',    1500000],
+  ['1,000.00',     1000],      // coma = miles, punto = decimales
+  ['1,500,000.50', 1500001],   // idem, con decimales
+  ['14.000,00',    14000],     // punto = miles, coma = decimales
   ['1.500.000,50', 1500001],
+  ['15000',        15000],     // sin separadores
+  ['15000.00',     15000],
+  ['1.500.000',    1500000],   // punto = miles, sin decimales
+  ['1,500,000',    1500000],   // coma = miles, sin decimales
   ['650000',       650000],
   ['2.900,00',     2900],
   ['4187464.00',   4187464],
+  ['15.000',       15000],     // ambiguo en teoria: 3 digitos = miles
+  ['15.00',        15],        // 2 digitos = decimales
   ['0',            null],
   ['abc',          null],
+  ['',             null],
 ];
 for (const [entrada, esperado] of MONTOS) {
   const r = parsearMonto(entrada);

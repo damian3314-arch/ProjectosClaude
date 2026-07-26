@@ -59,28 +59,41 @@ const PATRONES_ENTRADA = [
 
 
 /**
- * Montos colombianos en dos notaciones distintas, en el mismo banco:
- *   $14.000,00  → punto = miles, coma = decimales
- *   $100000.00  → punto = decimales
- *   $650000     → sin separadores
- *   $1.500.000  → punto = miles
+ * Bancolombia mezcla TRES notaciones de monto en los mismos correos:
+ *   $1,000.00    coma = miles,  punto = decimales   (visto en Bre-B real)
+ *   $14.000,00   punto = miles, coma = decimales    (notación colombiana)
+ *   $650000      sin separadores
+ *
+ * Asumir que "si hay coma es decimal" leía $1,000.00 como $1. Con eso
+ * ningún pago habría casado nunca.
+ *
+ * La regla que sí aguanta las tres: mira el ÚLTIMO separador. Si lo
+ * siguen 1 o 2 dígitos hasta el final, es el decimal; cualquier otro
+ * separador es de miles. Si lo siguen 3 dígitos, todos son de miles.
  */
 function parsearMonto(txt) {
-  if (!txt) return null;
-  let s = String(txt).trim();
+  if (txt === null || txt === undefined) return null;
+  const s = String(txt).trim().replace(/[^\d.,]/g, '');
+  if (!s) return null;
 
-  if (s.includes(',')) {
-    // Hay coma: es el separador decimal. Los puntos son de miles.
-    s = s.replace(/\./g, '').replace(',', '.');
-  } else if (/\.\d{2}$/.test(s)) {
-    // Termina en punto + exactamente 2 dígitos: son decimales.
-    s = s.replace(/\.(?=.*\.)/g, '');
+  const sep = Math.max(s.lastIndexOf('.'), s.lastIndexOf(','));
+  let entero, decimales = '';
+
+  if (sep >= 0) {
+    const cola = s.slice(sep + 1);
+    if (/^\d{1,2}$/.test(cola)) {
+      entero = s.slice(0, sep).replace(/[.,]/g, '');
+      decimales = cola;
+    } else {
+      entero = s.replace(/[.,]/g, '');
+    }
   } else {
-    // Cualquier otro punto es separador de miles.
-    s = s.replace(/\./g, '');
+    entero = s;
   }
 
-  const n = parseFloat(s);
+  if (!/^\d+$/.test(entero)) return null;
+
+  const n = parseFloat(entero + (decimales ? '.' + decimales : ''));
   if (!Number.isFinite(n) || n <= 0) return null;
   // Los pesos colombianos no llevan centavos en la práctica.
   return Math.round(n);
