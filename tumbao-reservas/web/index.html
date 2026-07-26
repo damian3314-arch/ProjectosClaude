@@ -16,7 +16,7 @@
    CONFIGURACIÓN — lo único que hay que tocar para ponerlo en línea.
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
-  N8N_BASE:  'PEGA_AQUI_TU_URL_DE_N8N/webhook',
+  N8N_BASE:  'https://barragan.app.n8n.cloud/webhook',
   WHATSAPP:  '573017833550',
   INSTAGRAM: 'tumbao.bca',
   MINUTOS_ESPERA: 5,
@@ -420,7 +420,9 @@ const CONFIG = {
   'use strict';
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
-  const cfgOk = !CONFIG.N8N_BASE.includes('PEGA_AQUI');
+  // Si alguien despliega el archivo con la URL sin poner, mas vale
+  // decirlo que dejar la pagina cargando para siempre.
+  const cfgOk = /^https?:\/\/.+/.test(CONFIG.N8N_BASE);
 
   let tipo = null, dias = [], diaActivo = null, elegida = null;
   let reserva = null, enviando = false, temporizador = null, sondeo = null;

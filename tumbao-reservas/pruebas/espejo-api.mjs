@@ -88,7 +88,7 @@ createServer(async (req, res) => {
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
     let html = readFileSync(join(RAIZ, 'web', 'index.html'), 'utf8')
-      .replace('PEGA_AQUI_TU_URL_DE_N8N/webhook', `http://localhost:${PUERTO}/webhook`);
+      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
     if (MINUTOS_ESPERA) html = html.replace(/MINUTOS_ESPERA:\s*[\d.]+/, `MINUTOS_ESPERA: ${MINUTOS_ESPERA}`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
