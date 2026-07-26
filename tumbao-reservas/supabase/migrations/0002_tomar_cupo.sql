@@ -62,7 +62,7 @@ security definer
 -- un vector de escalada de privilegios: quien pueda crear objetos en un
 -- esquema del search_path puede secuestrar la resolución de nombres
 -- dentro de la función. El advisor de Supabase lo marca.
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_clase    clases%rowtype;
@@ -113,7 +113,7 @@ $$;
 create or replace function liberar_cupos_expirados() returns int
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare v_n int;
 begin

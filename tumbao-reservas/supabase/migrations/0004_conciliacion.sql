@@ -36,7 +36,7 @@ create or replace function registrar_pago_y_conciliar(
 ) returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_pago      pagos%rowtype;
@@ -148,7 +148,7 @@ create or replace function conciliar_reserva(p_codigo text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_reserva  reservas%rowtype;
@@ -223,7 +223,7 @@ create or replace function marcar_pendiente_validacion(p_codigo text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare v_reserva reservas%rowtype;
 begin
