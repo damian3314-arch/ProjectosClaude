@@ -16,7 +16,14 @@ declare
   v_cupo  int;
   v_cod   text;
 begin
+  -- Reset completo: la prueba llena clases y las apaga, así que sin esto
+  -- la segunda corrida se encuentra las clases del día anterior llenas y
+  -- falla por algo que no tiene que ver con lo que se está probando.
   delete from admin_tokens;
+  delete from reservas;
+  delete from pagos;
+  delete from clases;
+  perform generar_horario(current_date, current_date + 13);
 
   -- ── token ──────────────────────────────────────────────────
   select crear_token_admin('Tania') into v_r;

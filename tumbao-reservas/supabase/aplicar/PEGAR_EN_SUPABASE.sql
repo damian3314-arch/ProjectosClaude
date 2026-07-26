@@ -1,27 +1,18 @@
--- ============================================================
---  Tumbao · migraciones 0007 a 0011, en un solo bloque
+-- ═══════════════════════════════════════════════════════════════
 --
---  Que hace, en cristiano:
---   0007  compara nombres para saber quien pago cuando hay dos
---         pagos del mismo valor a la misma hora
---   0008  usa esa comparacion al conciliar
---   0009  calcula los cupos de clase suelta restando del aforo
---         la gente con plan activo a esa hora
---   0010  distingue reserva de miembro y de clase suelta, y
---         permite importar el listado de afiliados
---   0011  panel de admin: armar el horario de la semana a mano,
---         forzar cupos, y darle el check a los pagos que no
---         conciliaron solos
+--   TUMBAO — PEGA TODO ESTO Y DALE RUN. NADA MÁS.
 --
---  Como aplicarlo: Supabase -> SQL Editor -> pegar todo -> Run.
---  Se puede correr dos veces sin romper nada.
+--   Esto hace las tres cosas de una:
+--     1. crea todo lo que falta en la base
+--     2. carga el horario de las próximas 3 semanas
+--     3. te emite el token del panel y te lo muestra al final
 --
---  Al terminar, emite el token del panel con:
---     select crear_token_admin('Tania');
---  Eso lo devuelve UNA sola vez. Guardalo.
--- ============================================================
-
-begin;
+--   Cuando termine, abajo aparece una tabla con TU TOKEN.
+--   Cópialo de una: no se puede volver a ver.
+--
+--   Se puede correr las veces que quieras. No duplica nada.
+--
+-- ═══════════════════════════════════════════════════════════════
 
 -- ─────────────────────────────────────────────
 -- 0007_desempate_por_nombre.sql
@@ -1357,4 +1348,50 @@ grant execute on function crear_token_admin(text)             to service_role;
 grant execute on function recalcular_cupos()                  to service_role;
 
 
-commit;
+-- ═══════════════════════════════════════════════════════════════
+--   Y ahora el horario y el token
+-- ═══════════════════════════════════════════════════════════════
+
+create temp table if not exists _tumbao_resultado (paso text, detalle text);
+delete from _tumbao_resultado;
+
+do $$
+declare
+  v_r jsonb;
+  v_n int;
+begin
+  -- ── horario de las próximas 3 semanas ──────────────────────
+  -- Lun–vie 7:00 am / 6:00 pm / 7:00 pm, sábado 8:00 am / 9:00 am.
+  -- No pisa las clases que ya existan.
+  perform generar_horario(current_date, current_date + 20);
+  select count(*) into v_n from clases where fecha_hora > now() and activa;
+  insert into _tumbao_resultado
+    values ('1. Horario', v_n || ' clases cargadas (proximas 3 semanas)');
+
+  -- ── cupos ──────────────────────────────────────────────────
+  select recalcular_cupos() into v_r;
+  insert into _tumbao_resultado
+    values ('2. Cupos',
+      'Calculados. Por ahora salen del aforo porque todavia no se ha ' ||
+      'importado el listado de afiliados; el workflow de n8n los ajusta esta noche.');
+
+  -- ── token del panel ────────────────────────────────────────
+  -- Solo se emite si no hay ninguno activo, para que re-correr este
+  -- archivo no llene la tabla de tokens sueltos.
+  if exists (select 1 from admin_tokens where activo) then
+    insert into _tumbao_resultado
+      values ('3. Token del panel',
+        'Ya habias emitido uno. Si lo perdiste, corre aparte:  ' ||
+        'select crear_token_admin(''Tania'');');
+  else
+    select crear_token_admin('Tania') into v_r;
+    insert into _tumbao_resultado
+      values ('3. TU TOKEN DEL PANEL — copialo ya, no se vuelve a ver',
+              v_r->>'token');
+  end if;
+end $$;
+
+-- ═══════════════════════════════════════════════════════════════
+--   RESULTADO — mira la tabla de abajo
+-- ═══════════════════════════════════════════════════════════════
+select * from _tumbao_resultado order by paso;
