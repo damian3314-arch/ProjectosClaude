@@ -51,6 +51,8 @@ for (let n = 1; n <= 7; n++) {
       fecha_hora: enDias(n, h).toISOString(),
       duracion_min: 60, precio_cop: 15000,
       cupo_total: libres, cupos_disponibles: libres, agotada: libres <= 0,
+      // Lo que ve el panel: los cupos salen de aforo − gente con plan.
+      activa: true, aforo: 30, activos_plan: 30 - libres, cupo_manual: null,
       _dow: dow, _hora: h,
     });
   }
@@ -58,6 +60,20 @@ for (let n = 1; n <= 7; n++) {
 // Una agotada para comprobar que se deshabilita.
 clases[1].cupos_disponibles = 0;
 clases[1].agotada = true;
+
+// Token del panel. En la vida real lo emite Supabase y se guarda hasheado;
+// aqui es fijo para poder probar.
+const TOKEN_ADMIN = process.env.TOKEN_ADMIN || 'token-de-prueba';
+
+const diaDe = iso => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date(iso));
+const sumaDias = (iso, n) => {
+  const [a, m, d] = iso.split('-').map(Number);
+  const f = new Date(Date.UTC(a, m - 1, d));
+  f.setUTCDate(f.getUTCDate() + n);
+  return f.toISOString().slice(0, 10);
+};
 
 const MIEMBROS = { '3001111111': 18 };   // celular -> hora de su plan
 const reservas = new Map();
@@ -93,11 +109,131 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
   }
+  if (url.pathname === '/admin' || url.pathname === '/admin.html') {
+    const html = readFileSync(join(RAIZ, 'web', 'admin.html'), 'utf8')
+      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end(html);
+  }
   if (url.pathname.startsWith('/img/')) {
     try {
       res.writeHead(200, { 'Content-Type': 'image/png' });
       return res.end(readFileSync(join(RAIZ, 'web', url.pathname)));
     } catch { res.writeHead(404); return res.end(); }
+  }
+
+  // ---- panel de admin ----
+  if (url.pathname.startsWith('/webhook/tumbao/admin/') && req.method === 'POST') {
+    const b = await leerCuerpo(req);
+    if (b.token !== TOKEN_ADMIN) {
+      return json(res, 401, { ok: false, error: 'NO_AUTORIZADO' });
+    }
+    const que = url.pathname.split('/').pop();
+
+    if (que === 'semana') {
+      const dias = [];
+      for (let i = 0; i < 7; i++) {
+        const f = sumaDias(b.desde, i);
+        dias.push({
+          fecha: f,
+          dow: new Date(`${f}T12:00:00-05:00`).getUTCDay(),
+          clases: clases.filter(c => diaDe(c.fecha_hora) === f).map(c => ({
+            clase_id: c.clase_id, nombre: c.nombre,
+            hora: String(c._hora).padStart(2, '0') + ':00',
+            profesor: c.profesor, activa: c.activa !== false,
+            aforo: c.aforo ?? 30, activos_plan: c.activos_plan ?? 0,
+            cupo_total: c.cupo_total, cupo_tomado: c.cupo_total - c.cupos_disponibles,
+            cupo_manual: c.cupo_manual ?? null,
+            ya_paso: new Date(c.fecha_hora) <= new Date()
+          }))
+        });
+      }
+      return json(res, 200, { ok: true, desde: b.desde, hasta: sumaDias(b.desde, 6), dias });
+    }
+
+    if (que === 'guardar') {
+      let creadas = 0, editadas = 0, apagadas = 0;
+      const avisos = [];
+      for (const cel of (b.celdas || [])) {
+        const h = Number(cel.hora.split(':')[0]);
+        let c = clases.find(x => diaDe(x.fecha_hora) === cel.fecha && x._hora === h);
+        if (!c) {
+          if (cel.activa === false) continue;
+          c = {
+            clase_id: 'clase-' + (seq++), nombre: 'Clase ' + cel.hora,
+            profesor: 'Por asignar', lugar: 'Sede Tumbao',
+            fecha_hora: new Date(`${cel.fecha}T${cel.hora}:00-05:00`).toISOString(),
+            duracion_min: 60, precio_cop: 15000, aforo: cel.aforo ?? 30,
+            activos_plan: 0, cupo_manual: cel.cupo_manual ?? null,
+            cupo_total: cel.cupo_manual ?? cel.aforo ?? 30,
+            activa: true,
+            _dow: new Date(`${cel.fecha}T12:00:00-05:00`).getUTCDay(), _hora: h
+          };
+          c.cupos_disponibles = c.cupo_total;
+          clases.push(c);
+          creadas++;
+          continue;
+        }
+        const tomado = c.cupo_total - c.cupos_disponibles;
+        if (cel.activa === false && tomado > 0) {
+          avisos.push({ fecha: cel.fecha, hora: cel.hora,
+            aviso: `no se apago: ya tiene ${tomado} reserva(s)` });
+          continue;
+        }
+        let manual = cel.cupo_manual;
+        if (manual != null && manual < tomado) {
+          avisos.push({ fecha: cel.fecha, hora: cel.hora,
+            aviso: `se dejo en ${tomado}: ya hay esas reservas, no se puede bajar mas` });
+          manual = tomado;
+        }
+        c.cupo_manual = manual ?? null;
+        c.aforo = cel.aforo ?? c.aforo ?? 30;
+        c.cupo_total = Math.max(tomado, manual ?? Math.max(c.aforo - (c.activos_plan || 0), 0));
+        c.cupos_disponibles = c.cupo_total - tomado;
+        c.agotada = c.cupos_disponibles <= 0;
+        if (cel.activa === false) { c.activa = false; apagadas++; }
+        else { c.activa = true; editadas++; }
+      }
+      return json(res, 200, { ok: true, creadas, editadas, apagadas, avisos });
+    }
+
+    if (que === 'pendientes') {
+      const lista = [...reservas.values()]
+        .filter(r => r.estado === 'pendiente_validacion' || r.estado === 'verificando')
+        .map(r => {
+          const c = clases.find(x => x.clase_id === r.clase_id) || {};
+          return {
+            codigo: r.codigo, nombre: r.nombre || 'Sin nombre',
+            telefono: r.telefono || '3000000000', estado: r.estado,
+            creada_at: r.creadaAt, clase: r.clase, fecha_hora: c.fecha_hora,
+            precio_cop: c.precio_cop || 15000,
+            pagos_sueltos: r.estado === 'pendiente_validacion'
+              ? [{ pago_id: 'pago-1', valor_cop: 15000, fecha: new Date().toISOString(),
+                   remitente: 'CAMILA ROJAS PEREZ', parecido: 0.67 }]
+              : []
+          };
+        });
+      return json(res, 200, { ok: true, reservas: lista });
+    }
+
+    if (que === 'confirmar' || que === 'rechazar') {
+      const r = reservas.get(String(b.codigo || '').toUpperCase());
+      if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+      if (que === 'confirmar') {
+        r.estado = 'confirmada';
+        return json(res, 200, { ok: true, estado: 'confirmada', codigo: r.codigo,
+          nombre: r.nombre, telefono: r.telefono || '3001112233',
+          mensaje: 'Confirmada a mano.' });
+      }
+      r.estado = 'rechazada';
+      const c = clases.find(x => x.clase_id === r.clase_id);
+      if (c) { c.cupos_disponibles++; c.agotada = false; }
+      return json(res, 200, { ok: true, estado: 'rechazada', codigo: r.codigo,
+        nombre: r.nombre, telefono: r.telefono || '3001112233',
+        mensaje: 'Rechazada, el cupo quedo libre.' });
+    }
+
+    return json(res, 400, { ok: false, error: 'ruta_desconocida' });
   }
 
   // ---- GET /tumbao/clases ----
@@ -151,6 +287,8 @@ createServer(async (req, res) => {
     const requierePago = tipo === 'suelta';
     reservas.set(cod, {
       codigo: cod, tipo, clase: c.nombre, clase_id: c.clase_id,
+      nombre: String(b.nombre || '').trim(), telefono: tel,
+      creadaAt: new Date().toISOString(),
       estado: requierePago ? 'pendiente_pago' : 'confirmada',
       fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
       hora: hora12(c.fecha_hora), pagoEn: null,

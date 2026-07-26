@@ -1,0 +1,723 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Tumbao · Panel</title>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   Lo único que hay que tocar si cambia el dominio de n8n.
+   ───────────────────────────────────────────────────────────── */
+const CONFIG = {
+  N8N_BASE: 'https://barragan.app.n8n.cloud/webhook',
+  WHATSAPP_PAIS: '57'
+};
+</script>
+
+<style>
+  :root{
+    --bg:#0d0b0f; --bg-2:#161219; --bg-3:#1f1a24;
+    --line:#312a38; --line-2:#463c4f;
+    --tx:#f4eff6; --tx-2:#b3a7bd; --tx-3:#7d7186;
+    --hot:#ff6b35; --hot-2:#ff8f5e; --gold:#ffc14d; --ok:#4ade80; --bad:#ff6b81;
+    --r:14px;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  /* Cualquier regla de autor con display: le gana al [hidden] del
+     navegador. Esto lo zanja de una para todo el archivo. */
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);
+    line-height:1.5;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(70rem 40rem at 50% -14rem,rgba(255,107,53,.13),transparent 65%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:72rem;margin:0 auto;padding:1.4rem 1rem 5rem}
+
+  header{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;padding:.6rem 0 1.2rem}
+  .logo{
+    font-size:1.7rem;font-weight:800;letter-spacing:-.03em;margin:0;
+    background:linear-gradient(100deg,var(--gold),var(--hot) 60%,#ff4f7d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .logo small{font-size:.9rem;font-weight:600;color:var(--tx-3);-webkit-text-fill-color:var(--tx-3)}
+  header .sp{flex:1}
+
+  button{font:inherit;cursor:pointer}
+  .btn{
+    background:var(--bg-2);border:1px solid var(--line);color:var(--tx);
+    border-radius:10px;padding:.5rem .9rem;transition:.16s;
+  }
+  .btn:hover{border-color:var(--line-2)}
+  .btn.primario{
+    background:linear-gradient(160deg,var(--hot),#e0491d);border-color:var(--hot);
+    color:#fff;font-weight:600;
+  }
+  .btn.primario:hover{filter:brightness(1.08)}
+  .btn.ok{border-color:rgba(74,222,128,.45);color:var(--ok)}
+  .btn.ok:hover{background:rgba(74,222,128,.1)}
+  .btn.mal{border-color:rgba(255,107,129,.4);color:var(--bad)}
+  .btn.mal:hover{background:rgba(255,107,129,.1)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.chico{padding:.3rem .6rem;font-size:.8rem;border-radius:8px}
+
+  input,select{
+    font:inherit;background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
+    border-radius:10px;padding:.5rem .7rem;width:100%;
+  }
+  input:focus,select:focus{outline:2px solid var(--hot);outline-offset:1px;border-color:var(--hot)}
+  label{display:block;font-size:.82rem;color:var(--tx-2);margin-bottom:.3rem}
+
+  .tarjeta{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem}
+
+  /* ---------- entrar ---------- */
+  #entrar{max-width:26rem;margin:3rem auto}
+  #entrar p{color:var(--tx-2);font-size:.88rem;margin:.2rem 0 1.1rem}
+  #entrar .btn{width:100%;margin-top:.9rem}
+
+  /* ---------- pestañas ---------- */
+  .tabs{display:flex;gap:.4rem;margin:0 0 1.3rem;border-bottom:1px solid var(--line)}
+  .tab{
+    background:none;border:0;border-bottom:2px solid transparent;color:var(--tx-3);
+    padding:.6rem .9rem;font-size:.95rem;margin-bottom:-1px;
+  }
+  .tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--hot);font-weight:600}
+  .tab .globo{
+    display:inline-block;min-width:1.3rem;padding:0 .35rem;margin-left:.4rem;
+    background:var(--hot);color:#2a1206;border-radius:99px;
+    font-size:.72rem;font-weight:700;line-height:1.3rem;text-align:center;
+  }
+  .tab .globo:empty,.tab .globo[hidden]{display:none}
+
+  .panel{display:none}
+  .panel.on{display:block}
+
+  /* ---------- barra de semana ---------- */
+  .semana-bar{display:flex;align-items:center;gap:.7rem;margin-bottom:1.1rem;flex-wrap:wrap}
+  .semana-bar .rango{font-weight:600}
+  .semana-bar .sp{flex:1}
+
+  /* ---------- rejilla de días ---------- */
+  .rejilla{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fill,minmax(15.5rem,1fr))}
+  .dia-col{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:.85rem}
+  .dia-col.domingo{opacity:.55}
+  .dia-col h3{margin:0 0 .1rem;font-size:.95rem;text-transform:capitalize}
+  .dia-col .fecha{font-size:.75rem;color:var(--tx-3);margin-bottom:.7rem}
+
+  .fila-clase{
+    display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;align-items:center;
+    padding:.5rem 0;border-top:1px solid var(--line);
+  }
+  .fila-clase:first-of-type{border-top:0}
+  .fila-clase.apagada{opacity:.45}
+  .fila-clase.paso{opacity:.4}
+  .fila-clase .hora{font-weight:700;font-size:.95rem;font-variant-numeric:tabular-nums}
+  .fila-clase .meta{font-size:.72rem;color:var(--tx-3);line-height:1.35}
+  .fila-clase .meta b{color:var(--tx-2);font-weight:600}
+  .cupo-in{width:3.6rem;padding:.3rem .4rem;text-align:center;font-variant-numeric:tabular-nums}
+  .cupo-in.manual{border-color:var(--gold);color:var(--gold)}
+
+  .interruptor{
+    width:2.4rem;height:1.35rem;border-radius:99px;background:var(--bg-3);
+    border:1px solid var(--line);position:relative;flex:none;padding:0;transition:.16s;
+  }
+  .interruptor::after{
+    content:"";position:absolute;top:2px;left:2px;width:1rem;height:1rem;border-radius:99px;
+    background:var(--tx-3);transition:.16s;
+  }
+  .interruptor[aria-pressed="true"]{background:rgba(74,222,128,.22);border-color:var(--ok)}
+  .interruptor[aria-pressed="true"]::after{left:calc(100% - 1.2rem);background:var(--ok)}
+
+  .agregar{display:flex;gap:.4rem;margin-top:.7rem;padding-top:.7rem;border-top:1px dashed var(--line)}
+  .agregar input{padding:.35rem .5rem;font-size:.85rem}
+
+  .barra-guardar{
+    position:sticky;bottom:0;margin-top:1.2rem;padding:.9rem 1rem;
+    background:rgba(22,18,25,.94);backdrop-filter:blur(8px);
+    border:1px solid var(--line);border-radius:var(--r);
+    display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;
+  }
+  .barra-guardar .sp{flex:1}
+  .barra-guardar .cuenta{font-size:.88rem;color:var(--tx-2)}
+
+  /* ---------- pendientes ---------- */
+  .pend{display:grid;gap:.8rem}
+  .pend-card{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:1rem}
+  .pend-card .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+  .pend-card .nom{font-weight:600;font-size:1.02rem}
+  .pend-card .cod{font-family:var(--mono);color:var(--gold);font-size:.85rem}
+  .pend-card .det{font-size:.83rem;color:var(--tx-2);margin:.25rem 0 .8rem}
+  .pend-card .acciones{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+  .etiqueta{
+    display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;
+    padding:.12rem .45rem;border-radius:99px;border:1px solid var(--line-2);color:var(--tx-3);
+  }
+  .etiqueta.espera{border-color:rgba(255,193,77,.45);color:var(--gold)}
+
+  .pagos{display:grid;gap:.4rem;margin-top:.2rem}
+  .pago{
+    display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+    background:var(--bg-3);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;
+    font-size:.83rem;
+  }
+  .pago .rem{font-weight:600}
+  .pago .sp{flex:1}
+  .pago .par{font-size:.75rem;color:var(--tx-3)}
+  .pago .par.alto{color:var(--ok)}
+  .sin-pagos{font-size:.8rem;color:var(--tx-3);font-style:italic}
+
+  .vacio{text-align:center;color:var(--tx-3);padding:3rem 1rem}
+  .vacio .ico{font-size:2.4rem;display:block;margin-bottom:.6rem}
+
+  .aviso{
+    border-radius:10px;padding:.7rem .9rem;font-size:.86rem;margin:.9rem 0;
+    border:1px solid var(--line);background:var(--bg-3);
+  }
+  .aviso.mal{border-color:rgba(255,107,129,.45);color:var(--bad)}
+  .aviso.bien{border-color:rgba(74,222,128,.45);color:var(--ok)}
+  .aviso.ojo{border-color:rgba(255,193,77,.45);color:var(--gold)}
+  .aviso[hidden]{display:none}
+  .aviso ul{margin:.4rem 0 0;padding-left:1.1rem}
+
+  .cargando{color:var(--tx-3);padding:2rem;text-align:center}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 class="logo">TUMBAO <small>panel</small></h1>
+    <span class="sp"></span>
+    <button class="btn chico" id="salir" hidden>Salir</button>
+  </header>
+
+  <!-- ══════════ entrar ══════════ -->
+  <section id="entrar" class="tarjeta">
+    <label for="token">Token del panel</label>
+    <input id="token" type="password" autocomplete="current-password" placeholder="Pegalo aquí">
+    <p>Se guarda solo en este navegador. Si lo perdiste, se emite otro desde Supabase con
+       <code>select crear_token_admin('tu nombre');</code></p>
+    <div class="aviso mal" id="err-entrar" hidden></div>
+    <button class="btn primario" id="btn-entrar">Entrar</button>
+  </section>
+
+  <!-- ══════════ panel ══════════ -->
+  <div id="app" hidden>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-horario" aria-selected="true">Horario</button>
+      <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
+        Por validar<span class="globo" id="globo-pend" hidden></span>
+      </button>
+    </div>
+
+    <!-- ── horario ── -->
+    <div class="panel on" id="p-horario">
+      <div class="semana-bar">
+        <button class="btn chico" id="sem-antes">← Semana</button>
+        <span class="rango" id="sem-rango">—</span>
+        <button class="btn chico" id="sem-despues">Semana →</button>
+        <button class="btn chico" id="sem-hoy">Esta semana</button>
+        <span class="sp"></span>
+      </div>
+
+      <div class="aviso ojo">
+        El cupo es lo que queda para <b>clase suelta</b>: aforo menos la gente con plan activo
+        a esa hora. Déjalo vacío para que se calcule solo, o escribe un número para forzarlo.
+      </div>
+
+      <div class="aviso" id="msg-horario" hidden></div>
+      <div class="cargando" id="cargando-horario">Cargando…</div>
+      <div class="rejilla" id="rejilla"></div>
+
+      <div class="barra-guardar" id="barra-guardar" hidden>
+        <span class="cuenta" id="cuenta-cambios"></span>
+        <span class="sp"></span>
+        <button class="btn" id="descartar">Descartar</button>
+        <button class="btn primario" id="guardar">Guardar cambios</button>
+      </div>
+    </div>
+
+    <!-- ── pendientes ── -->
+    <div class="panel" id="p-pendientes">
+      <div class="semana-bar">
+        <button class="btn chico" id="recargar-pend">Recargar</button>
+        <span class="sp"></span>
+      </div>
+      <div class="aviso" id="msg-pend" hidden></div>
+      <div class="cargando" id="cargando-pend" hidden>Cargando…</div>
+      <div class="pend" id="lista-pend"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const LLAVE = 'tumbao_admin_token';
+
+  let token = null;
+  let semanaDesde = semanaInicial();
+  let semana = null;
+  // clave "fecha|hora" -> celda que se va a mandar
+  const cambios = new Map();
+
+  /* ---------- utilidades ---------- */
+
+  // El panel se usa desde Colombia; anclar a Bogotá evita que un
+  // portátil con la zona horaria mal puesta muestre otra semana.
+  function hoyBogota() {
+    const p = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    return p;                                  // 'YYYY-MM-DD'
+  }
+  function lunesDe(d) {
+    const iso = typeof d === 'string' ? d : hoyBogota();
+    const [a, m, dd] = iso.split('-').map(Number);
+    const f = new Date(Date.UTC(a, m - 1, dd));
+    const dow = f.getUTCDay();                 // 0 domingo
+    f.setUTCDate(f.getUTCDate() - (dow === 0 ? 6 : dow - 1));
+    return f.toISOString().slice(0, 10);
+  }
+  // El domingo la semana en curso ya se acabó — y Tumbao ni siquiera
+  // abre ese día. Abrir el panel sobre una semana entera en pasado no
+  // le sirve a nadie, así que se salta a la que empieza mañana.
+  function semanaInicial() {
+    const hoy = hoyBogota();
+    const [a, m, d] = hoy.split('-').map(Number);
+    const esDomingo = new Date(Date.UTC(a, m - 1, d)).getUTCDay() === 0;
+    return lunesDe(esDomingo ? sumaDias(hoy, 1) : hoy);
+  }
+
+  // Declaración, no const: semanaInicial() la usa antes de esta línea.
+  function sumaDias(iso, n) {
+    const [a, m, d] = iso.split('-').map(Number);
+    const f = new Date(Date.UTC(a, m - 1, d));
+    f.setUTCDate(f.getUTCDate() + n);
+    return f.toISOString().slice(0, 10);
+  }
+  const fmtDia = iso => {
+    const [a, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', weekday: 'long' })
+      .format(new Date(Date.UTC(a, m - 1, d)));
+  };
+  const fmtCorto = iso => {
+    const [a, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+      .format(new Date(Date.UTC(a, m - 1, d)));
+  };
+  const hora12 = hhmm => {
+    const [h, m] = hhmm.split(':').map(Number);
+    const su = h >= 12 ? 'pm' : 'am';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${su}`;
+  };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function aviso(el, texto, clase) {
+    el.className = 'aviso' + (clase ? ' ' + clase : '');
+    el.innerHTML = texto;
+    el.hidden = !texto;
+  }
+
+  /* ---------- llamadas ---------- */
+  async function api(ruta, cuerpo) {
+    const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/admin/${ruta}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token }, cuerpo || {}))
+    });
+    let datos = {};
+    try { datos = await res.json(); } catch (_) { /* respuesta no-JSON */ }
+    if (res.status === 401) {
+      cerrarSesion('El token no sirve o fue revocado. Entra de nuevo.');
+      throw new Error('no autorizado');
+    }
+    if (!res.ok || datos.ok === false) {
+      throw new Error(datos.mensaje || datos.error || `Error ${res.status}`);
+    }
+    return datos;
+  }
+
+  /* ---------- entrar / salir ---------- */
+  function cerrarSesion(motivo) {
+    token = null;
+    try { localStorage.removeItem(LLAVE); } catch (_) {}
+    $('#app').hidden = true;
+    $('#salir').hidden = true;
+    $('#entrar').hidden = false;
+    $('#token').value = '';
+    aviso($('#err-entrar'), motivo ? esc(motivo) : '', 'mal');
+  }
+
+  async function entrar(tk) {
+    token = tk;
+    // La primera llamada hace de login: si el token no sirve, rebota 401.
+    await cargarSemana();
+    try { localStorage.setItem(LLAVE, tk); } catch (_) {}
+    $('#entrar').hidden = true;
+    $('#app').hidden = false;
+    $('#salir').hidden = false;
+    cargarPendientes();
+  }
+
+  $('#btn-entrar').addEventListener('click', async () => {
+    const tk = $('#token').value.trim();
+    if (!tk) { aviso($('#err-entrar'), 'Falta el token.', 'mal'); return; }
+    aviso($('#err-entrar'), '');
+    $('#btn-entrar').disabled = true;
+    try { await entrar(tk); }
+    catch (e) { aviso($('#err-entrar'), esc(e.message), 'mal'); token = null; }
+    finally { $('#btn-entrar').disabled = false; }
+  });
+  $('#token').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-entrar').click(); });
+  $('#salir').addEventListener('click', () => cerrarSesion());
+
+  /* ---------- pestañas ---------- */
+  function verPanel(cual) {
+    const esHorario = cual === 'horario';
+    $('#tab-horario').setAttribute('aria-selected', String(esHorario));
+    $('#tab-pendientes').setAttribute('aria-selected', String(!esHorario));
+    $('#p-horario').classList.toggle('on', esHorario);
+    $('#p-pendientes').classList.toggle('on', !esHorario);
+  }
+  $('#tab-horario').addEventListener('click', () => verPanel('horario'));
+  $('#tab-pendientes').addEventListener('click', () => { verPanel('pendientes'); cargarPendientes(); });
+
+  /* ---------- horario ---------- */
+  $('#sem-antes').addEventListener('click', () => moverSemana(-7));
+  $('#sem-despues').addEventListener('click', () => moverSemana(7));
+  $('#sem-hoy').addEventListener('click', () => { semanaDesde = semanaInicial(); cargarSemana(); });
+
+  function moverSemana(n) {
+    if (cambios.size && !confirm('Hay cambios sin guardar. ¿Los descartas?')) return;
+    cambios.clear();
+    semanaDesde = sumaDias(semanaDesde, n);
+    cargarSemana();
+  }
+
+  async function cargarSemana() {
+    $('#cargando-horario').hidden = false;
+    $('#rejilla').innerHTML = '';
+    aviso($('#msg-horario'), '');
+    try {
+      semana = await api('semana', { desde: semanaDesde });
+      cambios.clear();
+      pintarSemana();
+    } catch (e) {
+      aviso($('#msg-horario'), esc(e.message), 'mal');
+      throw e;
+    } finally {
+      $('#cargando-horario').hidden = true;
+      refrescarBarra();
+    }
+  }
+
+  function pintarSemana() {
+    $('#sem-rango').textContent =
+      `${fmtCorto(semanaDesde)} — ${fmtCorto(sumaDias(semanaDesde, 6))}`;
+
+    const rej = $('#rejilla');
+    rej.innerHTML = '';
+
+    for (const dia of semana.dias) {
+      const col = document.createElement('div');
+      col.className = 'dia-col' + (dia.dow === 0 ? ' domingo' : '');
+      col.innerHTML =
+        `<h3>${esc(fmtDia(dia.fecha))}</h3>` +
+        `<div class="fecha">${esc(fmtCorto(dia.fecha))}</div>`;
+
+      if (!dia.clases.length) {
+        const p = document.createElement('div');
+        p.className = 'meta';
+        p.style.color = 'var(--tx-3)';
+        p.textContent = 'Sin clases.';
+        col.appendChild(p);
+      }
+
+      for (const c of dia.clases) col.appendChild(filaClase(dia, c));
+      col.appendChild(filaAgregar(dia));
+      rej.appendChild(col);
+    }
+  }
+
+  function claveCelda(fecha, hora) { return fecha + '|' + hora; }
+
+  // Se arrastra el estado actual de la celda para no mandar a medias:
+  // el backend recibe siempre activa + cupo_manual juntos.
+  function tocar(fecha, hora, base, parche) {
+    const k = claveCelda(fecha, hora);
+    const actual = cambios.get(k) || {
+      fecha, hora,
+      activa: base ? base.activa : true,
+      cupo_manual: base ? base.cupo_manual : null,
+      aforo: base ? base.aforo : 30
+    };
+    cambios.set(k, Object.assign(actual, parche));
+    refrescarBarra();
+  }
+
+  function filaClase(dia, c) {
+    const fila = document.createElement('div');
+    fila.className = 'fila-clase' + (c.activa ? '' : ' apagada') + (c.ya_paso ? ' paso' : '');
+
+    const sw = document.createElement('button');
+    sw.className = 'interruptor';
+    sw.type = 'button';
+    sw.setAttribute('aria-pressed', String(c.activa));
+    sw.setAttribute('aria-label', (c.activa ? 'Apagar' : 'Prender') + ' la clase de ' + hora12(c.hora));
+    sw.disabled = !!c.ya_paso;
+    sw.addEventListener('click', () => {
+      const nuevo = sw.getAttribute('aria-pressed') !== 'true';
+      sw.setAttribute('aria-pressed', String(nuevo));
+      fila.classList.toggle('apagada', !nuevo);
+      tocar(dia.fecha, c.hora, c, { activa: nuevo });
+    });
+
+    const medio = document.createElement('div');
+    const libres = Math.max((c.cupo_total || 0) - (c.cupo_tomado || 0), 0);
+    medio.innerHTML =
+      `<div class="hora">${esc(hora12(c.hora))}</div>` +
+      `<div class="meta">` +
+        `<b>${c.cupo_tomado}</b> reservad${c.cupo_tomado === 1 ? 'a' : 'as'} · ` +
+        `${libres} libre${libres === 1 ? '' : 's'}<br>` +
+        `aforo ${c.aforo} − ${c.activos_plan} con plan` +
+      `</div>`;
+
+    const inp = document.createElement('input');
+    inp.className = 'cupo-in' + (c.cupo_manual !== null ? ' manual' : '');
+    inp.type = 'number';
+    inp.min = '0';
+    inp.placeholder = String(c.cupo_total);
+    inp.value = c.cupo_manual === null ? '' : String(c.cupo_manual);
+    inp.title = 'Cupos sueltos. Vacío = automático.';
+    inp.setAttribute('aria-label', 'Cupos de la clase de ' + hora12(c.hora));
+    inp.disabled = !!c.ya_paso;
+    inp.addEventListener('change', () => {
+      const v = inp.value.trim();
+      const n = v === '' ? null : Math.max(0, parseInt(v, 10) || 0);
+      if (n !== null) inp.value = String(n);
+      inp.classList.toggle('manual', n !== null);
+      tocar(dia.fecha, c.hora, c, { cupo_manual: n });
+    });
+
+    fila.append(sw, medio, inp);
+    return fila;
+  }
+
+  function filaAgregar(dia) {
+    const caja = document.createElement('div');
+    caja.className = 'agregar';
+
+    const hora = document.createElement('input');
+    hora.type = 'time';
+    hora.step = '900';
+    hora.setAttribute('aria-label', 'Hora de la clase nueva del ' + fmtCorto(dia.fecha));
+
+    const btn = document.createElement('button');
+    btn.className = 'btn chico';
+    btn.type = 'button';
+    btn.textContent = 'Abrir';
+    btn.addEventListener('click', () => {
+      const h = hora.value;
+      if (!/^\d{2}:\d{2}$/.test(h)) { aviso($('#msg-horario'), 'Elige una hora primero.', 'mal'); return; }
+      if (dia.clases.some(c => c.hora === h)) {
+        aviso($('#msg-horario'), `Ya hay una clase el ${esc(fmtCorto(dia.fecha))} a las ${esc(hora12(h))}.`, 'mal');
+        return;
+      }
+      aviso($('#msg-horario'), '');
+      // Se pinta de una para que se vea, aunque todavía no esté guardada.
+      dia.clases.push({
+        clase_id: null, hora: h, nombre: 'Clase ' + hora12(h), profesor: 'Por asignar',
+        activa: true, aforo: 30, activos_plan: 0, cupo_total: 30, cupo_tomado: 0,
+        cupo_manual: null, ya_paso: false
+      });
+      dia.clases.sort((a, b) => a.hora.localeCompare(b.hora));
+      tocar(dia.fecha, h, null, { activa: true, cupo_manual: null, aforo: 30 });
+      pintarSemana();
+    });
+
+    caja.append(hora, btn);
+    return caja;
+  }
+
+  function refrescarBarra() {
+    const n = cambios.size;
+    $('#barra-guardar').hidden = n === 0;
+    $('#cuenta-cambios').textContent =
+      n === 1 ? '1 cambio sin guardar' : `${n} cambios sin guardar`;
+  }
+
+  $('#descartar').addEventListener('click', () => { cambios.clear(); cargarSemana(); });
+
+  $('#guardar').addEventListener('click', async () => {
+    if (!cambios.size) return;
+    $('#guardar').disabled = true;
+    aviso($('#msg-horario'), '');
+    try {
+      const r = await api('guardar', { celdas: Array.from(cambios.values()) });
+      cambios.clear();
+      let txt = `Guardado: ${r.creadas} creada(s), ${r.editadas} editada(s), ${r.apagadas} apagada(s).`;
+      let clase = 'bien';
+      if (r.avisos && r.avisos.length) {
+        clase = 'ojo';
+        txt += '<ul>' + r.avisos.map(a =>
+          `<li>${esc(fmtCorto(a.fecha))} ${esc(hora12(a.hora))} — ${esc(a.aviso)}</li>`).join('') + '</ul>';
+      }
+      await cargarSemana();
+      aviso($('#msg-horario'), txt, clase);
+    } catch (e) {
+      aviso($('#msg-horario'), esc(e.message), 'mal');
+    } finally {
+      $('#guardar').disabled = false;
+      refrescarBarra();
+    }
+  });
+
+  /* ---------- pendientes ---------- */
+  $('#recargar-pend').addEventListener('click', cargarPendientes);
+
+  async function cargarPendientes() {
+    $('#cargando-pend').hidden = false;
+    aviso($('#msg-pend'), '');
+    try {
+      const r = await api('pendientes', {});
+      pintarPendientes(r.reservas || []);
+    } catch (e) {
+      aviso($('#msg-pend'), esc(e.message), 'mal');
+    } finally {
+      $('#cargando-pend').hidden = true;
+    }
+  }
+
+  function pintarPendientes(lista) {
+    const cont = $('#lista-pend');
+    const globo = $('#globo-pend');
+    globo.textContent = lista.length ? String(lista.length) : '';
+    globo.hidden = !lista.length;
+
+    if (!lista.length) {
+      cont.innerHTML =
+        '<div class="vacio"><span class="ico">✓</span>' +
+        'Nada por validar. Todo lo que entró concilió solo.</div>';
+      return;
+    }
+
+    cont.innerHTML = '';
+    for (const r of lista) cont.appendChild(tarjetaPendiente(r));
+  }
+
+  function tarjetaPendiente(r) {
+    const el = document.createElement('div');
+    el.className = 'pend-card';
+
+    const cuando = new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    }).format(new Date(r.fecha_hora));
+
+    const espera = r.estado === 'verificando';
+
+    el.innerHTML =
+      `<div class="top">` +
+        `<span class="nom">${esc(r.nombre)}</span>` +
+        `<span class="cod">${esc(r.codigo)}</span>` +
+        `<span class="etiqueta${espera ? ' espera' : ''}">${espera ? 'esperando banco' : 'por validar'}</span>` +
+      `</div>` +
+      `<div class="det">${esc(r.clase)} · ${esc(cuando)} · ` +
+        `$${Number(r.precio_cop || 0).toLocaleString('es-CO')} · ` +
+        `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${esc(String(r.telefono).replace(/\D/g, ''))}" ` +
+          `target="_blank" rel="noopener" style="color:var(--gold)">${esc(r.telefono)}</a>` +
+      `</div>`;
+
+    const pagos = document.createElement('div');
+    if (r.pagos_sueltos && r.pagos_sueltos.length) {
+      pagos.className = 'pagos';
+      for (const p of r.pagos_sueltos) {
+        const f = new Intl.DateTimeFormat('es-CO', {
+          timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit', hour12: true
+        }).format(new Date(p.fecha));
+        const par = Math.round((p.parecido || 0) * 100);
+        const fila = document.createElement('div');
+        fila.className = 'pago';
+        fila.innerHTML =
+          `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
+          `<span class="par${par >= 50 ? ' alto' : ''}">${par}% parecido</span>` +
+          `<span class="sp"></span>` +
+          `<span>$${Number(p.valor_cop).toLocaleString('es-CO')} · ${esc(f)}</span>`;
+        const btn = document.createElement('button');
+        btn.className = 'btn chico ok';
+        btn.textContent = 'Es este';
+        btn.addEventListener('click', () => resolver(el, 'confirmar', r.codigo, p.pago_id));
+        fila.appendChild(btn);
+        pagos.appendChild(fila);
+      }
+    } else {
+      pagos.className = 'sin-pagos';
+      pagos.textContent = 'No hay pagos sin dueño por ese valor cerca de esa hora.';
+    }
+    el.appendChild(pagos);
+
+    const acc = document.createElement('div');
+    acc.className = 'acciones';
+
+    const bOk = document.createElement('button');
+    bOk.className = 'btn ok';
+    bOk.textContent = '✓ Confirmar igual';
+    bOk.addEventListener('click', () => resolver(el, 'confirmar', r.codigo, null));
+
+    const bNo = document.createElement('button');
+    bNo.className = 'btn mal';
+    bNo.textContent = '✕ Rechazar';
+    bNo.addEventListener('click', () => {
+      if (!confirm(`¿Rechazar la reserva de ${r.nombre}? El cupo queda libre.`)) return;
+      resolver(el, 'rechazar', r.codigo, null);
+    });
+
+    acc.append(bOk, bNo);
+    el.appendChild(acc);
+    return el;
+  }
+
+  async function resolver(tarjeta, accion, codigo, pagoId) {
+    tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
+    try {
+      const r = await api(accion, { codigo, pago_id: pagoId });
+      const tel = String(r.telefono || '').replace(/\D/g, '');
+      const texto = accion === 'confirmar'
+        ? `¡Hola ${r.nombre || ''}! Tu pago quedó confirmado y tu cupo está asegurado. Código ${r.codigo}. Te esperamos 🕺`
+        : `Hola ${r.nombre || ''}, no pudimos validar el pago de la reserva ${r.codigo}. ¿Nos ayudas con el comprobante?`;
+      const wa = tel
+        ? `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${tel}?text=${encodeURIComponent(texto)}" ` +
+          `target="_blank" rel="noopener" class="btn chico" style="text-decoration:none">Escribirle por WhatsApp</a>`
+        : '';
+      tarjeta.innerHTML =
+        `<div class="top"><span class="nom">${esc(r.nombre || codigo)}</span>` +
+        `<span class="cod">${esc(r.codigo)}</span></div>` +
+        `<div class="det">${esc(r.mensaje || '')}</div>${wa}`;
+      tarjeta.style.borderColor = accion === 'confirmar'
+        ? 'rgba(74,222,128,.45)' : 'rgba(255,107,129,.4)';
+      // El contador de la pestaña tiene que bajar aunque la tarjeta siga en pantalla.
+      const globo = $('#globo-pend');
+      const n = Math.max((parseInt(globo.textContent, 10) || 1) - 1, 0);
+      globo.textContent = n ? String(n) : '';
+      globo.hidden = !n;
+    } catch (e) {
+      aviso($('#msg-pend'), esc(e.message), 'mal');
+      tarjeta.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+  }
+
+  /* ---------- arranque ---------- */
+  let guardado = null;
+  try { guardado = localStorage.getItem(LLAVE); } catch (_) {}
+  if (guardado) {
+    entrar(guardado).catch(() => cerrarSesion());
+  } else {
+    $('#entrar').hidden = false;
+  }
+})();
+</script>
