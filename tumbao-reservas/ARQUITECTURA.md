@@ -29,7 +29,7 @@ En la práctica:
 | Cupos | **Supabase** | `clases.cupo_total`, calculado |
 | Pagos conciliados | **Supabase** | tabla `pagos` — origen: correo del banco |
 | Tokens de admin | **Supabase** | tabla `admin_tokens` |
-| **Afiliados y planes** | **AdminGym** | tabla `membresias` — *réplica*, se borra y recarga cada noche |
+| **Afiliados y planes** | **AdminGym** | tabla `membresias` — *réplica*, se borra y recarga cada noche (61 activos hoy) |
 | **Caja y ventas** | **AdminGym** | todavía no se importa |
 
 Por qué importa la distinción: si alguien edita `membresias` a mano, el
@@ -113,18 +113,21 @@ que no estén en Cloudflare, nadie puede reservar.
 
 ---
 
-## 5. Una decisión que sigue sin tomarse
+## 5. Reglas de negocio, ya todas confirmadas
 
-**¿Qué da MEDIA MENSUALIDAD?** ¿Acceso a todas las clases de su hora, o a
-la mitad?
+- **Media mensualidad = plan completo.** Puede entrar entre semana igual
+  que la mensualidad, así que ocupa un puesto fijo del aforo. Son 15 de 61
+  afiliados. Confirmado por Damián en julio 2026; el código ya lo hacía
+  así, no hubo que cambiar nada.
+- **Entre semana, quien tiene plan no reserva.** Su puesto está asegurado,
+  solo llega. Reservar es únicamente para el sábado y para clase suelta.
+- **El sábado nadie tiene plan**, así que el aforo entero (30) sale a
+  clase suelta y los miembros sí tienen que apartar.
+- **El monto de la clase suelta no se toca.** Es fijo ($15.000) porque solo
+  paga quien no tiene mensualidad. Por eso los pagos se casan por nombre y
+  hora, no por un valor único.
 
-Hoy cuentan como plan completo. Son **15 de 61** afiliados. Si en realidad
-vienen día por medio, se están reservando 15 puestos que la mitad de los
-días están vacíos — es decir, se están vendiendo menos clases sueltas de
-las que se podrían.
-
-Es la única regla de negocio del sistema que está adivinada. Todo lo demás
-salió de datos reales.
+Ya no queda ninguna regla adivinada.
 
 ---
 

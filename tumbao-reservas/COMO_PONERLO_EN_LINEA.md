@@ -1,10 +1,19 @@
 # Cómo poner esto en línea
 
-**Un solo pegue en Supabase. Nada más.**
+> **Estado a 27 de julio de 2026: la base ya está lista.** El SQL está
+> aplicado, hay 50 clases cargadas hasta el 15 de agosto, y los 61
+> afiliados activos están importados, así que los cupos de clase suelta ya
+> son los reales (4 el lunes a las 6pm, 11 a las 7am, 30 el sábado).
+>
+> **Lo único que falta es publicar las dos páginas.** Ver la sección
+> "Después: publicar las dos páginas".
+>
+> El paso de abajo ya está hecho; queda documentado por si hay que
+> reconstruir la base desde cero.
 
 ---
 
-## El único paso
+## El primer paso (ya hecho)
 
 1. Entra a **supabase.com** y abre tu proyecto.
 2. En el menú de la izquierda busca el ícono de **SQL Editor** (dice `SQL`).
@@ -109,9 +118,9 @@ redactado.
       cuenta de Tumbao y borrar los pagos de prueba de la tabla `pagos`.
 - [ ] Los nodos que mandan WhatsApp automáticamente están **desactivados** a
       propósito. Desde el panel sí se manda, pero a mano y uno por uno.
-- [ ] Falta definir qué da **MEDIA MENSUALIDAD**: ¿acceso a todas las clases
-      de su hora, o a la mitad? Hoy se cuentan como plan completo, y son 15 de
-      61 personas.
+- [x] ~~Definir qué da MEDIA MENSUALIDAD~~ — resuelto: cuenta como plan
+      completo, puede entrar entre semana igual que la mensualidad. El
+      código ya lo hacía así.
 
 ---
 
