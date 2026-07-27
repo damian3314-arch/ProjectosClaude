@@ -13,7 +13,7 @@ Falta conectarlo a tu n8n y a tu Supabase — eso no lo pude hacer yo (ver
 ## Cómo funciona
 
 ```
-Navegador (web/index.html, estático)
+Navegador (docs/index.html, estático)
    │  GET  /webhook/tumbao/disponibilidad   → horarios con cupos
    │  POST /webhook/tumbao/reservar         → crea la reserva
    ▼
@@ -78,7 +78,7 @@ dos workflows y copia la **Production URL** del webhook.
 
 ### 4. Publicar la página
 
-Edita el bloque `CONFIG` al inicio de `web/index.html`:
+Edita el bloque `CONFIG` al inicio de `docs/index.html`:
 
 ```js
 const CONFIG = {

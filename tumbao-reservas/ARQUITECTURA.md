@@ -48,7 +48,8 @@ el único sitio donde esa información es real.
 | **Google Drive** | Solo depósito de los Excel de AdminGym | ✅ se lee, no se escribe |
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
-| **Cloudflare** | Publicar las dos páginas | ❌ **pendiente** |
+| **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
+| **Cloudflare** | Dominio propio | ⏳ más adelante |
 
 Detalle que vale la pena tener claro sobre n8n: **no toma ninguna decisión
 de negocio.** Quién tiene cupo, a quién se le abona un pago, si un token
@@ -106,10 +107,16 @@ convierte esto de "sistema de reservas" a "sistema con dashboard".
 Cuando se haga, va en una tabla aparte (`caja_diaria`), con la misma regla:
 réplica de AdminGym, se reemplaza por fecha, no se edita a mano.
 
-### 4.3 Las páginas no están publicadas
+### 4.3 Falta encender GitHub Pages
 
-`web/index.html` y `web/admin.html` funcionan, pero viven en el repo. Hasta
-que no estén en Cloudflare, nadie puede reservar.
+`docs/index.html` y `docs/admin.html` están listos y en la carpeta que
+GitHub Pages sirve. Falta un ajuste de una sola vez en Settings → Pages
+(rama + carpeta `/docs`). Está explicado paso a paso en
+COMO_PONERLO_EN_LINEA.md.
+
+Se intentó automatizar con GitHub Actions, pero el token de Actions no
+tiene permiso para crear el sitio de Pages. Servir desde la rama evita ese
+permiso y encima republica solo en cada push.
 
 ---
 
@@ -133,21 +140,19 @@ Ya no queda ninguna regla adivinada.
 
 ## 6. El orden en que yo seguiría
 
-1. **Publicar las páginas en Cloudflare.** Nada de lo construido sirve
-   mientras nadie pueda entrar. Es lo más barato y lo que más cambia.
+1. **Encender GitHub Pages.** Nada de lo construido sirve mientras nadie
+   pueda entrar. Es un ajuste de una sola vez.
 2. **Probar el flujo completo con una reserva de verdad** — la de los
    $1.000 que hay en el correo.
 3. **Cambiar la ingesta al correo de Tumbao** y borrar los pagos de prueba.
    Hoy lee el correo personal de Damián, que fue lo que se usó para probar.
-4. **Resolver lo de MEDIA MENSUALIDAD**, que es una pregunta de negocio, no
-   de código.
-5. **Importar el cierre de caja.** Ahí ya se puede hablar de dashboard.
-6. **Login de usuarios**, cuando cancelar y ver historial empiecen a hacer
+4. **Importar el cierre de caja.** Ahí ya se puede hablar de dashboard.
+5. **Login de usuarios**, cuando cancelar y ver historial empiecen a hacer
    falta de verdad.
 
-Los primeros tres son de horas. El resto son proyectos.
+Los primeros tres son de minutos u horas. El resto son proyectos.
 
-> Nota sobre el orden: el punto 5 y el 6 son tentadores porque son los más
+> Nota sobre el orden: el 4 y el 5 son tentadores porque son los más
 > vistosos, pero construirlos antes de que alguien use la página es
 > exactamente el patrón de armar infraestructura para algo que nadie está
 > usando todavía.

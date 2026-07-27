@@ -5,8 +5,8 @@
 > afiliados activos están importados, así que los cupos de clase suelta ya
 > son los reales (4 el lunes a las 6pm, 11 a las 7am, 30 el sábado).
 >
-> **Lo único que falta es publicar las dos páginas.** Ver la sección
-> "Después: publicar las dos páginas".
+> **Lo único que falta es encender GitHub Pages** — un ajuste de una sola
+> vez. Ver "Publicar las páginas" más abajo.
 >
 > El paso de abajo ya está hecho; queda documentado por si hay que
 > reconstruir la base desde cero.
@@ -54,19 +54,59 @@ update admin_tokens set activo = false where nombre = 'Kevin';
 
 ---
 
-## Después: publicar las dos páginas
+## Publicar las páginas — un ajuste de una sola vez
 
-`web/index.html` (la pública) y `web/admin.html` (el panel) son archivos
-sueltos, sin build ni dependencias. Sirve cualquier hosting estático —
-Cloudflare Pages, Netlify, GitHub Pages. Subes los dos `.html` y la carpeta
-`web/img/`.
+Las dos páginas ya están listas en la carpeta `docs/` del repo, que es
+justo donde GitHub Pages las busca. Falta encenderlo. Es una vez y nunca
+más:
+
+1. Ve a **https://github.com/damian3314-arch/ProjectosClaude/settings/pages**
+2. En **Source**, deja **Deploy from a branch**.
+3. En **Branch**, elige `claude/tumbao-reservas-n8n-831zit`.
+4. En la carpeta de al lado, elige **`/docs`**.
+5. **Save**.
+
+En un par de minutos quedan en línea:
+
+| | URL |
+|---|---|
+| **Reservas** — esta es la que se comparte | https://damian3314-arch.github.io/ProjectosClaude/ |
+| **Panel** | https://damian3314-arch.github.io/ProjectosClaude/admin.html |
+
+**Se actualiza solo.** Sirviendo desde la rama, cada vez que se suba un
+cambio a `docs/` la página se republica sola. No hay que volver a tocar
+nada.
+
+> Se intentó automatizar esto con GitHub Actions para que no tuvieras que
+> hacer ni ese clic, pero el token de Actions no tiene permiso para *crear*
+> el sitio de Pages (`Resource not accessible by integration`). Servir
+> directo desde la rama evita ese permiso por completo, y de paso no
+> depende de que Actions funcione.
+
+Se eligió GitHub Pages y no Cloudflare porque el repo ya es público, sale
+gratis, y queda en línea hoy en vez de esperar a montar dominio y DNS.
+
+### Sobre la seguridad del panel
+
+El panel queda en una URL pública y **no tiene sentido esconderlo en una
+ruta rara**: el repo es público, así que cualquiera puede leer el código y
+encontrar la ruta. Eso no es un descuido, es una consecuencia de tener el
+repo abierto.
+
+La defensa real es el token: 32 bytes aleatorios, guardado hasheado, y
+verificado por Postgres en cada una de las seis funciones. Sin él, todas
+responden 401 y no devuelven ni un dato. Es suficiente. Pero conviene
+saberlo en vez de creer que hay una ruta secreta.
+
+### Cuando quieras el dominio propio
+
+Cloudflare Pages conectado a este mismo repo, apuntando a
+`docs`. Ahí sí tiene sentido `reservas.tumbao.com` o lo que
+elijas, y de paso puedes poner el panel en un subdominio aparte con
+Cloudflare Access delante si quieres una segunda puerta además del token.
 
 La URL de n8n ya está puesta dentro de cada archivo. Si el dominio de n8n
 cambia, se cambia ahí y en ningún otro lado.
-
-> El panel lleva `noindex` y el token no viaja en la URL, pero **ponlo en una
-> ruta que no sea adivinable** (`/panel-a7f3/` en vez de `/admin.html`). Quien
-> tenga el token entra; el token es la única puerta.
 
 ---
 
@@ -79,8 +119,9 @@ cambia, se cambia ahí y en ningún otro lado.
 | `Tumbao · Ingesta de pagos` | **activo** — lee las alertas del banco |
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
 
-Los dos últimos van a fallar hasta que hagas el pegue de arriba, porque
-llaman funciones que todavía no existen en la base. Es ruido esperado.
+Los cuatro corriendo y probados contra los servicios reales. La última
+importación trajo los 61 afiliados activos (19 a las 7am, 26 a las 6pm,
+16 a las 7pm) y ajustó los cupos de 45 clases.
 
 `Tumbao · Explorar archivo de planes` fue temporal, para ver el formato del
 reporte de Drive. Se puede borrar.

@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
+// Las paginas viven en /docs del repo, no dentro del proyecto: es la
+// carpeta que GitHub Pages sirve directamente desde la rama.
+const WEB = join(RAIZ, '..', 'docs');
 const PUERTO = 8899;
 
 // Cuántos segundos tarda el "correo del banco" en llegar.
@@ -103,14 +106,14 @@ createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 204, {});
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    let html = readFileSync(join(RAIZ, 'web', 'index.html'), 'utf8')
+    let html = readFileSync(join(WEB, 'index.html'), 'utf8')
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
     if (MINUTOS_ESPERA) html = html.replace(/MINUTOS_ESPERA:\s*[\d.]+/, `MINUTOS_ESPERA: ${MINUTOS_ESPERA}`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
   }
   if (url.pathname === '/admin' || url.pathname === '/admin.html') {
-    const html = readFileSync(join(RAIZ, 'web', 'admin.html'), 'utf8')
+    const html = readFileSync(join(WEB, 'admin.html'), 'utf8')
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
@@ -118,7 +121,7 @@ createServer(async (req, res) => {
   if (url.pathname.startsWith('/img/')) {
     try {
       res.writeHead(200, { 'Content-Type': 'image/png' });
-      return res.end(readFileSync(join(RAIZ, 'web', url.pathname)));
+      return res.end(readFileSync(join(WEB, url.pathname)));
     } catch { res.writeHead(404); return res.end(); }
   }
 
