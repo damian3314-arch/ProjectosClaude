@@ -163,6 +163,52 @@ Está anotado en SIGUIENTE_VERSION.md.
 
 ---
 
+## 4ter. Cómo se calculan los cupos
+
+**Los 30 son por clase, no por día.** Cada hora es una sala llena
+distinta: el lunes hay 30 puestos a las 7am, otros 30 a las 6pm y otros
+30 a las 7pm.
+
+```
+cupos que se pueden vender = 30 − gente con plan activo a esa hora ese día
+```
+
+Entre semana, quien tiene mensualidad no reserva: su puesto ya está
+descontado del aforo. Lo que queda sale a clase suelta.
+
+El sábado nadie tiene plan de sábado, así que salen los 30 completos —
+y **ahí sí el miembro también reserva**, del mismo pozo que las sueltas.
+
+Hoy en producción, con 65 afiliados repartidos 19/27/19:
+
+| | con plan | libres |
+|---|---|---|
+| 7:00 am | 19 | 11 |
+| 6:00 pm | 27 | 3 |
+| 7:00 pm | 19 | 11 |
+| Sábado 8 y 9 am | 0 | 30 |
+
+### La página tiene la última palabra
+
+Si dice 3, se venden 3. Eso descansa en un `select ... for update` dentro
+de `tomar_cupo`: las sesiones hacen fila sobre la fila de la clase, así
+que dos personas no pueden llevarse el último cupo aunque den al botón en
+el mismo segundo.
+
+No es una promesa de papel: `pruebas/carrera-cupos.mjs` abre doce
+conexiones de verdad contra una clase de cuatro cupos y las lanza juntas.
+Entran cuatro, rebotan ocho, cero códigos repetidos.
+
+### La única forma de pasarse de 30
+
+Si alguien reserva una suelta y **después** entran más afiliados con plan
+a esa hora, el ideal bajaría por debajo de lo ya vendido. Ahí el sistema
+prefiere quedar apretado antes que cancelarle a alguien que ya pagó, y lo
+**reporta** en `clases_sobrevendidas_por_reservas_previas`. Hoy ese
+contador está en 0.
+
+---
+
 ## 5. Reglas de negocio, ya todas confirmadas
 
 - **Media mensualidad = plan completo.** Puede entrar entre semana igual
