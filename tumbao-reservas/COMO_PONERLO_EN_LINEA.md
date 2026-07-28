@@ -173,6 +173,14 @@ node pruebas/prueba-pagina.mjs       # la página pública, los dos caminos
 node pruebas/prueba-admin.mjs        # el panel entero
 ```
 
+> **Ojo con lo que el espejo NO prueba.** `espejo-api.mjs` reimplementa el
+> contrato de la API en Node; no ejecuta el código que corre dentro de
+> n8n. Prueba la página, no el workflow. Por eso pasó desapercibido que
+> tres nodos Code estaban en un modo donde `$input.first()` está
+> prohibido: la página estaba bien, el workflow no. Los chequeos de texto
+> (`modo-code-n8n.mjs`, `sin-delete-sin-where.mjs`) existen para tapar ese
+> hueco, pero la prueba definitiva sigue siendo reservar de verdad.
+
 El camino de validación humana (cuando el correo del banco no llega):
 
 ```bash

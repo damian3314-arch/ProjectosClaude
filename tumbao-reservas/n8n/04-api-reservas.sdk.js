@@ -1,8 +1,45 @@
 import { workflow, node, trigger, sticky, ifElse, newCredential, expr } from '@n8n/workflow-sdk';
 
 const AGRUPAR   = "const SUP = $input.all().map(i => i.json).filter(c => c && c.id);\nconst tz = \"America/Bogota\";\nconst fFecha = new Intl.DateTimeFormat(\"es-CO\", { timeZone: tz, weekday: \"long\", day: \"numeric\", month: \"long\" });\nconst fHora  = new Intl.DateTimeFormat(\"es-CO\", { timeZone: tz, hour: \"numeric\", minute: \"2-digit\", hour12: true });\nconst fClave = new Intl.DateTimeFormat(\"en-CA\", { timeZone: tz, year: \"numeric\", month: \"2-digit\", day: \"2-digit\" });\nconst compacta = (s) => s.replace(/ | /g, \" \").replace(/\\s*a\\.\\s*m\\./i, \" am\").replace(/\\s*p\\.\\s*m\\./i, \" pm\");\nconst dias = new Map();\nfor (const c of SUP) {\n  const d = new Date(c.fecha_hora);\n  const clave = fClave.format(d);\n  if (!dias.has(clave)) dias.set(clave, { fecha: clave, etiqueta: fFecha.format(d), clases: [] });\n  const libres = Math.max((c.cupo_total || 0) - (c.cupo_tomado || 0), 0);\n  dias.get(clave).clases.push({\n    clase_id: c.id, nombre: c.nombre, profesor: c.profesor, lugar: c.lugar,\n    hora: compacta(fHora.format(d)), fecha_hora: c.fecha_hora,\n    duracion_min: c.duracion_min, precio_cop: c.precio_cop,\n    cupo_total: c.cupo_total, cupos_disponibles: libres, agotada: libres <= 0\n  });\n}\nreturn [{ json: { ok: true, timezone: tz, dias: [...dias.values()] } }];\n";
-const NORMALIZAR= "const b = $input.first().json.body || {};\nconst esBot = (b.apellido2 || \"\").toString().trim() !== \"\";\nconst txt = (v, max) => (v == null ? \"\" : v.toString().trim().slice(0, max));\nlet tel = txt(b.telefono, 25).replace(/\\D/g, \"\");\nif (tel.length === 12 && tel.startsWith(\"57\")) tel = tel.slice(2);\nreturn [{ json: {\n  es_bot: esBot,\n  clase_id: txt(b.clase_id, 40),\n  nombre: txt(b.nombre, 80),\n  telefono: tel,\n  email: txt(b.email, 120),\n  habeas: b.habeas === true || b.habeas === \"true\",\n  valido: !esBot && txt(b.nombre, 80).length >= 2 && tel.length === 10\n        && (b.habeas === true || b.habeas === \"true\") && txt(b.clase_id, 40).length > 10\n} }];\n";
-const RESP_RES  = "const j = $input.first().json;\nconst r = (j && j.ok !== undefined) ? j : (Array.isArray(j) ? j[0] : {});\nif (!r.ok) {\n  const mapa = { SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410, CLASE_YA_PASO: 410 };\n  return [{ json: { http_status: mapa[r.error] || 400, ok: false,\n    error: r.error || \"desconocido\",\n    mensaje: r.mensaje || \"No pudimos apartar el cupo. Escribenos por WhatsApp.\" } }];\n}\nconst d = new Date(r.fecha_hora);\nconst fecha = new Intl.DateTimeFormat(\"es-CO\", { timeZone: \"America/Bogota\", weekday: \"long\", day: \"numeric\", month: \"long\" }).format(d);\nconst hora = new Intl.DateTimeFormat(\"es-CO\", { timeZone: \"America/Bogota\", hour: \"numeric\", minute: \"2-digit\", hour12: true })\n  .format(d).replace(/ | /g, \" \").replace(/\\s*a\\.\\s*m\\./i, \" am\").replace(/\\s*p\\.\\s*m\\./i, \" pm\");\nreturn [{ json: { http_status: 200, ok: true,\n  codigo: r.codigo, reserva_id: r.reserva_id, clase: r.clase, profesor: r.profesor,\n  lugar: r.lugar, fecha, hora, precio_cop: r.precio_cop, expira_en: r.expira_en } }];\n";
+const NORMALIZAR = "const b = $input.first().json.body || {};
+const esBot = (b.apellido2 || \"\").toString().trim() !== \"\";
+const txt = (v, max) => (v == null ? \"\" : v.toString().trim().slice(0, max));
+let tel = txt(b.telefono, 25).replace(/\D/g, \"\");
+if (tel.length === 12 && tel.startsWith(\"57\")) tel = tel.slice(2);
+const tipo = txt(b.tipo, 10) === \"miembro\" ? \"miembro\" : \"suelta\";
+return [{ json: {
+  es_bot: esBot,
+  tipo,
+  clase_id: txt(b.clase_id, 40),
+  nombre: txt(b.nombre, 80),
+  telefono: tel,
+  email: txt(b.email, 120),
+  habeas: b.habeas === true || b.habeas === \"true\",
+  valido: !esBot && txt(b.nombre, 80).length >= 2 && tel.length === 10
+        && (b.habeas === true || b.habeas === \"true\") && txt(b.clase_id, 40).length > 10
+} }];
+";
+const RESP_RES   = "const j = $input.first().json;
+const r = (j && j.ok !== undefined) ? j : (Array.isArray(j) ? j[0] : {});
+if (!r.ok) {
+  const mapa = {
+    SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410, CLASE_YA_PASO: 410,
+    MEMBRESIA_NO_ENCONTRADA: 404, PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409
+  };
+  return [{ json: { http_status: mapa[r.error] || 400, ok: false,
+    error: r.error || \"desconocido\",
+    hora_plan: r.hora_plan || null,
+    mensaje: r.mensaje || \"No pudimos apartar el cupo. Escribenos por WhatsApp.\" } }];
+}
+const d = new Date(r.fecha_hora);
+const fecha = new Intl.DateTimeFormat(\"es-CO\", { timeZone: \"America/Bogota\", weekday: \"long\", day: \"numeric\", month: \"long\" }).format(d);
+const hora = new Intl.DateTimeFormat(\"es-CO\", { timeZone: \"America/Bogota\", hour: \"numeric\", minute: \"2-digit\", hour12: true })
+  .format(d).replace(/ | /g, \" \").replace(/\s*a\.\s*m\./i, \" am\").replace(/\s*p\.\s*m\./i, \" pm\");
+return [{ json: { http_status: 200, ok: true,
+  tipo: r.tipo, requiere_pago: r.requiere_pago === true, estado: r.estado,
+  codigo: r.codigo, reserva_id: r.reserva_id, clase: r.clase, profesor: r.profesor,
+  lugar: r.lugar, fecha, hora, precio_cop: r.precio_cop, expira_en: r.expira_en } }];
+";
 const RESP_EST  = "const j = $input.first().json;\nconst r = (j && j.ok !== undefined) ? j : (Array.isArray(j) ? j[0] : {});\nif (!r.ok) return [{ json: { http_status: 404, ok: false, error: r.error || \"no_encontrada\" } }];\nconst mensajes = {\n  confirmada: \"Pago confirmado. Tu cupo esta asegurado.\",\n  verificando: \"Estamos esperando la confirmacion del banco.\",\n  pendiente_validacion: \"Recibimos tu comprobante. Alguien del equipo lo valida y te escribimos por WhatsApp.\",\n  pendiente_pago: \"Falta subir el comprobante.\",\n  rechazada: \"No pudimos validar el pago. Escribenos por WhatsApp.\",\n  expirada: \"Se solto el cupo por falta de pago.\"\n};\nreturn [{ json: { http_status: 200, ok: true, estado: r.estado, codigo: r.codigo,\n  clase: r.clase, metodo: r.metodo || null, mensaje: mensajes[r.estado] || \"\" } }];\n";
 
 const CORS = { entries: [{ name: 'Access-Control-Allow-Origin', value: '*' }] };
@@ -59,7 +96,7 @@ const wReservar = trigger({
 
 const normalizar = node({
   type: 'n8n-nodes-base.code', version: 2,
-  config: { name: 'Normalizar datos', parameters: { mode: 'runOnceForEachItem', language: 'javaScript', jsCode: NORMALIZAR } },
+  config: { name: 'Normalizar datos', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: NORMALIZAR } },
   output: [{ es_bot: false, valido: true, clase_id: 'uuid-demo', nombre: 'Camila', telefono: '3001234567', email: '', habeas: true }]
 });
 
@@ -90,7 +127,7 @@ const tomarCupo = node({
 
 const respReserva = node({
   type: 'n8n-nodes-base.code', version: 2,
-  config: { name: 'Armar respuesta reserva', parameters: { mode: 'runOnceForEachItem', language: 'javaScript', jsCode: RESP_RES } },
+  config: { name: 'Armar respuesta reserva', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: RESP_RES } },
   output: [{ http_status: 200, ok: true, codigo: 'ABC234', clase: 'Salsa Principiante', fecha: 'martes, 28 de julio', hora: '7:00 pm', precio_cop: 15000 }]
 });
 
@@ -196,7 +233,7 @@ const conciliar = node({
 
 const respEstado = node({
   type: 'n8n-nodes-base.code', version: 2,
-  config: { name: 'Armar respuesta estado', parameters: { mode: 'runOnceForEachItem', language: 'javaScript', jsCode: RESP_EST } },
+  config: { name: 'Armar respuesta estado', parameters: { mode: 'runOnceForAllItems', language: 'javaScript', jsCode: RESP_EST } },
   output: [{ http_status: 200, ok: true, estado: 'verificando', codigo: 'ABC234', mensaje: 'Estamos esperando la confirmacion del banco.' }]
 });
 
