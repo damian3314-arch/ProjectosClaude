@@ -78,6 +78,9 @@ const sumaDias = (iso, n) => {
   return f.toISOString().slice(0, 10);
 };
 
+// Lo ultimo que llego por /comprobante, para que la prueba lo pueda mirar.
+let ultimoComprobante = null;
+
 const MIEMBROS = { '3001111111': 18 };   // celular -> hora de su plan
 const reservas = new Map();
 let nCod = 0;
@@ -117,6 +120,12 @@ createServer(async (req, res) => {
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
+  }
+  if (url.pathname.startsWith('/js/')) {
+    try {
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+      return res.end(readFileSync(join(WEB, url.pathname)));
+    } catch { res.writeHead(404); return res.end(); }
   }
   if (url.pathname.startsWith('/img/')) {
     try {
@@ -312,6 +321,14 @@ createServer(async (req, res) => {
     if (!r) return json(res, 404, { ok: false, error: 'no_encontrada' });
     r.estado = 'verificando';
     r.pagoEn = Date.now();
+    r.recibido = {
+      referencia: b.referencia || null,
+      qr: b.qr || null,
+      pagado_en: b.pagado_en || null,
+      archivo: b.archivo ? { nombre: b.archivo.nombre, tipo: b.archivo.tipo,
+                             bytes: (b.archivo.base64 || '').length } : null,
+    };
+    ultimoComprobante = r.recibido;
     return json(res, 200, { ok: true, estado: 'verificando', codigo: r.codigo });
   }
 
@@ -334,6 +351,10 @@ createServer(async (req, res) => {
     };
     return json(res, 200, { ok: true, estado: r.estado, codigo: r.codigo,
       clase: r.clase, fecha: r.fecha, hora: r.hora, mensaje: mensajes[r.estado] || '' });
+  }
+
+  if (url.pathname === '/_prueba/ultimo-comprobante') {
+    return json(res, 200, { ok: true, ultimo: ultimoComprobante });
   }
 
   json(res, 404, { ok: false, error: 'no_existe' });
