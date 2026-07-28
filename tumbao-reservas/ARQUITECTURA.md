@@ -29,7 +29,7 @@ En la práctica:
 | Cupos | **Supabase** | `clases.cupo_total`, calculado |
 | Pagos conciliados | **Supabase** | tabla `pagos` — origen: correo del banco |
 | Tokens de admin | **Supabase** | tabla `admin_tokens` |
-| **Afiliados y planes** | **AdminGym** | tabla `membresias` — *réplica*, se borra y recarga cada noche (61 activos hoy) |
+| **Afiliados y planes** | **AdminGym** | tabla `membresias` — *réplica*, se borra y recarga cada noche (65 activos hoy) |
 | **Caja y ventas** | **AdminGym** | todavía no se importa |
 
 Por qué importa la distinción: si alguien edita `membresias` a mano, el
@@ -46,6 +46,7 @@ el único sitio donde esa información es real.
 | **Supabase** | Base del sistema. Toda la lógica de negocio vive en funciones de Postgres, no en n8n | ✅ funcionando |
 | **n8n** | Pegamento. Mueve y transforma, no decide ni guarda lógica | ✅ 4 workflows activos |
 | **Google Drive** | Solo depósito de los Excel de AdminGym | ✅ se lee, no se escribe |
+| ↳ carpeta de reportes | `1aqP6ZmNCUEBpLe9Nkfbf8aKEZdmMnJYp` — ahí van cierres y afiliados | ✅ |
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
 | **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
@@ -120,12 +121,54 @@ permiso y encima republica solo en cada push.
 
 ---
 
+## 4bis. Cómo se nombran los archivos de Drive
+
+En la carpeta de reportes conviven **dos cosas distintas**, y la
+automatización tiene que poder separarlas:
+
+| Qué | Cómo se llama | Ejemplo |
+|---|---|---|
+| Cierre de caja diario | solo la fecha | `25-07-2026.xlsx` |
+| Reporte de afiliados | prefijo + fecha ISO | `Afiliados activos 2026-07-27.xlsx` |
+
+**El prefijo no es decorativo.** Sin él, "el archivo más reciente" de esa
+carpeta sería un cierre de caja, y se intentaría leer como si fuera el
+listado de gente con plan.
+
+**La fecha va en el nombre porque no hay otra forma de saberla.** La
+operación de búsqueda de Drive que usa n8n devuelve id y nombre, y no la
+fecha de modificación. El nombre es la única señal fiable.
+
+### Por qué importa que el archivo esté fresco
+
+Las membresías traen inicio y fin, así que las vencidas se descuentan
+solas — hasta ahí el archivo viejo se degrada bien. El problema es al
+revés: **quien se afilió después del archivo no aparece**. El sistema cree
+que hay menos gente con plan de la que hay, y ofrece más clases sueltas de
+las que caben en la sala.
+
+No es teórico. Al pasar del archivo viejo (61 afiliados) al nuevo (65), el
+martes a las 7pm bajó de 14 cupos a 11. Tres puestos que no existían.
+
+Por eso el selector mide el atraso: hasta 2 días pasa callado, de 3 a 7
+importa pero avisa, y de 8 en adelante **se niega y deja la ejecución en
+rojo** en vez de calcular cupos con datos viejos.
+
+### Si algún día no se guarda el archivo
+
+No pasa nada grave: los cupos se quedan como estaban en la última
+importación buena. Lo que no puede pasar es que nadie se entere, y hoy esa
+es la pieza que falta — el aviso llega al log de n8n, no a un WhatsApp.
+Está anotado en SIGUIENTE_VERSION.md.
+
+---
+
 ## 5. Reglas de negocio, ya todas confirmadas
 
 - **Media mensualidad = plan completo.** Puede entrar entre semana igual
-  que la mensualidad, así que ocupa un puesto fijo del aforo. Son 15 de 61
-  afiliados. Confirmado por Damián en julio 2026; el código ya lo hacía
-  así, no hubo que cambiar nada.
+  que la mensualidad, así que ocupa un puesto fijo del aforo. Es cerca de
+  una cuarta parte de los afiliados. Confirmado por Damián en julio 2026;
+  el código ya lo hacía así, no hubo que cambiar nada.
 - **Entre semana, quien tiene plan no reserva.** Su puesto está asegurado,
   solo llega. Reservar es únicamente para el sábado y para clase suelta.
 - **El sábado nadie tiene plan**, así que el aforo entero (30) sale a

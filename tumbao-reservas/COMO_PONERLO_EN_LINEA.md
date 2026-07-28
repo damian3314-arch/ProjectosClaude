@@ -1,9 +1,11 @@
 # Cómo poner esto en línea
 
-> **Estado a 27 de julio de 2026: la base ya está lista.** El SQL está
-> aplicado, hay 50 clases cargadas hasta el 15 de agosto, y los 61
-> afiliados activos están importados, así que los cupos de clase suelta ya
-> son los reales (4 el lunes a las 6pm, 11 a las 7am, 30 el sábado).
+> **Estado a 28 de julio de 2026: la base ya está lista y probada contra
+> los servicios reales.** El SQL está aplicado, hay 50 clases cargadas
+> hasta el 15 de agosto, y los 65 afiliados activos están importados desde
+> `Afiliados activos 2026-07-27.xlsx`, así que los cupos de clase suelta
+> son los reales: el martes quedan 11 a las 7am, 3 a las 6pm y 11 a las
+> 7pm; el sábado 30, porque nadie tiene plan de sábado.
 >
 > **Lo único que falta es encender GitHub Pages** — un ajuste de una sola
 > vez. Ver "Publicar las páginas" más abajo.
@@ -120,8 +122,8 @@ cambia, se cambia ahí y en ningún otro lado.
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
 
 Los cuatro corriendo y probados contra los servicios reales. La última
-importación trajo los 61 afiliados activos (19 a las 7am, 26 a las 6pm,
-16 a las 7pm) y ajustó los cupos de 45 clases.
+importación trajo los 65 afiliados activos (19 a las 7am, 27 a las 6pm,
+19 a las 7pm) y ajustó los cupos de 28 clases.
 
 `Tumbao · Explorar archivo de planes` fue temporal, para ver el formato del
 reporte de Drive. Se puede borrar.
@@ -193,4 +195,34 @@ Las funciones de Postgres, contra una base local:
 ```bash
 psql -d tumbao -f pruebas/humo-supabase.sql
 psql -d tumbao -f pruebas/humo-admin.sql
+psql -d tumbao -f pruebas/humo-historico.sql
 ```
+
+Y los chequeos que no necesitan nada corriendo:
+
+```bash
+node pruebas/parser-afiliados.test.mjs   # lee el xlsx de afiliados
+node pruebas/elegir-reporte.test.mjs     # cuál archivo de Drive tomar
+node pruebas/parser.test.js              # correos del banco
+node pruebas/sin-delete-sin-where.mjs    # trampa de Supabase
+node pruebas/modo-code-n8n.mjs           # trampa de n8n
+```
+
+---
+
+## La rutina diaria
+
+Solo hay que hacer una cosa cada día, y es guardar el archivo bien
+nombrado en la carpeta de reportes:
+
+```
+Afiliados activos AAAA-MM-DD.xlsx
+```
+
+Por ejemplo `Afiliados activos 2026-07-28.xlsx`. La fecha al final, con
+año-mes-día. Nada más: a las 9:30 pm y otra vez a las 8:00 am la
+automatización lo busca, lo importa y recalcula los cupos sola.
+
+El cierre de caja sigue guardándose como siempre (`28-07-2026.xlsx`) en la
+misma carpeta. No se estorban: la automatización de afiliados exige el
+prefijo `Afiliados`, así que nunca va a agarrar un cierre por error.
