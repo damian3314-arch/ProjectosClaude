@@ -103,6 +103,7 @@ ok('el QR carga', await p.locator('#pago-qr').evaluate(i => i.complete && i.natu
 ok('muestra la llave Bre-B', (await p.locator('#d-llave').innerText()).trim() === '1096803067');
 ok('muestra la cuenta', (await p.locator('#d-cuenta').innerText()).trim() === '91289724619');
 
+await p.fill('#hora-transf', '18:42');
 await p.locator('#ya-pague').click();
 await p.waitForSelector('#s4.on', { timeout: 8000 });
 ok('pasa a la espera con barra', true);
@@ -196,6 +197,7 @@ try {
 }
 await p.waitForTimeout(600);   // que termine el fundido de entrada
 await p.screenshot({ path: `${dir}/p2-pago.png`, fullPage: true });
+await p.fill('#hora-transf', '18:42');
 await p.locator('#ya-pague').click();
 await p.waitForSelector('#s4.on');
 await p.waitForTimeout(1200);

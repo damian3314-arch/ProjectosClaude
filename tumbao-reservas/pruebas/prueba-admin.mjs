@@ -139,6 +139,7 @@ await p2.fill('#celular', '3002223344');
 await p2.check('#habeas');
 await p2.locator('#enviar').click();
 await p2.waitForSelector('#s3.on', { timeout: 8000 });
+await p2.fill('#hora-transf', '18:42');
 await p2.locator('#ya-pague').click();
 await p2.waitForSelector('#s4.on', { timeout: 8000 });
 

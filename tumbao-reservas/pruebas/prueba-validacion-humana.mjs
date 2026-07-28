@@ -34,6 +34,7 @@ await p.check('#habeas');
 await p.locator('#enviar').click();
 
 await p.waitForSelector('#s3.on', { timeout: 8000 });
+await p.fill('#hora-transf', '18:42');
 await p.locator('#ya-pague').click();
 await p.waitForSelector('#s4.on', { timeout: 8000 });
 ok('entra a la espera', true);

@@ -51,24 +51,36 @@ const irAPago = async () => {
 // largo sin que se haya leido nada. Se espera el resultado final.
 const esperarLectura = () => p.waitForFunction(() => {
   const a = document.querySelector('#aviso-qr');
-  const previa = document.querySelector('#previa');
-  if (!previa || previa.hidden) return false;
   if (!a || a.hidden) return false;
-  return /comprobante leído|no le encontramos|no pudimos leerlo/i.test(a.textContent);
+  return /leído|no le encontramos|no pudimos leer|no parece una imagen/i.test(a.textContent);
 }, { timeout: 30000 });
 
 await irAPago();
 
 // ───────── la zona existe y no estorba ─────────
-ok('hay zona para subir el comprobante', await p.locator('#soltar').isVisible());
+ok('pide la hora de la transferencia', await p.locator('#hora-transf').isVisible());
 ok('hay campo de referencia', await p.locator('#referencia').isVisible());
-ok('la previa está escondida al principio', await p.locator('#previa').isHidden());
+ok('ofrece leer el QR', await p.locator('#soltar').isVisible());
+ok('dice que la imagen no se guarda',
+   /no se sube ni se guarda/i.test(await p.locator('.pista.privacidad').innerText()));
+ok('el campo de quien paga arranca escondido', await p.locator('#caja-pagador').isHidden());
 
-// Sin comprobante se puede seguir igual: es opcional a propósito.
-ok('el botón de pagar no está bloqueado sin comprobante',
-   !(await p.locator('#ya-pague').isDisabled()));
+// ───────── la hora es obligatoria ─────────
+await p.locator('#ya-pague').click();
+await p.waitForTimeout(300);
+ok('sin hora no deja seguir', await p.locator('#s3').evaluate(e => e.classList.contains('on')));
+ok('y lo dice', /hora que sale en tu comprobante/i.test(await p.locator('#e-hora').innerText()),
+   await p.locator('#e-hora').innerText());
 
-// ───────── subir un archivo que no es imagen ─────────
+// ───────── pagó otra persona ─────────
+await p.check('#otro-paga');
+await p.waitForTimeout(200);
+ok('al marcar que pagó otro, pide el nombre', await p.locator('#caja-pagador').isVisible());
+await p.uncheck('#otro-paga');
+await p.waitForTimeout(200);
+ok('al desmarcar se vuelve a esconder', await p.locator('#caja-pagador').isHidden());
+
+// ───────── subir algo que no es imagen ─────────
 await p.locator('#archivo').setInputFiles({
   name: 'notas.txt', mimeType: 'text/plain', buffer: Buffer.from('no soy una imagen'),
 });
@@ -76,34 +88,23 @@ await p.waitForTimeout(400);
 ok('rechaza lo que no es imagen',
    /no parece una imagen/i.test(await p.locator('#aviso-qr').innerText()),
    await p.locator('#aviso-qr').innerText());
-ok('y no lo toma como comprobante', await p.locator('#previa').isHidden());
 
-// ───────── subir el QR real ─────────
+// ───────── leer el QR real ─────────
 await p.locator('#archivo').setInputFiles(QR);
 await esperarLectura();
-
-ok('muestra la previa del archivo', await p.locator('#previa').isVisible());
-ok('esconde la zona de soltar', await p.locator('#soltar').isHidden());
-ok('muestra el nombre del archivo',
-   (await p.locator('#previa-nombre').innerText()).includes('qr-breb'),
-   await p.locator('#previa-nombre').innerText());
-
 const avisoQr = await p.locator('#aviso-qr').innerText();
-ok('leyó el QR sin ningún servicio de IA', /comprobante leído/i.test(avisoQr), avisoQr);
-
-// Que jsQR se cargó solo cuando hizo falta, no en la primera pantalla.
+ok('leyó el QR sin ningún servicio de IA', /leído/i.test(avisoQr), avisoQr);
 ok('jsQR se cargó bajo demanda', await p.evaluate(() => typeof window.jsQR === 'function'));
-
-// ───────── quitar ─────────
-await p.locator('#quitar').click();
-await p.waitForTimeout(250);
-ok('se puede quitar el comprobante', await p.locator('#previa').isHidden());
-ok('y vuelve la zona de soltar', await p.locator('#soltar').isVisible());
+ok('el input de archivo queda vacío: la imagen no se conserva',
+   (await p.locator('#archivo').inputValue()) === '');
 
 // ───────── lo que se manda al servidor ─────────
 await p.locator('#archivo').setInputFiles(QR);
 await esperarLectura();
 await p.fill('#referencia', 'M25418019');
+await p.fill('#hora-transf', '18:42');
+await p.check('#otro-paga');
+await p.fill('#pagador', 'Marta Rojas de Camila');
 await p.locator('#ya-pague').click();
 await p.waitForSelector('#s4.on', { timeout: 10000 });
 ok('avanza a la espera con el comprobante puesto', true);
@@ -116,22 +117,26 @@ ok('llegó la referencia', enviado && enviado.referencia === 'M25418019',
    enviado && enviado.referencia);
 ok('llegó el contenido del QR', !!(enviado && enviado.qr),
    enviado && String(enviado.qr).slice(0, 40) + '…');
-ok('llegó la imagen', !!(enviado && enviado.archivo && enviado.archivo.bytes > 1000),
-   enviado && enviado.archivo && `${Math.round(enviado.archivo.bytes / 1024)} KB en base64`);
-ok('llegó la hora en que dijo que pagó',
-   !!(enviado && enviado.pagado_en && !isNaN(Date.parse(enviado.pagado_en))),
-   enviado && enviado.pagado_en);
+ok('NO se mandó ninguna imagen', !!enviado && !enviado.archivo,
+   enviado && enviado.archivo ? 'llegó una imagen' : 'ninguna');
+ok('llegó el nombre de quien pagó', enviado && enviado.pagador === 'Marta Rojas de Camila',
+   enviado && enviado.pagador);
+const h = enviado && enviado.pagado_en
+  ? new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', hour: '2-digit',
+      minute: '2-digit', hour12: false }).format(new Date(enviado.pagado_en)) : null;
+ok('la hora llegó como instante, en hora de Bogotá', h === '18:42', String(h));
 
 // ───────── sin comprobante también funciona ─────────
 await irAPago();
+await p.fill('#hora-transf', '07:15');
 await p.locator('#ya-pague').click();
 await p.waitForSelector('#s4.on', { timeout: 10000 });
 const sinNada = await p.evaluate(async () => {
   const r = await fetch('http://localhost:8899/_prueba/ultimo-comprobante');
   return (await r.json()).ultimo;
 });
-ok('sin comprobante la reserva sigue avanzando',
-   sinNada && sinNada.archivo === null && sinNada.referencia === null);
+ok('sin QR ni referencia la reserva sigue avanzando, solo con la hora',
+   !!sinNada && sinNada.referencia === null && sinNada.qr === null && !!sinNada.pagado_en);
 
 // ───────── consola ─────────
 console.log('');
@@ -141,6 +146,7 @@ ok('sin errores de JavaScript inesperados', inesperados.length === 0,
 
 const dir = process.env.CAPTURAS || '/tmp';
 await irAPago();
+await p.fill('#hora-transf', '18:42');
 await p.locator('#archivo').setInputFiles(QR);
 await esperarLectura();
 await p.waitForTimeout(400);

@@ -151,6 +151,9 @@ const CONFIG = {
   .pend-card .cod{font-family:var(--mono);color:var(--gold);font-size:.85rem}
   .pend-card .det{font-size:.83rem;color:var(--tx-2);margin:.25rem 0 .8rem}
   .pend-card .acciones{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+  .declarado{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.8rem;color:var(--tx-2);
+    background:var(--bg-3);border-radius:8px;padding:.45rem .7rem;margin:0 0 .8rem}
+  .declarado b{color:var(--tx)}
   .etiqueta{
     display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;
     padding:.12rem .45rem;border-radius:99px;border:1px solid var(--line-2);color:var(--tx-3);
@@ -631,7 +634,20 @@ const CONFIG = {
         `$${Number(r.precio_cop || 0).toLocaleString('es-CO')} · ` +
         `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${esc(String(r.telefono).replace(/\D/g, ''))}" ` +
           `target="_blank" rel="noopener" style="color:var(--gold)">${esc(r.telefono)}</a>` +
-      `</div>`;
+      `</div>` +
+      // Lo que declaro quien paga. El "pago otra persona" es lo que
+      // explica por que el nombre del banco no coincide con el de la
+      // reserva, asi que va bien visible.
+      (r.pagador || r.referencia || r.pagado_en
+        ? `<div class="declarado">` +
+            (r.pagador ? `<span>💳 Pagó <b>${esc(r.pagador)}</b></span>` : '') +
+            (r.pagado_en ? `<span>🕒 Dijo que transfirió a las <b>${esc(
+                new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota',
+                  hour: 'numeric', minute: '2-digit', hour12: true })
+                  .format(new Date(r.pagado_en)))}</b></span>` : '') +
+            (r.referencia ? `<span>🧾 Ref. <b>${esc(r.referencia)}</b></span>` : '') +
+          `</div>`
+        : '');
 
     const pagos = document.createElement('div');
     if (r.pagos_sueltos && r.pagos_sueltos.length) {
@@ -643,8 +659,14 @@ const CONFIG = {
         const par = Math.round((p.parecido || 0) * 100);
         const fila = document.createElement('div');
         fila.className = 'pago';
+        // Los minutos de diferencia con la hora que declaro resuelven el
+        // caso mas rapido que el nombre, sobre todo cuando pago otro.
+        const dif = p.minutos == null ? null : Math.abs(p.minutos);
         fila.innerHTML =
           `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
+          (dif == null ? ''
+            : `<span class="par${dif <= 15 ? ' alto' : ''}">` +
+              (dif === 0 ? 'misma hora' : `${dif} min de diferencia`) + `</span>`) +
           `<span class="par${par >= 50 ? ' alto' : ''}">${par}% parecido</span>` +
           `<span class="sp"></span>` +
           `<span>$${Number(p.valor_cop).toLocaleString('es-CO')} · ${esc(f)}</span>`;

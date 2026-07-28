@@ -196,14 +196,22 @@ const CONFIG = {
 
   /* ---------- comprobante ---------- */
   .comprobante{margin:1.2rem 0}
-  .comprobante label[for="referencia"]{display:block;font-size:.85rem;color:var(--tx-2);margin:.9rem 0 .35rem}
+  .comprobante > label:not(.soltar){display:block;font-size:.85rem;color:var(--tx-2);margin:.9rem 0 .35rem}
   .comprobante .opt{color:var(--tx-3);font-weight:400}
-  .comprobante input[type="text"]{
+  .comprobante .req{color:var(--hot)}
+  .comprobante input[type="text"],.comprobante input[type="time"]{
     width:100%;background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
     border-radius:10px;padding:.7rem .8rem;font:inherit;
   }
-  .comprobante input[type="text"]:focus{outline:2px solid var(--hot);outline-offset:1px;border-color:var(--hot)}
+  .comprobante input:focus{outline:2px solid var(--hot);outline-offset:1px;border-color:var(--hot)}
+  /* Sin esto el reloj del selector de hora sale negro sobre fondo negro. */
+  .comprobante input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.6)}
   .pista{display:block;color:var(--tx-3);font-size:.76rem;margin-top:.35rem;line-height:1.4}
+  .check-otro{display:flex!important;align-items:center;gap:.6rem;margin:1rem 0 0!important;
+    color:var(--tx-2);cursor:pointer;font-size:.85rem}
+  .check-otro input{width:1.1rem;height:1.1rem;accent-color:var(--hot);flex:none}
+  .pista.privacidad{margin-top:.5rem;color:var(--tx-2)}
+  .pista.privacidad b{color:var(--tx)}
 
   .soltar{
     display:flex;flex-direction:column;align-items:center;gap:.2rem;text-align:center;
@@ -409,29 +417,41 @@ const CONFIG = {
     </div>
 
     <div class="comprobante">
-      <label for="archivo" class="soltar" id="soltar">
-        <span class="ico" aria-hidden="true">📄</span>
-        <span class="tit">Sube tu comprobante</span>
-        <span class="des">La captura de la app del banco. Así confirmamos más rápido.</span>
-        <input id="archivo" type="file" accept="image/*" hidden>
+      <label for="hora-transf">¿A qué hora hiciste la transferencia? <span class="req">*</span></label>
+      <input id="hora-transf" type="time" step="60">
+      <small class="pista">Sale en tu comprobante. Con eso encontramos tu pago de una.</small>
+      <div id="e-hora" class="error" hidden></div>
+
+      <label class="check-otro" for="otro-paga">
+        <input id="otro-paga" type="checkbox">
+        <span>Pagó otra persona por mí</span>
       </label>
 
-      <div class="previa" id="previa" hidden>
-        <img id="previa-img" alt="Comprobante que subiste">
-        <div class="previa-info">
-          <b id="previa-nombre"></b>
-          <span id="previa-peso"></span>
-          <button class="quitar" type="button" id="quitar">Quitar</button>
-        </div>
+      <div id="caja-pagador" hidden>
+        <label for="pagador">¿A nombre de quién sale la cuenta?</label>
+        <input id="pagador" type="text" autocomplete="off"
+               placeholder="Como aparece en el banco" maxlength="80">
+        <small class="pista">Así sabemos que ese pago es el tuyo aunque no venga
+          a tu nombre.</small>
       </div>
-
-      <div class="aviso-qr" id="aviso-qr" hidden></div>
 
       <label for="referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
       <input id="referencia" type="text" inputmode="latin" autocomplete="off"
              placeholder="Ej: M25418019" maxlength="40">
-      <small class="pista">Sale en tu comprobante, debajo del valor. Si subiste la
-        captura y tiene QR, la leemos sola.</small>
+      <small class="pista">Va debajo del valor. No todos los bancos la muestran igual;
+        si no la ves, déjalo vacío.</small>
+
+      <label for="archivo" class="soltar" id="soltar">
+        <span class="ico" aria-hidden="true">📷</span>
+        <span class="tit">O léelo de tu comprobante</span>
+        <span class="des">Si tu comprobante tiene código QR, elige la captura y
+          llenamos los campos solos.</span>
+        <input id="archivo" type="file" accept="image/*" hidden>
+      </label>
+      <small class="pista privacidad">🔒 La imagen <b>no se sube ni se guarda</b>.
+        Se lee aquí mismo en tu celular y se descarta.</small>
+
+      <div class="aviso-qr" id="aviso-qr" hidden></div>
     </div>
 
     <button class="btn" type="button" id="ya-pague">Ya pagué</button>
@@ -685,9 +705,10 @@ const CONFIG = {
   }));
 
   /* ---------- comprobante ---------- */
-  // Lo que sube la persona. La imagen viaja en base64 dentro del mismo
-  // POST: son unos cientos de KB y evita montar subida aparte.
-  let comprobante = null;      // { nombre, tipo, peso, base64 }
+  // La imagen NUNCA sale del navegador. Se lee aqui para sacarle el QR y
+  // se descarta: no se sube, no se guarda, no hay nada que borrar despues.
+  // Ademas cada banco arma el comprobante distinto, asi que guardar la
+  // imagen tampoco serviria para leerla automaticamente.
   let qrLeido = null;          // lo que traia el QR del comprobante, si lo tiene
 
   const MAX_MB = 8;
@@ -730,24 +751,6 @@ const CONFIG = {
     return r ? r.data : null;
   }
 
-  function pintarPrevia(){
-    const p = $('#previa');
-    if (!comprobante) {
-      p.hidden = true;
-      $('#soltar').hidden = false;
-      $('#aviso-qr').hidden = true;
-      return;
-    }
-    $('#soltar').hidden = true;
-    p.hidden = false;
-    $('#previa-img').src = comprobante.base64;
-    $('#previa-nombre').textContent = comprobante.nombre;
-    // Una captura suele pesar cientos de KB: en MB se veria "0.0 MB".
-    $('#previa-peso').textContent = comprobante.peso < 1024 * 1024
-      ? Math.max(1, Math.round(comprobante.peso / 1024)) + ' KB'
-      : (comprobante.peso / 1024 / 1024).toFixed(1) + ' MB';
-  }
-
   function avisoQr(texto, clase){
     const el = $('#aviso-qr');
     el.className = 'aviso-qr' + (clase ? ' ' + clase : '');
@@ -758,50 +761,53 @@ const CONFIG = {
   async function tomarArchivo(file){
     if (!file) return;
     if (!/^image\//.test(file.type)) {
-      avisoQr('Eso no parece una imagen. Sube la captura de tu comprobante.', 'ojo');
+      avisoQr('Eso no parece una imagen. Elige la captura de tu comprobante.', 'ojo');
       return;
     }
     if (file.size > MAX_MB * 1024 * 1024) {
       avisoQr(`La imagen pesa más de ${MAX_MB} MB. Manda una captura, no la foto original.`, 'ojo');
       return;
     }
-    const base64 = await new Promise((ok, mal) => {
-      const fr = new FileReader();
-      fr.onload = () => ok(fr.result);
-      fr.onerror = () => mal(fr.error);
-      fr.readAsDataURL(file);
-    });
-    comprobante = { nombre: file.name, tipo: file.type, peso: file.size, base64 };
-    qrLeido = null;
-    pintarPrevia();
-    avisoQr('Leyendo el comprobante…');
+    avisoQr('Leyendo tu comprobante…');
 
-    // Que no lea el QR no es un error: hay comprobantes sin QR, y la
-    // referencia se puede escribir a mano. Solo se avisa.
+    let base64 = null;
     try {
+      base64 = await new Promise((ok, mal) => {
+        const fr = new FileReader();
+        fr.onload = () => ok(fr.result);
+        fr.onerror = () => mal(fr.error);
+        fr.readAsDataURL(file);
+      });
+
       qrLeido = await leerQr(base64);
       if (qrLeido) {
-        avisoQr('✓ Comprobante leído. Ya no tienes que escribir nada más.');
         const ref = $('#referencia');
-        if (!ref.value.trim()) {
-          const m = /\b([A-Z]\d{6,})\b/.exec(qrLeido);
-          if (m) ref.value = m[1];
-        }
+        // El QR no siempre lleva la referencia con el mismo formato, asi
+        // que solo se pre-llena si se reconoce algo con pinta de serlo.
+        const m = /\b([A-Z]{1,2}\d{6,})\b/.exec(qrLeido);
+        if (m && !ref.value.trim()) ref.value = m[1];
+        avisoQr(m
+          ? '✓ Leído. Revisa que la hora esté bien y dale a Ya pagué.'
+          : '✓ Leído. Nos quedamos con el código de tu comprobante. Confirma la hora.');
       } else {
-        avisoQr('Recibimos tu comprobante. No le encontramos el QR, así que si puedes escribe la referencia.', 'ojo');
+        avisoQr('No le encontramos código QR. No pasa nada: con la hora es suficiente.', 'ojo');
       }
     } catch (err) {
-      avisoQr('Recibimos tu comprobante. No pudimos leerlo automáticamente, pero sirve igual.', 'ojo');
+      avisoQr('No pudimos leer esa imagen. Con la hora es suficiente.', 'ojo');
       console.error('[tumbao] qr:', err);
+    } finally {
+      // Se suelta la imagen de inmediato. Ni se sube ni se conserva.
+      base64 = null;
+      $('#archivo').value = '';
     }
   }
 
-  $('#archivo').addEventListener('change', e => tomarArchivo(e.target.files[0]));
-  $('#quitar').addEventListener('click', () => {
-    comprobante = null; qrLeido = null;
-    $('#archivo').value = '';
-    pintarPrevia();
+  $('#otro-paga').addEventListener('change', e => {
+    $('#caja-pagador').hidden = !e.target.checked;
+    if (e.target.checked) $('#pagador').focus(); else $('#pagador').value = '';
   });
+
+  $('#archivo').addEventListener('change', e => tomarArchivo(e.target.files[0]));
   ['dragenter','dragover'].forEach(ev => $('#soltar').addEventListener(ev, e => {
     e.preventDefault(); $('#soltar').classList.add('encima');
   }));
@@ -812,8 +818,32 @@ const CONFIG = {
     if (e.dataTransfer && e.dataTransfer.files) tomarArchivo(e.dataTransfer.files[0]);
   });
 
+  // "18:42" del comprobante -> instante real. Se arma sobre la fecha de
+  // hoy en Bogotá. Si eso diera una hora en el futuro, es que la
+  // transferencia fue anoche y ya pasó la medianoche: se resta un día.
+  function instanteDeLaHora(hhmm){
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm || '');
+    if (!m) return null;
+    const hoy = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    let d = new Date(`${hoy}T${m[1]}:${m[2]}:00-05:00`);
+    if (d.getTime() - Date.now() > 10 * 60 * 1000) d = new Date(d.getTime() - 86400000);
+    return d.toISOString();
+  }
+
   $('#ya-pague').addEventListener('click', async () => {
     if (!reserva) return;
+
+    const hora = $('#hora-transf').value;
+    const cuando = instanteDeLaHora(hora);
+    if (!cuando) {
+      aviso('#e-hora','Pon la hora que sale en tu comprobante.');
+      $('#hora-transf').focus();
+      return;
+    }
+    aviso('#e-hora','');
+
     $('#ya-pague').disabled = true;
     $('#ya-pague').textContent = 'Un momento…';
     aviso('#err3','');
@@ -823,15 +853,16 @@ const CONFIG = {
         body: JSON.stringify({
           codigo: reserva.codigo,
           referencia: $('#referencia').value.trim() || null,
+          // Solo el contenido del QR, nunca la imagen.
           qr: qrLeido,
-          // La hora del navegador de quien paga: sirve para acotar la
-          // busqueda del pago en el correo del banco.
-          pagado_en: new Date().toISOString(),
-          archivo: comprobante ? {
-            nombre: comprobante.nombre,
-            tipo: comprobante.tipo,
-            base64: comprobante.base64.split(',')[1] || ''
-          } : null
+          // La hora del comprobante: es lo que permite encontrar el pago
+          // en el correo del banco sin barrer tres horas.
+          pagado_en: cuando,
+          // Cuando paga la mamá o la pareja, el nombre del banco no es el
+          // de quien reserva. Sin esto, dos pagos iguales a la misma hora
+          // no se pueden separar y los dos van a validación manual.
+          pagador: $('#otro-paga').checked
+            ? ($('#pagador').value.trim() || null) : null
         })
       });
       const data = await res.json().catch(() => ({}));

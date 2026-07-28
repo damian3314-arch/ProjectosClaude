@@ -221,7 +221,7 @@ createServer(async (req, res) => {
             precio_cop: c.precio_cop || 15000,
             pagos_sueltos: r.estado === 'pendiente_validacion'
               ? [{ pago_id: 'pago-1', valor_cop: 15000, fecha: new Date().toISOString(),
-                   remitente: 'CAMILA ROJAS PEREZ', parecido: 0.67 }]
+                   remitente: 'CAMILA ROJAS PEREZ', parecido: 0.67, minutos: 3 }]
               : []
           };
         });
@@ -325,6 +325,7 @@ createServer(async (req, res) => {
       referencia: b.referencia || null,
       qr: b.qr || null,
       pagado_en: b.pagado_en || null,
+      pagador: b.pagador || null,
       archivo: b.archivo ? { nombre: b.archivo.nombre, tipo: b.archivo.tipo,
                              bytes: (b.archivo.base64 || '').length } : null,
     };

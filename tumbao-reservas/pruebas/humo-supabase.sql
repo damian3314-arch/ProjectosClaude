@@ -54,13 +54,19 @@ begin
 
   -- ── membresias ─────────────────────────────────────────────
   -- 25 personas con plan de 6pm, 1 de 7pm, 1 con plan ya vencido.
-  select fecha_hora::date into v_lun
+  -- Ojo: solo clases FUTURAS. recalcular_cupos no toca las que ya
+  -- pasaron, asi que si se escoge el dia de hoy despues de la ultima
+  -- clase, activos_plan sigue en 0 y la prueba falla por la hora a la
+  -- que se corrio, no por un error de verdad.
+  select (fecha_hora at time zone 'America/Bogota')::date into v_lun
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') between 1 and 5
+     and fecha_hora > now()
    order by fecha_hora limit 1;
-  select fecha_hora::date into v_sab
+  select (fecha_hora at time zone 'America/Bogota')::date into v_sab
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
+     and fecha_hora > now()
    order by fecha_hora limit 1;
 
   select importar_membresias((
@@ -108,7 +114,7 @@ begin
 
   select id, cupo_total, activos_plan into v_clase_lun18, v_cupos, v_activos
     from clases
-   where fecha_hora::date = v_lun
+   where (fecha_hora at time zone 'America/Bogota')::date = v_lun
      and extract(hour from fecha_hora at time zone 'America/Bogota') = 18;
 
   -- Aforo 30, 25 con plan activo (la vencida no cuenta) -> 5 sueltas.
@@ -117,10 +123,10 @@ begin
   raise notice 'cupos 6pm: % activos -> % sueltas', v_activos, v_cupos;
 
   select id into v_clase_lun19 from clases
-   where fecha_hora::date = v_lun
+   where (fecha_hora at time zone 'America/Bogota')::date = v_lun
      and extract(hour from fecha_hora at time zone 'America/Bogota') = 19;
   select id into v_clase_sab from clases
-   where fecha_hora::date = v_sab
+   where (fecha_hora at time zone 'America/Bogota')::date = v_sab
      and extract(hour from fecha_hora at time zone 'America/Bogota') = 8;
 
   -- ── clase suelta ───────────────────────────────────────────
