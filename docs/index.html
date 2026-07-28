@@ -603,6 +603,21 @@ const CONFIG = {
     $$('#dias .dia').forEach(b => b.addEventListener('click', () => elegirDia(b.dataset.fecha)));
   }
 
+  // El nombre que trae la clase suele ser "Clase 7:00 am", que al lado de
+  // la hora no dice nada nuevo. Cuando pasa eso se muestra la duracion y
+  // el lugar, que si aportan. Si algun dia les ponen nombre de verdad
+  // ("Salsa casino"), ese se respeta.
+  const nombreRedundante = c =>
+    !c.nombre || c.nombre.replace(/[\s.]/g, '').toLowerCase()
+      .includes(String(c.hora).replace(/[\s.]/g, '').toLowerCase());
+
+  const tituloClase = c => nombreRedundante(c) ? '' : c.nombre;
+  const metaClase = c => [
+    nombreRedundante(c) && c.duracion_min ? `${c.duracion_min} min` : null,
+    c.profesor && c.profesor !== 'Por asignar' ? c.profesor : null,
+    c.lugar,
+  ].filter(Boolean).join(' · ');
+
   function elegirDia(fecha){
     diaActivo = fecha;
     $$('#dias .dia').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fecha === fecha)));
@@ -613,10 +628,11 @@ const CONFIG = {
       const libres = Math.max(c.cupos_disponibles, 0);
       const cls = libres === 0 ? 'cero' : (libres <= 3 ? 'pocos' : '');
       const txt = libres === 0 ? 'Agotada' : (libres <= 3 ? `¡Solo ${libres}!` : `${libres} cupos`);
-      const meta = [c.profesor, c.lugar].filter(x => x && x !== 'Por asignar').join(' · ');
+      const tit = tituloClase(c);
+      const meta = metaClase(c);
       return `<button class="clase" type="button" data-id="${esc(c.clase_id)}" ${libres === 0 ? 'disabled' : ''}>
                 <span class="hora">${esc(c.hora)}</span>
-                <span class="info"><span class="nom">${esc(c.nombre)}</span><span class="meta">${esc(meta)}</span></span>
+                <span class="info">${tit ? `<span class="nom">${esc(tit)}</span>` : ''}<span class="meta">${esc(meta)}</span></span>
                 <span class="cupos ${cls}">${txt}</span>
               </button>`;
     }).join('');
@@ -630,8 +646,9 @@ const CONFIG = {
     if (!c) return;
     elegida = { ...c, etiqueta: dia.etiqueta };
     $('#resumen').innerHTML =
-      `<strong>${esc(c.nombre)}</strong>
-       <span>${esc(cap(dia.etiqueta))} · ${esc(c.hora)}${tipo === 'suelta' ? ' · ' + pesos(c.precio_cop) : ''}</span>`;
+      `<strong>${esc(cap(dia.etiqueta))} · ${esc(c.hora)}</strong>
+       <span>${esc([tituloClase(c), metaClase(c)].filter(Boolean).join(' · '))}${
+         tipo === 'suelta' ? ' · ' + pesos(c.precio_cop) : ''}</span>`;
     aviso('#err2','');
     irA(2);
     setTimeout(() => $('#nombre').focus(), 320);
