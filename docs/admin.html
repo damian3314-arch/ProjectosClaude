@@ -276,8 +276,17 @@ const CONFIG = {
     }).format(new Date());
     return p;                                  // 'YYYY-MM-DD'
   }
+  // Todo lo que aquí se llame "fecha" tiene que ser AAAA-MM-DD y nada
+  // más. Postgres devolvió alguna vez "2026-07-28T00:00:00+00:00" y la
+  // cuadrícula entera se cayó con "Invalid time value" — el error salía
+  // en el login y parecía que el token estuviera mal. Se corrigió en la
+  // función admin_semana; esto es el cinturón, para que una forma
+  // inesperada nunca vuelva a dejar el panel en blanco. Va como
+  // declaración porque lunesDe la usa desde semanaInicial(), que corre
+  // más arriba que esta línea.
+  function soloFecha(v) { return String(v ?? '').slice(0, 10); }
   function lunesDe(d) {
-    const iso = typeof d === 'string' ? d : hoyBogota();
+    const iso = typeof d === 'string' ? soloFecha(d) : hoyBogota();
     const [a, m, dd] = iso.split('-').map(Number);
     const f = new Date(Date.UTC(a, m - 1, dd));
     const dow = f.getUTCDay();                 // 0 domingo
@@ -296,21 +305,21 @@ const CONFIG = {
 
   // Declaración, no const: semanaInicial() la usa antes de esta línea.
   function sumaDias(iso, n) {
-    const [a, m, d] = iso.split('-').map(Number);
+    const [a, m, d] = soloFecha(iso).split('-').map(Number);
     const f = new Date(Date.UTC(a, m - 1, d));
     f.setUTCDate(f.getUTCDate() + n);
     return f.toISOString().slice(0, 10);
   }
-  const fmtDia = iso => {
-    const [a, m, d] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', weekday: 'long' })
-      .format(new Date(Date.UTC(a, m - 1, d)));
+  // Si aun así llega algo impintable, se muestra tal cual en vez de
+  // reventar: un encabezado feo se ve, un panel en blanco no.
+  const conFecha = (iso, opciones) => {
+    const [a, m, d] = soloFecha(iso).split('-').map(Number);
+    const f = new Date(Date.UTC(a, m - 1, d));
+    if (isNaN(f)) return String(iso ?? '');
+    return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', ...opciones }).format(f);
   };
-  const fmtCorto = iso => {
-    const [a, m, d] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', day: 'numeric', month: 'short' })
-      .format(new Date(Date.UTC(a, m - 1, d)));
-  };
+  const fmtDia   = iso => conFecha(iso, { weekday: 'long' });
+  const fmtCorto = iso => conFecha(iso, { day: 'numeric', month: 'short' });
   const hora12 = hhmm => {
     const [h, m] = hhmm.split(':').map(Number);
     const su = h >= 12 ? 'pm' : 'am';
@@ -408,6 +417,10 @@ const CONFIG = {
     aviso($('#msg-horario'), '');
     try {
       semana = await api('semana', { desde: semanaDesde });
+      // Se limpia una sola vez, aquí: de esta línea para abajo dia.fecha
+      // es AAAA-MM-DD, y eso vale también para las claves de `cambios`
+      // y para lo que se le manda de vuelta a admin_guardar_semana.
+      for (const dia of (semana?.dias || [])) dia.fecha = soloFecha(dia.fecha);
       cambios.clear();
       pintarSemana();
     } catch (e) {

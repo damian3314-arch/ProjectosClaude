@@ -214,6 +214,46 @@ begin
     jsonb_array_length(v_r->'reservas');
 end $$;
 
+-- ── la forma de la fecha, que es contrato con la página ────────
+-- admin_semana tiene que devolver AAAA-MM-DD pelado. Cuando devolvía
+-- "2026-07-28T00:00:00+00:00" la cuadrícula se caía entera con
+-- "Invalid time value", y como el error subía hasta el login parecía
+-- que el token estuviera mal. Se comprueba en las tres zonas horarias
+-- porque el valor viejo cambiaba según la zona de la conexión.
+do $$
+declare
+  v_tok text; v_r jsonb; v_f text; v_tz text;
+begin
+  delete from admin_tokens where true;
+  v_tok := (crear_token_admin('forma de fecha'))->>'token';
+
+  foreach v_tz in array array['UTC', 'America/Bogota', 'Asia/Tokyo'] loop
+    execute format('set local timezone = %L', v_tz);
+    v_r := admin_semana(v_tok, date '2026-07-27');
+
+    if jsonb_array_length(v_r->'dias') <> 7 then
+      raise exception '% : la semana no trajo 7 dias', v_tz;
+    end if;
+    for v_f in select d->>'fecha' from jsonb_array_elements(v_r->'dias') d loop
+      if v_f !~ '^\d{4}-\d{2}-\d{2}$' then
+        raise exception '% : fecha con forma impintable: %', v_tz, v_f;
+      end if;
+    end loop;
+    if (v_r->'dias'->0->>'fecha') <> '2026-07-27'
+       or (v_r->'dias'->6->>'fecha') <> '2026-08-02' then
+      raise exception '% : la semana no va del 27 al 2: % .. %', v_tz,
+        v_r->'dias'->0->>'fecha', v_r->'dias'->6->>'fecha';
+    end if;
+    -- El 27 de julio de 2026 es lunes: dow 1. Si esto se corre, el dia
+    -- de la semana tampoco depende ya de la zona de la conexion.
+    if (v_r->'dias'->0->>'dow')::int <> 1 then
+      raise exception '% : el lunes salio con dow %', v_tz, v_r->'dias'->0->>'dow';
+    end if;
+  end loop;
+  reset timezone;
+  raise notice 'fechas de la semana: AAAA-MM-DD en las tres zonas';
+end $$;
+
 -- ── permisos, otra vez, ahora con las de admin ─────────────────
 do $$
 declare v_mal text;

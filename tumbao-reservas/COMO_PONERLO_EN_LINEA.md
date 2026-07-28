@@ -182,6 +182,20 @@ node pruebas/prueba-admin.mjs        # el panel entero
 > prohibido: la página estaba bien, el workflow no. Los chequeos de texto
 > (`modo-code-n8n.mjs`, `sin-delete-sin-where.mjs`) existen para tapar ese
 > hueco, pero la prueba definitiva sigue siendo reservar de verdad.
+>
+> El mismo hueco tumbó el panel una segunda vez: el espejo devolvía la
+> fecha de cada día como `2026-07-28`, y Supabase la devolvía como
+> `2026-07-28T00:00:00+00:00`. La página se caía con *Invalid time
+> value* y el error salía en el login, como si el token estuviera mal.
+> Ahora se puede correr la suite del panel contra la forma fea:
+>
+> ```bash
+> FECHA_FEA=1 node pruebas/espejo-api.mjs
+> node pruebas/prueba-admin.mjs          # tiene que pasar igual
+> ```
+>
+> Y `humo-admin.sql` comprueba, en tres zonas horarias, que la fecha que
+> sale de `admin_semana` es `AAAA-MM-DD` pelado.
 
 El camino de validación humana (cuando el correo del banco no llega):
 

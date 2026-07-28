@@ -68,6 +68,11 @@ clases[1].agotada = true;
 // aqui es fijo para poder probar.
 const TOKEN_ADMIN = process.env.TOKEN_ADMIN || 'token-de-prueba';
 
+// Devuelve las fechas de la semana con hora y desfase pegados, como las
+// devolvía admin_semana antes de la migración 0015. Sirve para correr la
+// prueba del panel contra la forma que lo tumbó.
+const FECHA_FEA = process.env.FECHA_FEA === '1';
+
 const diaDe = iso => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
 }).format(new Date(iso));
@@ -147,7 +152,12 @@ createServer(async (req, res) => {
       for (let i = 0; i < 7; i++) {
         const f = sumaDias(b.desde, i);
         dias.push({
-          fecha: f,
+          // FECHA_FEA repite la forma con la que Postgres tumbó el panel
+          // ("2026-07-28T00:00:00+00:00" en vez de "2026-07-28"). El
+          // espejo devolvía la fecha ya limpia, así que la prueba pasaba
+          // en verde mientras producción se caía. Con la bandera puesta
+          // la suite entera se corre contra el contrato feo.
+          fecha: FECHA_FEA ? `${f}T00:00:00+00:00` : f,
           dow: new Date(`${f}T12:00:00-05:00`).getUTCDay(),
           clases: clases.filter(c => diaDe(c.fecha_hora) === f).map(c => ({
             clase_id: c.clase_id, nombre: c.nombre,
