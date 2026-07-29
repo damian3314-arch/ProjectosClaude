@@ -249,8 +249,10 @@ Ya no queda ninguna regla adivinada.
    pueda entrar. Es un ajuste de una sola vez.
 2. **Probar el flujo completo con una reserva de verdad** — la de los
    $1.000 que hay en el correo.
-3. **Cambiar la ingesta al correo de Tumbao** y borrar los pagos de prueba.
-   Hoy lee el correo personal de Damián, que fue lo que se usó para probar.
+3. **Borrar los pagos de prueba.** La ingesta ya lee el correo de Tumbao
+   (`bailatumbao@gmail.com`, verificado el 29 de julio en la cabecera
+   `Delivered-To` de un correo recién procesado). Lo que queda es limpiar
+   los $1.000 de prueba de la tabla `pagos`.
 4. **Importar el cierre de caja.** Ahí ya se puede hablar de dashboard.
 5. **Login de usuarios**, cuando cancelar y ver historial empiecen a hacer
    falta de verdad.

@@ -196,9 +196,21 @@ prefiere quedarse quieto — la salida es subir el cupo a mano en Horario.
 
 ## Antes de cobrarle a alguien de verdad
 
-- [ ] El workflow de ingesta hoy lee el **correo personal de Damián**, que fue
-      lo que se usó para probar. Hay que cambiarle la credencial de Gmail a la
-      cuenta de Tumbao y borrar los pagos de prueba de la tabla `pagos`.
+- [x] ~~Cambiar la ingesta al correo de Tumbao~~ — hecho. Verificado el 29 de
+      julio de 2026 leyendo la cabecera `Delivered-To` de un correo que el
+      workflow acababa de procesar: **`bailatumbao@gmail.com`**. La credencial
+      que lo hace es `Gmail OAuth2 API`.
+- [ ] Borrar los **pagos de prueba** de la tabla `pagos`. Hay al menos dos de
+      $1.000 a nombre de Damián, del 26 y del 29 de julio, los dos con
+      `sin_reserva_que_casar`. Están en `supabase/aplicar/LIMPIAR_PRUEBAS.sql`,
+      que primero muestra y solo borra si descomentas la parte 2.
+- [ ] **Renombrar las credenciales de Gmail.** En este n8n conviven dos y los
+      nombres no dicen nada: `Gmail OAuth2 API` es la de Tumbao y
+      `Gmail account` es la de **Joyería** (`joyeriataller5@gmail.com`). Si
+      alguien elige la equivocada en el nodo del trigger, la ingesta se queda
+      leyendo un buzón donde nunca va a llegar una alerta del banco: no falla,
+      no avisa, simplemente deja de conciliar. Ponerles el correo en el nombre
+      cuesta un minuto y cierra el agujero.
 - [ ] Los nodos que mandan WhatsApp automáticamente están **desactivados** a
       propósito. Desde el panel sí se manda, pero a mano y uno por uno.
 - [x] ~~Definir qué da MEDIA MENSUALIDAD~~ — resuelto: cuenta como plan

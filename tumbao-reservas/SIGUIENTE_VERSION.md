@@ -188,7 +188,7 @@ Ninguna es un proyecto; son de horas.
 |---|---|---|
 | 1 | Publicar las páginas en Cloudflare | ya |
 | 2 | Prueba completa con una reserva real | ya |
-| 3 | Ingesta al correo de Tumbao, borrar pagos de prueba | antes de cobrar |
+| 3 | Borrar pagos de prueba, renombrar credenciales de Gmail | antes de cobrar |
 | 4 | Foto diaria de membresías (`membresias_historico`) | **antes de que haga falta** |
 | 5 | Nombres de clase, profesores, lista de asistencia | primera semana de uso |
 | 6 | Importar cierre de caja | cuando me pases un archivo de ejemplo |
