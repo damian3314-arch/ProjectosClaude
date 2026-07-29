@@ -26,6 +26,16 @@ empezarlo ya.
 
 ## 1. Página de dashboard
 
+### 1.0 Lo que ya está hecho (julio 2026)
+
+La pestaña **Tablero** del panel ya responde el día de hoy, clase por
+clase: cupos libres, gente con plan, reservas, cuánta gente entra a la
+sala y lo cobrado. Se puede mover día a día.
+
+Lo que **no** hace, y es todo lo de abajo: comparar. Un solo día no dice
+si el 7pm está vendiendo peor que hace un mes. Para eso hacen falta
+semanas de datos reales, que es justo lo que todavía no hay.
+
 ### 1.1 Lo que ya se puede calcular hoy
 
 Todo esto sale de `reservas`, `clases`, `pagos` y `membresias`, sin

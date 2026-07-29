@@ -73,6 +73,7 @@ const TOKEN_ADMIN = process.env.TOKEN_ADMIN || 'token-de-prueba';
 // prueba del panel contra la forma que lo tumbó.
 const FECHA_FEA = process.env.FECHA_FEA === '1';
 
+const soloFecha = v => String(v ?? '').slice(0, 10);
 const diaDe = iso => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
 }).format(new Date(iso));
@@ -227,7 +228,16 @@ createServer(async (req, res) => {
           return {
             codigo: r.codigo, nombre: r.nombre || 'Sin nombre',
             telefono: r.telefono || '3000000000', estado: r.estado,
+            tipo: r.tipo || 'suelta',
             creada_at: r.creadaAt, clase: r.clase, fecha_hora: c.fecha_hora,
+            // Con que agrupar por horario en el panel.
+            clase_id: r.clase_id,
+            // Lo que declaro quien paga. Sin esto el espejo escondia el
+            // "pago otra persona", que es justo lo que explica que el
+            // nombre del banco no cuadre con el de la reserva.
+            pagado_en:  (r.recibido || {}).pagado_en  || null,
+            pagador:    (r.recibido || {}).pagador    || null,
+            referencia: (r.recibido || {}).referencia || null,
             precio_cop: c.precio_cop || 15000,
             pagos_sueltos: r.estado === 'pendiente_validacion'
               ? [{ pago_id: 'pago-1', valor_cop: 15000, fecha: new Date().toISOString(),
@@ -236,6 +246,46 @@ createServer(async (req, res) => {
           };
         });
       return json(res, 200, { ok: true, reservas: lista });
+    }
+
+    if (que === 'tablero') {
+      const dia = soloFecha(b.dia) || diaDe(new Date().toISOString());
+      const delDia = clases.filter(c => diaDe(c.fecha_hora) === dia);
+      const tarjetas = delDia.map(c => {
+        const deLaClase = [...reservas.values()].filter(r => r.clase_id === c.clase_id);
+        const cuenta = e => deLaClase.filter(r => e.includes(r.estado)).length;
+        const confirmadas = cuenta(['confirmada']);
+        const porValidar  = cuenta(['pendiente_validacion']);
+        const esperando   = cuenta(['pendiente_pago', 'verificando']);
+        const aforo    = c.aforo ?? 30;
+        const conPlan  = c.activos_plan ?? 0;
+        const tomadas  = c.cupo_total - c.cupos_disponibles;
+        return {
+          clase_id: c.clase_id, nombre: c.nombre,
+          hora: String(c._hora).padStart(2, '0') + ':00',
+          activa: c.activa !== false,
+          ya_paso: new Date(c.fecha_hora) <= new Date(),
+          aforo, con_plan: conPlan, a_la_venta: c.cupo_total,
+          cupo_manual: c.cupo_manual ?? null,
+          reservadas: tomadas, libres: Math.max(c.cupos_disponibles, 0),
+          confirmadas, por_validar: porValidar, esperando,
+          en_sala: conPlan + tomadas,
+          ingreso_cop: confirmadas * (c.precio_cop || 15000)
+        };
+      }).sort((a, z) => a.hora.localeCompare(z.hora));
+
+      const suma = k => tarjetas.reduce((t, c) => t + (c[k] || 0), 0);
+      return json(res, 200, {
+        ok: true, dia, es_hoy: dia === diaDe(new Date().toISOString()),
+        clases: tarjetas,
+        resumen: {
+          clases: tarjetas.length, aforo: suma('aforo'), con_plan: suma('con_plan'),
+          a_la_venta: suma('a_la_venta'), reservadas: suma('reservadas'),
+          libres: suma('libres'), confirmadas: suma('confirmadas'),
+          por_validar: suma('por_validar'), esperando: suma('esperando'),
+          en_sala: suma('en_sala'), ingreso_cop: suma('ingreso_cop')
+        }
+      });
     }
 
     if (que === 'confirmar' || que === 'rechazar') {

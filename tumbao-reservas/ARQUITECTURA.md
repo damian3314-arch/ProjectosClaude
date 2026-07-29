@@ -69,7 +69,7 @@ no se va con él.
 | Gestión de horarios | ✅ panel, semana por semana |
 | Automatizaciones | ✅ ingesta de pagos + importación nocturna |
 | Administración de usuarios | ⚠️ **parcial** — ver abajo |
-| Dashboard administrativo | ⚠️ **parcial** — hay panel de operación, no de indicadores |
+| Dashboard administrativo | ⚠️ **parcial** — hay tablero del día; falta la serie histórica |
 | Reportes | ❌ no hay |
 | Escalabilidad | ✅ el esquema aguanta; falta caja |
 
@@ -198,6 +198,22 @@ el mismo segundo.
 No es una promesa de papel: `pruebas/carrera-cupos.mjs` abre doce
 conexiones de verdad contra una clase de cuatro cupos y las lanza juntas.
 Entran cuatro, rebotan ocho, cero códigos repetidos.
+
+### El número que faltaba: cuánta gente entra
+
+`cupos libres` responde "¿puedo vender otra?". No responde "¿cuánta
+gente va a haber en la sala?", que es lo que se necesita al abrir la
+puerta. Entre semana entran dos grupos distintos:
+
+```
+en sala = gente con plan (no reserva, solo llega) + reservas vivas
+```
+
+El sábado el primer sumando es cero, así que en sala son las reservas.
+La pestaña **Tablero** del panel lo muestra clase por clase, con una
+barra que separa los dos grupos sobre el aforo. Es solo lectura y sale
+de columnas que ya se mantienen solas: si un número se ve raro, el
+problema está en la importación de la noche, no en el tablero.
 
 ### La única forma de pasarse de 30
 

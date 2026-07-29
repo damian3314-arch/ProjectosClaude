@@ -117,7 +117,7 @@ cambia, se cambia ahí y en ningún otro lado.
 | Workflow | Estado |
 |---|---|
 | `Tumbao · API de reservas` | **activo** — 4 webhooks, miembro vs. clase suelta |
-| `Tumbao · Panel de admin` | **activo** — 6 webhooks |
+| `Tumbao · Panel de admin` | **activo** — 7 webhooks |
 | `Tumbao · Ingesta de pagos` | **activo** — lee las alertas del banco |
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
 
@@ -131,6 +131,19 @@ reporte de Drive. Se puede borrar.
 ---
 
 ## Qué hace el panel
+
+**Pestaña Tablero.** Es donde cae quien entra. Un día a la vez, con cinco
+cifras arriba (cupos libres, cuánta gente entra, reservas, por validar y lo
+cobrado) y una tarjeta por clase con el desglose: aforo, gente con plan, lo
+que queda a la venta y lo reservado. La barra separa los dos grupos que
+llenan la sala — los que tienen plan y los que compraron suelta — sobre el
+aforo.
+
+Solo lee: desde aquí no se cambia nada. Para eso están las otras dos
+pestañas.
+
+> Necesita `supabase/aplicar/PEGAR_TABLERO.sql` aplicado. Sin eso, esta
+> pestaña sale en rojo y las otras dos siguen funcionando igual.
 
 **Pestaña Horario.** Una columna por día. En cada clase:
 
@@ -151,6 +164,13 @@ los pagos sin dueño de ese valor cerca de esa hora, con un **% de parecido**
 del nombre. Le das *Es este* al que corresponda, o *Confirmar igual* si te
 consta. Después queda un botón para escribirle por WhatsApp con el mensaje ya
 redactado.
+
+La cola viene **agrupada por horario**, para que se vea de un golpe quién
+viene a las 6 y quién a las 7, y arriba hay un **buscador** por nombre,
+código o celular. Ignora tildes y mayúsculas: en el mostrador nadie escribe
+"Velásquez" con el acento puesto. Si son puros números, busca por celular.
+El contador de la pestaña no se mueve al filtrar — es cuánto trabajo queda,
+no cuánto se está viendo.
 
 ---
 
@@ -210,6 +230,9 @@ Las funciones de Postgres, contra una base local:
 psql -d tumbao -f pruebas/humo-supabase.sql
 psql -d tumbao -f pruebas/humo-admin.sql
 psql -d tumbao -f pruebas/humo-historico.sql
+psql -d tumbao -f pruebas/humo-aviso-pago.sql
+psql -d tumbao -f pruebas/humo-aforo.sql
+psql -d tumbao -f pruebas/humo-tablero.sql
 ```
 
 Y los chequeos que no necesitan nada corriendo:

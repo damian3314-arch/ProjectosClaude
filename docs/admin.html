@@ -144,7 +144,9 @@ const CONFIG = {
   .barra-guardar .cuenta{font-size:.88rem;color:var(--tx-2)}
 
   /* ---------- pendientes ---------- */
-  .pend{display:grid;gap:.8rem}
+  /* En pantalla ancha caben dos por fila: con diez en cola, una sola
+     columna obliga a hacer scroll con alguien esperando en el mostrador. */
+  .pend{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fill,minmax(24rem,1fr))}
   .pend-card{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:1rem}
   .pend-card .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
   .pend-card .nom{font-weight:600;font-size:1.02rem}
@@ -172,8 +174,87 @@ const CONFIG = {
   .pago .par.alto{color:var(--ok)}
   .sin-pagos{font-size:.8rem;color:var(--tx-3);font-style:italic}
 
+  /* ---------- buscador y grupos de la cola ---------- */
+  .buscar{flex:1;min-width:11rem;max-width:24rem;position:relative}
+  .buscar input{padding-left:2rem}
+  .buscar .lupa{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);
+    color:var(--tx-3);font-size:.9rem;pointer-events:none}
+  .buscar .limpiar{
+    position:absolute;right:.35rem;top:50%;transform:translateY(-50%);
+    background:none;border:0;color:var(--tx-3);font-size:1.1rem;line-height:1;padding:.2rem .4rem;
+  }
+  .buscar .limpiar:hover{color:var(--tx)}
+  .cuenta-filtro{font-size:.8rem;color:var(--tx-3)}
+
+  .grupo{margin-bottom:1.5rem}
+  .grupo-cab{
+    display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;
+    margin:0 0 .75rem;padding-bottom:.45rem;border-bottom:1px solid var(--line);
+  }
+  /* capitalize pondría "Miércoles, 29 De Jul": mayúscula en cada
+     palabra. Solo hace falta la primera. */
+  .grupo-cab h3{margin:0;font-size:1.02rem}
+  .grupo-cab h3::first-letter{text-transform:uppercase}
+  .grupo-cab .hh{
+    font-family:var(--mono);font-size:.9rem;color:var(--gold);font-weight:700;
+    background:rgba(255,193,77,.1);border:1px solid rgba(255,193,77,.3);
+    border-radius:8px;padding:.1rem .5rem;
+  }
+  .grupo-cab .cuantos{font-size:.8rem;color:var(--tx-3)}
+
+  /* ---------- tablero ---------- */
+  .tiles{display:grid;gap:.7rem;margin-bottom:1.3rem;
+    grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr))}
+  .tile{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:.85rem .95rem;
+  }
+  .tile .n{font-size:1.85rem;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .tile .k{font-size:.72rem;color:var(--tx-3);text-transform:uppercase;
+    letter-spacing:.05em;margin-top:.3rem}
+  .tile .pista{font-size:.72rem;color:var(--tx-3);margin-top:.15rem;font-style:italic}
+  .tile.bueno .n{color:var(--ok)}
+  .tile.ojo   .n{color:var(--gold)}
+  .tile.hot   .n{color:var(--hot-2)}
+
+  .clases-tab{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
+  .clase-card{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:1rem;
+  }
+  .clase-card.paso{opacity:.5}
+  .clase-card.apagada{opacity:.4;border-style:dashed}
+  .clase-card .cab{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
+  .clase-card .h{font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .clase-card .sp{flex:1}
+  .quedan{
+    font-size:.78rem;font-weight:700;border-radius:99px;padding:.15rem .6rem;
+    border:1px solid rgba(74,222,128,.45);color:var(--ok);white-space:nowrap;
+  }
+  .quedan.poco{border-color:rgba(255,193,77,.5);color:var(--gold)}
+  .quedan.lleno{border-color:rgba(255,107,129,.45);color:var(--bad)}
+
+  .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin:.9rem 0 .7rem}
+  .mini > div{text-align:center}
+  .mini .v{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .mini .e{font-size:.65rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.03em;
+    line-height:1.25;margin-top:.1rem}
+
+  .sala{font-size:.78rem;color:var(--tx-2);display:flex;align-items:baseline;gap:.4rem}
+  .sala b{color:var(--tx);font-variant-numeric:tabular-nums}
+  .barra{height:.45rem;border-radius:99px;background:var(--bg-3);overflow:hidden;
+    display:flex;margin:.35rem 0 .6rem}
+  .barra i{display:block;height:100%}
+  .barra .plan{background:var(--line-2)}
+  .barra .res{background:linear-gradient(90deg,var(--hot),var(--gold))}
+  .desglose{font-size:.75rem;color:var(--tx-3);display:flex;gap:.7rem;flex-wrap:wrap}
+  .desglose .ok{color:var(--ok)}
+  .desglose .ojo{color:var(--gold)}
+
   .vacio{text-align:center;color:var(--tx-3);padding:3rem 1rem}
   .vacio .ico{font-size:2.4rem;display:block;margin-bottom:.6rem}
+  /* Dentro de una rejilla el mensaje se metía en una sola columna y
+     salía partido en tres renglones estrechos. Que ocupe el ancho. */
+  .clases-tab > .vacio,.pend > .vacio{grid-column:1/-1}
 
   .aviso{
     border-radius:10px;padding:.7rem .9rem;font-size:.86rem;margin:.9rem 0;
@@ -208,14 +289,33 @@ const CONFIG = {
   <!-- ══════════ panel ══════════ -->
   <div id="app" hidden>
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" id="tab-horario" aria-selected="true">Horario</button>
+      <button class="tab" role="tab" id="tab-tablero" aria-selected="true">Tablero</button>
+      <button class="tab" role="tab" id="tab-horario" aria-selected="false">Horario</button>
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
         Por validar<span class="globo" id="globo-pend" hidden></span>
       </button>
     </div>
 
+    <!-- ── tablero ── -->
+    <div class="panel on" id="p-tablero">
+      <div class="semana-bar">
+        <button class="btn chico" id="dia-antes">← Día</button>
+        <span class="rango" id="dia-rango">—</span>
+        <button class="btn chico" id="dia-despues">Día →</button>
+        <button class="btn chico" id="dia-hoy">Hoy</button>
+        <input id="dia-fecha" type="date" style="width:auto;padding:.3rem .5rem;font-size:.85rem">
+        <span class="sp"></span>
+        <button class="btn chico" id="recargar-tab">Recargar</button>
+      </div>
+
+      <div class="aviso" id="msg-tab" hidden></div>
+      <div class="cargando" id="cargando-tab">Cargando…</div>
+      <div class="tiles" id="tiles-tab"></div>
+      <div class="clases-tab" id="clases-tab"></div>
+    </div>
+
     <!-- ── horario ── -->
-    <div class="panel on" id="p-horario">
+    <div class="panel" id="p-horario">
       <div class="semana-bar">
         <button class="btn chico" id="sem-antes">← Semana</button>
         <span class="rango" id="sem-rango">—</span>
@@ -244,12 +344,23 @@ const CONFIG = {
     <!-- ── pendientes ── -->
     <div class="panel" id="p-pendientes">
       <div class="semana-bar">
-        <button class="btn chico" id="recargar-pend">Recargar</button>
+        <label class="buscar">
+          <span class="lupa" aria-hidden="true">🔎</span>
+          <input id="buscar-pend" type="search" autocomplete="off"
+                 aria-label="Buscar en la cola de validación"
+                 placeholder="Nombre, código o celular…">
+          <button class="limpiar" id="limpiar-busq" type="button"
+                  aria-label="Borrar la búsqueda" hidden>×</button>
+        </label>
+        <span class="cuenta-filtro" id="cuenta-filtro"></span>
         <span class="sp"></span>
+        <button class="btn chico" id="recargar-pend">Recargar</button>
       </div>
       <div class="aviso" id="msg-pend" hidden></div>
       <div class="cargando" id="cargando-pend" hidden>Cargando…</div>
-      <div class="pend" id="lista-pend"></div>
+      <!-- Sin clase: los grupos van uno debajo de otro. La rejilla de
+           dos columnas es .pend, y va dentro de cada grupo. -->
+      <div id="lista-pend"></div>
     </div>
   </div>
 </div>
@@ -263,6 +374,8 @@ const CONFIG = {
   let token = null;
   let semanaDesde = semanaInicial();
   let semana = null;
+  let diaTablero = null;          // se fija al entrar, ya con hoyBogota()
+  let pendientes = [];            // la cola cruda; el buscador filtra sobre esto
   // clave "fecha|hora" -> celda que se va a mandar
   const cambios = new Map();
 
@@ -373,6 +486,10 @@ const CONFIG = {
     $('#entrar').hidden = true;
     $('#app').hidden = false;
     $('#salir').hidden = false;
+    diaTablero = hoyBogota();
+    verPanel('tablero');
+    // Sin await: que el panel se vea de una y estas dos vayan llegando.
+    cargarTablero();
     cargarPendientes();
   }
 
@@ -389,15 +506,143 @@ const CONFIG = {
   $('#salir').addEventListener('click', () => cerrarSesion());
 
   /* ---------- pestañas ---------- */
+  const PANELES = ['tablero', 'horario', 'pendientes'];
   function verPanel(cual) {
-    const esHorario = cual === 'horario';
-    $('#tab-horario').setAttribute('aria-selected', String(esHorario));
-    $('#tab-pendientes').setAttribute('aria-selected', String(!esHorario));
-    $('#p-horario').classList.toggle('on', esHorario);
-    $('#p-pendientes').classList.toggle('on', !esHorario);
+    for (const p of PANELES) {
+      $('#tab-' + p).setAttribute('aria-selected', String(p === cual));
+      $('#p-' + p).classList.toggle('on', p === cual);
+    }
   }
+  $('#tab-tablero').addEventListener('click', () => { verPanel('tablero'); cargarTablero(); });
   $('#tab-horario').addEventListener('click', () => verPanel('horario'));
-  $('#tab-pendientes').addEventListener('click', () => { verPanel('pendientes'); cargarPendientes(); });
+  $('#tab-pendientes').addEventListener('click', () => {
+    verPanel('pendientes');
+    cargarPendientes();
+    // El caso real es alguien esperando en el mostrador: el cursor ya
+    // en el buscador ahorra un clic en el momento en que más molesta.
+    $('#buscar-pend').focus();
+  });
+
+  /* ---------- tablero ---------- */
+  $('#dia-antes').addEventListener('click',   () => moverDia(-1));
+  $('#dia-despues').addEventListener('click', () => moverDia(1));
+  $('#dia-hoy').addEventListener('click',     () => { diaTablero = hoyBogota(); cargarTablero(); });
+  $('#recargar-tab').addEventListener('click', cargarTablero);
+  $('#dia-fecha').addEventListener('change', e => {
+    const v = soloFecha(e.target.value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { diaTablero = v; cargarTablero(); }
+  });
+
+  function moverDia(n) { diaTablero = sumaDias(diaTablero || hoyBogota(), n); cargarTablero(); }
+
+  async function cargarTablero() {
+    if (!diaTablero) diaTablero = hoyBogota();
+    $('#cargando-tab').hidden = false;
+    aviso($('#msg-tab'), '');
+    try {
+      const r = await api('tablero', { dia: diaTablero });
+      pintarTablero(r);
+    } catch (e) {
+      // No relanza: el error ya se pinta aquí, y quien manda al login es
+      // api() cuando el token rebota. Relanzarlo solo dejaría promesas
+      // rechazadas sueltas en cada uno de los cinco sitios que llaman.
+      // Pasa de verdad mientras admin_tablero no esté aplicada en
+      // Supabase: el resto del panel tiene que seguir funcionando.
+      aviso($('#msg-tab'), esc(e.message), 'mal');
+      $('#tiles-tab').innerHTML = '';
+      $('#clases-tab').innerHTML = '';
+    } finally {
+      $('#cargando-tab').hidden = true;
+    }
+  }
+
+  // Intl devuelve "miércoles, 29 de julio" en minúscula. Solo la
+  // primera: "Miércoles, 29 De Julio" es lo que sale con capitalize.
+  const mayusInicial = s => String(s || '').replace(/^./, c => c.toUpperCase());
+  const fmtLargo = iso => mayusInicial(conFecha(iso,
+    { weekday: 'long', day: 'numeric', month: 'long' }));
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+
+  function pintarTablero(t) {
+    diaTablero = soloFecha(t.dia) || diaTablero;
+    $('#dia-fecha').value = diaTablero;
+    $('#dia-rango').textContent =
+      (t.es_hoy ? 'Hoy · ' : '') + fmtLargo(diaTablero);
+
+    const r = t.resumen || {};
+    const cuando = t.es_hoy ? 'hoy' : 'ese día';
+    const plural = (n, uno, varios) => `${n} ${Number(n) === 1 ? uno : varios}`;
+    // Cinco números y ya. La tentación es meter doce; con doce no se lee
+    // ninguno. Estos son los que cambian una decisión: si queda sitio,
+    // cuánta gente entra, y qué falta por resolver a mano.
+    $('#tiles-tab').innerHTML = [
+      ['bueno', r.libres,      'cupos libres', `para vender ${cuando}`],
+      ['',      r.en_sala,     'entran',       `de ${r.aforo || 0} de aforo`],
+      ['hot',   r.reservadas,  'reservas',     plural(r.confirmadas || 0, 'ya pagada', 'ya pagadas')],
+      ['ojo',   r.por_validar, 'por validar',  'esperan tu visto bueno'],
+      ['',      pesos(r.ingreso_cop), 'cobrado', 'clases sueltas confirmadas'],
+    ].map(([cls, n, k, pista]) =>
+      `<div class="tile${cls ? ' ' + cls : ''}">` +
+        `<div class="n">${esc(n == null ? '—' : n)}</div>` +
+        `<div class="k">${esc(k)}</div>` +
+        `<div class="pista">${esc(pista)}</div>` +
+      `</div>`).join('');
+
+    const cont = $('#clases-tab');
+    const clases = t.clases || [];
+    if (!clases.length) {
+      cont.innerHTML =
+        '<div class="vacio"><span class="ico">🗓️</span>' +
+        'No hay clases ese día. Se abren desde la pestaña Horario.</div>';
+      return;
+    }
+    cont.innerHTML = clases.map(tarjetaClase).join('');
+  }
+
+  function tarjetaClase(c) {
+    const libres  = Number(c.libres || 0);
+    const aforo   = Number(c.aforo || 0);
+    const enSala  = Number(c.en_sala || 0);
+    const conPlan = Number(c.con_plan || 0);
+    const res     = Number(c.reservadas || 0);
+
+    const estadoCupo = libres === 0 ? 'lleno' : libres <= 3 ? 'poco' : '';
+    const textoCupo  = libres === 0 ? 'Sin cupo'
+                     : libres === 1 ? '1 libre' : `${libres} libres`;
+
+    // La barra es la sala vista de lado: primero los que ya tienen su
+    // puesto por el plan, encima los que compraron suelta. Lo que queda
+    // en gris de fondo es lo que todavía cabe.
+    const pct = n => aforo ? Math.min(100, (n / aforo) * 100) : 0;
+
+    return `<div class="clase-card${c.ya_paso ? ' paso' : ''}${c.activa === false ? ' apagada' : ''}">` +
+      `<div class="cab">` +
+        `<span class="h">${esc(hora12(c.hora))}</span>` +
+        `<span class="sp"></span>` +
+        `<span class="quedan${estadoCupo ? ' ' + estadoCupo : ''}">${esc(textoCupo)}</span>` +
+      `</div>` +
+      `<div class="mini">` +
+        `<div><div class="v">${aforo}</div><div class="e">aforo</div></div>` +
+        `<div><div class="v">${conPlan}</div><div class="e">con plan</div></div>` +
+        `<div><div class="v">${Number(c.a_la_venta || 0)}</div><div class="e">a la venta</div></div>` +
+        `<div><div class="v">${res}</div><div class="e">reservadas</div></div>` +
+      `</div>` +
+      `<div class="sala">Entran <b>${enSala}</b> de ${aforo}` +
+        (c.cupo_manual != null ? ' <span class="etiqueta">cupo a mano</span>' : '') +
+      `</div>` +
+      `<div class="barra" role="img" aria-label="${enSala} de ${aforo} puestos ocupados">` +
+        `<i class="plan" style="width:${pct(conPlan)}%"></i>` +
+        `<i class="res" style="width:${pct(res)}%"></i>` +
+      `</div>` +
+      `<div class="desglose">` +
+        `<span class="ok">${Number(c.confirmadas || 0)} ` +
+          `confirmada${Number(c.confirmadas) === 1 ? '' : 's'}</span>` +
+        (Number(c.por_validar) ? `<span class="ojo">${Number(c.por_validar)} por validar</span>` : '') +
+        (Number(c.esperando)   ? `<span>${Number(c.esperando)} esperando pago</span>` : '') +
+        `<span class="sp"></span><span>${esc(pesos(c.ingreso_cop))}</span>` +
+      `</div>` +
+    `</div>`;
+  }
 
   /* ---------- horario ---------- */
   $('#sem-antes').addEventListener('click', () => moverSemana(-7));
@@ -601,7 +846,8 @@ const CONFIG = {
     aviso($('#msg-pend'), '');
     try {
       const r = await api('pendientes', {});
-      pintarPendientes(r.reservas || []);
+      pendientes = r.reservas || [];
+      pintarPendientes();
     } catch (e) {
       aviso($('#msg-pend'), esc(e.message), 'mal');
     } finally {
@@ -609,41 +855,127 @@ const CONFIG = {
     }
   }
 
-  function pintarPendientes(lista) {
-    const cont = $('#lista-pend');
-    const globo = $('#globo-pend');
-    globo.textContent = lista.length ? String(lista.length) : '';
-    globo.hidden = !lista.length;
+  // Buscar sin tildes ni mayúsculas: en el mostrador nadie escribe
+  // "Velásquez" con el acento puesto.
+  const plano = s => String(s ?? '').normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-    if (!lista.length) {
+  function coincide(r, q) {
+    if (!q) return true;
+    // Si lo tecleado son puros números, se busca por celular: así
+    // "319" no arrastra a todos los que tengan un 3 en el código.
+    const soloNum = /^\d+$/.test(q);
+    if (soloNum) return String(r.telefono || '').replace(/\D/g, '').includes(q);
+    return [r.nombre, r.codigo, r.pagador, r.referencia, r.telefono]
+      .some(v => plano(v).includes(q));
+  }
+
+  $('#buscar-pend').addEventListener('input', pintarPendientes);
+  $('#limpiar-busq').addEventListener('click', () => {
+    $('#buscar-pend').value = '';
+    pintarPendientes();
+    $('#buscar-pend').focus();
+  });
+  $('#buscar-pend').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { $('#buscar-pend').value = ''; pintarPendientes(); }
+  });
+
+  function pintarPendientes() {
+    const cont  = $('#lista-pend');
+    const globo = $('#globo-pend');
+    const q     = plano($('#buscar-pend').value);
+
+    // El globo cuenta lo que falta por resolver, no lo filtrado: es
+    // cuánto trabajo queda, y no debería cambiar porque alguien escriba
+    // en el buscador.
+    const faltan = pendientes.filter(r => !r._resuelto).length;
+    globo.textContent = faltan ? String(faltan) : '';
+    globo.hidden = !faltan;
+    $('#limpiar-busq').hidden = !q;
+
+    const lista = pendientes.filter(r => coincide(r, q));
+    $('#cuenta-filtro').textContent = !q ? ''
+      : lista.length === pendientes.length ? `${lista.length}`
+      : `${lista.length} de ${pendientes.length}`;
+
+    cont.innerHTML = '';
+
+    if (!pendientes.length) {
       cont.innerHTML =
         '<div class="vacio"><span class="ico">✓</span>' +
         'Nada por validar. Todo lo que entró concilió solo.</div>';
       return;
     }
+    if (!lista.length) {
+      cont.innerHTML =
+        '<div class="vacio"><span class="ico">🔎</span>' +
+        `Nadie con «${esc($('#buscar-pend').value)}» en la cola.</div>`;
+      return;
+    }
 
-    cont.innerHTML = '';
-    for (const r of lista) cont.appendChild(tarjetaPendiente(r));
+    for (const g of agruparPorClase(lista)) {
+      const bloque = document.createElement('div');
+      bloque.className = 'grupo';
+      bloque.innerHTML =
+        `<div class="grupo-cab">` +
+          `<span class="hh">${esc(hora12(g.hora))}</span>` +
+          `<h3>${esc(g.dia)}</h3>` +
+          `<span class="sp"></span>` +
+          `<span class="cuantos">${g.reservas.length === 1
+             ? '1 persona' : g.reservas.length + ' personas'}</span>` +
+        `</div>`;
+      const caja = document.createElement('div');
+      caja.className = 'pend';
+      for (const r of g.reservas) caja.appendChild(tarjetaPendiente(r));
+      bloque.appendChild(caja);
+      cont.appendChild(bloque);
+    }
+  }
+
+  // Diez tarjetas seguidas y todas iguales no dicen quién viene a las 6
+  // y quién a las 7. Se agrupa por clase, en el orden en que van a
+  // pasar por la puerta.
+  function agruparPorClase(lista) {
+    const mapa = new Map();
+    for (const r of lista) {
+      const clave = r.clase_id || r.fecha_hora;
+      if (!mapa.has(clave)) {
+        const d = new Date(r.fecha_hora);
+        mapa.set(clave, {
+          orden: d.getTime(),
+          hora: new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota',
+            hour: '2-digit', minute: '2-digit', hour12: false }).format(d),
+          dia: new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota',
+            weekday: 'long', day: 'numeric', month: 'short' }).format(d),
+          reservas: []
+        });
+      }
+      mapa.get(clave).reservas.push(r);
+    }
+    return Array.from(mapa.values()).sort((a, b) => a.orden - b.orden);
   }
 
   function tarjetaPendiente(r) {
+    // Ya resuelta: se conserva el resultado y el enlace de WhatsApp. Si
+    // se volviera a pintar la cruda, escribir en el buscador borraría de
+    // la pantalla el link que el cajero acaba de necesitar.
+    if (r._resuelto) return tarjetaResuelta(r);
+
     const el = document.createElement('div');
     el.className = 'pend-card';
 
-    const cuando = new Intl.DateTimeFormat('es-CO', {
-      timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short',
-      hour: 'numeric', minute: '2-digit', hour12: true
-    }).format(new Date(r.fecha_hora));
-
     const espera = r.estado === 'verificando';
 
+    // La clase y la hora ya van en el encabezado del grupo; repetirlas
+    // en cada tarjeta solo alarga la lista.
     el.innerHTML =
       `<div class="top">` +
         `<span class="nom">${esc(r.nombre)}</span>` +
         `<span class="cod">${esc(r.codigo)}</span>` +
         `<span class="etiqueta${espera ? ' espera' : ''}">${espera ? 'esperando banco' : 'por validar'}</span>` +
+        (r.tipo === 'miembro' ? `<span class="etiqueta">miembro</span>` : '') +
       `</div>` +
-      `<div class="det">${esc(r.clase)} · ${esc(cuando)} · ` +
+      `<div class="det">` +
         `$${Number(r.precio_cop || 0).toLocaleString('es-CO')} · ` +
         `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${esc(String(r.telefono).replace(/\D/g, ''))}" ` +
           `target="_blank" rel="noopener" style="color:var(--gold)">${esc(r.telefono)}</a>` +
@@ -702,14 +1034,14 @@ const CONFIG = {
     const bOk = document.createElement('button');
     bOk.className = 'btn ok';
     bOk.textContent = '✓ Confirmar igual';
-    bOk.addEventListener('click', () => resolver(el, 'confirmar', r.codigo, null));
+    bOk.addEventListener('click', () => resolver(el, r, 'confirmar', null));
 
     const bNo = document.createElement('button');
     bNo.className = 'btn mal';
     bNo.textContent = '✕ Rechazar';
     bNo.addEventListener('click', () => {
       if (!confirm(`¿Rechazar la reserva de ${r.nombre}? El cupo queda libre.`)) return;
-      resolver(el, 'rechazar', r.codigo, null);
+      resolver(el, r, 'rechazar', null);
     });
 
     acc.append(bOk, bNo);
@@ -717,29 +1049,45 @@ const CONFIG = {
     return el;
   }
 
-  async function resolver(tarjeta, accion, codigo, pagoId) {
-    tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
-    try {
-      const r = await api(accion, { codigo, pago_id: pagoId });
-      const tel = String(r.telefono || '').replace(/\D/g, '');
-      const texto = accion === 'confirmar'
-        ? `¡Hola ${r.nombre || ''}! Tu pago quedó confirmado y tu cupo está asegurado. Código ${r.codigo}. Te esperamos 🕺`
-        : `Hola ${r.nombre || ''}, no pudimos validar el pago de la reserva ${r.codigo}. ¿Nos ayudas con el comprobante?`;
-      const wa = tel
+  function tarjetaResuelta(r) {
+    const v = r._resuelto;
+    const tel = String(v.telefono || '').replace(/\D/g, '');
+    const texto = v.accion === 'confirmar'
+      ? `¡Hola ${v.nombre || ''}! Tu pago quedó confirmado y tu cupo está asegurado. Código ${v.codigo}. Te esperamos 🕺`
+      : `Hola ${v.nombre || ''}, no pudimos validar el pago de la reserva ${v.codigo}. ¿Nos ayudas con el comprobante?`;
+    const el = document.createElement('div');
+    el.className = 'pend-card';
+    el.style.borderColor = v.accion === 'confirmar'
+      ? 'rgba(74,222,128,.45)' : 'rgba(255,107,129,.4)';
+    el.innerHTML =
+      `<div class="top"><span class="nom">${esc(v.nombre || v.codigo)}</span>` +
+      `<span class="cod">${esc(v.codigo)}</span></div>` +
+      `<div class="det">${esc(v.mensaje || '')}</div>` +
+      (tel
         ? `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${tel}?text=${encodeURIComponent(texto)}" ` +
           `target="_blank" rel="noopener" class="btn chico" style="text-decoration:none">Escribirle por WhatsApp</a>`
-        : '';
-      tarjeta.innerHTML =
-        `<div class="top"><span class="nom">${esc(r.nombre || codigo)}</span>` +
-        `<span class="cod">${esc(r.codigo)}</span></div>` +
-        `<div class="det">${esc(r.mensaje || '')}</div>${wa}`;
-      tarjeta.style.borderColor = accion === 'confirmar'
-        ? 'rgba(74,222,128,.45)' : 'rgba(255,107,129,.4)';
-      // El contador de la pestaña tiene que bajar aunque la tarjeta siga en pantalla.
-      const globo = $('#globo-pend');
-      const n = Math.max((parseInt(globo.textContent, 10) || 1) - 1, 0);
-      globo.textContent = n ? String(n) : '';
-      globo.hidden = !n;
+        : '');
+    return el;
+  }
+
+  async function resolver(tarjeta, r, accion, pagoId) {
+    tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
+    try {
+      const res = await api(accion, { codigo: r.codigo, pago_id: pagoId });
+      // Se guarda en la reserva, no solo en el DOM: así el resultado y su
+      // enlace de WhatsApp sobreviven a que alguien use el buscador.
+      r._resuelto = {
+        accion,
+        codigo:   res.codigo || r.codigo,
+        nombre:   res.nombre || r.nombre,
+        mensaje:  res.mensaje || '',
+        telefono: res.telefono || r.telefono
+      };
+      tarjeta.replaceWith(tarjetaResuelta(r));
+      // El globo tiene que bajar aunque la tarjeta siga en pantalla.
+      const faltan = pendientes.filter(x => !x._resuelto).length;
+      $('#globo-pend').textContent = faltan ? String(faltan) : '';
+      $('#globo-pend').hidden = !faltan;
     } catch (e) {
       aviso($('#msg-pend'), esc(e.message), 'mal');
       tarjeta.querySelectorAll('button').forEach(b => b.disabled = false);
