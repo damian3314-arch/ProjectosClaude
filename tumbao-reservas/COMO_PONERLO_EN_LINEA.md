@@ -117,7 +117,7 @@ cambia, se cambia ahí y en ningún otro lado.
 | Workflow | Estado |
 |---|---|
 | `Tumbao · API de reservas` | **activo** — 4 webhooks, miembro vs. clase suelta |
-| `Tumbao · Panel de admin` | **activo** — 7 webhooks |
+| `Tumbao · Panel de admin` | **activo** — 8 webhooks |
 | `Tumbao · Ingesta de pagos` | **activo** — lee las alertas del banco |
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
 
@@ -171,6 +171,26 @@ código o celular. Ignora tildes y mayúsculas: en el mostrador nadie escribe
 "Velásquez" con el acento puesto. Si son puros números, busca por celular.
 El contador de la pestaña no se mueve al filtrar — es cuánto trabajo queda,
 no cuánto se está viendo.
+
+**Deshacer.** Confirmar y rechazar están uno al lado del otro, y la duda llega
+medio segundo después del clic. La tarjeta ya resuelta trae un botón
+**↩ Deshacer** con el plazo que queda; la reserva vuelve a la cola tal como
+estaba, con sus pagos candidatos y sus dos botones.
+
+Tres candados, a propósito:
+
+- Solo lo que resolvió una persona desde el panel. Lo que concilió solo el
+  sistema no se toca desde ahí.
+- Solo dentro de los **15 minutos** siguientes. Pasado eso ya no es un
+  resbalón, y a la persona probablemente ya se le avisó por WhatsApp.
+- Una sola vez.
+
+Lo único que puede no poder hacer: si deshaces un **rechazo** y mientras
+tanto alguien compró ese cupo, se niega y te lo dice. Antes de sobrevender,
+prefiere quedarse quieto — la salida es subir el cupo a mano en Horario.
+
+> Necesita `supabase/aplicar/PEGAR_DESHACER.sql` aplicado. Sin eso el botón
+> sencillamente no aparece y el resto sigue igual.
 
 ---
 
@@ -233,7 +253,13 @@ psql -d tumbao -f pruebas/humo-historico.sql
 psql -d tumbao -f pruebas/humo-aviso-pago.sql
 psql -d tumbao -f pruebas/humo-aforo.sql
 psql -d tumbao -f pruebas/humo-tablero.sql
+psql -d tumbao -f pruebas/humo-deshacer.sql
 ```
+
+El de deshacer es el que hay que mirar si se toca la cola de validación:
+comprueba que restaura el estado exacto, que el cupo vuelve, que el pago se
+suelta, y —lo que de verdad importa— que **no sobrevende** cuando el cupo ya
+se vendió mientras se dudaba.
 
 Y los chequeos que no necesitan nada corriendo:
 

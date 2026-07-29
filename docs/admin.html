@@ -10,7 +10,12 @@
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
   N8N_BASE: 'https://barragan.app.n8n.cloud/webhook',
-  WHATSAPP_PAIS: '57'
+  WHATSAPP_PAIS: '57',
+  // Tiene que ser el mismo plazo que aplica admin_deshacer en Supabase.
+  // Aquí solo sirve para la cuenta atrás; quien decide de verdad es la
+  // base, así que si se desincronizan, el botón puede desaparecer un
+  // poco antes o dar un error claro — nunca deshacer fuera de plazo.
+  MINUTOS_DESHACER: 15
 };
 </script>
 
@@ -161,6 +166,15 @@ const CONFIG = {
     padding:.12rem .45rem;border-radius:99px;border:1px solid var(--line-2);color:var(--tx-3);
   }
   .etiqueta.espera{border-color:rgba(255,193,77,.45);color:var(--gold)}
+
+  /* ---------- ya resuelta, con vuelta atrás ---------- */
+  .pend-card.resuelta.si{border-color:rgba(74,222,128,.45)}
+  .pend-card.resuelta.no{border-color:rgba(255,107,129,.4)}
+  .btn.deshacer{border-color:var(--line-2);color:var(--tx-2)}
+  .btn.deshacer:hover{border-color:var(--gold);color:var(--gold)}
+  /* El plazo que queda, en gris: informa sin gritar. */
+  .btn.deshacer .resta{color:var(--tx-3);font-size:.75rem;margin-left:.15rem}
+  .btn.deshacer .resta:empty{display:none}
 
   .pagos{display:grid;gap:.4rem;margin-top:.2rem}
   .pago{
@@ -1056,18 +1070,51 @@ const CONFIG = {
       ? `¡Hola ${v.nombre || ''}! Tu pago quedó confirmado y tu cupo está asegurado. Código ${v.codigo}. Te esperamos 🕺`
       : `Hola ${v.nombre || ''}, no pudimos validar el pago de la reserva ${v.codigo}. ¿Nos ayudas con el comprobante?`;
     const el = document.createElement('div');
-    el.className = 'pend-card';
-    el.style.borderColor = v.accion === 'confirmar'
-      ? 'rgba(74,222,128,.45)' : 'rgba(255,107,129,.4)';
+    el.className = 'pend-card resuelta ' + (v.accion === 'confirmar' ? 'si' : 'no');
     el.innerHTML =
       `<div class="top"><span class="nom">${esc(v.nombre || v.codigo)}</span>` +
       `<span class="cod">${esc(v.codigo)}</span></div>` +
-      `<div class="det">${esc(v.mensaje || '')}</div>` +
-      (tel
-        ? `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${tel}?text=${encodeURIComponent(texto)}" ` +
-          `target="_blank" rel="noopener" class="btn chico" style="text-decoration:none">Escribirle por WhatsApp</a>`
-        : '');
+      `<div class="det">${esc(v.mensaje || '')}</div>`;
+
+    const pie = document.createElement('div');
+    pie.className = 'acciones';
+    if (tel) {
+      const wa = document.createElement('a');
+      wa.className = 'btn chico';
+      wa.style.textDecoration = 'none';
+      wa.target = '_blank'; wa.rel = 'noopener';
+      wa.href = `https://wa.me/${CONFIG.WHATSAPP_PAIS}${tel}?text=${encodeURIComponent(texto)}`;
+      wa.textContent = 'Escribirle por WhatsApp';
+      pie.appendChild(wa);
+    }
+    // Solo si el servidor dijo que se puede: es él quien manda sobre el
+    // plazo, no el reloj del navegador.
+    if (v.se_puede_deshacer) {
+      const und = document.createElement('button');
+      und.className = 'btn chico deshacer';
+      und.innerHTML = '↩ Deshacer <span class="resta"></span>';
+      und.addEventListener('click', () => deshacer(el, r));
+      pie.appendChild(und);
+      cuentaAtras(und, v.hasta);
+    }
+    el.appendChild(pie);
     return el;
+  }
+
+  // Los 15 minutos del servidor, a la vista. Cuando se acaban, el botón
+  // desaparece en vez de quedarse ahí prometiendo algo que ya no puede.
+  function cuentaAtras(boton, hasta) {
+    const resta = boton.querySelector('.resta');
+    const tic = () => {
+      const seg = Math.round((hasta - Date.now()) / 1000);
+      if (seg <= 0) { clearInterval(id); boton.remove(); return; }
+      // Redondeando hacia arriba: recién dado el clic quedan 14:59, y
+      // decir "14 min" cuando el plazo son 15 se lee como si ya hubiera
+      // perdido un minuto.
+      resta.textContent = seg >= 60 ? `${Math.ceil(seg / 60)} min` : `${seg}s`;
+    };
+    const id = setInterval(tic, 1000);
+    tic();
   }
 
   async function resolver(tarjeta, r, accion, pagoId) {
@@ -1081,17 +1128,43 @@ const CONFIG = {
         codigo:   res.codigo || r.codigo,
         nombre:   res.nombre || r.nombre,
         mensaje:  res.mensaje || '',
-        telefono: res.telefono || r.telefono
+        telefono: res.telefono || r.telefono,
+        // Lo dice el servidor. Si la base todavía no tiene admin_deshacer
+        // aplicada, no viene, y el botón sencillamente no sale.
+        se_puede_deshacer: res.se_puede_deshacer === true,
+        hasta: Date.now() + CONFIG.MINUTOS_DESHACER * 60000
       };
       tarjeta.replaceWith(tarjetaResuelta(r));
-      // El globo tiene que bajar aunque la tarjeta siga en pantalla.
-      const faltan = pendientes.filter(x => !x._resuelto).length;
-      $('#globo-pend').textContent = faltan ? String(faltan) : '';
-      $('#globo-pend').hidden = !faltan;
+      recontarGlobo();
     } catch (e) {
       aviso($('#msg-pend'), esc(e.message), 'mal');
       tarjeta.querySelectorAll('button').forEach(b => b.disabled = false);
     }
+  }
+
+  async function deshacer(tarjeta, r) {
+    tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
+    try {
+      await api('deshacer', { codigo: r.codigo });
+      delete r._resuelto;
+      // Vuelve a la cola tal como estaba, con sus pagos candidatos y sus
+      // dos botones. Es lo que hace que deshacer sirva de algo.
+      tarjeta.replaceWith(tarjetaPendiente(r));
+      recontarGlobo();
+      aviso($('#msg-pend'),
+        `Deshecho. <b>${esc(r.nombre)}</b> vuelve a estar por validar.`, 'bien');
+    } catch (e) {
+      // El caso feo: mientras dudaba, alguien compró ese cupo. Hay que
+      // decirlo entero, no dejarlo en "no se pudo".
+      aviso($('#msg-pend'), esc(e.message), 'mal');
+      tarjeta.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+  }
+
+  function recontarGlobo() {
+    const faltan = pendientes.filter(x => !x._resuelto).length;
+    $('#globo-pend').textContent = faltan ? String(faltan) : '';
+    $('#globo-pend').hidden = !faltan;
   }
 
   /* ---------- arranque ---------- */

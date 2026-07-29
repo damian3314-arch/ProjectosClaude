@@ -293,6 +293,34 @@ ok('la confirmacion sobrevive al buscador', /confirmada/i.test(trasFiltro),
 await p.locator('#limpiar-busq').click();
 await p.waitForTimeout(300);
 
+// ───────── deshacer ─────────
+// La duda llega medio segundo despues del clic: "¿era este el que habia
+// pagado?". Sin esto la unica salida es tocar la base a mano.
+console.log('\n── Deshacer ──');
+const resuelta = p.locator('.pend-card.resuelta').first();
+ok('la tarjeta resuelta ofrece deshacer',
+   await resuelta.locator('.btn.deshacer').count() === 1);
+const restante = (await resuelta.locator('.btn.deshacer').innerText()).trim();
+ok('y dice cuanto plazo queda', /\d+\s*(min|s)\b/.test(restante), restante);
+
+await resuelta.locator('.btn.deshacer').click();
+await p.waitForTimeout(1000);
+ok('lo dice cuando lo deshace',
+   /vuelve a estar por validar/i.test(await p.locator('#msg-pend').innerText()),
+   (await p.locator('#msg-pend').innerText()).slice(0, 55));
+
+// Lo que hace que deshacer sirva de algo: la tarjeta vuelve con sus dos
+// botones, no como un aviso muerto.
+const devuelta = p.locator('.pend-card').filter({ hasText: cod1 }).first();
+ok('vuelve a la cola con sus botones',
+   (await devuelta.locator('.acciones .btn.ok').count()) === 1 &&
+   (await devuelta.locator('.acciones .btn.mal').count()) === 1);
+ok('y ya no se ve como resuelta',
+   await p.locator('.pend-card.resuelta').count() === 0);
+ok('el contador vuelve a subir',
+   (await p.locator('#globo-pend').innerText()).trim() === String(tarjetas),
+   await p.locator('#globo-pend').innerText());
+
 // ───────── salir ─────────
 console.log('\n── Sesión ──');
 await p.locator('#salir').click();

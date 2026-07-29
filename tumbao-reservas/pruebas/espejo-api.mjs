@@ -73,6 +73,9 @@ const TOKEN_ADMIN = process.env.TOKEN_ADMIN || 'token-de-prueba';
 // prueba del panel contra la forma que lo tumbó.
 const FECHA_FEA = process.env.FECHA_FEA === '1';
 
+// Fuerza el caso incomodo de deshacer: el cupo ya se vendio.
+const SIN_CUPO_AL_DESHACER = process.env.SIN_CUPO_AL_DESHACER === '1';
+
 const soloFecha = v => String(v ?? '').slice(0, 10);
 const diaDe = iso => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -291,10 +294,14 @@ createServer(async (req, res) => {
     if (que === 'confirmar' || que === 'rechazar') {
       const r = reservas.get(String(b.codigo || '').toUpperCase());
       if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+      // El rastro para deshacer: de donde venia y cuando se resolvio.
+      r.estadoAntes = r.estado;
+      r.resueltaAt = Date.now();
       if (que === 'confirmar') {
         r.estado = 'confirmada';
         return json(res, 200, { ok: true, estado: 'confirmada', codigo: r.codigo,
           nombre: r.nombre, telefono: r.telefono || '3001112233',
+          se_puede_deshacer: true,
           mensaje: 'Confirmada a mano.' });
       }
       r.estado = 'rechazada';
@@ -302,7 +309,44 @@ createServer(async (req, res) => {
       if (c) { c.cupos_disponibles++; c.agotada = false; }
       return json(res, 200, { ok: true, estado: 'rechazada', codigo: r.codigo,
         nombre: r.nombre, telefono: r.telefono || '3001112233',
+        se_puede_deshacer: true,
         mensaje: 'Rechazada, el cupo quedo libre.' });
+    }
+
+    if (que === 'deshacer') {
+      const r = reservas.get(String(b.codigo || '').toUpperCase());
+      if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+      if (r.estado !== 'confirmada' && r.estado !== 'rechazada') {
+        return json(res, 400, { ok: false, error: 'NADA_QUE_DESHACER',
+          mensaje: 'Esa reserva no esta confirmada ni rechazada.' });
+      }
+      if (!r.estadoAntes) {
+        return json(res, 400, { ok: false, error: 'NO_FUE_A_MANO',
+          mensaje: 'Esta se resolvio sola, no desde el panel. No se deshace desde aqui.' });
+      }
+      const min = Math.floor((Date.now() - r.resueltaAt) / 60000);
+      if (min > 15) {
+        return json(res, 400, { ok: false, error: 'FUERA_DE_TIEMPO', minutos: min,
+          mensaje: `Ya pasaron ${min} minutos. Deshacer solo sirve en los primeros 15.` });
+      }
+      const c = clases.find(x => x.clase_id === r.clase_id);
+      if (r.estado === 'rechazada') {
+        // SIN_CUPO_AL_DESHACER=1 fuerza el caso incomodo: mientras se
+        // dudaba, alguien compro ese cupo.
+        if (SIN_CUPO_AL_DESHACER || (c && c.cupos_disponibles <= 0)) {
+          return json(res, 409, { ok: false, error: 'SIN_CUPO',
+            mensaje: 'Mientras tanto se vendio ese cupo y la clase quedo llena. '
+                   + 'Si hay que meter a esta persona, primero sube el cupo a mano '
+                   + 'en la pestana Horario.' });
+        }
+        if (c) { c.cupos_disponibles--; c.agotada = c.cupos_disponibles <= 0; }
+      }
+      const volvio = r.estadoAntes;
+      r.estado = volvio;
+      r.estadoAntes = null;
+      r.resueltaAt = null;
+      return json(res, 200, { ok: true, codigo: r.codigo, nombre: r.nombre,
+        estado: volvio, mensaje: 'Deshecho. Vuelve a la cola tal como estaba.' });
     }
 
     return json(res, 400, { ok: false, error: 'ruta_desconocida' });
