@@ -495,7 +495,7 @@ const CONFIG = {
       <p class="reloj" id="reloj"></p>
       <p class="sub" style="margin-top:1.4rem">
         Casi siempre entra solo en un par de minutos. Si no,
-        te pedimos el soporte por WhatsApp y lo validamos de una.
+        compartes el soporte por WhatsApp y lo validamos a mano.
       </p>
     </div>
   </section>
@@ -832,7 +832,7 @@ const CONFIG = {
       return;
     }
     if (file.size > MAX_MB * 1024 * 1024) {
-      avisoQr(`La imagen pesa más de ${MAX_MB} MB. Manda una captura, no la foto original.`, 'ojo');
+      avisoQr(`La imagen pesa más de ${MAX_MB} MB. Sube una captura, no la foto original.`, 'ojo');
       return;
     }
     $('#soltar').classList.add('leyendo');
@@ -1021,9 +1021,13 @@ const CONFIG = {
 
     $('#ok-tick').textContent = confirmada ? '✓' : (pendiente ? '⏳' : '!');
     $('#ok-tick').classList.toggle('espera-humana', !confirmada);
+    // "Recibimos tu aviso" no dice lo que pasó ni qué sigue. Aquí el
+    // pago no se confirmó solo, y la persona tiene algo que hacer: hay
+    // que decírselo, y de una que no perdió el cupo.
     $('#t5').textContent = confirmada
       ? (tipo === 'miembro' ? '¡Listo, te esperamos!' : '¡Pago confirmado!')
-      : (pendiente ? 'Recibimos tu aviso' : 'Algo pasó con tu reserva');
+      : (pendiente ? 'No pudimos confirmar tu pago automáticamente'
+                   : 'Algo pasó con tu reserva');
 
     const clase = d.clase || (elegida && elegida.nombre) || '';
     const fecha = d.fecha || (elegida && cap(elegida.etiqueta)) || '';
@@ -1037,17 +1041,17 @@ const CONFIG = {
           // Aqui la persona tiene algo QUE HACER, y hay que decirlo sin
           // rodeos: el pago no se confirmo solo y con el soporte se
           // resuelve en un minuto. "Te escribimos" la deja esperando.
-          ? 'Tu cupo sigue apartado. <b>Mándanos el soporte por WhatsApp</b> ' +
-            'y lo validamos de una.'
+          ? 'No te preocupes: <b>tu cupo sigue apartado</b>. Compártenos el ' +
+            'soporte por WhatsApp y lo validamos a mano.'
           : esc(d.mensaje || 'Escríbenos por WhatsApp y lo resolvemos.'));
 
     // El boton cambia segun el caso: si hay que validar a mano, el
     // mensaje ya viene escrito pidiendo el soporte.
     $('#ok-wa').textContent = pendiente
-      ? 'Mandar el soporte por WhatsApp' : 'Escribirnos por WhatsApp';
+      ? 'Compartir soporte por WhatsApp' : 'Escribirnos por WhatsApp';
     $('#ok-wa').className = pendiente ? 'btn' : 'btn-ghost';
     $('#ok-wa').href = waUrl(pendiente
-      ? `Hola, soy ${$('#nombre').value.trim()}. Les mando el soporte de mi pago. ` +
+      ? `Hola, soy ${$('#nombre').value.trim()}. Les comparto el soporte de mi pago. ` +
         `Mi código es ${d.codigo || ''} (${clase}${hora ? ' · ' + hora : ''}).`
       : `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
     irA(5);
