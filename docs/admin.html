@@ -264,6 +264,62 @@ const CONFIG = {
   .desglose .ok{color:var(--ok)}
   .desglose .ojo{color:var(--gold)}
 
+  /* ---------- la lista de la puerta ---------- */
+  /* La tarjeta del tablero abre la lista, así que tiene que verse
+     tocable. Sin esto nadie descubre que se puede entrar. */
+  .clase-card.abrible{cursor:pointer;transition:border-color .16s,transform .08s}
+  .clase-card.abrible:hover{border-color:var(--line-2)}
+  .clase-card.abrible:active{transform:scale(.995)}
+  .clase-card .ver-lista{
+    margin-top:.7rem;font-size:.78rem;color:var(--tx-3);
+    display:flex;align-items:center;gap:.3rem;
+  }
+  .clase-card.abrible:hover .ver-lista{color:var(--gold)}
+
+  .marcador{
+    display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:.8rem 1rem;margin-bottom:.9rem;
+  }
+  .marcador .n{font-size:1.9rem;font-weight:800;line-height:1;color:var(--ok);
+    font-variant-numeric:tabular-nums}
+  .marcador .de{color:var(--tx-2);font-size:.95rem}
+  .marcador .sp{flex:1}
+  .marcador .ojo{color:var(--gold);font-size:.8rem}
+  .buscar-puerta{max-width:none;display:block;margin-bottom:1rem}
+
+  .grupo-puerta{margin-bottom:1.4rem}
+  .grupo-puerta > h3{
+    margin:0 0 .2rem;font-size:1rem;
+    display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;
+  }
+  .grupo-puerta > h3 .cuantos{font-size:.8rem;color:var(--tx-3);font-weight:400}
+  .grupo-puerta > .pista{
+    font-size:.78rem;color:var(--tx-3);margin:0 0 .7rem;font-style:italic;
+  }
+  .filas{display:grid;gap:.4rem}
+  .fila-puerta{
+    display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:12px;
+    padding:.6rem .8rem;
+  }
+  .fila-puerta.entro{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.05)}
+  .fila-puerta .quien{min-width:0;flex:1}
+  .fila-puerta .nom{font-weight:600;overflow-wrap:anywhere}
+  .fila-puerta .sub{font-size:.75rem;color:var(--tx-3);margin-top:.1rem}
+  .fila-puerta .sub a{color:var(--gold)}
+  /* Se toca con prisa, a veces de pie y con una mano: el botón tiene
+     que ser grande de verdad, no un check de 16 píxeles. */
+  .btn-entro{
+    min-width:6.5rem;min-height:2.6rem;font-weight:600;border-radius:12px;
+    background:var(--bg-3);border:1px solid var(--line-2);color:var(--tx-2);
+  }
+  .btn-entro:hover{border-color:var(--ok);color:var(--ok)}
+  .btn-entro.si{
+    background:rgba(74,222,128,.16);border-color:var(--ok);color:var(--ok);
+  }
+  .btn-entro:disabled{opacity:.5}
+
   .vacio{text-align:center;color:var(--tx-3);padding:3rem 1rem}
   .vacio .ico{font-size:2.4rem;display:block;margin-bottom:.6rem}
   /* Dentro de una rejilla el mensaje se metía en una sola columna y
@@ -312,20 +368,48 @@ const CONFIG = {
 
     <!-- ── tablero ── -->
     <div class="panel on" id="p-tablero">
-      <div class="semana-bar">
-        <button class="btn chico" id="dia-antes">← Día</button>
-        <span class="rango" id="dia-rango">—</span>
-        <button class="btn chico" id="dia-despues">Día →</button>
-        <button class="btn chico" id="dia-hoy">Hoy</button>
-        <input id="dia-fecha" type="date" style="width:auto;padding:.3rem .5rem;font-size:.85rem">
-        <span class="sp"></span>
-        <button class="btn chico" id="recargar-tab">Recargar</button>
+
+      <!-- el día entero -->
+      <div id="vista-dia">
+        <div class="semana-bar">
+          <button class="btn chico" id="dia-antes">← Día</button>
+          <span class="rango" id="dia-rango">—</span>
+          <button class="btn chico" id="dia-despues">Día →</button>
+          <button class="btn chico" id="dia-hoy">Hoy</button>
+          <input id="dia-fecha" type="date" style="width:auto;padding:.3rem .5rem;font-size:.85rem">
+          <span class="sp"></span>
+          <button class="btn chico" id="recargar-tab">Recargar</button>
+        </div>
+
+        <div class="aviso" id="msg-tab" hidden></div>
+        <div class="cargando" id="cargando-tab">Cargando…</div>
+        <div class="tiles" id="tiles-tab"></div>
+        <div class="clases-tab" id="clases-tab"></div>
       </div>
 
-      <div class="aviso" id="msg-tab" hidden></div>
-      <div class="cargando" id="cargando-tab">Cargando…</div>
-      <div class="tiles" id="tiles-tab"></div>
-      <div class="clases-tab" id="clases-tab"></div>
+      <!-- una clase: la lista de la puerta -->
+      <div id="vista-puerta" hidden>
+        <div class="semana-bar">
+          <button class="btn chico" id="puerta-volver">← Volver al día</button>
+          <span class="rango" id="puerta-titulo">—</span>
+          <span class="sp"></span>
+          <button class="btn chico" id="puerta-recargar">Recargar</button>
+        </div>
+
+        <div class="marcador" id="puerta-marcador"></div>
+        <label class="buscar buscar-puerta">
+          <span class="lupa" aria-hidden="true">🔎</span>
+          <input id="buscar-puerta" type="search" autocomplete="off"
+                 aria-label="Buscar a alguien en la lista de la clase"
+                 placeholder="¿Quién dice que reservó? Nombre, código o celular…">
+          <button class="limpiar" id="limpiar-puerta" type="button"
+                  aria-label="Borrar la búsqueda" hidden>×</button>
+        </label>
+
+        <div class="aviso" id="msg-puerta" hidden></div>
+        <div class="cargando" id="cargando-puerta" hidden>Cargando…</div>
+        <div id="lista-puerta"></div>
+      </div>
     </div>
 
     <!-- ── horario ── -->
@@ -611,6 +695,10 @@ const CONFIG = {
       return;
     }
     cont.innerHTML = clases.map(tarjetaClase).join('');
+    // Toda la tarjeta abre la lista de esa clase. Es el camino más
+    // corto desde "entro al panel" hasta "¿quién dice que reservó?".
+    cont.querySelectorAll('.clase-card[data-clase]').forEach(el =>
+      el.addEventListener('click', () => abrirPuerta(el.dataset.clase)));
   }
 
   function tarjetaClase(c) {
@@ -629,7 +717,9 @@ const CONFIG = {
     // en gris de fondo es lo que todavía cabe.
     const pct = n => aforo ? Math.min(100, (n / aforo) * 100) : 0;
 
-    return `<div class="clase-card${c.ya_paso ? ' paso' : ''}${c.activa === false ? ' apagada' : ''}">` +
+    return `<div class="clase-card abrible${c.ya_paso ? ' paso' : ''}` +
+      `${c.activa === false ? ' apagada' : ''}" data-clase="${esc(c.clase_id)}"` +
+      ` role="button" tabindex="0">` +
       `<div class="cab">` +
         `<span class="h">${esc(hora12(c.hora))}</span>` +
         `<span class="sp"></span>` +
@@ -655,7 +745,195 @@ const CONFIG = {
         (Number(c.esperando)   ? `<span>${Number(c.esperando)} esperando pago</span>` : '') +
         `<span class="sp"></span><span>${esc(pesos(c.ingreso_cop))}</span>` +
       `</div>` +
+      `<div class="ver-lista">Ver quién entra →</div>` +
     `</div>`;
+  }
+
+  /* ---------- la lista de la puerta ---------- */
+  // El caso: son las 5:55, hay cola, y alguien dice "yo reservé".
+  let puerta = null;                 // lo último que devolvió el servidor
+
+  $('#puerta-volver').addEventListener('click', cerrarPuerta);
+  $('#puerta-recargar').addEventListener('click',
+    () => puerta && abrirPuerta(puerta.clase.clase_id));
+  $('#buscar-puerta').addEventListener('input', pintarPuerta);
+  $('#limpiar-puerta').addEventListener('click', () => {
+    $('#buscar-puerta').value = ''; pintarPuerta(); $('#buscar-puerta').focus();
+  });
+  $('#buscar-puerta').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { $('#buscar-puerta').value = ''; pintarPuerta(); }
+  });
+
+  function cerrarPuerta() {
+    puerta = null;
+    $('#vista-puerta').hidden = true;
+    $('#vista-dia').hidden = false;
+    // Al volver, los contadores del día tienen que reflejar lo que se
+    // acaba de marcar.
+    cargarTablero();
+  }
+
+  async function abrirPuerta(claseId) {
+    $('#vista-dia').hidden = true;
+    $('#vista-puerta').hidden = false;
+    $('#cargando-puerta').hidden = false;
+    aviso($('#msg-puerta'), '');
+    try {
+      puerta = await api('lista', { clase_id: claseId });
+      pintarPuerta();
+    } catch (e) {
+      aviso($('#msg-puerta'), esc(e.message), 'mal');
+      $('#lista-puerta').innerHTML = '';
+    } finally {
+      $('#cargando-puerta').hidden = true;
+    }
+  }
+
+  function pintarPuerta() {
+    if (!puerta) return;
+    const c = puerta.clase || {};
+    const r = puerta.resumen || {};
+    $('#puerta-titulo').textContent =
+      `${hora12(c.hora)} · ${fmtLargo(c.fecha)}`;
+
+    $('#puerta-marcador').innerHTML =
+      `<span class="n">${Number(r.entraron || 0)}</span>` +
+      `<span class="de">de ${Number(r.esperados || 0)} entraron</span>` +
+      `<span class="sp"></span>` +
+      (Number(r.sin_confirmar)
+        ? `<span class="ojo">⚠ ${r.sin_confirmar} sin confirmar el pago</span>` : '');
+
+    const q = plano($('#buscar-puerta').value);
+    $('#limpiar-puerta').hidden = !q;
+
+    const filtra = lista => lista.filter(p => {
+      if (!q) return true;
+      if (/^\d+$/.test(q)) return String(p.telefono || '').replace(/\D/g, '').includes(q);
+      return [p.nombre, p.codigo, p.telefono].some(v => plano(v).includes(q));
+    });
+
+    const res  = filtra(puerta.reservas || []);
+    const plan = filtra(puerta.con_plan || []);
+
+    const cont = $('#lista-puerta');
+    if (!res.length && !plan.length) {
+      cont.innerHTML = q
+        ? `<div class="vacio"><span class="ico">🔎</span>` +
+          `Nadie con «${esc($('#buscar-puerta').value)}» en esta clase. ` +
+          `Puede que haya reservado para otra hora.</div>`
+        : `<div class="vacio"><span class="ico">🚪</span>` +
+          `Todavía no hay nadie apuntado a esta clase.</div>`;
+      return;
+    }
+
+    cont.innerHTML = '';
+    if (res.length) {
+      cont.appendChild(grupoPuerta(
+        'Reservaron', res,
+        'Compraron clase suelta. Su cupo salió de los que estaban a la venta.'));
+    }
+    if (plan.length) {
+      cont.appendChild(grupoPuerta(
+        'Con plan de esta hora', plan,
+        'No reservan: su puesto ya está descontado del aforo, solo llegan.'));
+    }
+  }
+
+  function grupoPuerta(titulo, gente, pista) {
+    const caja = document.createElement('div');
+    caja.className = 'grupo-puerta';
+    const entraron = gente.filter(p => p.asistio).length;
+    caja.innerHTML =
+      `<h3>${esc(titulo)}` +
+        `<span class="cuantos">${entraron} de ${gente.length}</span></h3>` +
+      `<p class="pista">${esc(pista)}</p>`;
+    const filas = document.createElement('div');
+    filas.className = 'filas';
+    for (const p of gente) filas.appendChild(filaPuerta(p));
+    caja.appendChild(filas);
+    return caja;
+  }
+
+  function filaPuerta(p) {
+    const el = document.createElement('div');
+    el.className = 'fila-puerta' + (p.asistio ? ' entro' : '');
+
+    const tel = String(p.telefono || '').replace(/\D/g, '');
+    el.innerHTML =
+      `<div class="quien">` +
+        `<div class="nom">${esc(p.nombre)}` +
+          (p.codigo ? ` <span class="cod">${esc(p.codigo)}</span>` : '') +
+          (p.confirmada === false
+            ? ` <span class="etiqueta espera">sin confirmar</span>` : '') +
+        `</div>` +
+        `<div class="sub">` +
+          (tel ? `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${tel}" target="_blank" ` +
+                 `rel="noopener">${esc(p.telefono)}</a>` : 'sin celular') +
+          (p.membresia ? ` · ${esc(p.membresia)}` : '') +
+        `</div>` +
+      `</div>`;
+
+    const b = document.createElement('button');
+    b.className = 'btn-entro' + (p.asistio ? ' si' : '');
+    b.textContent = p.asistio ? '✓ Entró' : 'Marcar';
+    b.setAttribute('aria-pressed', String(!!p.asistio));
+    b.setAttribute('aria-label',
+      (p.asistio ? 'Quitar la entrada de ' : 'Marcar que entró ') + p.nombre);
+    b.addEventListener('click', () => marcarEntrada(el, b, p));
+    el.appendChild(b);
+    return el;
+  }
+
+  async function marcarEntrada(fila, boton, p) {
+    const nuevo = !p.asistio;
+    // Optimista: en la puerta hay cola y esperar medio segundo por cada
+    // persona se nota. Si el servidor dice que no, se devuelve solo.
+    pintarBoton(fila, boton, p, nuevo);
+    boton.disabled = true;
+    try {
+      const r = await api('asistencia', {
+        clase_id: puerta.clase.clase_id, ref: p.ref, asistio: nuevo
+      });
+      p.asistio = nuevo;
+      // El total lo dice el servidor, no una suma local: si alguien más
+      // está marcando desde otro teléfono, este es el bueno.
+      if (puerta.resumen) puerta.resumen.entraron = r.entraron;
+      refrescarMarcador();
+      aviso($('#msg-puerta'), '');
+    } catch (e) {
+      pintarBoton(fila, boton, p, p.asistio);
+      aviso($('#msg-puerta'), esc(e.message), 'mal');
+    } finally {
+      boton.disabled = false;
+    }
+  }
+
+  function pintarBoton(fila, boton, p, entro) {
+    fila.classList.toggle('entro', entro);
+    boton.classList.toggle('si', entro);
+    boton.textContent = entro ? '✓ Entró' : 'Marcar';
+    boton.setAttribute('aria-pressed', String(entro));
+  }
+
+  function refrescarMarcador() {
+    const r = puerta.resumen || {};
+    const m = $('#puerta-marcador');
+    const n = m.querySelector('.n');
+    if (n) n.textContent = Number(r.entraron || 0);
+    // Los "N de M" de cada grupo se recalculan a mano para no repintar
+    // la lista entera: repintarla movería el scroll con gente esperando.
+    const grupos = [
+      ['Reservaron', puerta.reservas || []],
+      ['Con plan de esta hora', puerta.con_plan || []],
+    ];
+    $('#lista-puerta').querySelectorAll('.grupo-puerta').forEach(g => {
+      const t = g.querySelector('h3').firstChild.textContent.trim();
+      const par = grupos.find(x => x[0] === t);
+      if (!par) return;
+      const vis = g.querySelectorAll('.fila-puerta').length;
+      const si  = g.querySelectorAll('.fila-puerta.entro').length;
+      g.querySelector('.cuantos').textContent = `${si} de ${vis}`;
+    });
   }
 
   /* ---------- horario ---------- */

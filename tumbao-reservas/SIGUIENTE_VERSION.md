@@ -57,6 +57,21 @@ importar nada nuevo.
 - Ingreso por clase suelta (número de reservas confirmadas × $15.000).
 - Qué horario vende más sueltas.
 
+#### Quién no llegó — nuevo, desde que existe la lista de la puerta
+
+La tabla `asistencias` empieza a registrar quién entró de verdad a cada
+clase. Cruzada con `reservas` y con `membresias` abre dos preguntas que
+antes no se podían ni formular:
+
+- **Cuántos reservan y no llegan.** Si es alto, un cupo vendido no es un
+  cupo ocupado, y la sala se ve más llena de lo que está.
+- **Miembros que dejaron de venir.** Alguien con mensualidad activa que
+  lleva dos semanas sin aparecer es alguien que probablemente no renueve.
+  Esto es retención pura, y es la señal más temprana que va a haber.
+
+Los dos necesitan que la puerta se marque con constancia. Si no se marca,
+el dato no existe — conviene decidirlo antes de contar con él.
+
 #### Salud del proceso de pago
 
 Esto mide si el sistema está funcionando, no el negocio:
@@ -174,9 +189,9 @@ Ninguna es un proyecto; son de horas.
 - **Recordatorio el día antes** por WhatsApp a quien reservó. Reduce el
   que no llega. Es un workflow de n8n de una hora, pero mandar mensajes
   a clientes reales necesita tu visto bueno explícito.
-- **Lista de asistencia** para el profesor: quién viene a la clase de hoy.
-  La función `admin_reservas_de_clase` ya existe y está publicada; solo
-  falta pintarla en el panel.
+- ~~**Lista de asistencia**~~ — hecha. Toca una tarjeta de clase en el
+  Tablero y sale quién entra, en dos grupos (los que reservaron y los que
+  tienen plan de esa hora), con un botón para marcar que entró.
 - **Aviso cuando la importación nocturna falle.** Hoy si falla, se sabe
   entrando a n8n. Debería llegar un mensaje.
 
@@ -190,7 +205,7 @@ Ninguna es un proyecto; son de horas.
 | 2 | Prueba completa con una reserva real | ya |
 | 3 | Borrar pagos de prueba, renombrar credenciales de Gmail | antes de cobrar |
 | 4 | Foto diaria de membresías (`membresias_historico`) | **antes de que haga falta** |
-| 5 | Nombres de clase, profesores, lista de asistencia | primera semana de uso |
+| 5 | Nombres de clase y profesores | primera semana de uso |
 | 6 | Importar cierre de caja | cuando me pases un archivo de ejemplo |
 | 7 | Dashboard | después de 2 semanas de uso real |
 | 8 | Login y cancelación | cuando cancelar empiece a doler |

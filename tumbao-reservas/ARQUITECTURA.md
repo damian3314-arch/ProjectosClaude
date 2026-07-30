@@ -69,6 +69,7 @@ no se va con él.
 | Gestión de horarios | ✅ panel, semana por semana |
 | Automatizaciones | ✅ ingesta de pagos + importación nocturna |
 | Administración de usuarios | ⚠️ **parcial** — ver abajo |
+| Control de acceso en la puerta | ✅ lista por clase, con asistencia |
 | Dashboard administrativo | ⚠️ **parcial** — hay tablero del día; falta la serie histórica |
 | Reportes | ❌ no hay |
 | Escalabilidad | ✅ el esquema aguanta; falta caja |

@@ -117,7 +117,7 @@ cambia, se cambia ahí y en ningún otro lado.
 | Workflow | Estado |
 |---|---|
 | `Tumbao · API de reservas` | **activo** — 4 webhooks, miembro vs. clase suelta |
-| `Tumbao · Panel de admin` | **activo** — 8 webhooks |
+| `Tumbao · Panel de admin` | **activo** — 10 webhooks |
 | `Tumbao · Ingesta de pagos` | **activo** — lee las alertas del banco |
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
 
@@ -144,6 +144,34 @@ pestañas.
 
 > Necesita `supabase/aplicar/PEGAR_TABLERO.sql` aplicado. Sin eso, esta
 > pestaña sale en rojo y las otras dos siguen funcionando igual.
+
+**La lista de la puerta.** Toca cualquier tarjeta de clase en el Tablero y se
+abre quién entra a esa clase. Es la respuesta a *"llega alguien y dice yo
+reservé, ¿dónde miro?"*.
+
+Trae **dos grupos**, y esto es lo importante:
+
+| | reserva | por qué está en la lista |
+|---|---|---|
+| **Reservaron** | sí | compraron clase suelta |
+| **Con plan de esta hora** | no | su puesto ya salió del aforo, solo llegan |
+
+Con solo las reservas estarías mirando 3 nombres de las 30 personas que van a
+entrar. El sábado el segundo grupo va vacío: ahí nadie tiene plan y todos
+reservan.
+
+Arriba, un contador de *N de M entraron* y un buscador por nombre, código o
+celular. Cada persona tiene un botón grande de **Marcar / ✓ Entró**, que se
+puede quitar si fue un error. Marcar dos veces no cuenta dos personas — en la
+puerta se dan clics repetidos y con prisa.
+
+Las reservas que aún no concilian **también salen**, con un aviso de *sin
+confirmar* al lado: alguien puede plantarse en la puerta con el pago hecho
+hace dos minutos. Las rechazadas no salen.
+
+> Necesita `supabase/aplicar/PEGAR_PUERTA.sql`. La asistencia se guarda en una
+> tabla aparte a propósito: `membresias` se borra entera cada noche, y lo que
+> ya pasó por la puerta no puede irse con ella.
 
 **Pestaña Horario.** Una columna por día. En cada clase:
 
@@ -222,7 +250,7 @@ prefiere quedarse quieto — la salida es subir el cupo a mano en Horario.
 ## Probar sin tocar nada real
 
 ```bash
-node pruebas/espejo-api.mjs          # imita los 10 webhooks
+node pruebas/espejo-api.mjs          # imita todos los webhooks
 node pruebas/prueba-pagina.mjs       # la página pública, los dos caminos
 node pruebas/prueba-admin.mjs        # el panel entero
 ```
@@ -266,7 +294,14 @@ psql -d tumbao -f pruebas/humo-aviso-pago.sql
 psql -d tumbao -f pruebas/humo-aforo.sql
 psql -d tumbao -f pruebas/humo-tablero.sql
 psql -d tumbao -f pruebas/humo-deshacer.sql
+psql -d tumbao -f pruebas/humo-puerta.sql
 ```
+
+Las suites de navegador se pueden correr varias veces seguidas contra el
+mismo espejo: `prueba-admin.mjs` lo devuelve al estado inicial antes de
+empezar (`GET /_prueba/reiniciar`). Sin eso, la segunda corrida arrancaba
+sobre los restos de la primera y fallaba por cosas que no tenían nada que
+ver con el código.
 
 El de deshacer es el que hay que mirar si se toca la cola de validación:
 comprueba que restaura el estado exacto, que el cupo vuelve, que el pago se

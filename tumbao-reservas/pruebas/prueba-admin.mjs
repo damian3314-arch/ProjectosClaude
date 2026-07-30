@@ -25,6 +25,12 @@ const entrar = async tk => {
   await p.locator('#btn-entrar').click();
 };
 
+// El espejo guarda estado en memoria y esta suite crea clases, reserva
+// y marca asistencias. Sin volver al principio, la segunda corrida
+// arranca sobre los restos de la primera y falla por cosas que no
+// tienen que ver con el codigo.
+await fetch('http://localhost:8899/_prueba/reiniciar').catch(() => {});
+
 await p.goto(BASE, { waitUntil: 'networkidle' });
 
 // ───────── entrar ─────────
@@ -83,6 +89,88 @@ const cifras = await c1.evaluate(e => {
 ok('aforo − con plan = a la venta',
    cifras.aforo - cifras.conPlan === cifras.venta,
    `${cifras.aforo} − ${cifras.conPlan} = ${cifras.venta}`);
+
+// ───────── la lista de la puerta ─────────
+// El caso real: son las 5:55, hay cola, y alguien dice "yo reservé".
+// ¿Dónde se mira? Aquí, a un toque de la tarjeta de la clase.
+console.log('\n── Puerta ──');
+// Esa clase todavia no tiene reservas: se le siembra una para que la
+// lista tenga los DOS grupos, que es lo que hay que comprobar. Con solo
+// gente de plan el caso interesante no aparece.
+const idClase = await c1.getAttribute('data-clase');
+await fetch('http://localhost:8899/webhook/tumbao/reservar', {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ clase_id: idClase, nombre: 'Yenny Vergara',
+                         telefono: '3102543733', tipo: 'suelta', habeas: true })
+});
+await p.locator('#recargar-tab').click();
+await p.waitForTimeout(700);
+
+await c1.click();
+await p.waitForSelector('#vista-puerta:not([hidden])', { timeout: 8000 });
+await p.waitForSelector('.fila-puerta', { timeout: 8000 });
+ok('la tarjeta de la clase abre su lista', true);
+ok('esconde la vista del dia', await p.locator('#vista-dia').isHidden());
+
+const marcador = await p.locator('#puerta-marcador').innerText();
+ok('dice cuantos entraron de cuantos', /\d+\s*de\s*\d+\s*entraron/.test(marcador),
+   marcador.replace(/\n/g, ' '));
+
+// Los dos grupos: quien reservó, y quien tiene plan y solo llega. Sin
+// el segundo, el portero vería 3 nombres de las 30 personas que entran.
+const gruposP = await p.locator('.grupo-puerta > h3').allInnerTexts();
+ok('separa a los que reservaron de los que tienen plan',
+   gruposP.some(t => /Reservaron/i.test(t)) && gruposP.some(t => /plan/i.test(t)),
+   gruposP.join(' | ').replace(/\n/g, ' '));
+
+const fila1 = p.locator('.fila-puerta').first();
+const quien = (await fila1.locator('.nom').innerText()).trim();
+ok('cada persona trae un boton grande de marcar',
+   await fila1.locator('.btn-entro').count() === 1,
+   quien);
+
+await fila1.locator('.btn-entro').click();
+await p.waitForTimeout(800);
+ok('marcar deja la fila en verde',
+   (await fila1.getAttribute('class')).includes('entro'));
+ok('y el boton dice que entro', /Entró/.test(await fila1.locator('.btn-entro').innerText()),
+   (await fila1.locator('.btn-entro').innerText()).trim());
+const tras1 = await p.locator('#puerta-marcador .n').innerText();
+ok('el contador sube', Number(tras1) >= 1, `${tras1} entraron`);
+
+// Se toca con prisa: marcar dos veces no puede contar dos personas.
+await fila1.locator('.btn-entro').click();
+await p.waitForTimeout(700);
+await fila1.locator('.btn-entro').click();
+await p.waitForTimeout(700);
+ok('desmarcar y volver a marcar no cuenta doble',
+   (await p.locator('#puerta-marcador .n').innerText()) === tras1,
+   `${await p.locator('#puerta-marcador .n').innerText()} vs ${tras1}`);
+
+// El buscador es el punto entero de la pantalla.
+await p.fill('#buscar-puerta', quien.split(' ')[0].toLowerCase());
+await p.waitForTimeout(300);
+ok('el buscador filtra la lista', await p.locator('.fila-puerta').count() >= 1,
+   `${await p.locator('.fila-puerta').count()} fila(s)`);
+await p.fill('#buscar-puerta', 'zzz-nadie');
+await p.waitForTimeout(300);
+ok('y dice cuando no esta', /Nadie con/.test(await p.locator('#lista-puerta').innerText()),
+   (await p.locator('#lista-puerta').innerText()).replace(/\n/g, ' ').slice(0, 50));
+await p.locator('#limpiar-puerta').click();
+await p.waitForTimeout(300);
+
+// La marca tiene que seguir puesta al volver a abrir.
+await p.locator('#puerta-volver').click();
+await p.waitForSelector('#vista-dia:not([hidden])', { timeout: 8000 });
+ok('volver devuelve a la vista del dia', await p.locator('#vista-puerta').isHidden());
+await p.waitForSelector('.clase-card', { timeout: 8000 });
+await p.locator('.clase-card').first().click();
+await p.waitForSelector('.fila-puerta', { timeout: 8000 });
+ok('lo marcado sigue marcado al volver a entrar',
+   await p.locator('.fila-puerta.entro').count() >= 1,
+   `${await p.locator('.fila-puerta.entro').count()} marcada(s)`);
+await p.locator('#puerta-volver').click();
+await p.waitForSelector('#vista-dia:not([hidden])', { timeout: 8000 });
 
 await p.locator('#dia-hoy').click();
 await p.waitForTimeout(700);

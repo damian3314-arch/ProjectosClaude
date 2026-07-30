@@ -39,30 +39,41 @@ const enDias = (n, h) => new Date(`${fechaBogota(n)}T${String(h).padStart(2, '0'
 const dowBogota = n => new Date(`${fechaBogota(n)}T12:00:00-05:00`).getUTCDay();
 
 // Lun–vie 7am/6pm/7pm, sábado 8am/9am — el horario real de Tumbao.
+//
+// Va en una función y no suelto arriba porque el espejo guarda estado en
+// memoria: las pruebas crean clases, reservan y marcan asistencias. Sin
+// poder volver al principio, la segunda corrida de la misma suite
+// arranca sobre los restos de la primera y falla por cosas que no tienen
+// nada que ver con el código. Ese fue exactamente el sintoma.
 const clases = [];
 let seq = 1;
-for (let n = 1; n <= 7; n++) {
-  const dow = dowBogota(n);
-  const horas = dow === 6 ? [[8, 'Clase 8:00 am'], [9, 'Clase 9:00 am']]
-              : dow === 0 ? []
-              : [[7, 'Clase 7:00 am'], [18, 'Clase 6:00 pm'], [19, 'Clase 7:00 pm']];
-  for (const [h, nombre] of horas) {
-    const libres = dow === 6 ? 30 : (h === 18 ? 4 : h === 7 ? 11 : 14);
-    clases.push({
-      clase_id: 'clase-' + (seq++),
-      nombre, profesor: 'Kevin', lugar: 'Sede Tumbao',
-      fecha_hora: enDias(n, h).toISOString(),
-      duracion_min: 60, precio_cop: 15000,
-      cupo_total: libres, cupos_disponibles: libres, agotada: libres <= 0,
-      // Lo que ve el panel: los cupos salen de aforo − gente con plan.
-      activa: true, aforo: 30, activos_plan: 30 - libres, cupo_manual: null,
-      _dow: dow, _hora: h,
-    });
+function sembrarClases() {
+  clases.length = 0;
+  seq = 1;
+  for (let n = 1; n <= 7; n++) {
+    const dow = dowBogota(n);
+    const horas = dow === 6 ? [[8, 'Clase 8:00 am'], [9, 'Clase 9:00 am']]
+                : dow === 0 ? []
+                : [[7, 'Clase 7:00 am'], [18, 'Clase 6:00 pm'], [19, 'Clase 7:00 pm']];
+    for (const [h, nombre] of horas) {
+      const libres = dow === 6 ? 30 : (h === 18 ? 4 : h === 7 ? 11 : 14);
+      clases.push({
+        clase_id: 'clase-' + (seq++),
+        nombre, profesor: 'Kevin', lugar: 'Sede Tumbao',
+        fecha_hora: enDias(n, h).toISOString(),
+        duracion_min: 60, precio_cop: 15000,
+        cupo_total: libres, cupos_disponibles: libres, agotada: libres <= 0,
+        // Lo que ve el panel: los cupos salen de aforo − gente con plan.
+        activa: true, aforo: 30, activos_plan: 30 - libres, cupo_manual: null,
+        _dow: dow, _hora: h,
+      });
+    }
   }
+  // Una agotada para comprobar que se deshabilita.
+  clases[1].cupos_disponibles = 0;
+  clases[1].agotada = true;
 }
-// Una agotada para comprobar que se deshabilita.
-clases[1].cupos_disponibles = 0;
-clases[1].agotada = true;
+sembrarClases();
 
 // Token del panel. En la vida real lo emite Supabase y se guarda hasheado;
 // aqui es fijo para poder probar.
@@ -90,8 +101,16 @@ const sumaDias = (iso, n) => {
 // Lo ultimo que llego por /comprobante, para que la prueba lo pueda mirar.
 let ultimoComprobante = null;
 
-const MIEMBROS = { '3001111111': 18 };   // celular -> hora de su plan
+// celular -> hora de su plan. Varios a las 18 para que la lista de la
+// puerta tenga los dos grupos y se note la diferencia.
+const MIEMBROS = {
+  '3001111111': 18, '3001111112': 18, '3001111113': 18,
+  '3002222221': 7,  '3002222222': 7,
+};
 const reservas = new Map();
+// "claseId|ref" de quien ya entro. Un Set, porque marcar dos veces no
+// puede contar dos personas.
+const asistencias = new Set();
 let nCod = 0;
 const codigo = () => 'AB' + String(++nCod).padStart(4, '0');
 
@@ -291,6 +310,67 @@ createServer(async (req, res) => {
       });
     }
 
+    if (que === 'lista') {
+      const c = clases.find(x => x.clase_id === b.clase_id);
+      if (!c) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+
+      const reservadas = [...reservas.values()]
+        .filter(r => r.clase_id === c.clase_id &&
+                     !['expirada', 'rechazada'].includes(r.estado))
+        .map(r => ({
+          ref: 'r:' + r.codigo, codigo: r.codigo,
+          nombre: r.nombre, telefono: r.telefono, tipo: r.tipo,
+          estado: r.estado, confirmada: r.estado === 'confirmada',
+          asistio: asistencias.has(c.clase_id + '|r:' + r.codigo)
+        }))
+        .sort((a, z) => a.nombre.localeCompare(z.nombre));
+
+      // Entre semana el miembro no reserva: su puesto ya salio del
+      // aforo. El sabado no hay planes de esa hora, asi que va vacio.
+      const tels = new Set(reservadas.map(r => String(r.telefono || '').replace(/\D/g, '')));
+      const conPlan = c._dow === 6 ? [] : Object.entries(MIEMBROS)
+        .filter(([tel, hora]) => hora === c._hora && !tels.has(tel))
+        .map(([tel]) => ({
+          ref: 'p:' + tel, nombre: 'Afiliada ' + tel.slice(-4), telefono: tel,
+          membresia: 'PLAN MENSUALIDAD',
+          asistio: asistencias.has(c.clase_id + '|p:' + tel)
+        }))
+        .sort((a, z) => a.nombre.localeCompare(z.nombre));
+
+      const entraron = [...asistencias].filter(k => k.startsWith(c.clase_id + '|')).length;
+      return json(res, 200, {
+        ok: true,
+        clase: { clase_id: c.clase_id, nombre: c.nombre, fecha: diaDe(c.fecha_hora),
+                 hora: String(c._hora).padStart(2, '0') + ':00',
+                 aforo: c.aforo ?? 30, ya_paso: new Date(c.fecha_hora) <= new Date() },
+        reservas: reservadas, con_plan: conPlan,
+        resumen: {
+          reservas: reservadas.length, con_plan: conPlan.length,
+          esperados: reservadas.length + conPlan.length, entraron,
+          sin_confirmar: reservadas.filter(r => !r.confirmada).length
+        }
+      });
+    }
+
+    if (que === 'asistencia') {
+      const c = clases.find(x => x.clase_id === b.clase_id);
+      if (!c) return json(res, 400, { ok: false, error: 'CLASE_NO_EXISTE' });
+      const ref = String(b.ref || '');
+      if (!/^[rp]:.+/.test(ref)) return json(res, 400, { ok: false, error: 'REF_INVALIDA' });
+      if (ref.startsWith('r:')) {
+        const r = reservas.get(ref.slice(2).toUpperCase());
+        if (!r || r.clase_id !== c.clase_id) {
+          return json(res, 400, { ok: false, error: 'NO_EXISTE',
+            mensaje: 'Esa reserva no es de esta clase.' });
+        }
+      }
+      const llave = c.clase_id + '|' + ref;
+      // Idempotente: en la puerta se dan clics repetidos y con prisa.
+      if (b.asistio !== false) asistencias.add(llave); else asistencias.delete(llave);
+      const entraron = [...asistencias].filter(k => k.startsWith(c.clase_id + '|')).length;
+      return json(res, 200, { ok: true, ref, asistio: b.asistio !== false, entraron });
+    }
+
     if (que === 'confirmar' || que === 'rechazar') {
       const r = reservas.get(String(b.codigo || '').toUpperCase());
       if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
@@ -460,6 +540,17 @@ createServer(async (req, res) => {
 
   if (url.pathname === '/_prueba/ultimo-comprobante') {
     return json(res, 200, { ok: true, ultimo: ultimoComprobante });
+  }
+
+  // Vuelve al estado del arranque. Sin esto, correr la misma suite dos
+  // veces seguidas falla por los restos de la primera, y el fallo no se
+  // parece en nada a su causa.
+  if (url.pathname === '/_prueba/reiniciar') {
+    sembrarClases();
+    reservas.clear();
+    asistencias.clear();
+    ultimoComprobante = null;
+    return json(res, 200, { ok: true, clases: clases.length });
   }
 
   json(res, 404, { ok: false, error: 'no_existe' });
