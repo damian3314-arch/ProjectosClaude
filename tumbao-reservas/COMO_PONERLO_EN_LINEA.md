@@ -120,10 +120,40 @@ cambia, se cambia ahí y en ningún otro lado.
 | `Tumbao · Panel de admin` | **activo** — 10 webhooks |
 | `Tumbao · Ingesta de pagos` | **activo** — lee las alertas del banco |
 | `Tumbao · Importar afiliados y recalcular cupos` | **activo** — 9:30 pm y 8:00 am |
+| `Tumbao · Leer comprobante` | **activo** — ⚠️ le falta la credencial de OpenAI |
 
-Los cuatro corriendo y probados contra los servicios reales. La última
-importación trajo los 65 afiliados activos (19 a las 7am, 27 a las 6pm,
-19 a las 7pm) y ajustó los cupos de 28 clases.
+Corriendo y probados contra los servicios reales. La última importación
+trajo los 65 afiliados activos (19 a las 7am, 27 a las 6pm, 19 a las 7pm)
+y ajustó los cupos de 28 clases.
+
+### La lectura del comprobante
+
+`Tumbao · Leer comprobante` recibe la captura que sube el cliente y
+devuelve **hora, referencia, quién pagó y el valor** para autocompletar
+los campos. Le falta una cosa para que funcione:
+
+> **Crea una credencial de tipo OpenAI en n8n y ponla en el nodo
+> `OpenAI: leer el comprobante`.** Sin ella el workflow responde igual,
+> con todo en null, y la página le pide los datos a mano a la persona —
+> no se cae, pero tampoco autocompleta nada. Comprobado.
+
+Tres cosas que conviene tener claras:
+
+- **La imagen sale del celular.** Antes se leía el QR dentro del
+  navegador y no salía nada; se cambió porque el QR **nunca trae la
+  hora**, que es justo el dato con el que se casa el pago. La página lo
+  dice tal cual: *"se usa solo para leer esos datos y no se guarda"*.
+- **Y no se guarda, de verdad.** En Settings de ese workflow, guardar
+  ejecuciones está en **Do not save** a propósito. Si alguien lo
+  enciende, n8n empieza a guardar el cuerpo del webhook —o sea, la
+  imagen— en el historial, y esa frase de la página deja de ser cierta.
+- **Ante la duda, null.** El prompt insiste en no adivinar y el nodo que
+  normaliza vuelve a validar todo. Una hora inventada cruza el pago con
+  el equivocado; un null solo hace que la persona la escriba.
+
+Cuesta unos centavos por comprobante. Si algún día molesta, el nodo se
+puede cambiar por otro proveedor sin tocar la página: el contrato es
+`{ ok, hora, referencia, pagador, valor }`.
 
 `Tumbao · Explorar archivo de planes` fue temporal, para ver el formato del
 reporte de Drive. Se puede borrar.
@@ -187,7 +217,7 @@ hace dos minutos. Las rechazadas no salen.
 Los cambios se acumulan y se guardan todos juntos con el botón de abajo.
 
 **Pestaña Por validar.** La cola de lo que no concilió solo: o el correo del
-banco no llegó en 5 minutos, o llegaron dos pagos iguales. Cada tarjeta trae
+banco no llegó en 3 minutos, o llegaron dos pagos iguales. Cada tarjeta trae
 los pagos sin dueño de ese valor cerca de esa hora, con un **% de parecido**
 del nombre. Le das *Es este* al que corresponda, o *Confirmar igual* si te
 consta. Después queda un botón para escribirle por WhatsApp con el mensaje ya
@@ -296,6 +326,20 @@ psql -d tumbao -f pruebas/humo-tablero.sql
 psql -d tumbao -f pruebas/humo-deshacer.sql
 psql -d tumbao -f pruebas/humo-puerta.sql
 ```
+
+La lectura del comprobante se prueba en sus tres caminos, y el que más
+importa es el segundo:
+
+```bash
+node pruebas/espejo-api.mjs                     # lee bien
+LECTURA_VACIA=1 node pruebas/espejo-api.mjs     # no saca nada
+LECTURA_OTRO=1  node pruebas/espejo-api.mjs     # pagó otra persona
+# y la misma variable al correr prueba-comprobante.mjs
+```
+
+`LECTURA_VACIA` es el camino que va a pasar seguido —bancos raros,
+capturas recortadas, o simplemente que falte la credencial— y ahí la
+persona tiene que poder escribir los datos y seguir como si nada.
 
 Las suites de navegador se pueden correr varias veces seguidas contra el
 mismo espejo: `prueba-admin.mjs` lo devuelve al estado inicial antes de

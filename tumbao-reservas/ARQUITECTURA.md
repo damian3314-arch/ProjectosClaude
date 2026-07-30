@@ -44,13 +44,14 @@ el único sitio donde esa información es real.
 | Herramienta | Papel | Estado real |
 |---|---|---|
 | **Supabase** | Base del sistema. Toda la lógica de negocio vive en funciones de Postgres, no en n8n | ✅ funcionando |
-| **n8n** | Pegamento. Mueve y transforma, no decide ni guarda lógica | ✅ 4 workflows activos |
+| **n8n** | Pegamento. Mueve y transforma, no decide ni guarda lógica | ✅ 5 workflows activos |
 | **Google Drive** | Solo depósito de los Excel de AdminGym | ✅ se lee, no se escribe |
 | ↳ carpeta de reportes | `1aqP6ZmNCUEBpLe9Nkfbf8aKEZdmMnJYp` — ahí van cierres y afiliados | ✅ |
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
 | **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
 | **Cloudflare** | Dominio propio | ⏳ más adelante |
+| **OpenAI** | Solo lee la captura del comprobante y devuelve 4 campos | ⚠️ falta la credencial en n8n |
 
 Detalle que vale la pena tener claro sobre n8n: **no toma ninguna decisión
 de negocio.** Quién tiene cupo, a quién se le abona un pago, si un token

@@ -19,7 +19,9 @@ const CONFIG = {
   N8N_BASE:  'https://barragan.app.n8n.cloud/webhook',
   WHATSAPP:  '573017833550',
   INSTAGRAM: 'tumbao.bca',
-  MINUTOS_ESPERA: 5,
+  // El aviso del banco tarda de 1 a 2 minutos. Con 3 basta, y esperar 5
+  // solo hace que la gente crea que algo se rompió.
+  MINUTOS_ESPERA: 3,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -197,6 +199,18 @@ const CONFIG = {
   /* ---------- comprobante ---------- */
   .comprobante{margin:1.2rem 0}
   .comprobante > label:not(.soltar){display:block;font-size:.85rem;color:var(--tx-2);margin:.9rem 0 .35rem}
+  .paso-titulo{
+    font-size:1.02rem;margin:1.6rem 0 .5rem;padding-top:1.2rem;
+    border-top:1px solid var(--line);
+  }
+  .comprobante > .paso-titulo:first-child{margin-top:.4rem;padding-top:0;border-top:0}
+  .paso-sub{font-size:.82rem;color:var(--tx-3);margin:0 0 .6rem}
+  /* Lo que llenó la lectura se marca un momento, para que se note qué
+     hay que revisar. Se quita en cuanto la persona lo toca. */
+  .comprobante input.leido{
+    border-color:rgba(74,222,128,.55);
+    box-shadow:0 0 0 3px rgba(74,222,128,.09);
+  }
   .comprobante .opt{color:var(--tx-3);font-weight:400}
   .comprobante .req{color:var(--hot)}
   .comprobante input[type="text"],.comprobante input[type="time"]{
@@ -222,6 +236,11 @@ const CONFIG = {
   .soltar .ico{font-size:1.7rem}
   .soltar .tit{font-weight:600}
   .soltar .des{font-size:.8rem;color:var(--tx-3)}
+  /* La lectura pasa por la red y puede tardar un par de segundos: sin
+     esto la pantalla se queda muda y la gente vuelve a tocar. */
+  .soltar.leyendo{border-color:var(--gold);cursor:progress;opacity:.75}
+  .soltar.leyendo .ico{animation:latir 1s ease-in-out infinite}
+  @keyframes latir{50%{opacity:.35}}
 
   .previa{display:flex;gap:.8rem;align-items:center;background:var(--bg-2);
     border:1px solid var(--line);border-radius:var(--r);padding:.7rem}
@@ -315,7 +334,7 @@ const CONFIG = {
         <span class="ico" aria-hidden="true">🎟️</span>
         <span>
           <span class="tit">Clase suelta</span>
-          <span class="des">Pagas la clase y nos mandas el comprobante.</span>
+          <span class="des">Eliges tu clase, pagas y tu cupo queda confirmado.</span>
         </span>
       </button>
     </div>
@@ -417,10 +436,36 @@ const CONFIG = {
     </div>
 
     <div class="comprobante">
+      <!-- Primero la captura: de ahí salen los tres campos de abajo. El
+           orden importa — pedirlos a mano antes de ofrecer leerlos hacía
+           que nadie usara la lectura. -->
+      <h3 class="paso-titulo">Sube tu comprobante</h3>
+
+      <label for="archivo" class="soltar" id="soltar">
+        <span class="ico" aria-hidden="true">📷</span>
+        <span class="tit">Elige la captura del pago</span>
+        <span class="des">Leemos la hora y la referencia por ti.</span>
+        <input id="archivo" type="file" accept="image/*" hidden>
+      </label>
+      <small class="pista privacidad">🔒 La imagen se usa <b>solo para leer
+        esos datos</b> y no se guarda en ningún lado.</small>
+
+      <div class="aviso-qr" id="aviso-qr" hidden></div>
+
+      <h3 class="paso-titulo">Confirma los datos</h3>
+      <p class="paso-sub" id="paso-sub">Los llenamos con lo que diga tu
+        comprobante. Revísalos y corrige lo que haga falta.</p>
+
       <label for="hora-transf">¿A qué hora hiciste la transferencia? <span class="req">*</span></label>
       <input id="hora-transf" type="time" step="60">
-      <small class="pista">Sale en tu comprobante. Con eso encontramos tu pago de una.</small>
+      <small class="pista">Con la hora exacta encontramos tu pago de una.</small>
       <div id="e-hora" class="error" hidden></div>
+
+      <label for="referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
+      <input id="referencia" type="text" inputmode="latin" autocomplete="off"
+             placeholder="Ej: M25418019" maxlength="40">
+      <small class="pista">Va debajo del valor. No todos los bancos la muestran igual;
+        si no la ves, déjalo vacío.</small>
 
       <label class="check-otro" for="otro-paga">
         <input id="otro-paga" type="checkbox">
@@ -434,24 +479,6 @@ const CONFIG = {
         <small class="pista">Así sabemos que ese pago es el tuyo aunque no venga
           a tu nombre.</small>
       </div>
-
-      <label for="referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
-      <input id="referencia" type="text" inputmode="latin" autocomplete="off"
-             placeholder="Ej: M25418019" maxlength="40">
-      <small class="pista">Va debajo del valor. No todos los bancos la muestran igual;
-        si no la ves, déjalo vacío.</small>
-
-      <label for="archivo" class="soltar" id="soltar">
-        <span class="ico" aria-hidden="true">📷</span>
-        <span class="tit">O léelo de tu comprobante</span>
-        <span class="des">Si tu comprobante tiene código QR, elige la captura y
-          llenamos los campos solos.</span>
-        <input id="archivo" type="file" accept="image/*" hidden>
-      </label>
-      <small class="pista privacidad">🔒 La imagen <b>no se sube ni se guarda</b>.
-        Se lee aquí mismo en tu celular y se descarta.</small>
-
-      <div class="aviso-qr" id="aviso-qr" hidden></div>
     </div>
 
     <button class="btn" type="button" id="ya-pague">Ya pagué</button>
@@ -467,8 +494,8 @@ const CONFIG = {
       <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="barra"><i></i></div>
       <p class="reloj" id="reloj"></p>
       <p class="sub" style="margin-top:1.4rem">
-        Si se demora más de la cuenta no pasa nada: alguien del equipo lo valida
-        y te escribimos por WhatsApp.
+        Casi siempre entra solo en un par de minutos. Si no,
+        te pedimos el soporte por WhatsApp y lo validamos de una.
       </p>
     </div>
   </section>
@@ -548,7 +575,7 @@ const CONFIG = {
     $('#chip-fin').textContent = esMiembro ? '4' : '5';
     $('#sub-horario').textContent = esMiembro
       ? 'Tus clases entre semana ya están cubiertas. Aquí apartas el sábado.'
-      : 'Elige el día y la hora. Después pagas y nos mandas el comprobante.';
+      : 'Elige el día y la hora. Después pagas y tu cupo queda confirmado.';
     $('#sub-datos').textContent = esMiembro
       ? 'Con tu celular verificamos tu mensualidad.'
       : 'Solo lo necesario para apartarte el cupo.';
@@ -561,6 +588,25 @@ const CONFIG = {
   }));
 
   /* ---------- 1 · horarios ---------- */
+
+  // Tumbao arma el horario semana a semana. Ofrecer días de la semana
+  // que viene es prometer clases que todavía no están puestas: el cupo
+  // que muestren no lo ha revisado nadie. Así que la página solo enseña
+  // hasta el domingo de la semana que corre, aunque el servidor mande
+  // más.
+  function finDeLaSemana(){
+    const hoy = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const [a, m, d] = hoy.split('-').map(Number);
+    const f = new Date(Date.UTC(a, m - 1, d));
+    const dow = f.getUTCDay();                 // 0 domingo
+    // El domingo Tumbao no abre y la semana ya se acabó: la que corre es
+    // la que empieza mañana, así que se llega hasta el domingo siguiente.
+    f.setUTCDate(f.getUTCDate() + (dow === 0 ? 7 : 7 - dow));
+    return f.toISOString().slice(0, 10);
+  }
+
   async function cargar(){
     if (!cfgOk){
       $('#clases').innerHTML = '';
@@ -573,7 +619,9 @@ const CONFIG = {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
 
-      dias = (data.dias || []).filter(d => d.clases && d.clases.length);
+      dias = (data.dias || [])
+        .filter(d => d.clases && d.clases.length)
+        .filter(d => d.fecha <= finDeLaSemana());
       $('#clases').innerHTML = '';
       aviso('#err1','');
 
@@ -722,57 +770,59 @@ const CONFIG = {
   }));
 
   /* ---------- comprobante ---------- */
-  // La imagen NUNCA sale del navegador. Se lee aqui para sacarle el QR y
-  // se descarta: no se sube, no se guarda, no hay nada que borrar despues.
-  // Ademas cada banco arma el comprobante distinto, asi que guardar la
-  // imagen tampoco serviria para leerla automaticamente.
-  let qrLeido = null;          // lo que traia el QR del comprobante, si lo tiene
+  // La imagen se manda a n8n SOLO para leerla y no se guarda en ningún
+  // lado: ni en Supabase, ni en Drive, ni en el propio n8n. Se lee y se
+  // suelta.
+  //
+  // Antes esto se hacía en el navegador con jsQR, sin subir nada. Se
+  // cambió porque el QR nunca trae la HORA, que es justo el dato con el
+  // que se casa el pago; y porque cada banco arma el comprobante
+  // distinto, así que buscar la hora con expresiones regulares sobre
+  // texto extraído a ciegas fallaba en cuanto cambiaba el banco.
+  let qrLeido = null;          // lo que se pudo leer, para mandarlo con el aviso
 
   const MAX_MB = 8;
-
-  // jsQR pesa 250 KB. No tiene por que cargarse en la primera pantalla:
-  // se trae solo cuando alguien elige un archivo.
-  let cargandoQr = null;
-  function traerJsQR(){
-    if (window.jsQR) return Promise.resolve(window.jsQR);
-    if (cargandoQr) return cargandoQr;
-    cargandoQr = new Promise((ok, mal) => {
-      const s = document.createElement('script');
-      s.src = 'js/jsQR.js';
-      s.onload = () => ok(window.jsQR);
-      s.onerror = () => mal(new Error('no cargo jsQR'));
-      document.head.appendChild(s);
-    });
-    return cargandoQr;
-  }
-
-  // El QR del comprobante suele ser chico dentro de una captura grande.
-  // Se dibuja a tamaño real (hasta un tope) para no perder los modulos.
-  async function leerQr(dataUrl){
-    const jsQR = await traerJsQR();
-    const img = await new Promise((ok, mal) => {
-      const i = new Image();
-      i.onload = () => ok(i);
-      i.onerror = () => mal(new Error('imagen ilegible'));
-      i.src = dataUrl;
-    });
-    const tope = 1600;
-    const escala = Math.min(1, tope / Math.max(img.width, img.height));
-    const w = Math.round(img.width * escala), h = Math.round(img.height * escala);
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(img, 0, 0, w, h);
-    const d = ctx.getImageData(0, 0, w, h);
-    const r = jsQR(d.data, w, h, { inversionAttempts: 'attemptBoth' });
-    return r ? r.data : null;
-  }
+  // Las capturas de celular vienen de 1080–1290 px de ancho. Reducirlas
+  // antes de mandarlas hace la lectura bastante más rápida sin perder
+  // nada de lo que hay que leer, que son números grandes.
+  const ANCHO_MAX = 1100;
 
   function avisoQr(texto, clase){
     const el = $('#aviso-qr');
     el.className = 'aviso-qr' + (clase ? ' ' + clase : '');
-    el.textContent = texto;
+    el.innerHTML = texto;
     el.hidden = !texto;
+  }
+
+  // Marca lo que llenó la lectura, y quita la marca en cuanto la persona
+  // lo toca: a partir de ahí el dato es suyo, no nuestro.
+  function ponerLeido(input, valor){
+    if (valor == null || valor === '') return false;
+    if (String(input.value).trim() !== '') return false;   // no pisar lo escrito
+    input.value = valor;
+    input.classList.add('leido');
+    input.addEventListener('input', () => input.classList.remove('leido'), { once: true });
+    return true;
+  }
+
+  async function achicar(file){
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, mal) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => mal(new Error('imagen ilegible'));
+        i.src = url;
+      });
+      const escala = Math.min(1, ANCHO_MAX / Math.max(img.width, img.height));
+      const w = Math.round(img.width * escala), h = Math.round(img.height * escala);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      return c.toDataURL('image/jpeg', 0.82);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   async function tomarArchivo(file){
@@ -785,37 +835,53 @@ const CONFIG = {
       avisoQr(`La imagen pesa más de ${MAX_MB} MB. Manda una captura, no la foto original.`, 'ojo');
       return;
     }
+    $('#soltar').classList.add('leyendo');
     avisoQr('Leyendo tu comprobante…');
 
-    let base64 = null;
+    let imagen = null;
     try {
-      base64 = await new Promise((ok, mal) => {
-        const fr = new FileReader();
-        fr.onload = () => ok(fr.result);
-        fr.onerror = () => mal(fr.error);
-        fr.readAsDataURL(file);
-      });
+      imagen = await achicar(file);
 
-      qrLeido = await leerQr(base64);
-      if (qrLeido) {
-        const ref = $('#referencia');
-        // El QR no siempre lleva la referencia con el mismo formato, asi
-        // que solo se pre-llena si se reconoce algo con pinta de serlo.
-        const m = /\b([A-Z]{1,2}\d{6,})\b/.exec(qrLeido);
-        if (m && !ref.value.trim()) ref.value = m[1];
-        avisoQr(m
-          ? '✓ Leído. Revisa que la hora esté bien y dale a Ya pagué.'
-          : '✓ Leído. Nos quedamos con el código de tu comprobante. Confirma la hora.');
+      const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/leer-comprobante`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imagen })
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok === false) throw new Error(d.error || `HTTP ${res.status}`);
+
+      qrLeido = d.referencia || null;
+      const puestos = [
+        ponerLeido($('#hora-transf'), d.hora),
+        ponerLeido($('#referencia'),  d.referencia),
+      ].filter(Boolean).length;
+
+      // Si el comprobante sale a otro nombre, se abre solo el campo y se
+      // marca la casilla: es el caso que más se olvida rellenar.
+      if (d.pagador && !$('#pagador').value.trim()) {
+        $('#otro-paga').checked = true;
+        $('#caja-pagador').hidden = false;
+        ponerLeido($('#pagador'), d.pagador);
+      }
+
+      if (!puestos && !d.pagador) {
+        avisoQr('No pudimos sacarle los datos a esa imagen. ' +
+                'Escríbelos abajo y listo, funciona igual.', 'ojo');
+      } else if (!d.hora) {
+        avisoQr('✓ Leído, pero no encontramos la hora. Ponla tú abajo — ' +
+                'es la que más nos sirve.', 'ojo');
       } else {
-        avisoQr('No le encontramos código QR. No pasa nada: con la hora es suficiente.', 'ojo');
+        avisoQr('✓ Listo. <b>Revisa abajo que esté bien</b> y dale a Ya pagué.');
       }
     } catch (err) {
-      avisoQr('No pudimos leer esa imagen. Con la hora es suficiente.', 'ojo');
-      console.error('[tumbao] qr:', err);
+      avisoQr('No pudimos leer esa imagen. Escribe los datos abajo y listo, ' +
+              'funciona igual.', 'ojo');
+      console.error('[tumbao] comprobante:', err);
     } finally {
-      // Se suelta la imagen de inmediato. Ni se sube ni se conserva.
-      base64 = null;
+      // Se suelta de inmediato. Aquí no queda nada.
+      imagen = null;
       $('#archivo').value = '';
+      $('#soltar').classList.remove('leyendo');
     }
   }
 
@@ -968,11 +1034,22 @@ const CONFIG = {
     $('#ok-mensaje').innerHTML = confirmada
       ? 'Muestra este código en recepción. Llega 10 minutos antes.'
       : (pendiente
-          ? 'Alguien del equipo valida tu pago y te escribimos por WhatsApp. Tu cupo sigue apartado.'
+          // Aqui la persona tiene algo QUE HACER, y hay que decirlo sin
+          // rodeos: el pago no se confirmo solo y con el soporte se
+          // resuelve en un minuto. "Te escribimos" la deja esperando.
+          ? 'Tu cupo sigue apartado. <b>Mándanos el soporte por WhatsApp</b> ' +
+            'y lo validamos de una.'
           : esc(d.mensaje || 'Escríbenos por WhatsApp y lo resolvemos.'));
 
-    $('#ok-wa').href = waUrl(
-      `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
+    // El boton cambia segun el caso: si hay que validar a mano, el
+    // mensaje ya viene escrito pidiendo el soporte.
+    $('#ok-wa').textContent = pendiente
+      ? 'Mandar el soporte por WhatsApp' : 'Escribirnos por WhatsApp';
+    $('#ok-wa').className = pendiente ? 'btn' : 'btn-ghost';
+    $('#ok-wa').href = waUrl(pendiente
+      ? `Hola, soy ${$('#nombre').value.trim()}. Les mando el soporte de mi pago. ` +
+        `Mi código es ${d.codigo || ''} (${clase}${hora ? ' · ' + hora : ''}).`
+      : `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
     irA(5);
   }
 

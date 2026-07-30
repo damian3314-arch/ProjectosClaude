@@ -47,9 +47,16 @@ const titulo = await p.locator('#t5').innerText();
 const cuerpo = await p.locator('#s5').innerText();
 ok('no dice que el pago fue confirmado',
    !titulo.toLowerCase().includes('confirmado'), titulo);
-ok('avisa que alguien lo va a revisar',
-   /valida|revis/i.test(cuerpo), titulo);
-ok('promete respuesta por WhatsApp', /whatsapp/i.test(cuerpo));
+// Aqui la persona tiene algo QUE HACER. "Te escribimos" la deja
+// esperando; lo que resuelve el caso es que mande el soporte.
+ok('le pide el soporte, no la deja esperando',
+   /soporte/i.test(cuerpo) && /whatsapp/i.test(cuerpo), cuerpo.replace(/\n/g, ' '));
+ok('y le deja el botón con el mensaje ya escrito',
+   /soporte/i.test(await p.locator('#ok-wa').innerText()),
+   (await p.locator('#ok-wa').innerText()).trim());
+ok('el enlace de WhatsApp lleva el código',
+   decodeURIComponent(await p.locator('#ok-wa').getAttribute('href')).includes('soporte'));
+ok('dice que el cupo sigue apartado', /cupo sigue apartado/i.test(cuerpo));
 ok('conserva el código de la reserva',
    /^[A-Z0-9]{4,8}$/.test((await p.locator('#ok-codigo').innerText()).trim()),
    (await p.locator('#ok-codigo').innerText()).trim());

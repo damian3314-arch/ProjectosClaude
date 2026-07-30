@@ -73,6 +73,26 @@ console.log('\n── Clase suelta ──');
 await elegirTipo('suelta');
 await p.waitForSelector('.clase:not(:disabled)', { timeout: 8000 });
 ok('carga los días', await p.locator('.dia').count() > 0, `${await p.locator('.dia').count()} días`);
+
+// Tumbao arma el horario semana a semana: ofrecer dias de la semana que
+// viene es prometer clases que nadie ha puesto todavia, con un cupo que
+// nadie ha revisado. El servidor manda 7 dias corridos; la pagina tiene
+// que cortar en el domingo.
+const fechas = await p.locator('.dia').evaluateAll(
+  els => els.map(e => e.dataset.fecha));
+const finSemana = (() => {
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota',
+    year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const [a, m, d] = hoy.split('-').map(Number);
+  const f = new Date(Date.UTC(a, m - 1, d));
+  const dow = f.getUTCDay();
+  f.setUTCDate(f.getUTCDate() + (dow === 0 ? 7 : 7 - dow));
+  return f.toISOString().slice(0, 10);
+})();
+ok('no ofrece días de la semana siguiente',
+   fechas.every(f => f <= finSemana),
+   `hasta ${fechas[fechas.length - 1]} (el corte es ${finSemana})`);
+
 ok('el chip de Pago está visible', !(await p.locator('#chip-pago').isHidden()));
 
 const horaTxt = await p.locator('.clase .hora').first().innerText();

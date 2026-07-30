@@ -87,6 +87,14 @@ const FECHA_FEA = process.env.FECHA_FEA === '1';
 // Fuerza el caso incomodo de deshacer: el cupo ya se vendio.
 const SIN_CUPO_AL_DESHACER = process.env.SIN_CUPO_AL_DESHACER === '1';
 
+// La lectura del comprobante no encuentra nada: la persona tiene que
+// escribir los datos a mano. Es el camino que MAS se va a usar los
+// primeros dias, asi que tiene prueba propia.
+const LECTURA_VACIA = process.env.LECTURA_VACIA === '1';
+// El comprobante sale a nombre de otra persona.
+const LECTURA_OTRO  = process.env.LECTURA_OTRO === '1';
+let ultimaLectura = null;
+
 const soloFecha = v => String(v ?? '').slice(0, 10);
 const diaDe = iso => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -148,12 +156,6 @@ createServer(async (req, res) => {
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
-  }
-  if (url.pathname.startsWith('/js/')) {
-    try {
-      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
-      return res.end(readFileSync(join(WEB, url.pathname)));
-    } catch { res.writeHead(404); return res.end(); }
   }
   if (url.pathname.startsWith('/img/')) {
     try {
@@ -495,6 +497,29 @@ createServer(async (req, res) => {
       codigo: cod, clase: c.nombre, profesor: c.profesor, lugar: c.lugar,
       fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
       hora: hora12(c.fecha_hora), precio_cop: c.precio_cop,
+    });
+  }
+
+  // ---- POST /tumbao/leer-comprobante ----
+  // Imita la lectura de la captura. LECTURA_VACIA=1 fuerza el caso de
+  // "no le saco nada", que es el que tiene que dejar a la persona
+  // escribiendo los datos a mano sin que se rompa nada.
+  if (url.pathname === '/webhook/tumbao/leer-comprobante' && req.method === 'POST') {
+    const b = await leerCuerpo(req);
+    const img = typeof b.imagen === 'string' ? b.imagen : '';
+    if (!/^data:image\/(jpe?g|png|webp);base64,/.test(img)) {
+      return json(res, 200, { ok: false, error: 'no_es_imagen',
+        hora: null, referencia: null, pagador: null, valor: null, leidos: 0 });
+    }
+    ultimaLectura = { bytes: img.length };
+    if (LECTURA_VACIA) {
+      return json(res, 200, { ok: true, hora: null, referencia: null,
+        pagador: null, valor: null, leidos: 0 });
+    }
+    return json(res, 200, {
+      ok: true, hora: '18:31', referencia: 'M25418019',
+      pagador: LECTURA_OTRO ? 'LUISA GOMEZ MORA' : null,
+      valor: 15000, leidos: LECTURA_OTRO ? 3 : 2
     });
   }
 
