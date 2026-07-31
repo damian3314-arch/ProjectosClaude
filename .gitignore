@@ -1,0 +1,9 @@
+# Caché local de wrangler. La deja al desplegar a Cloudflare Pages y solo
+# guarda el account_id y el nombre del proyecto; se regenera sola.
+.wrangler/
+
+# Dependencias de node, por si algún día se instala algo local.
+node_modules/
+
+# Ruido del sistema.
+.DS_Store
