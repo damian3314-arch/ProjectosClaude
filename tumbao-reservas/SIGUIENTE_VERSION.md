@@ -267,3 +267,57 @@ Hay que correrlo cuando esté disponible para v3.
    resultado que debe dar cada uno.
 
 Fuente: [v3.0 Breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes)
+
+---
+
+## 7. Consumo de n8n — lo hecho y lo que falta
+
+Medido el 31/07/2026: **362 ejecuciones en 24 horas**, o sea ~10.900 al
+mes contra un plan de **2.500**. El reparto real sorprende:
+
+| Origen | Peso | Qué lo dispara |
+|---|---|---|
+| Panel de admin | **55%** | cada clic; abrir el panel eran 2-3 de golpe |
+| API de reservas | 22% | sobre todo la consulta de estado |
+| Barrido de cupos | — | el reloj (lo introduje yo, a 5 min = 8.640/mes) |
+| Ingesta de pagos | 2% | solo cuando llega correo del banco |
+
+Dato útil: **el Gmail Trigger no gasta cuando no hay correos.** Sondea
+cada minuto y solo generó 8 ejecuciones en 24h. Los sondeos en vacío son
+gratis; los Schedule Trigger no.
+
+### Hecho
+
+1. **Espera de pago**: de preguntar cada 8s a siete tiempos fijos.
+   ~23 llamadas por reserva pasan a ~8.
+2. **Panel**: ventana de frescura, 45s el tablero y 10s la cola.
+   Mata las ráfagas de siete llamadas en catorce segundos.
+3. **Barrido**: de cada 5 minutos a una vez por hora, 6am–10pm.
+   8.640/mes → ~480/mes.
+4. **Joyería**: la corrida de respaldo de las 8:30pm fallaba todos los
+   días. Ya no.
+
+### Falta
+
+**Matar el barrido del todo.** En vez de un reloj, expirar los cupos
+vencidos dentro de `tomar_cupo`, que ya bloquea la fila de la clase, y
+descontarlos en `clases_para` al leer. Cuesta **cero ejecuciones** y
+libera el cupo justo cuando alguien lo necesita, no hasta una hora
+después. Ahorro: ~480/mes, y quita un reloj del sistema.
+
+Es migración SQL, así que no se hizo el día del estreno.
+
+**Seguir bajando el panel.** Lo grande ya está, pero abrir el panel
+sigue costando dos llamadas y cada confirmación una más. Si hiciera
+falta, se pueden juntar tablero y pendientes en un solo webhook.
+
+### Dónde queda la cuenta
+
+Con lo hecho, la proyección es **~3.500/mes** — todavía por encima de
+2.500, pero hay que tener en cuenta que el día medido fue de pruebas
+intensivas, no de uso normal. Con el punto pendiente y una semana de
+datos reales se sabrá si hace falta subir de plan o seguir recortando.
+
+**Regla para lo que venga:** antes de añadir cualquier Schedule Trigger,
+calcular qué son al mes. Cada 5 minutos son 8.640. Cada minuto son
+43.200. Es la forma más fácil de fundir un plan sin darse cuenta.
