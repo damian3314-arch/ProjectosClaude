@@ -321,3 +321,63 @@ datos reales se sabrá si hace falta subir de plan o seguir recortando.
 **Regla para lo que venga:** antes de añadir cualquier Schedule Trigger,
 calcular qué son al mes. Cada 5 minutos son 8.640. Cada minuto son
 43.200. Es la forma más fácil de fundir un plan sin darse cuenta.
+
+---
+
+## 8. Opción A — sacar las lecturas de n8n
+
+Decidida el 31/07. **No se hace antes de tener una semana de datos
+reales**, y esa es la parte importante de la decisión: la estimación de
+abajo dice qué pesa según mi aritmética, no según el uso.
+
+### El problema de fondo
+
+n8n hace de intermediario para leer cosas que **no son secretas**. Ver
+los horarios o preguntar "¿ya me confirmaron?" no necesita ninguna llave
+privada, pero hoy cada pregunta cuesta una ejecución.
+
+### Qué se mueve
+
+| Endpoint | Hoy | Con A |
+|---|---|---|
+| `/tumbao/clases` | n8n → Supabase | la página → Supabase (llave `anon`) |
+| `/tumbao/estado` | n8n → Supabase | la página → Supabase (llave `anon`) |
+| `/tumbao/reservar` | n8n | **se queda en n8n** — mueve cupos |
+| `/tumbao/comprobante` | n8n | **se queda** — toca estado de pago |
+| Panel de admin | n8n | **se queda** — token privado |
+
+Lo que se mueve son las dos **lecturas**. Nada que escriba sale de n8n.
+
+### Lo que hay que resolver antes de escribir código
+
+1. **RLS de verdad.** Hoy `anon` no puede ejecutar nada, y eso está bien.
+   Hay que abrir exactamente dos caminos y ni uno más:
+   - listar clases futuras con su cupo — público, no expone a nadie;
+   - consultar UNA reserva por su código — el código es de 6 caracteres,
+     así que hay que pensar el límite de intentos. Un `select` por código
+     sin freno es una forma de enumerar reservas ajenas.
+2. **Qué queda expuesto.** La respuesta de estado no puede traer teléfono
+   ni nombre completo: solo el estado y lo mínimo para pintar la
+   pantalla.
+3. **El reparto del sábado tiene que seguir invisible.** `clases_para`
+   ya lo resuelve; hay que asegurarse de que la vista pública no filtre
+   `cupo_miembros` ni `cupo_sueltas`.
+
+### Ahorro estimado
+
+Quita ~6 de las ~11 ejecuciones por reserva. Con 30 reservas diarias:
+de ~10.600/mes a **~5.600/mes**. Sigue por encima de 2.500, así que A
+**no evita subir de plan** — lo que hace es que el siguiente escalón
+dure años en vez de meses.
+
+Conviene decirlo claro para no construir con una expectativa falsa.
+
+### Orden
+
+1. Una semana de uso real y volver a medir. Sin eso, optimizar es
+   adivinar.
+2. Con los datos: ver si lo que pesa es lo que creo. Si resulta que
+   pesa más el marcado de asistencia que la consulta de estado, el
+   trabajo es otro.
+3. Entonces sí, RLS y las dos lecturas.
+
