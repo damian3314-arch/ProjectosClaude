@@ -615,7 +615,13 @@ const CONFIG = {
     }
     $('#clases').innerHTML = '<div class="skel"></div><div class="skel"></div>';
     try{
-      const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/clases`, { headers:{ Accept:'application/json' } });
+      // Se pide el horario del tipo de persona que está mirando. El
+      // servidor devuelve los cupos de SU lado ya calculados, así que
+      // el sábado (que está partido entre afiliados y sueltas) se ve
+      // como un número normal y nadie tiene que enterarse del reparto.
+      const res = await fetch(
+        `${CONFIG.N8N_BASE}/tumbao/clases?tipo=${encodeURIComponent(tipo || 'suelta')}`,
+        { headers:{ Accept:'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
 

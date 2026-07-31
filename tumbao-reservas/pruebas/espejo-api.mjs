@@ -68,6 +68,10 @@ function sembrarClases() {
         // A dos de las 6pm se les acaba el plan ese dia. Sirve para que
         // el aviso punteado del tablero tenga algo que mostrar.
         _vencen: h === 18 ? 2 : 0,
+        // El sabado va partido: 15 para afiliados y 15 para sueltas.
+        // Entre semana en null, que es "sin reparto".
+        cupo_miembros: dow === 6 ? 15 : null,
+        cupo_sueltas:  dow === 6 ? 15 : null,
         _dow: dow, _hora: h,
       });
     }
@@ -312,6 +316,18 @@ createServer(async (req, res) => {
           // Los del plan a los que se les acaba ESE dia. Nunca puede
           // pasarse de con_plan: es un subconjunto.
           vencen: Math.min(c._vencen ?? 0, conPlan),
+          reparto: c.cupo_miembros == null ? null : (() => {
+            const vivas = t => [...reservas.values()].filter(r =>
+              r.clase_id === c.clase_id && r.tipo === t &&
+              !['rechazada', 'expirada'].includes(r.estado)).length;
+            const m = vivas('miembro'), s = vivas('suelta');
+            return {
+              miembros_tope: c.cupo_miembros, miembros_tomados: m,
+              miembros_libres: Math.max(c.cupo_miembros - m, 0),
+              sueltas_tope: c.cupo_sueltas, sueltas_tomadas: s,
+              sueltas_libres: Math.max(c.cupo_sueltas - s, 0),
+            };
+          })(),
           cupo_manual: c.cupo_manual ?? null,
           reservadas: tomadas, libres: Math.max(c.cupos_disponibles, 0),
           confirmadas, por_validar: porValidar, esperando,
@@ -462,6 +478,7 @@ createServer(async (req, res) => {
 
   // ---- GET /tumbao/clases ----
   if (url.pathname === '/webhook/tumbao/clases') {
+    const tipo = url.searchParams.get('tipo') === 'miembro' ? 'miembro' : 'suelta';
     const dias = new Map();
     for (const c of clases) {
       const clave = new Intl.DateTimeFormat('en-CA', {
@@ -472,7 +489,23 @@ createServer(async (req, res) => {
         etiqueta: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
         clases: [],
       });
-      dias.get(clave).clases.push({ ...c, hora: hora12(c.fecha_hora) });
+      // El sabado va partido: a cada quien se le muestran los cupos de
+      // SU lado, y los del otro ni salen. Asi el reparto es invisible.
+      const tope = tipo === 'miembro' ? c.cupo_miembros : c.cupo_sueltas;
+      let total = c.cupo_total, libres = c.cupos_disponibles;
+      if (tope != null) {
+        const tomadas = [...reservas.values()].filter(r =>
+          r.clase_id === c.clase_id && r.tipo === tipo &&
+          !['rechazada', 'expirada'].includes(r.estado)).length;
+        total  = tope;
+        libres = Math.max(Math.min(c.cupos_disponibles, tope - tomadas), 0);
+      }
+      dias.get(clave).clases.push({
+        ...c, hora: hora12(c.fecha_hora),
+        cupo_total: total, cupos_disponibles: libres, agotada: libres <= 0,
+        // Que no se escapen ni por descuido.
+        cupo_miembros: undefined, cupo_sueltas: undefined,
+      });
     }
     return json(res, 200, { ok: true, timezone: 'America/Bogota', dias: [...dias.values()] });
   }
@@ -503,6 +536,19 @@ createServer(async (req, res) => {
 
     if (c.cupos_disponibles <= 0) {
       return json(res, 409, { ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó. Elige otro horario.' });
+    }
+    // El tope de su lado, cuando la clase esta partida. El mensaje es el
+    // mismo de siempre a proposito: decir "se acabaron los de afiliados"
+    // le contaria al cliente que hay un reparto.
+    const tope = tipo === 'miembro' ? c.cupo_miembros : c.cupo_sueltas;
+    if (tope != null) {
+      const tomadas = [...reservas.values()].filter(r =>
+        r.clase_id === c.clase_id && r.tipo === tipo &&
+        !['rechazada', 'expirada'].includes(r.estado)).length;
+      if (tomadas >= tope) {
+        return json(res, 409, { ok: false, error: 'SIN_CUPO',
+          mensaje: 'Esa clase se llenó. Elige otro horario.' });
+      }
     }
     c.cupos_disponibles--;
     c.agotada = c.cupos_disponibles <= 0;

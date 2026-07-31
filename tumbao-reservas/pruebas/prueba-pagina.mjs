@@ -193,6 +193,33 @@ if (await elegirDiaConDow(6)) {
      await p.locator('#t5').innerText());
 } else { ok('sábado', false, 'no se encontro sabado en los proximos 7 dias'); }
 
+// ───────── el reparto del sábado no se ve ─────────
+// El aforo del sábado va partido entre afiliados y sueltas, y eso el
+// cliente no tiene por qué saberlo. Se comprueba por donde se sabría:
+// en lo que devuelve el servidor.
+console.log('\n── El sábado, por dentro ──');
+const respuesta = async tipo => {
+  const r = await fetch(`http://localhost:8899/webhook/tumbao/clases?tipo=${tipo}`);
+  const d = await r.json();
+  for (const dia of d.dias) {
+    for (const c of dia.clases) if (c.hora.includes('8:00 am')) return c;
+  }
+  return null;
+};
+const vistaSuelta  = await respuesta('suelta');
+const vistaMiembro = await respuesta('miembro');
+ok('el sábado existe en la respuesta', !!vistaSuelta && !!vistaMiembro);
+if (vistaSuelta) {
+  // Ni un número del otro lado puede salir del servidor.
+  const filtra = Object.keys(vistaSuelta).filter(k => /cupo_(miembros|sueltas)|reparto/.test(k));
+  ok('no viaja ningún dato del reparto', filtra.length === 0,
+     filtra.join(', ') || 'ninguno');
+  // Y a cada quien se le ofrece su lado, no el aforo entero.
+  ok('a cada tipo se le ofrece su propio cupo',
+     vistaSuelta.cupo_total === 15 && vistaMiembro.cupo_total === 15,
+     `suelta ${vistaSuelta.cupo_total} · miembro ${vistaMiembro.cupo_total}`);
+}
+
 // 4) quien no es miembro
 await irInicio();
 await elegirTipo('miembro');

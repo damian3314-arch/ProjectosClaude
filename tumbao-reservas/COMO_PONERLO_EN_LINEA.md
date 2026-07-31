@@ -185,6 +185,14 @@ aparecen —y la gente suele renovar el último día— y encima vendiste dos
 sueltas, la sala queda apretada. La decisión la tomas tú con el número
 delante.
 
+**El sábado, además, sale el reparto:**
+
+> **11** de 15 afiliados · **9** de 15 sueltas
+
+El aforo del sábado va partido en dos cupos independientes. Aquí sí se
+muestra, porque es lo único que explica el número de libres de arriba. El
+cliente no lo ve — ver más abajo.
+
 Solo lee: desde aquí no se cambia nada. Para eso están las otras dos
 pestañas.
 
@@ -272,6 +280,37 @@ prefiere quedarse quieto — la salida es subir el cupo a mano en Horario.
 
 ---
 
+### El sábado: 15 y 15, sin que se note
+
+El aforo del sábado está partido: **15 puestos para afiliados y 15 para
+clase suelta**, independientes. Cuando se llenan los 15 de plan no entra
+ningún afiliado más aunque queden sueltas libres, y al revés.
+
+**El cliente no se entera, y no porque se le esconda.** La página ya sabe
+quién está mirando: lo primero que pregunta es *"¿vienes con mensualidad o
+por clase suelta?"*. Así que a cada quien se le contesta el número de **su**
+lado. Los del otro lado ni siquiera salen del servidor, así que no hay nada
+que encontrar mirando la respuesta — la prueba lo comprueba clave por clave.
+
+Cuando un lado se llena, el mensaje es el de siempre —*"Esa clase se
+llenó"*— justo para no delatar el reparto.
+
+**Entre semana no cambia nada**: ahí el afiliado ni siquiera reserva, su
+puesto ya está descontado del aforo.
+
+Si mañana quieres 20 y 10, es un número guardado, no una fórmula:
+
+```sql
+update clases set cupo_miembros = 20, cupo_sueltas = 10
+ where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
+   and fecha_hora > now();
+```
+
+(y cambia el `/ 2` de `generar_horario` para los sábados que se creen
+después)
+
+---
+
 ## Antes de cobrarle a alguien de verdad
 
 - [x] ~~Cambiar la ingesta al correo de Tumbao~~ — hecho. Verificado el 29 de
@@ -346,6 +385,15 @@ psql -d tumbao -f pruebas/humo-tablero.sql
 psql -d tumbao -f pruebas/humo-deshacer.sql
 psql -d tumbao -f pruebas/humo-puerta.sql
 psql -d tumbao -f pruebas/humo-vencen.sql
+psql -d tumbao -f pruebas/humo-sabado-partido.sql
+```
+
+Y las dos carreras, que son las únicas que prueban lo que solo se rompe
+con varias personas dándole al botón a la vez:
+
+```bash
+node pruebas/carrera-cupos.mjs     # 12 personas por 4 cupos
+node pruebas/carrera-sabado.mjs    # 20 y 20 contra el reparto 15/15
 ```
 
 La lectura del comprobante se prueba en sus tres caminos, y el que más

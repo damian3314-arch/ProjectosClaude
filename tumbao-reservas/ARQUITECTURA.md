@@ -179,7 +179,16 @@ Entre semana, quien tiene mensualidad no reserva: su puesto ya está
 descontado del aforo. Lo que queda sale a clase suelta.
 
 El sábado nadie tiene plan de sábado, así que salen los 30 completos —
-y **ahí sí el miembro también reserva**, del mismo pozo que las sueltas.
+y **ahí sí el miembro también reserva**.
+
+Pero el sábado los 30 no son un pozo común: van **partidos en 15 y 15**,
+afiliados y clase suelta, como dos cupos independientes. Llenar uno no
+cierra el otro. Es una decisión de negocio, no de aforo: garantiza que
+siempre queden 15 puestos vendibles por más afiliados que reserven.
+
+El cliente no ve el reparto, y no porque se le esconda: la página ya sabe
+si viene con mensualidad o por suelta, así que se le contesta el número de
+su lado y los del otro ni salen del servidor.
 
 Hoy en producción, con 65 afiliados repartidos 19/27/19:
 
