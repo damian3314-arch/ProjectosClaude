@@ -100,15 +100,78 @@ verificado por Postgres en cada una de las seis funciones. Sin él, todas
 responden 401 y no devuelven ni un dato. Es suficiente. Pero conviene
 saberlo en vez de creer que hay una ruta secreta.
 
-### Cuando quieras el dominio propio
+---
 
-Cloudflare Pages conectado a este mismo repo, apuntando a
-`docs`. Ahí sí tiene sentido `reservas.tumbao.com` o lo que
-elijas, y de paso puedes poner el panel en un subdominio aparte con
-Cloudflare Access delante si quieres una segunda puerta además del token.
+## El dominio propio: tumbaobaila.com
 
-La URL de n8n ya está puesta dentro de cada archivo. Si el dominio de n8n
-cambia, se cambia ahí y en ningún otro lado.
+El dominio ya está comprado en Cloudflare, así que el camino corto es
+**Cloudflare Pages**: mismo repo, se despliega solo en cada push, HTTPS
+automático y el registro de DNS lo pone Cloudflare sin que haya que
+escribir nada.
+
+Del lado del código no hay nada que cambiar: todas las rutas de la
+página son relativas y los webhooks de n8n aceptan cualquier origen
+(`allowedOrigins: '*'`), así que funciona igual desde el dominio nuevo.
+Comprobado antes de escribir esto.
+
+### Los clics, en orden
+
+1. En el panel de Cloudflare: **Workers & Pages → Create → Pages →
+   Connect to Git**.
+2. Autoriza GitHub y elige el repo **`damian3314-arch/ProjectosClaude`**.
+3. **Production branch: `claude/tumbao-reservas-n8n-831zit`.**
+
+   > Este es el paso que se falla. Cloudflare propone `main` por
+   > defecto, y en `main` no está nada de esto: el sitio saldría vacío o
+   > con un 404.
+
+4. En **Build settings**:
+
+   | campo | qué poner |
+   |---|---|
+   | Framework preset | **None** |
+   | Build command | **déjalo vacío** |
+   | Build output directory | **`docs`** |
+
+5. **Save and Deploy.** En un minuto queda en `algo.pages.dev`. Ábrelo y
+   comprueba que se ve la página de reservas antes de seguir.
+6. Dentro del proyecto: **Custom domains → Set up a custom domain →**
+   escribe `tumbaobaila.com` → **Activate**.
+
+   Como el dominio está en la misma cuenta de Cloudflare, el registro de
+   DNS lo crea él solo. No hay que copiar ninguna IP.
+
+7. Repite el paso 6 con **`www.tumbaobaila.com`**, para que las dos
+   formas de escribirlo funcionen.
+
+### Cómo queda
+
+| | URL |
+|---|---|
+| **Reservas** — esta es la que se comparte | **https://tumbaobaila.com** |
+| **Panel** | https://tumbaobaila.com/admin.html |
+
+La URL vieja de GitHub Pages sigue funcionando. Déjala unos días como
+red y después apágala en Settings → Pages, para que haya una sola
+dirección buena.
+
+### Ahora sí se puede cerrar el panel de verdad
+
+Hasta ahora la única defensa del panel era el token, y estaba bien
+porque no había alternativa. Con dominio propio sí la hay:
+
+**Zero Trust → Access → Applications → Add an application → Self-hosted**,
+con dominio `tumbaobaila.com` y ruta `admin.html`. Como regla, deja
+*Emails* con los correos de quienes deben entrar.
+
+Con eso, antes de ver siquiera la pantalla del token Cloudflare pide un
+código al correo. Son dos puertas en vez de una, y no cuesta nada en el
+plan gratis.
+
+### Si cambia el dominio de n8n
+
+Se cambia en la línea `N8N_BASE` de `docs/index.html` y
+`docs/admin.html`, y en ningún otro sitio.
 
 ---
 

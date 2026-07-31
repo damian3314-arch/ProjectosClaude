@@ -50,7 +50,7 @@ el único sitio donde esa información es real.
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
 | **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
-| **Cloudflare** | Dominio propio | ⏳ más adelante |
+| **Cloudflare** | Dominio propio: `tumbaobaila.com`, y Pages sirviendo `docs/` | ⏳ falta conectarlo |
 | **OpenAI** | Solo lee la captura del comprobante y devuelve 4 campos | ⚠️ falta la credencial en n8n |
 
 Detalle que vale la pena tener claro sobre n8n: **no toma ninguna decisión

@@ -1,0 +1,23 @@
+# Cabeceras de Cloudflare Pages.
+#
+# Este archivo solo lo lee Cloudflare Pages; en GitHub Pages se ignora
+# sin hacer nada. Por eso puede estar aquí desde ya.
+
+/*
+  # El panel y la página de reservas no tienen por qué cargarse dentro
+  # de un iframe de nadie. Es la defensa barata contra que alguien monte
+  # una copia de la página con el formulario de reservas real dentro.
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  # Que el navegador no adivine el tipo de archivo.
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  # No se usa ninguna de estas, y decirlo evita que un script de
+  # terceros las pida por su cuenta.
+  Permissions-Policy: geolocation=(), microphone=(), payment=()
+
+/admin.html
+  # El panel además no se guarda en caché de nadie: lleva la cola de
+  # pagos y la lista de quién entra.
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
