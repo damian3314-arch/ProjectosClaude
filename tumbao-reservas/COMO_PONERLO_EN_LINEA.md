@@ -114,18 +114,29 @@ página son relativas y los webhooks de n8n aceptan cualquier origen
 (`allowedOrigins: '*'`), así que funciona igual desde el dominio nuevo.
 Comprobado antes de escribir esto.
 
+### Por qué falló el primer intento
+
+Vale la pena dejarlo escrito, porque no daba ningún error entendible: el
+sitio salía **en blanco o con 404** y nada decía por qué.
+
+La causa era la rama. El repo **no tenía `main`**, y su rama por defecto
+era `claude/aprende-esto-khjryq` — otra cosa, sin la carpeta `docs/`.
+Cloudflare propone como *production branch* la rama por defecto del
+repo, así que construyó esa y publicó un sitio vacío.
+
+Ya está arreglado de raíz: **existe la rama `main` con todo el
+proyecto**, que es lo que Cloudflare espera encontrar.
+
 ### Los clics, en orden
 
-1. En el panel de Cloudflare: **Workers & Pages → Create → Pages →
+1. En GitHub: **Settings → General → Default branch** y cámbiala a
+   **`main`**. Un minuto, y evita que esto vuelva a pasar con cualquier
+   herramienta que conectes después.
+2. En el panel de Cloudflare: **Workers & Pages → Create → Pages →
    Connect to Git**.
-2. Autoriza GitHub y elige el repo **`damian3314-arch/ProjectosClaude`**.
-3. **Production branch: `claude/tumbao-reservas-n8n-831zit`.**
-
-   > Este es el paso que se falla. Cloudflare propone `main` por
-   > defecto, y en `main` no está nada de esto: el sitio saldría vacío o
-   > con un 404.
-
-4. En **Build settings**:
+3. Autoriza GitHub y elige el repo **`damian3314-arch/ProjectosClaude`**.
+4. **Production branch: `main`.** Compruébalo aunque venga puesto.
+5. En **Build settings**:
 
    | campo | qué poner |
    |---|---|
@@ -133,16 +144,38 @@ Comprobado antes de escribir esto.
    | Build command | **déjalo vacío** |
    | Build output directory | **`docs`** |
 
-5. **Save and Deploy.** En un minuto queda en `algo.pages.dev`. Ábrelo y
-   comprueba que se ve la página de reservas antes de seguir.
-6. Dentro del proyecto: **Custom domains → Set up a custom domain →**
+6. **Save and Deploy.** En un minuto queda en `algo.pages.dev`. Ábrelo y
+   comprueba que **se ve la página de reservas** antes de seguir. Si sale
+   en blanco o 404, es la rama o la carpeta de salida: vuelve al 4 y al
+   5, no sigas al 7.
+7. Dentro del proyecto: **Custom domains → Set up a custom domain →**
    escribe `tumbaobaila.com` → **Activate**.
 
    Como el dominio está en la misma cuenta de Cloudflare, el registro de
    DNS lo crea él solo. No hay que copiar ninguna IP.
 
-7. Repite el paso 6 con **`www.tumbaobaila.com`**, para que las dos
+8. Repite el paso 7 con **`www.tumbaobaila.com`**, para que las dos
    formas de escribirlo funcionen.
+
+### Si el proyecto de Pages ya existe y salió mal
+
+No hace falta borrarlo:
+
+1. **Settings → Builds & deployments → Production branch →** cámbiala a
+   **`main`**.
+2. Ahí mismo comprueba que **Build output directory** dice `docs` y que
+   **Build command** está vacío.
+3. **Deployments → Retry deployment** (o el botón de crear uno nuevo).
+
+### Cómo saber desde fuera si ya quedó
+
+Sin entrar a Cloudflare, el DNS lo dice:
+
+| lo que responde `tumbaobaila.com` | qué significa |
+|---|---|
+| *No address associated with hostname* | la zona existe pero **no hay registro**: falta el paso 7 |
+| *Name or service not known* | el dominio no está en Cloudflare todavía |
+| una dirección IP | ya está enlazado |
 
 ### Cómo queda
 
