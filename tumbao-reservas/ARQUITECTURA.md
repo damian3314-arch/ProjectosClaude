@@ -50,8 +50,9 @@ el único sitio donde esa información es real.
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
 | **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
-| **Cloudflare** | Pages sirviendo `docs/` en `tumbao.pages.dev` | ✅ publicado |
-| ↳ `tumbaobaila.com` | El dominio apunta al mismo proyecto de Pages | ⏳ faltan los 2 CNAME |
+| **Cloudflare** | Pages sirviendo `docs/` — proyecto `tumbao` | ✅ publicado |
+| ↳ **`tumbaobaila.com`** | La dirección de verdad. `www` sirve lo mismo | ✅ **en línea** |
+| ↳ `tumbao.pages.dev` | La misma página; sirve de respaldo si el dominio falla | ✅ |
 | **OpenAI** | Solo lee la captura del comprobante y devuelve 4 campos | ✅ credencial conectada |
 | **Gmail** | Lee el correo del banco, y manda el aviso cuando algo falla | ✅ |
 
