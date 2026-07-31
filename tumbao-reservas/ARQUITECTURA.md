@@ -44,14 +44,16 @@ el único sitio donde esa información es real.
 | Herramienta | Papel | Estado real |
 |---|---|---|
 | **Supabase** | Base del sistema. Toda la lógica de negocio vive en funciones de Postgres, no en n8n | ✅ funcionando |
-| **n8n** | Pegamento. Mueve y transforma, no decide ni guarda lógica | ✅ 5 workflows activos |
+| **n8n** | Pegamento. Mueve y transforma, no decide ni guarda lógica | ✅ 6 workflows activos |
 | **Google Drive** | Solo depósito de los Excel de AdminGym | ✅ se lee, no se escribe |
 | ↳ carpeta de reportes | `1aqP6ZmNCUEBpLe9Nkfbf8aKEZdmMnJYp` — ahí van cierres y afiliados | ✅ |
 | **Google Sheets** | Solo auditoría: copia de los pagos que entran, para revisar a mano | ✅ rama paralela, no bloquea nada |
 | **GitHub** | Código, migraciones, pruebas y esta documentación | ✅ |
 | **GitHub Pages** | Publica las dos páginas desde `docs/`, se actualiza en cada push | ⚠️ falta encenderlo en Settings |
-| **Cloudflare** | Dominio propio: `tumbaobaila.com`, y Pages sirviendo `docs/` | ⏳ falta conectarlo |
-| **OpenAI** | Solo lee la captura del comprobante y devuelve 4 campos | ⚠️ falta la credencial en n8n |
+| **Cloudflare** | Pages sirviendo `docs/` en `tumbao.pages.dev` | ✅ publicado |
+| ↳ `tumbaobaila.com` | El dominio apunta al mismo proyecto de Pages | ⏳ faltan los 2 CNAME |
+| **OpenAI** | Solo lee la captura del comprobante y devuelve 4 campos | ✅ credencial conectada |
+| **Gmail** | Lee el correo del banco, y manda el aviso cuando algo falla | ✅ |
 
 Detalle que vale la pena tener claro sobre n8n: **no toma ninguna decisión
 de negocio.** Quién tiene cupo, a quién se le abona un pago, si un token
@@ -159,9 +161,34 @@ rojo** en vez de calcular cupos con datos viejos.
 ### Si algún día no se guarda el archivo
 
 No pasa nada grave: los cupos se quedan como estaban en la última
-importación buena. Lo que no puede pasar es que nadie se entere, y hoy esa
-es la pieza que falta — el aviso llega al log de n8n, no a un WhatsApp.
-Está anotado en SIGUIENTE_VERSION.md.
+importación buena. Lo que no puede pasar es que nadie se entere — y eso
+ya está resuelto.
+
+**Llega un correo a `bailatumbao@gmail.com`.** Lo manda el workflow
+`Tumbao · Avisos de fallo`, enganchado como *error workflow* de la
+importación y de la ingesta de pagos. Trae qué falló, en qué nodo, el
+mensaje de error y un enlace directo a la ejecución en n8n. Cuando el
+workflow que falla es el de afiliados, el correo además explica la
+consecuencia: los cupos quedaron con datos viejos y conviene revisar el
+aforo antes de vender en recepción.
+
+Esto no es una precaución teórica. **El 29 de julio a las 8am pasó**: el
+Excel venía sin fila de encabezado, la importación murió, el guardia
+aguantó y no se corrompió nada — pero el sistema corrió todo el día con
+los datos del 27 y nadie se dio cuenta. Ese día se ofrecieron uno o dos
+cupos de más en tres horarios.
+
+Dos cosas que conviene saber del Error Trigger de n8n:
+
+- **Solo dispara en ejecuciones de producción**, no en las manuales. Si
+  pruebas el workflow a mano y falla, no llega correo.
+- **Solo dispara si la ejecución queda en rojo.** Un nodo con
+  `continueRegularOutput` no cuenta como fallo: sigue de largo. Ese es el
+  motivo por el que el OCR estuvo devolviendo campos vacíos sin que
+  saltara ninguna alarma.
+
+El WhatsApp queda para después, y cuando llegue no hay que tocar los
+otros workflows: se le agrega un nodo más a `Tumbao · Avisos de fallo`.
 
 ---
 
