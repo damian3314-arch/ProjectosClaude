@@ -260,6 +260,13 @@ $$;
 revoke execute on function admin_tablero(text, date)     from public, anon, authenticated;
 revoke execute on function admin_lista_clase(text, uuid) from public, anon, authenticated;
 
+-- `create or replace` conserva los permisos, asi que el grant de 0016 y
+-- 0018 sobrevive y esto es redundante. Va igual: si alguien aplica esta
+-- migracion sola, o cambia el orden, el permiso queda puesto de todos
+-- modos. Un grant de mas no rompe nada; el que falta si.
+grant execute on function admin_tablero(text, date)     to service_role;
+grant execute on function admin_lista_clase(text, uuid) to service_role;
+
 -- ── Comprobación: esto tiene que decir "vencimientos OK" ─────────
 do $$
 declare

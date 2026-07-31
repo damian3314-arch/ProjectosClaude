@@ -313,6 +313,11 @@ comment on function admin_marcar_asistencia(text, uuid, text, boolean) is
 revoke execute on function admin_lista_clase(text, uuid)                       from public, anon, authenticated;
 revoke execute on function admin_marcar_asistencia(text, uuid, text, boolean)  from public, anon, authenticated;
 
+-- Las dos son nuevas: sin este grant, n8n —que entra como service_role—
+-- no puede ni abrir la lista de la puerta ni marcar que alguien entro.
+grant execute on function admin_lista_clase(text, uuid)                       to service_role;
+grant execute on function admin_marcar_asistencia(text, uuid, text, boolean)  to service_role;
+
 alter table asistencias enable row level security;
 
 -- ── Comprobación: esto tiene que decir "puerta OK" ───────────────

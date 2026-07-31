@@ -309,6 +309,15 @@ revoke execute on function admin_deshacer(text, text)         from public, anon,
 revoke execute on function admin_confirmar(text, text, uuid)  from public, anon, authenticated;
 revoke execute on function admin_rechazar(text, text)         from public, anon, authenticated;
 
+-- admin_deshacer es nueva, asi que nunca tuvo el grant a service_role
+-- —el rol con el que entra n8n— y el revoke de arriba le quita el que
+-- heredaba de public. Las otras dos ya lo traian de 0011 y el revoke no
+-- toca un grant explicito, pero se repiten por claridad: asi este bloque
+-- se lee entero sin ir a buscar que paso en otra migracion.
+grant execute on function admin_deshacer(text, text)        to service_role;
+grant execute on function admin_confirmar(text, text, uuid) to service_role;
+grant execute on function admin_rechazar(text, text)        to service_role;
+
 -- ── Comprobación: esto tiene que decir "deshacer OK" ─────────────
 do $$
 declare

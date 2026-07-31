@@ -493,6 +493,16 @@ revoke execute on function tomar_cupo(uuid, text, text, text, text, text) from p
 revoke execute on function generar_horario(date, date, int, int, text, text) from public, anon, authenticated;
 revoke execute on function admin_tablero(text, date)                from public, anon, authenticated;
 
+-- clases_para es NUEVA y es la que responde /tumbao/clases: sin este
+-- grant la pagina publica no muestra una sola clase. Es el peor de los
+-- permisos que se pueden olvidar aqui, porque rompe lo que ya andaba.
+-- Las otras tres conservan su grant por `create or replace`, pero se
+-- listan explicitas para no depender de eso.
+grant execute on function clases_para(text)                                to service_role;
+grant execute on function tomar_cupo(uuid, text, text, text, text, text)   to service_role;
+grant execute on function generar_horario(date, date, int, int, text, text) to service_role;
+grant execute on function admin_tablero(text, date)                        to service_role;
+
 -- ── Comprobación: esto tiene que decir "sabado OK" ───────────────
 do $$
 declare

@@ -224,6 +224,14 @@ $$;
 revoke execute on function admin_tablero(text, date)  from public, anon, authenticated;
 revoke execute on function admin_pendientes(text)     from public, anon, authenticated;
 
+-- Y despues del revoke hay que devolverle el permiso a service_role, que
+-- es el rol con el que entra n8n. Postgres le da execute a public en toda
+-- funcion nueva, y service_role lo heredaba de ahi; al quitarselo a public
+-- se lo quitamos tambien a el. Sin este grant el Tablero contesta
+-- "permission denied for function admin_tablero". Es el mismo par
+-- revoke/grant de 0011, que aqui se habia quedado a medias.
+grant execute on function admin_tablero(text, date) to service_role;
+
 -- ── Comprobación: esto tiene que decir "tablero OK" ──────────────
 do $$
 declare v_tok text; v_r jsonb; v_c jsonb;
