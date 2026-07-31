@@ -16,8 +16,16 @@
   # terceros las pida por su cuenta.
   Permissions-Policy: geolocation=(), microphone=(), payment=()
 
+# Cloudflare Pages sirve el panel en /admin y redirige /admin.html ahí
+# con un 308. Hay que declarar las dos rutas: si solo se declara el
+# .html, la redirección se lleva estas cabeceras y en /admin queda el
+# caché público por defecto. Comprobado contra el despliegue real.
+/admin
+  # El panel no se guarda en caché de nadie: lleva la cola de pagos y
+  # la lista de quién entra.
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
 /admin.html
-  # El panel además no se guarda en caché de nadie: lleva la cola de
-  # pagos y la lista de quién entra.
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow

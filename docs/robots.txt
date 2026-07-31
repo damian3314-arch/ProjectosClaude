@@ -1,6 +1,9 @@
 # La página de reservas sí queremos que se encuentre en Google.
 # El panel no: no es secreto —el repo es público— pero no tiene por qué
 # salir en una búsqueda. La defensa de verdad sigue siendo el token.
+# Cloudflare Pages sirve el panel en /admin; /admin.html redirige ahí.
+# Se listan las dos por si acaso.
 User-agent: *
 Allow: /
+Disallow: /admin
 Disallow: /admin.html
