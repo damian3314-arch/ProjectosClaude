@@ -1,0 +1,29 @@
+;;
+;; Zona de tumbaobaila.com — archivo BIND para importar en Cloudflare.
+;;
+;; Cloudflare > tumbaobaila.com > DNS > Records > Import
+;;
+;;   *** DEJA MARCADA LA CASILLA "Proxy imported DNS records" ***
+;;
+;; Sin esa casilla los registros entran en gris (DNS only) y Cloudflare
+;; Pages NO responde en el dominio: el trafico sale a internet buscando
+;; tumbao.pages.dev por su cuenta en vez de quedarse dentro de
+;; Cloudflare. El DNS resuelve, todo parece bien, y la pagina no carga.
+;;
+;; La extension tiene que ser .txt — es la que usa la documentacion de
+;; Cloudflare, y por eso el archivo .zone anterior no se podia
+;; seleccionar en el dialogo de subida.
+;;
+;; Los dos registros apuntan al mismo proyecto de Pages: "tumbao".
+;; El apex (tumbaobaila.com) es un CNAME, que en DNS normal no se
+;; puede — Cloudflare lo resuelve solo con CNAME flattening.
+;;
+;; El destino lleva punto final a proposito: la doc de Cloudflare exige
+;; que el contenido de un CNAME sea un nombre completamente calificado.
+;;
+;; TTL 1 significa "Auto" en Cloudflare.
+;;
+
+;; CNAME Records
+tumbaobaila.com.	1	IN	CNAME	tumbao.pages.dev.
+www.tumbaobaila.com.	1	IN	CNAME	tumbao.pages.dev.
