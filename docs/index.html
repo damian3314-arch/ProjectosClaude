@@ -988,14 +988,40 @@ const CONFIG = {
       if (queda <= 0){ detenerEspera(); consultar(true); }
     }, 1000);
 
-    // Se consulta cada 8 s. La confirmación real la decide la base cuando
-    // llega el correo del banco; aquí solo se pregunta.
-    sondeo = setInterval(() => consultar(false), 8000);
-    setTimeout(() => consultar(false), 2500);
+    // Cuándo preguntar, en segundos desde que arrancó la espera.
+    //
+    // Antes se preguntaba cada 8 segundos: 22 consultas por persona, y las
+    // primeras siempre en vano — el aviso del banco tarda de 1 a 2 minutos,
+    // así que preguntar al segundo 3 no puede dar otra cosa que "todavía no".
+    //
+    // Con estos siete tiempos se pregunta poco al principio, seguido en la
+    // franja donde de verdad llega el correo, y una última vez antes del
+    // corte. Para el cliente es idéntico: la barra corre igual y la
+    // confirmación aparece a los pocos segundos de que el banco avise. Lo
+    // que cambia es que cada reserva pasa de ~23 llamadas a ~8, y eso es
+    // lo que decide si el plan de n8n aguanta el mes.
+    const CUANDO = [12, 30, 55, 85, 115, 145, 172];
+    let siguiente = 0;
+
+    const programar = () => {
+      const transcurrido = total - queda;
+      // Si el celular tuvo la pestaña dormida, varios tiempos pueden haber
+      // quedado atrás. Se descartan en vez de dispararlos todos de golpe,
+      // que es justo el atracón de llamadas que se quiere evitar.
+      while (siguiente < CUANDO.length && CUANDO[siguiente] <= transcurrido) siguiente++;
+      if (siguiente >= CUANDO.length) return;
+      const espera = (CUANDO[siguiente] - transcurrido) * 1000;
+      siguiente++;
+      sondeo = setTimeout(() => { consultar(false); programar(); }, espera);
+    };
+    programar();
   }
 
   function detenerEspera(){
-    clearInterval(temporizador); clearInterval(sondeo);
+    clearInterval(temporizador);
+    // El sondeo ya no es un intervalo sino una cadena de timeouts, cada uno
+    // programando el siguiente. Basta con cortar el que esté pendiente.
+    clearTimeout(sondeo);
     temporizador = sondeo = null;
   }
 

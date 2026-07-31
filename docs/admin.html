@@ -653,13 +653,49 @@ const CONFIG = {
 
   function moverDia(n) { diaTablero = sumaDias(diaTablero || hoyBogota(), n); cargarTablero(); }
 
-  async function cargarTablero() {
+  // Cada llamada del panel es una ejecución de n8n, y el plan las cuenta.
+  // Medido el 31/07: el panel era el 55% del consumo de toda la cuenta,
+  // porque cambiar de pestaña volvía a pedir lo mismo que se había traído
+  // diez segundos antes. Con esta ventana, ir y volver entre pestañas es
+  // gratis; el botón de recargar y cualquier cambio real (otro día, un
+  // pago confirmado) siguen pidiendo de verdad.
+  // Dos ventanas distintas a propósito:
+  //
+  // El tablero son conteos del día. Que tengan 45 segundos no cambia
+  // ninguna decisión.
+  //
+  // La cola de pagos NO puede envejecer: el caso real es alguien parado en
+  // el mostrador diciendo "acabo de pagar". Diez segundos solo alcanzan
+  // para tragarse las ráfagas —en los datos del 31/07 hay siete llamadas
+  // en catorce segundos, de ir y volver entre pestañas— sin que recepción
+  // llegue a notarlo.
+  const FRESCO_MS = { tablero: 45000, pendientes: 10000 };
+  const traido = new Map();
+  // Qué día hay dibujado ahora mismo en el tablero.
+  let diaPintado = null;
+  const esReciente = clave => {
+    const ms = FRESCO_MS[clave.split(':')[0]] ?? 10000;
+    return Date.now() - (traido.get(clave) || 0) < ms;
+  };
+
+  async function cargarTablero(forzar) {
     if (!diaTablero) diaTablero = hoyBogota();
+    // Los botones pasan el evento del clic, que es truthy: recargar a mano
+    // siempre pide de nuevo. Las pestañas llaman sin argumentos.
+    const clave = 'tablero:' + diaTablero;
+    // Hay que mirar DOS cosas, no una. Que el dato sea reciente no basta:
+    // la pantalla dibuja un solo día a la vez, así que si se está viendo
+    // el sábado y se pide el viernes, saltarse la petición deja el sábado
+    // puesto y el botón "Hoy" parece no hacer nada. Solo se ahorra la
+    // llamada cuando lo que ya está dibujado es justo lo que se pide.
+    if (!forzar && diaPintado === diaTablero && esReciente(clave)) return;
+    traido.set(clave, Date.now());
     $('#cargando-tab').hidden = false;
     aviso($('#msg-tab'), '');
     try {
       const r = await api('tablero', { dia: diaTablero });
       pintarTablero(r);
+      diaPintado = diaTablero;
     } catch (e) {
       // No relanza: el error ya se pinta aquí, y quien manda al login es
       // api() cuando el token rebota. Relanzarlo solo dejaría promesas
@@ -669,6 +705,10 @@ const CONFIG = {
       aviso($('#msg-tab'), esc(e.message), 'mal');
       $('#tiles-tab').innerHTML = '';
       $('#clases-tab').innerHTML = '';
+      // Si falló no hay nada fresco que guardar: el próximo intento debe
+      // volver a pedir, no quedarse 45 segundos mostrando el error.
+      traido.delete(clave);
+      diaPintado = null;
     } finally {
       $('#cargando-tab').hidden = true;
     }
@@ -813,8 +853,9 @@ const CONFIG = {
     $('#vista-puerta').hidden = true;
     $('#vista-dia').hidden = false;
     // Al volver, los contadores del día tienen que reflejar lo que se
-    // acaba de marcar.
-    cargarTablero();
+    // acaba de marcar. Va forzado: aquí la caché estorbaría, porque lo
+    // que se acaba de cambiar es justo lo que hay que volver a leer.
+    cargarTablero(true);
   }
 
   async function abrirPuerta(claseId) {
@@ -1182,7 +1223,12 @@ const CONFIG = {
   /* ---------- pendientes ---------- */
   $('#recargar-pend').addEventListener('click', cargarPendientes);
 
-  async function cargarPendientes() {
+  async function cargarPendientes(forzar) {
+    // Misma ventana que el tablero. Ojo: confirmar o rechazar NO pasa por
+    // aquí —esas funciones actualizan la lista en memoria—, así que la
+    // caché nunca hace que un pago recién resuelto siga apareciendo.
+    if (!forzar && esReciente('pendientes')) return;
+    traido.set('pendientes', Date.now());
     $('#cargando-pend').hidden = false;
     aviso($('#msg-pend'), '');
     try {
@@ -1191,6 +1237,7 @@ const CONFIG = {
       pintarPendientes();
     } catch (e) {
       aviso($('#msg-pend'), esc(e.message), 'mal');
+      traido.delete('pendientes');
     } finally {
       $('#cargando-pend').hidden = true;
     }
