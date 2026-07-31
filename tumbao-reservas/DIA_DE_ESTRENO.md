@@ -168,3 +168,36 @@ reintento a propósito**: no es idempotente, y repetirlo después de un
 timeout crearía una segunda reserva y se comería dos cupos — que es
 exactamente lo que este sistema existe para evitar. Ahí es preferible
 que falle visible y la persona reintente.
+
+---
+
+## 8. El cupo fantasma (encontrado el 31 de julio, con una reserva real)
+
+**Síntoma:** en la lista de una clase aparece alguien ocupando un cupo,
+pero esa persona **no está en "Reservas por confirmar"**, así que no hay
+forma de rechazarla ni de soltar el puesto.
+
+**Causa:** una reserva nace en `pendiente_pago` en cuanto alguien elige
+la clase — el cupo se aparta ahí mismo, antes de pagar. Si la persona
+completa el pago pasa a `verificando` y sigue su curso. **Si abandona,
+se queda en `pendiente_pago`.** Y los dos listados no filtran igual:
+
+| Vista | Qué muestra |
+|---|---|
+| Lista de la clase | todo menos `expirada` y `rechazada` → **sí muestra** `pendiente_pago` |
+| Reservas por confirmar | solo `pendiente_validacion` y `verificando` → **no lo muestra** |
+
+Existe `liberar_cupos_expirados()` en la base desde el primer día, y su
+propio comentario dice *"la llama el cron"*. **Ese cron nunca se creó.**
+No había `pg_cron` en ninguna migración ni ningún workflow de n8n que la
+llamara. Resultado: cada abandono se comía un cupo de forma permanente.
+
+**Arreglo:** el workflow `Tumbao · Liberar cupos vencidos` corre cada 5
+minutos y suelta lo que lleve más de 30 minutos sin pagar. Solo toca
+`pendiente_pago` vencidas; no roza confirmadas, ni las que esperan al
+banco, ni las de la cola.
+
+**Cuidado con la primera pasada.** Expira todo lo atascado desde antes.
+Si alguna de esas personas sí pagó pero nunca le dio a "ya pagué" en la
+página, pierde el puesto. Conviene mirar la lista de puerta antes de la
+primera corrida.
