@@ -197,7 +197,20 @@ minutos y suelta lo que lleve más de 30 minutos sin pagar. Solo toca
 `pendiente_pago` vencidas; no roza confirmadas, ni las que esperan al
 banco, ni las de la cola.
 
-**Cuidado con la primera pasada.** Expira todo lo atascado desde antes.
-Si alguna de esas personas sí pagó pero nunca le dio a "ya pagué" en la
-página, pierde el puesto. Conviene mirar la lista de puerta antes de la
-primera corrida.
+**Ya está activo** desde el 31 de julio a las 10:59 am. La primera
+pasada liberó **4 cupos**, no uno: además de la reserva que se detectó a
+mano había otras tres atascadas. La segunda pasada devolvió 0, que es lo
+que confirma que no vuelve a tocar nada ya soltado.
+
+### Cómo saber si un cupo se soltó
+
+El workflow deja el número en el log de cada ejecución (`liberados`). Si
+algún día un cupo desaparece sin explicación, ahí está el registro de
+qué se soltó y cuándo.
+
+### Lo que este arreglo NO hace
+
+Sigue sin haber un botón en el panel para soltar a mano una reserva en
+`pendiente_pago`. Hoy hay que esperar los 30 minutos. Para el caso normal
+—alguien abandona— es suficiente. Si alguna vez hace falta soltar uno de
+inmediato, eso es trabajo pendiente.
