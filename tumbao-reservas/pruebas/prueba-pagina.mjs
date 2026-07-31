@@ -12,6 +12,11 @@ const ok = (n, c, extra = '') => {
   if (!c) fallos++;
 };
 
+// El espejo guarda estado en memoria y estas suites reservan y marcan.
+// Sin volver al principio, correr dos seguidas hace fallar a la segunda
+// por los restos de la primera, y el fallo no se parece a su causa.
+await fetch('http://localhost:8899/_prueba/reiniciar').catch(() => {});
+
 const nav = await chromium.launch({ executablePath: CHROME });
 const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-CO' });
 const p = await ctx.newPage();
@@ -98,9 +103,19 @@ ok('el chip de Pago está visible', !(await p.locator('#chip-pago').isHidden()))
 const horaTxt = await p.locator('.clase .hora').first().innerText();
 ok('la hora sale compacta', /\d{1,2}:\d{2}\s?(am|pm)/i.test(horaTxt), `"${horaTxt}"`);
 
-const agotadas = await p.locator('.clase:disabled').count();
+// Se busca por toda la semana visible, no solo en el dia que abre por
+// defecto: la clase agotada del espejo esta en el sabado, y con el
+// corte de semana el dia inicial cambia segun cuando se corra.
+let agotadas = 0;
+for (let i = 0; i < await p.locator('.dia').count(); i++) {
+  await p.locator('.dia').nth(i).click();
+  await p.waitForTimeout(250);
+  agotadas += await p.locator('.clase:disabled').count();
+}
 ok('la clase agotada queda deshabilitada', agotadas >= 1, `${agotadas} agotada(s)`);
 
+await p.locator('.dia').first().click();
+await p.waitForTimeout(300);
 await p.locator('.clase:not(:disabled)').first().click();
 await p.waitForTimeout(400);
 ok('pasa a datos', await p.locator('#s2').isVisible());
@@ -147,7 +162,6 @@ await p.waitForSelector('.clase:not(:disabled)', { timeout: 8000 });
 ok('el chip de Pago se esconde', await p.locator('#chip-pago').isHidden());
 
 // 1) su propio horario entre semana -> "tu plan ya te cubre"
-//    Se usa martes: el lunes a las 6pm esta agotada a proposito.
 if (await buscarDiaConClase('6:00 pm')) {
   await llenarDatos('Alba Camacho', '3001111111');
   await p.waitForTimeout(900);

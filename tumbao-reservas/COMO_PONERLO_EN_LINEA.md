@@ -169,6 +169,22 @@ que queda a la venta y lo reservado. La barra separa los dos grupos que
 llenan la sala — los que tienen plan y los que compraron suelta — sobre el
 aforo.
 
+En la tarjeta de cada clase, si hay planes que se acaban ese día, sale un
+aviso punteado:
+
+> ⌛ **2** con plan vencen este día
+
+Una mensualidad que termina hoy sigue contando hoy: su puesto está
+descontado del aforo. Correcto — pero esa persona puede no venir, y si no
+viene tampoco renueva, y se guardó un puesto que nadie usó. Con ese número
+puedes **arriesgarte a vender hasta esa cantidad de sueltas de más**,
+sabiendo exactamente cuánto arriesgas.
+
+**No se suma al cupo a propósito.** Es una apuesta, no un cupo: si los dos
+aparecen —y la gente suele renovar el último día— y encima vendiste dos
+sueltas, la sala queda apretada. La decisión la tomas tú con el número
+delante.
+
 Solo lee: desde aquí no se cambia nada. Para eso están las otras dos
 pestañas.
 
@@ -194,6 +210,10 @@ Arriba, un contador de *N de M entraron* y un buscador por nombre, código o
 celular. Cada persona tiene un botón grande de **Marcar / ✓ Entró**, que se
 puede quitar si fue un error. Marcar dos veces no cuenta dos personas — en la
 puerta se dan clics repetidos y con prisa.
+
+Cada persona a la que se le acaba el plan ese día sale marcada con
+**⌛ vence hoy**. Está enfrente tuyo: es el mejor momento que vas a tener
+para renovarla, sin llamar a nadie.
 
 Las reservas que aún no concilian **también salen**, con un aviso de *sin
 confirmar* al lado: alguien puede plantarse en la puerta con el pago hecho
@@ -325,6 +345,7 @@ psql -d tumbao -f pruebas/humo-aforo.sql
 psql -d tumbao -f pruebas/humo-tablero.sql
 psql -d tumbao -f pruebas/humo-deshacer.sql
 psql -d tumbao -f pruebas/humo-puerta.sql
+psql -d tumbao -f pruebas/humo-vencen.sql
 ```
 
 La lectura del comprobante se prueba en sus tres caminos, y el que más

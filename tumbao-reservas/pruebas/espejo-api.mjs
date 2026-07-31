@@ -65,13 +65,32 @@ function sembrarClases() {
         cupo_total: libres, cupos_disponibles: libres, agotada: libres <= 0,
         // Lo que ve el panel: los cupos salen de aforo − gente con plan.
         activa: true, aforo: 30, activos_plan: 30 - libres, cupo_manual: null,
+        // A dos de las 6pm se les acaba el plan ese dia. Sirve para que
+        // el aviso punteado del tablero tenga algo que mostrar.
+        _vencen: h === 18 ? 2 : 0,
         _dow: dow, _hora: h,
       });
     }
   }
-  // Una agotada para comprobar que se deshabilita.
-  clases[1].cupos_disponibles = 0;
-  clases[1].agotada = true;
+  // Una agotada, para comprobar que se deshabilita.
+  //
+  // Va en el SEGUNDO sabado y se busca por hora, no por indice. Desde
+  // que la pagina solo muestra la semana que corre, hay dias en que
+  // queda un solo dia entre semana a la vista, y entonces agotar
+  // cualquier clase de entre semana rompe alguna prueba:
+  //
+  //   7 am  -> el panel abre el dia siguiente y su primera tarjeta
+  //            queda sin cupo: no se puede ni reservar ni bajar el
+  //            cupo manual por debajo de lo ya tomado
+  //   6 pm  -> es el horario del miembro de prueba, y necesita el
+  //            suyo habilitado para que le diga "ya te cubre"
+  //   7 pm  -> es la "otra hora" del mismo caso
+  //
+  // El sabado no estorba a ninguna: siempre esta dentro de la semana
+  // visible, y al ser la segunda de ese dia la primera tarjeta del
+  // sabado sigue libre.
+  const agotada = clases.find(c => c._dow === 6 && c._hora === 9);
+  if (agotada) { agotada.cupos_disponibles = 0; agotada.agotada = true; }
 }
 sembrarClases();
 
@@ -290,6 +309,9 @@ createServer(async (req, res) => {
           activa: c.activa !== false,
           ya_paso: new Date(c.fecha_hora) <= new Date(),
           aforo, con_plan: conPlan, a_la_venta: c.cupo_total,
+          // Los del plan a los que se les acaba ESE dia. Nunca puede
+          // pasarse de con_plan: es un subconjunto.
+          vencen: Math.min(c._vencen ?? 0, conPlan),
           cupo_manual: c.cupo_manual ?? null,
           reservadas: tomadas, libres: Math.max(c.cupos_disponibles, 0),
           confirmadas, por_validar: porValidar, esperando,
@@ -304,6 +326,7 @@ createServer(async (req, res) => {
         clases: tarjetas,
         resumen: {
           clases: tarjetas.length, aforo: suma('aforo'), con_plan: suma('con_plan'),
+          vencen: suma('vencen'),
           a_la_venta: suma('a_la_venta'), reservadas: suma('reservadas'),
           libres: suma('libres'), confirmadas: suma('confirmadas'),
           por_validar: suma('por_validar'), esperando: suma('esperando'),
@@ -335,6 +358,9 @@ createServer(async (req, res) => {
         .map(([tel]) => ({
           ref: 'p:' + tel, nombre: 'Afiliada ' + tel.slice(-4), telefono: tel,
           membresia: 'PLAN MENSUALIDAD',
+          // Una de las de las 6pm vence hoy, para que la etiqueta de la
+          // puerta tenga algo que mostrar.
+          vence_hoy: c._hora === 18 && tel === '3001111111',
           asistio: asistencias.has(c.clase_id + '|p:' + tel)
         }))
         .sort((a, z) => a.nombre.localeCompare(z.nombre));

@@ -69,6 +69,36 @@ const tarj = await p.locator('.clase-card').count();
 ok('pinta una tarjeta por clase', tarj > 0, `${tarj} clases`);
 ok('cinco cifras arriba', await p.locator('#tiles-tab .tile').count() === 5);
 
+// El aviso punteado de los que vencen ese dia. Solo sale donde hay
+// alguien venciendo: si saliera en todas, seria ruido.
+const conVence = p.locator('.clase-card').filter({ has: p.locator('.vencen') });
+ok('avisa cuando hay planes que vencen ese dia', await conVence.count() >= 1,
+   `${await conVence.count()} de ${await p.locator('.clase-card').count()} clases`);
+if (await conVence.count()) {
+  const txtV = await conVence.first().locator('.vencen').innerText();
+  ok('dice cuantos son', /\d+\s+con plan vencen?/.test(txtV), txtV.trim());
+  // Nunca puede pasarse de los que tienen plan: se estarian ofreciendo
+  // puestos que si estan ocupados.
+  const cifrasV = await conVence.first().evaluate(e => ({
+    conPlan: Number(e.querySelectorAll('.mini .v')[1].textContent),
+    vencen: Number(e.querySelector('.vencen b').textContent),
+  }));
+  ok('nunca dice mas de los que tienen plan',
+     cifrasV.vencen <= cifrasV.conPlan,
+     `${cifrasV.vencen} de ${cifrasV.conPlan} con plan`);
+  // Es informacion, no una venta: el cupo a la venta no lo incluye.
+  const venta = await conVence.first().evaluate(e =>
+    Number(e.querySelectorAll('.mini .v')[2].textContent));
+  const aforoV = await conVence.first().evaluate(e =>
+    Number(e.querySelectorAll('.mini .v')[0].textContent));
+  ok('y no se suma solo al cupo a la venta',
+     venta === aforoV - cifrasV.conPlan,
+     `${venta} = ${aforoV} − ${cifrasV.conPlan}`);
+}
+ok('no ensucia las clases donde no vence nadie',
+   await p.locator('.clase-card').count() > await conVence.count(),
+   `${await p.locator('.clase-card').count() - await conVence.count()} sin aviso`);
+
 const c1 = p.locator('.clase-card').first();
 const txtC1 = await c1.innerText();
 ok('la tarjeta trae las cuatro cifras del cupo',

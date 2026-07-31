@@ -39,6 +39,11 @@ const ok = (n, c, extra = '') => {
 
 console.log(`modo del espejo: ${MODO}\n`);
 
+// El espejo guarda estado en memoria y estas suites reservan y marcan.
+// Sin volver al principio, correr dos seguidas hace fallar a la segunda
+// por los restos de la primera, y el fallo no se parece a su causa.
+await fetch('http://localhost:8899/_prueba/reiniciar').catch(() => {});
+
 const nav = await chromium.launch({ executablePath: CHROME });
 const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-CO' });
 const p = await ctx.newPage();
