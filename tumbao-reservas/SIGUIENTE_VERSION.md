@@ -212,3 +212,58 @@ Ninguna es un proyecto; son de horas.
 
 El 4 está arriba en la lista a propósito, aunque no se necesite todavía:
 es lo único de esta lista que **no se puede recuperar después**.
+
+---
+
+## 6. n8n v3 — qué hay que hacer y cuándo
+
+**Sale en octubre de 2026.** No corre prisa, y sobre todo: no se toca el
+día que hay clientes estrenando la página.
+
+### Lo más grande no nos toca
+
+El cambio más pesado de v3 es que **el self-hosted va a exigir Docker**:
+las instalaciones por `npm` / `npx n8n` dejan de estar soportadas. Tumbao
+corre en **n8n Cloud** (`barragan.app.n8n.cloud`), así que ese cambio pasa
+de largo. Es el que más trabajo le va a dar a otra gente y a nosotros
+ninguno.
+
+### Lo que sí hay que revisar
+
+| Cambio | Estado en Tumbao |
+|---|---|
+| Se eliminan los nodos **Function**, **Function Item** e **Item Lists** | ✅ no se usan |
+| Se elimina el helper `$getPairedItem` | ✅ no se usa |
+| Cambia el comportamiento viejo de **Execute Workflow** | ✅ no se usa |
+| Se retira el **Chat hub** | ✅ no se usa |
+| Se quita **importar workflow desde URL** en el editor | ✅ no se usa |
+| Rotación de llaves activada por defecto | ⚠️ revisar credenciales |
+| Defaults de seguridad más estrictos | ⚠️ revisar tras actualizar |
+
+Verificado nodo por nodo en cuatro de los seis workflows de Tumbao —
+*API de reservas*, *Leer comprobante*, *Ingesta de pagos* y *Avisos de
+fallo*. Todos usan `code` v2, `httpRequest` v4.2, `if` v2.2, `filter`
+v2.3, `set` v3.4, `webhook` v2, `gmail` 2.2, `googleSheets` 4.7 y
+`gmailTrigger` 1.4. Ninguno de esos desaparece en v3.
+
+Faltan por revisar a mano *Panel de admin* e *Importar afiliados*. El
+riesgo es bajo —los seis se construyeron la misma semana con el mismo
+SDK, que ni siquiera puede emitir los nodos legacy— pero bajo no es cero.
+
+### La comprobación que manda
+
+n8n trae un **Migration Report** que escanea la instancia entera: todos
+los workflows y también la configuración de instancia, que desde fuera no
+se ve. Eso es más confiable que cualquier auditoría a mano, incluida esta.
+Hay que correrlo cuando esté disponible para v3.
+
+### Orden sugerido
+
+1. Correr el Migration Report cuando n8n lo habilite para v3.
+2. Arreglar lo que reporte, con la página en horario de poco uso.
+3. Actualizar. En Cloud lo hace n8n, pero conviene tener revisado antes.
+4. Después de actualizar: probar los cinco endpoints de la página y los
+   seis del panel. Están listados en `DIA_DE_ESTRENO.md` §6 con el
+   resultado que debe dar cada uno.
+
+Fuente: [v3.0 Breaking changes](https://docs.n8n.io/changelog/v30-breaking-changes)
