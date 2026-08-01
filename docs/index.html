@@ -589,21 +589,42 @@ const CONFIG = {
 
   /* ---------- 1 · horarios ---------- */
 
-  // Tumbao arma el horario semana a semana. Ofrecer días de la semana
-  // que viene es prometer clases que todavía no están puestas: el cupo
-  // que muestren no lo ha revisado nadie. Así que la página solo enseña
-  // hasta el domingo de la semana que corre, aunque el servidor mande
-  // más.
+  // Tumbao arma el horario semana a semana, así que la página no enseña
+  // todo lo que manda el servidor: ofrecer días que nadie ha revisado es
+  // prometer cupos que quizá no existan.
+  //
+  // Pero la semana no se abre el lunes, se abre el VIERNES. Para el
+  // jueves la gente ya está preguntando por la semana entrante, y hasta
+  // hoy la página le decía que no había nada — con las clases creadas y
+  // activas en la base. Se perdían tres días de venta por una regla de
+  // la página, no del negocio.
+  //
+  //   lunes a jueves   ->  hasta el domingo de esta semana
+  //   viernes a domingo ->  hasta el domingo de la que viene
+  //
+  // Si algún día hay que abrir antes o después, se cambia DIA_QUE_ABRE:
+  // 5 es viernes, 4 jueves, 1 lunes.
+  const DIA_QUE_ABRE = 5;
+
   function finDeLaSemana(){
     const hoy = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date());
     const [a, m, d] = hoy.split('-').map(Number);
     const f = new Date(Date.UTC(a, m - 1, d));
-    const dow = f.getUTCDay();                 // 0 domingo
-    // El domingo Tumbao no abre y la semana ya se acabó: la que corre es
-    // la que empieza mañana, así que se llega hasta el domingo siguiente.
-    f.setUTCDate(f.getUTCDate() + (dow === 0 ? 7 : 7 - dow));
+    const dow = f.getUTCDay();                 // 0 domingo … 6 sábado
+
+    // Días que faltan para el domingo que cierra la semana en curso.
+    // El domingo Tumbao no abre y la semana ya terminó: la que corre es
+    // la que empieza mañana, así que se cuentan 7.
+    let faltan = dow === 0 ? 7 : 7 - dow;
+
+    // Del viernes en adelante se suma la semana siguiente entera. El
+    // domingo ya la tiene contada arriba, así que no se le suma dos
+    // veces.
+    if (dow >= DIA_QUE_ABRE) faltan += 7;
+
+    f.setUTCDate(f.getUTCDate() + faltan);
     return f.toISOString().slice(0, 10);
   }
 
