@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-opina",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+
+  // La página del chat se sirve como archivos estáticos desde el mismo
+  // Worker. Un solo despliegue, sin CORS y sin un Pages aparte.
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tumbao-opina",
+      "database_id": "fec50988-bedc-4cf8-bc73-917c12a5b279"
+    }
+  ],
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    // Modelos baratos a propósito: esto son conversaciones cortas, no
+    // razonamiento. La campaña completa de 40 personas sale por menos
+    // de un dólar.
+    "MODELO_CHAT": "gpt-4o-mini",
+    "MODELO_VOZ": "whisper-1",
+    // Id de la hoja de Google. Se llena cuando exista.
+    "HOJA_ID": ""
+  }
+
+  // SECRETOS — se ponen en el dashboard, nunca en este archivo:
+  //   OPENAI_API_KEY   Workers > tumbao-opina > Settings > Variables
+  //   GOOGLE_SA_JSON   la cuenta de servicio, para escribir en la hoja
+  //
+  // Sin OPENAI_API_KEY el bot arranca igual, en modo de ensayo: contesta
+  // con respuestas fijas para poder probar la página entera sin gastar
+  // ni un peso. Sin GOOGLE_SA_JSON todo se guarda en D1 y la hoja se
+  // sincroniza después.
+}
