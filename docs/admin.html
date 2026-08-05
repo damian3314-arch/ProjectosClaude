@@ -234,6 +234,25 @@ const CONFIG = {
   .tile.bueno .n{color:var(--ok)}
   .tile.ojo   .n{color:var(--gold)}
   .tile.hot   .n{color:var(--hot-2)}
+  .tile.malo  .n{color:var(--bad)}
+
+  /* En la caja los cuatro números no pesan igual: el del cajón es el
+     único que se cuenta a mano, así que va marcado y los otros tres
+     acompañan. Una franja arriba dice de un vistazo si entra o sale. */
+  #caja-tiles .tile{position:relative;overflow:hidden}
+  #caja-tiles .tile::before{
+    content:'';position:absolute;left:0;right:0;top:0;height:2px;background:var(--line-2);
+  }
+  #caja-tiles .tile.bueno::before{background:var(--ok)}
+  #caja-tiles .tile.ojo::before  {background:var(--gold)}
+  #caja-tiles .tile.malo::before {background:var(--bad)}
+  #caja-tiles .tile.cajon{
+    background:linear-gradient(160deg,rgba(255,193,77,.09),var(--bg-2));
+    border-color:rgba(255,193,77,.32);
+  }
+  #caja-tiles .tile.cajon::before{background:var(--gold)}
+  #caja-tiles .tile.cajon .n{color:var(--gold);font-size:2.1rem}
+  #caja-tiles .tile.cajon .k{color:var(--tx-2)}
 
   .clases-tab{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
   .clase-card{
@@ -362,65 +381,137 @@ const CONFIG = {
 
   .cargando{color:var(--tx-3);padding:2rem;text-align:center}
   /* ---------- caja ---------- */
-  .caja-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:.6rem;margin-bottom:1.1rem}
+  /* Dos mundos que no se pueden confundir: lo que entra y lo que sale.
+     El color es la señal rápida; el título de sección es la lenta. */
+  .caja-seccion{margin:0 0 1.3rem}
+  .caja-seccion > h4{
+    display:flex;align-items:center;gap:.5rem;margin:0 0 .6rem;
+    font-size:.8rem;text-transform:uppercase;letter-spacing:.09em;color:var(--tx-3);font-weight:700;
+  }
+  .caja-seccion > h4::after{content:'';flex:1;height:1px;background:var(--line)}
+  .caja-seccion > h4 .pin{
+    width:.5rem;height:.5rem;border-radius:99px;background:var(--ok);flex:none;
+  }
+  .caja-seccion.sale > h4 .pin{background:var(--bad)}
+
+  .caja-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.65rem}
   .caja-btn{
+    position:relative;overflow:hidden;
     background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:.85rem .7rem;color:inherit;font:inherit;cursor:pointer;text-align:left;
-    transition:.15s;display:flex;flex-direction:column;gap:.15rem;min-height:4.6rem;
+    padding:.9rem .85rem .85rem 1.05rem;color:inherit;font:inherit;cursor:pointer;text-align:left;
+    transition:.16s;display:flex;flex-direction:column;gap:.2rem;min-height:4.9rem;
   }
-  .caja-btn:hover{border-color:var(--gold);transform:translateY(-2px)}
-  .caja-btn .q{font-weight:700;font-size:.95rem;line-height:1.2}
-  .caja-btn .v{font-size:.8rem;color:var(--gold);font-variant-numeric:tabular-nums}
-  .caja-btn.sale{border-style:dashed}
-  .caja-btn.sale:hover{border-color:var(--bad)}
-  .caja-btn.sale .v{color:var(--tx-3)}
-  .caja-h{font-size:.95rem;margin:1.2rem 0 .5rem;color:var(--tx-2)}
+  /* La franja de color a la izquierda: se lee antes que el texto. */
+  .caja-btn::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ok);
+  }
+  .caja-btn.sale::before{background:var(--bad)}
+  .caja-btn:hover{border-color:var(--line-2);transform:translateY(-2px);
+    box-shadow:0 8px 22px -14px rgba(0,0,0,.9)}
+  .caja-btn:active{transform:translateY(0)}
+  .caja-btn .q{font-weight:650;font-size:.97rem;line-height:1.25}
+  .caja-btn .v{font-size:.83rem;color:var(--ok);font-variant-numeric:tabular-nums;font-weight:600}
+  .caja-btn.sale .v{color:var(--tx-3);font-weight:500}
+  .caja-btn .v.libre{color:var(--tx-3);font-weight:500}
+
+  .caja-h{
+    display:flex;align-items:center;gap:.5rem;font-size:.8rem;margin:1.5rem 0 .6rem;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--tx-3);font-weight:700;
+  }
+  .caja-h::after{content:'';flex:1;height:1px;background:var(--line)}
+  .caja-h .cuenta{
+    text-transform:none;letter-spacing:0;font-weight:500;color:var(--tx-3);font-size:.78rem;
+  }
+
   .mov{
-    display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;
-    background:var(--bg-2);border:1px solid var(--line);border-radius:10px;margin-bottom:.4rem;
+    display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;
+    background:var(--bg-2);border:1px solid var(--line);border-left-width:3px;
+    border-radius:10px;margin-bottom:.45rem;
   }
-  .mov .h{font-size:.78rem;color:var(--tx-3);font-variant-numeric:tabular-nums;flex:none}
-  .mov .q{flex:1;min-width:0;font-size:.9rem}
-  .mov .q small{display:block;color:var(--tx-3);font-size:.74rem}
-  .mov .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .mov.sale .v{color:var(--bad)}
-  .mov.entra .v{color:var(--ok)}
+  .mov.entra{border-left-color:var(--ok)}
+  .mov.sale{border-left-color:var(--bad)}
+  .mov .h{font-size:.76rem;color:var(--tx-3);font-variant-numeric:tabular-nums;flex:none;width:2.6rem}
+  .mov .q{flex:1;min-width:0;font-size:.92rem;font-weight:550}
+  .mov .q small{display:block;color:var(--tx-3);font-size:.73rem;font-weight:400;margin-top:.1rem}
+  .mov .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.98rem}
+  .mov.sale .v{color:var(--bad)} .mov.entra .v{color:var(--ok)}
+
+  /* ---- cierre ---- */
   .cierre{
-    margin-top:1.4rem;background:var(--bg-2);border:1px solid var(--line);
-    border-radius:var(--r);padding:1rem;
+    margin-top:1.6rem;background:linear-gradient(165deg,var(--bg-2),var(--bg-3));
+    border:1px solid var(--line-2);border-radius:var(--r);padding:1.15rem;
   }
-  .cierre h3{margin:0 0 .7rem;font-size:1rem}
-  .cierre .fila{display:flex;justify-content:space-between;padding:.35rem 0;font-size:.9rem}
-  .cierre .fila.total{border-top:1px solid var(--line);margin-top:.4rem;padding-top:.6rem;font-weight:700}
-  .cierre .fila span:last-child{font-variant-numeric:tabular-nums}
-  .cierre .dif{font-weight:800;font-size:1.05rem}
+  .cierre h3{margin:0 0 .2rem;font-size:1.05rem}
+  .cierre .sub-c{color:var(--tx-3);font-size:.78rem;margin:0 0 1rem}
+  .cierre .grupo{margin-bottom:1rem}
+  .cierre .grupo > .et{
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--tx-3);font-weight:700;margin-bottom:.35rem;
+  }
+  .cierre .fila{display:flex;justify-content:space-between;gap:1rem;padding:.32rem 0;font-size:.9rem}
+  /* Ojo con el `>`: la etiqueta de AdminGym es el último hijo de su
+     propio span, así que sin él heredaba el oro y el tamaño del total. */
+  .cierre .fila > span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cierre .fila .ag{
+    display:block;font-size:.7rem;color:var(--tx-3);margin-top:.1rem;
+    font-weight:400;letter-spacing:.02em;white-space:normal;
+  }
+  .cierre .fila.total{
+    border-top:1px solid var(--line-2);margin-top:.45rem;padding-top:.65rem;
+    font-weight:700;font-size:1rem;
+  }
+  .cierre .fila.total > span:last-child{color:var(--gold);font-size:1.15rem}
+  .cierre .dif{font-weight:800;font-size:1.1rem}
   .cierre .dif.mal{color:var(--bad)} .cierre .dif.bien{color:var(--ok)}
+  .cierre label{display:block;font-size:.82rem;color:var(--tx-2);margin:.7rem 0 .3rem}
+  /* `.mini` ya existe arriba y es una rejilla de 4 columnas: usarla aquí
+     partía "Nota (opcional)" en dos renglones. Esta es la de texto. */
+  .suave{color:var(--tx-3);font-size:.75rem}
+  p.suave{margin:.5rem 0 0;font-style:italic}
+  .cierre input{
+    width:100%;background:var(--bg);border:1px solid var(--line);color:var(--tx);
+    border-radius:10px;padding:.6rem .8rem;font:inherit;font-size:1rem;
+    font-variant-numeric:tabular-nums;
+  }
+  .cierre input:focus{outline:none;border-color:var(--gold)}
+  .cierre .btn{margin-top:.9rem;width:100%}
+
+  /* ---- ventana de registro ---- */
   .modal{
-    position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;
-    display:grid;place-items:center;padding:1rem;
+    position:fixed;inset:0;background:rgba(6,4,8,.78);z-index:50;
+    display:grid;place-items:center;padding:1rem;backdrop-filter:blur(3px);
   }
   .caja-modal{
     background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r);
-    padding:1.2rem;width:100%;max-width:22rem;
+    padding:1.3rem;width:100%;max-width:22rem;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.9);
   }
-  .caja-modal h3{margin:0 0 .8rem;font-size:1.05rem}
+  .caja-modal h3{margin:0 0 1rem;font-size:1.08rem;display:flex;align-items:center;gap:.55rem}
+  .caja-modal h3 .pin{width:.6rem;height:.6rem;border-radius:99px;background:var(--ok);flex:none}
+  .caja-modal h3.sale .pin{background:var(--bad)}
+  .caja-modal label{display:block;font-size:.8rem;color:var(--tx-2);margin:0 0 .3rem}
   .caja-modal input{
     width:100%;background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
-    border-radius:10px;padding:.65rem .8rem;font:inherit;font-size:1.05rem;margin-bottom:.7rem;
+    border-radius:10px;padding:.7rem .85rem;font:inherit;font-size:1.15rem;
+    margin-bottom:.85rem;font-variant-numeric:tabular-nums;
   }
   .caja-modal input:focus{outline:none;border-color:var(--gold)}
-  .medios{display:flex;gap:.5rem;margin-bottom:.8rem}
+  .medios{display:flex;gap:.5rem;margin-bottom:.9rem}
   .medio{
-    flex:1;padding:.6rem;border-radius:10px;background:var(--bg-3);
-    border:1px solid var(--line);color:var(--tx-2);font:inherit;cursor:pointer;font-size:.86rem;
+    flex:1;padding:.65rem;border-radius:10px;background:var(--bg-3);
+    border:1px solid var(--line);color:var(--tx-2);font:inherit;cursor:pointer;font-size:.87rem;
+    transition:.14s;
   }
-  .medio.on{border-color:var(--gold);color:var(--tx);background:rgba(255,193,77,.1)}
-  .modal-pie{display:flex;gap:.5rem;justify-content:flex-end}
+  .medio.on{border-color:var(--gold);color:var(--tx);background:rgba(255,193,77,.12)}
+  .modal-pie{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.3rem}
+
   @media print{
-    header,.tabs,.semana-bar,.caja-grid,.modal,#caja-botones,.btn{display:none!important}
+    header,.tabs,.semana-bar,.caja-seccion,.modal,.caja-h,#caja-lista,.btn{display:none!important}
     body{background:#fff;color:#000}
-    .cierre,.mov{background:#fff;border-color:#ccc;color:#000}
+    .cierre{background:#fff;border-color:#999;color:#000}
+    .cierre .fila.total span:last-child{color:#000}
   }
+
 </style>
 
 <div class="wrap">
@@ -558,13 +649,19 @@ const CONFIG = {
            cajón. Va primero y grande. -->
       <div class="tiles" id="caja-tiles"></div>
 
-      <p class="mini" style="margin:.2rem 0 .5rem">Toca para registrar. Se guarda de una.</p>
-      <div class="caja-grid" id="caja-botones"></div>
+      <div class="caja-seccion" id="sec-entra">
+        <h4><span class="pin"></span>Entra plata</h4>
+        <div class="caja-grid" id="caja-entra"></div>
+      </div>
+      <div class="caja-seccion sale" id="sec-sale">
+        <h4><span class="pin"></span>Sale plata</h4>
+        <div class="caja-grid" id="caja-sale"></div>
+      </div>
 
       <div class="aviso" id="msg-caja" hidden></div>
       <div class="cargando" id="cargando-caja" hidden>Cargando…</div>
 
-      <h3 class="caja-h">Movimientos de hoy</h3>
+      <h3 class="caja-h" id="caja-h-mov">Movimientos de hoy</h3>
       <div id="caja-lista"></div>
 
       <div class="cierre" id="caja-cierre"></div>
@@ -576,14 +673,14 @@ const CONFIG = {
      dos pasos son dos oportunidades de equivocarse. -->
 <div class="modal" id="modal-caja" hidden>
   <div class="caja-modal">
-    <h3 id="modal-titulo">Registrar</h3>
+    <h3 id="modal-titulo"><span class="pin"></span><span id="modal-texto">Registrar</span></h3>
     <label for="modal-valor">Valor</label>
     <input id="modal-valor" type="text" inputmode="numeric" placeholder="15.000" autocomplete="off">
     <div class="medios">
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
       <button class="medio" data-medio="transferencia">📲 Transferencia</button>
     </div>
-    <label for="modal-nota">Nota <span class="mini">(opcional)</span></label>
+    <label for="modal-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
     <div class="aviso mal" id="modal-err" hidden></div>
     <div class="modal-pie">
@@ -1715,23 +1812,38 @@ const CONFIG = {
     const d = cajaDatos; if (!d) return;
     $('#caja-dia').textContent = 'Caja · ' + conFecha(d.dia, { weekday:'long', day:'numeric', month:'long' });
 
-    // Lo primero y más grande: cuánto debería haber en el cajón.
+    // Lo primero y más grande: cuánto debería haber en el cajón. Las
+    // clases son las mismas del tablero (.n/.k/.pista), que son las que
+    // el CSS conoce — con <b><span><small> el texto salía todo pegado.
     $('#caja-tiles').innerHTML = [
-      ['', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
-      ['ok', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
-      ['ojo', pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
-      ['hot', pesos(d.total_egresos), 'salió', 'egresos del día'],
-    ].map(([cl, n, t, s]) =>
-      `<div class="tile"><b class="${cl}">${esc(n)}</b><span>${esc(t)}</span><small>${esc(s)}</small></div>`
+      ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
+      ['bueno', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
+      ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
+      ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
+    ].map(([cl, n, k, pista]) =>
+      `<div class="tile ${cl}">` +
+        `<div class="n">${esc(n)}</div>` +
+        `<div class="k">${esc(k)}</div>` +
+        `<div class="pista">${esc(pista)}</div>` +
+      `</div>`
     ).join('');
 
-    $('#caja-botones').innerHTML = CONCEPTOS.map((x, i) =>
-      `<button class="caja-btn ${x.s === 'egreso' ? 'sale' : ''}" data-i="${i}">` +
-      `<span class="q">${x.s === 'egreso' ? '− ' : ''}${esc(x.n)}</span>` +
-      `<span class="v">${x.v ? pesos(x.v) : 'monto libre'}</span></button>`
-    ).join('');
+    // Cada sección pinta solo lo suyo. El índice sigue siendo el de
+    // CONCEPTOS, para que el clic no dependa de en qué grupo cayó.
+    const tarjetas = (sentido) => CONCEPTOS
+      .map((x, i) => [x, i])
+      .filter(([x]) => x.s === sentido)
+      .map(([x, i]) =>
+        `<button class="caja-btn ${sentido === 'egreso' ? 'sale' : ''}" data-i="${i}">` +
+        `<span class="q">${esc(x.n)}</span>` +
+        `<span class="v${x.v ? '' : ' libre'}">${x.v ? pesos(x.v) : 'monto libre'}</span></button>`
+      ).join('');
+    $('#caja-entra').innerHTML = tarjetas('ingreso');
+    $('#caja-sale').innerHTML  = tarjetas('egreso');
 
     const ms = d.movimientos || [];
+    $('#caja-h-mov').innerHTML = 'Movimientos de hoy' +
+      (ms.length ? `<span class="cuenta">${ms.length}</span>` : '');
     $('#caja-lista').innerHTML = ms.length ? ms.map(m =>
       `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
       `<span class="h">${esc(m.hora)}</span>` +
@@ -1750,31 +1862,51 @@ const CONFIG = {
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
-    // Los cuatro números con el nombre que usa AdminGym, para que
-    // cuadrar sea leer dos columnas sin traducir nada.
+    // Tres bloques, en el orden en que se cuadra una caja: primero el
+    // cajón —lo único que se cuenta a mano—, después lo que no pasó por
+    // él, y al final el arqueo. Mezclarlos es lo que hace que un cierre
+    // no sirva.
+    const fila = (t, v, ag, cl) =>
+      `<div class="fila ${cl || ''}"><span>${t}` +
+      (ag ? `<span class="ag">AdminGym · ${esc(ag)}</span>` : '') +
+      `</span><span>${v}</span></div>`;
+
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
-      `<div class="fila"><span>Base con la que abrió</span><span>${pesos(d.base_cop)}</span></div>` +
-      `<div class="fila"><span>Efectivo recibido <small class="mini">· AdminGym: Venta Membresías</small></span><span>${pesos(a.venta_membresias)}</span></div>` +
-      `<div class="fila"><span>Salidas en efectivo <small class="mini">· AdminGym: Retirar Dinero</small></span><span>−${pesos(a.retirar_dinero_de_caja)}</span></div>` +
-      `<div class="fila total"><span>Debería haber en el cajón <small class="mini">· AdminGym: DINERO EN CAJA</small></span><span>${pesos(a.dinero_en_caja)}</span></div>` +
-      `<div class="fila" style="margin-top:.7rem"><span>A banco <small class="mini">· AdminGym: Ingresos a Banco</small></span><span>${pesos(a.ingresos_a_banco)}</span></div>` +
+      `<p class="sub-c">Los nombres de AdminGym van al lado: cuadrar es comparar dos columnas.</p>` +
+
+      `<div class="grupo"><div class="et">En el cajón</div>` +
+        fila('Base con la que abrió', pesos(d.base_cop)) +
+        fila('Efectivo recibido', pesos(a.venta_membresias), 'Venta Membresías') +
+        fila('Salidas en efectivo', '−' + pesos(a.retirar_dinero_de_caja), 'Retirar Dinero') +
+        fila('Debería haber', pesos(a.dinero_en_caja), 'DINERO EN CAJA', 'total') +
+      `</div>` +
+
+      `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
+        fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
+        fila('Reservas de la página', pesos(d.reservas_cop)) +
+        fila('Total a banco', pesos(a.ingresos_a_banco), 'Ingresos a Banco', 'total') +
+      `</div>` +
+
       (d.cerrado
-        ? `<div class="fila total"><span>Contado</span><span>${pesos(d.cierre.contado_cop)}</span></div>` +
-          `<div class="fila"><span>Diferencia</span><span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
-          `${d.cierre.diferencia_cop > 0 ? '+' : ''}${pesos(d.cierre.diferencia_cop)}</span></div>` +
-          `<div class="fila"><span>Se dejó de base</span><span>${pesos(d.cierre.dejado_cop)}</span></div>` +
-          `<div class="fila"><span>Se retiró</span><span>${pesos(d.cierre.retirado_cop)}</span></div>` +
-          `<p class="mini">Cerrado. Para guardarlo, imprime esta página y elige “Guardar como PDF”.</p>` +
-          `<button class="btn" onclick="window.print()">Imprimir / guardar PDF</button>`
-        : `<div style="margin-top:.9rem">` +
-          `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
-          `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
-          `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
-          `<input id="c-dejado" type="text" inputmode="numeric" value="100000">` +
-          `<label for="c-nota">Nota <span class="mini">(opcional)</span></label>` +
-          `<input id="c-nota" type="text" maxlength="300" placeholder="Ej: faltaron 2 mil">` +
-          `<button class="btn primario" id="btn-cerrar-caja">Cerrar el día</button></div>`);
+        ? `<div class="grupo"><div class="et">Arqueo</div>` +
+            fila('Contado en el cajón', pesos(d.cierre.contado_cop)) +
+            `<div class="fila"><span>Diferencia</span><span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
+            `${d.cierre.diferencia_cop > 0 ? '+' : ''}${pesos(d.cierre.diferencia_cop)}</span></div>` +
+            fila('Se dejó de base para mañana', pesos(d.cierre.dejado_cop)) +
+            fila('Se retiró', pesos(d.cierre.retirado_cop)) +
+            (d.cierre.nota ? `<p class="suave">“${esc(d.cierre.nota)}”</p>` : '') +
+          `</div>` +
+          `<button class="btn" onclick="window.print()">Imprimir o guardar en PDF</button>`
+        : `<div class="grupo"><div class="et">Cerrar el día</div>` +
+            `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
+            `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
+            `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
+            `<input id="c-dejado" type="text" inputmode="numeric" value="100000">` +
+            `<label for="c-nota">Nota <span class="suave">(opcional)</span></label>` +
+            `<input id="c-nota" type="text" maxlength="300" placeholder="Ej: faltaron 2 mil">` +
+            `<button class="btn primario" id="btn-cerrar-caja">Cerrar el día</button>` +
+          `</div>`);
   }
 
   // Un solo escuchador para todo el panel: las tarjetas y los botones de
@@ -1811,7 +1943,8 @@ const CONFIG = {
   function abrirModal(x) {
     cajaElegido = x;
     cajaMedio = 'efectivo';
-    $('#modal-titulo').textContent = (x.s === 'egreso' ? 'Salida · ' : '') + x.n;
+    $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
+    $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
     $('#modal-valor').value = x.v ? String(x.v) : '';
     $('#modal-nota').value = '';
     $('#modal-err').hidden = true;

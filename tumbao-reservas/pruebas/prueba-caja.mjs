@@ -126,9 +126,20 @@ visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el pan
 const nTarjetas = await pagina.locator('.caja-btn').count();
 nTarjetas === 9 ? bien('salen las 9 tarjetas') : falla('salen las 9 tarjetas', `salieron ${nTarjetas}`);
 
-const enCajon = async () => (await pagina.locator('#caja-tiles .tile b').first().innerText()).trim();
+const enCajon = async () => (await pagina.locator('#caja-tiles .tile .n').first().innerText()).trim();
 (await enCajon()) === '$100.000'
   ? bien('arranca en $100.000') : falla('arranca en $100.000', await enCajon());
+
+// Los recuadros se pintaban con <b><span><small>, etiquetas que el CSS
+// del panel no conoce: salía "$100.000en el cajónbase + efectivo".
+// Pasaba todas las pruebas porque el número sí estaba. Esto mira que
+// cifra, título y pista sean tres bloques, no una frase pegada.
+const primerTile = pagina.locator('#caja-tiles .tile').first();
+const partes = await primerTile.evaluate((e) =>
+  ['.n', '.k', '.pista'].map((s) => e.querySelector(s)?.textContent.trim() || null));
+partes.every(Boolean)
+  ? bien('el recuadro va en tres renglones', partes.join(' / '))
+  : falla('el recuadro va en tres renglones', 'texto pegado: ' + (await primerTile.innerText()).trim());
 
 // Registrar una clase suelta
 await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
