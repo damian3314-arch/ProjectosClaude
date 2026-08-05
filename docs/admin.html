@@ -10,6 +10,10 @@
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
   N8N_BASE: 'https://barragan.app.n8n.cloud/webhook',
+  // La caja NO pasa por n8n: cada venta sería una ejecución del plan.
+  // Va por un Worker de Cloudflare, que además guarda la llave de
+  // Supabase y deja solo cuatro endpoints expuestos.
+  CAJA_BASE: 'https://tumbao-caja.damian3314.workers.dev',
   WHATSAPP_PAIS: '57',
   // Tiene que ser el mismo plazo que aplica admin_deshacer en Supabase.
   // Aquí solo sirve para la cuenta atrás; quien decide de verdad es la
@@ -17,6 +21,197 @@ const CONFIG = {
   // poco antes o dar un error claro — nunca deshacer fuera de plazo.
   MINUTOS_DESHACER: 15
 };
+  /* ═══════════════ caja ═══════════════
+     No pasa por n8n: cada venta sería una ejecución del plan. Habla
+     directo con el Worker, que guarda la llave de Supabase. El token es
+     el mismo del panel — quien pueda entrar aquí puede vender. */
+
+  const CONCEPTOS = [
+    { s:'ingreso', c:'clase_suelta',  n:'Clase suelta',  v:15000  },
+    { s:'ingreso', c:'mensualidad',   n:'Mensualidad',   v:125000 },
+    { s:'ingreso', c:'cumpleanos',    n:'Cumpleaños',    v:250000 },
+    { s:'ingreso', c:'otro_ingreso',  n:'Otro ingreso',  v:null   },
+    { s:'egreso',  c:'profesores',    n:'Profesores',    v:null   },
+    { s:'egreso',  c:'cafeteria',     n:'Cafetería',     v:null   },
+    { s:'egreso',  c:'aseo',          n:'Aseo',          v:null   },
+    { s:'egreso',  c:'papeleria',     n:'Papelería',     v:null   },
+    { s:'egreso',  c:'otro_egreso',   n:'Otra salida',   v:null   },
+  ];
+
+  let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+
+  async function caja(ruta, cuerpo) {
+    const res = await fetch(`${CONFIG.CAJA_BASE}/api/${ruta}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token }, cuerpo || {})),
+    });
+    let d = {};
+    try { d = await res.json(); } catch (_) {}
+    if (res.status === 401) { cerrarSesion('El token no sirve o fue revocado.'); throw new Error('401'); }
+    if (!res.ok || d.ok === false) throw new Error(d.mensaje || d.error || 'No se pudo.');
+    return d;
+  }
+
+  $('#tab-caja').addEventListener('click', () => { verPanel('caja'); cargarCaja(); });
+  $('#caja-recargar').addEventListener('click', () => cargarCaja(true));
+
+  async function cargarCaja(forzar) {
+    if (!forzar && esReciente('caja')) return;
+    traido.set('caja', Date.now());
+    $('#cargando-caja').hidden = false;
+    aviso($('#msg-caja'), '');
+    try {
+      cajaDatos = await caja('dia', {});
+      pintarCaja();
+    } catch (e) {
+      aviso($('#msg-caja'), esc(e.message), 'mal');
+      traido.delete('caja');
+    } finally { $('#cargando-caja').hidden = true; }
+  }
+
+  function pintarCaja() {
+    const d = cajaDatos; if (!d) return;
+    $('#caja-dia').textContent = 'Caja · ' + conFecha(d.dia, { weekday:'long', day:'numeric', month:'long' });
+
+    // Lo primero y más grande: cuánto debería haber en el cajón.
+    $('#caja-tiles').innerHTML = [
+      ['', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
+      ['ok', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
+      ['ojo', pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
+      ['hot', pesos(d.total_egresos), 'salió', 'egresos del día'],
+    ].map(([cl, n, t, s]) =>
+      `<div class="tile"><b class="${cl}">${esc(n)}</b><span>${esc(t)}</span><small>${esc(s)}</small></div>`
+    ).join('');
+
+    $('#caja-botones').innerHTML = CONCEPTOS.map((x, i) =>
+      `<button class="caja-btn ${x.s === 'egreso' ? 'sale' : ''}" data-i="${i}">` +
+      `<span class="q">${x.s === 'egreso' ? '− ' : ''}${esc(x.n)}</span>` +
+      `<span class="v">${x.v ? pesos(x.v) : 'monto libre'}</span></button>`
+    ).join('');
+
+    const ms = d.movimientos || [];
+    $('#caja-lista').innerHTML = ms.length ? ms.map(m =>
+      `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
+      `<span class="h">${esc(m.hora)}</span>` +
+      `<span class="q">${esc(nombreConcepto(m.concepto))}` +
+      `<small>${esc(m.medio)}${m.nota ? ' · ' + esc(m.nota) : ''}${m.quien ? ' · ' + esc(m.quien) : ''}</small></span>` +
+      `<span class="v">${m.sentido === 'egreso' ? '−' : ''}${pesos(m.valor_cop)}</span>` +
+      (d.cerrado ? '' : `<button class="btn chico" data-anular="${esc(m.id)}">Anular</button>`) +
+      `</div>`
+    ).join('') : '<div class="vacio">Todavía no hay movimientos hoy.</div>';
+
+    pintarCierre();
+  }
+
+  const nombreConcepto = c => (CONCEPTOS.find(x => x.c === c) || {}).n || c;
+
+  function pintarCierre() {
+    const d = cajaDatos;
+    const a = d.contra_admingym || {};
+    // Los cuatro números con el nombre que usa AdminGym, para que
+    // cuadrar sea leer dos columnas sin traducir nada.
+    $('#caja-cierre').innerHTML =
+      `<h3>Cierre del día</h3>` +
+      `<div class="fila"><span>Base con la que abrió</span><span>${pesos(d.base_cop)}</span></div>` +
+      `<div class="fila"><span>Efectivo recibido <small class="mini">· AdminGym: Venta Membresías</small></span><span>${pesos(a.venta_membresias)}</span></div>` +
+      `<div class="fila"><span>Salidas en efectivo <small class="mini">· AdminGym: Retirar Dinero</small></span><span>−${pesos(a.retirar_dinero_de_caja)}</span></div>` +
+      `<div class="fila total"><span>Debería haber en el cajón <small class="mini">· AdminGym: DINERO EN CAJA</small></span><span>${pesos(a.dinero_en_caja)}</span></div>` +
+      `<div class="fila" style="margin-top:.7rem"><span>A banco <small class="mini">· AdminGym: Ingresos a Banco</small></span><span>${pesos(a.ingresos_a_banco)}</span></div>` +
+      (d.cerrado
+        ? `<div class="fila total"><span>Contado</span><span>${pesos(d.cierre.contado_cop)}</span></div>` +
+          `<div class="fila"><span>Diferencia</span><span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
+          `${d.cierre.diferencia_cop > 0 ? '+' : ''}${pesos(d.cierre.diferencia_cop)}</span></div>` +
+          `<div class="fila"><span>Se dejó de base</span><span>${pesos(d.cierre.dejado_cop)}</span></div>` +
+          `<div class="fila"><span>Se retiró</span><span>${pesos(d.cierre.retirado_cop)}</span></div>` +
+          `<p class="mini">Cerrado. Para guardarlo, imprime esta página y elige “Guardar como PDF”.</p>` +
+          `<button class="btn" onclick="window.print()">Imprimir / guardar PDF</button>`
+        : `<div style="margin-top:.9rem">` +
+          `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
+          `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
+          `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
+          `<input id="c-dejado" type="text" inputmode="numeric" value="100000">` +
+          `<label for="c-nota">Nota <span class="mini">(opcional)</span></label>` +
+          `<input id="c-nota" type="text" maxlength="300" placeholder="Ej: faltaron 2 mil">` +
+          `<button class="btn primario" id="btn-cerrar-caja">Cerrar el día</button></div>`);
+  }
+
+  // Un solo escuchador para todo el panel: las tarjetas y los botones de
+  // anular se repintan a cada rato, y colgarles uno a cada uno los
+  // duplicaría en cada refresco.
+  $('#p-caja').addEventListener('click', async ev => {
+    const btn = ev.target.closest('.caja-btn');
+    if (btn) return abrirModal(CONCEPTOS[+btn.dataset.i]);
+
+    const an = ev.target.closest('[data-anular]');
+    if (an) {
+      an.disabled = true;
+      try {
+        const r = await caja('anular', { id: an.dataset.anular });
+        aviso($('#msg-caja'), `Anulado: ${esc(nombreConcepto(r.concepto))} ${pesos(r.valor_cop)}`, 'bien');
+        await cargarCaja(true);
+      } catch (e) { an.disabled = false; aviso($('#msg-caja'), esc(e.message), 'mal'); }
+      return;
+    }
+
+    if (ev.target.id === 'btn-cerrar-caja') {
+      const contado = ($('#c-contado').value || '').replace(/\D/g, '');
+      const dejado  = ($('#c-dejado').value  || '').replace(/\D/g, '');
+      if (!contado) return aviso($('#msg-caja'), 'Escribe cuánto contaste.', 'mal');
+      ev.target.disabled = true;
+      try {
+        await caja('cerrar', { contado, base: cajaDatos.base_cop, dejado, nota: $('#c-nota').value });
+        await cargarCaja(true);
+        aviso($('#msg-caja'), 'Día cerrado.', 'bien');
+      } catch (e) { ev.target.disabled = false; aviso($('#msg-caja'), esc(e.message), 'mal'); }
+    }
+  });
+
+  function abrirModal(x) {
+    cajaElegido = x;
+    cajaMedio = 'efectivo';
+    $('#modal-titulo').textContent = (x.s === 'egreso' ? 'Salida · ' : '') + x.n;
+    $('#modal-valor').value = x.v ? String(x.v) : '';
+    $('#modal-nota').value = '';
+    $('#modal-err').hidden = true;
+    for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === 'efectivo');
+    $('#modal-caja').hidden = false;
+    setTimeout(() => $('#modal-valor').focus(), 60);
+  }
+  const cerrarModal = () => { $('#modal-caja').hidden = true; cajaElegido = null; };
+  $('#modal-cancelar').addEventListener('click', cerrarModal);
+  $('#modal-caja').addEventListener('click', e => { if (e.target.id === 'modal-caja') cerrarModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-caja').hidden) cerrarModal(); });
+  for (const b of document.querySelectorAll('.medio')) {
+    b.addEventListener('click', () => {
+      cajaMedio = b.dataset.medio;
+      for (const o of document.querySelectorAll('.medio')) o.classList.toggle('on', o === b);
+    });
+  }
+  $('#modal-valor').addEventListener('keydown', e => { if (e.key === 'Enter') $('#modal-guardar').click(); });
+
+  $('#modal-guardar').addEventListener('click', async () => {
+    if (!cajaElegido) return;
+    const valor = ($('#modal-valor').value || '').replace(/\D/g, '');
+    if (!valor || +valor <= 0) {
+      $('#modal-err').textContent = 'Escribe un valor mayor que cero.';
+      $('#modal-err').hidden = false; return;
+    }
+    $('#modal-guardar').disabled = true;
+    try {
+      await caja('registrar', {
+        sentido: cajaElegido.s, concepto: cajaElegido.c,
+        valor, medio: cajaMedio, nota: $('#modal-nota').value,
+      });
+      cerrarModal();
+      await cargarCaja(true);
+      aviso($('#msg-caja'), `Registrado: ${esc(cajaElegido.n)} ${pesos(valor)}`, 'bien');
+    } catch (e) {
+      $('#modal-err').textContent = e.message;
+      $('#modal-err').hidden = false;
+    } finally { $('#modal-guardar').disabled = false; }
+  });
 </script>
 
 <style>
@@ -357,6 +552,66 @@ const CONFIG = {
   .aviso ul{margin:.4rem 0 0;padding-left:1.1rem}
 
   .cargando{color:var(--tx-3);padding:2rem;text-align:center}
+  /* ---------- caja ---------- */
+  .caja-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr));gap:.6rem;margin-bottom:1.1rem}
+  .caja-btn{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:.85rem .7rem;color:inherit;font:inherit;cursor:pointer;text-align:left;
+    transition:.15s;display:flex;flex-direction:column;gap:.15rem;min-height:4.6rem;
+  }
+  .caja-btn:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .caja-btn .q{font-weight:700;font-size:.95rem;line-height:1.2}
+  .caja-btn .v{font-size:.8rem;color:var(--gold);font-variant-numeric:tabular-nums}
+  .caja-btn.sale{border-style:dashed}
+  .caja-btn.sale:hover{border-color:var(--bad)}
+  .caja-btn.sale .v{color:var(--tx-3)}
+  .caja-h{font-size:.95rem;margin:1.2rem 0 .5rem;color:var(--tx-2)}
+  .mov{
+    display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:10px;margin-bottom:.4rem;
+  }
+  .mov .h{font-size:.78rem;color:var(--tx-3);font-variant-numeric:tabular-nums;flex:none}
+  .mov .q{flex:1;min-width:0;font-size:.9rem}
+  .mov .q small{display:block;color:var(--tx-3);font-size:.74rem}
+  .mov .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mov.sale .v{color:var(--bad)}
+  .mov.entra .v{color:var(--ok)}
+  .cierre{
+    margin-top:1.4rem;background:var(--bg-2);border:1px solid var(--line);
+    border-radius:var(--r);padding:1rem;
+  }
+  .cierre h3{margin:0 0 .7rem;font-size:1rem}
+  .cierre .fila{display:flex;justify-content:space-between;padding:.35rem 0;font-size:.9rem}
+  .cierre .fila.total{border-top:1px solid var(--line);margin-top:.4rem;padding-top:.6rem;font-weight:700}
+  .cierre .fila span:last-child{font-variant-numeric:tabular-nums}
+  .cierre .dif{font-weight:800;font-size:1.05rem}
+  .cierre .dif.mal{color:var(--bad)} .cierre .dif.bien{color:var(--ok)}
+  .modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;
+    display:grid;place-items:center;padding:1rem;
+  }
+  .caja-modal{
+    background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r);
+    padding:1.2rem;width:100%;max-width:22rem;
+  }
+  .caja-modal h3{margin:0 0 .8rem;font-size:1.05rem}
+  .caja-modal input{
+    width:100%;background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
+    border-radius:10px;padding:.65rem .8rem;font:inherit;font-size:1.05rem;margin-bottom:.7rem;
+  }
+  .caja-modal input:focus{outline:none;border-color:var(--gold)}
+  .medios{display:flex;gap:.5rem;margin-bottom:.8rem}
+  .medio{
+    flex:1;padding:.6rem;border-radius:10px;background:var(--bg-3);
+    border:1px solid var(--line);color:var(--tx-2);font:inherit;cursor:pointer;font-size:.86rem;
+  }
+  .medio.on{border-color:var(--gold);color:var(--tx);background:rgba(255,193,77,.1)}
+  .modal-pie{display:flex;gap:.5rem;justify-content:flex-end}
+  @media print{
+    header,.tabs,.semana-bar,.caja-grid,.modal,#caja-botones,.btn{display:none!important}
+    body{background:#fff;color:#000}
+    .cierre,.mov{background:#fff;border-color:#ccc;color:#000}
+  }
 </style>
 
 <div class="wrap">
@@ -384,6 +639,7 @@ const CONFIG = {
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
         Por validar<span class="globo" id="globo-pend" hidden></span>
       </button>
+      <button class="tab" role="tab" id="tab-caja" aria-selected="false">Caja</button>
     </div>
 
     <!-- ── tablero ── -->
@@ -479,6 +735,51 @@ const CONFIG = {
       <!-- Sin clase: los grupos van uno debajo de otro. La rejilla de
            dos columnas es .pend, y va dentro de cada grupo. -->
       <div id="lista-pend"></div>
+    </div>
+
+    <!-- ── caja ── -->
+    <div class="panel" id="p-caja">
+      <div class="semana-bar">
+        <b id="caja-dia">Caja de hoy</b>
+        <span class="sp"></span>
+        <button class="btn chico" id="caja-recargar">Recargar</button>
+      </div>
+
+      <!-- Lo que hay que saber sin pensar: cuánto debería haber en el
+           cajón. Va primero y grande. -->
+      <div class="tiles" id="caja-tiles"></div>
+
+      <p class="mini" style="margin:.2rem 0 .5rem">Toca para registrar. Se guarda de una.</p>
+      <div class="caja-grid" id="caja-botones"></div>
+
+      <div class="aviso" id="msg-caja" hidden></div>
+      <div class="cargando" id="cargando-caja" hidden>Cargando…</div>
+
+      <h3 class="caja-h">Movimientos de hoy</h3>
+      <div id="caja-lista"></div>
+
+      <div class="cierre" id="caja-cierre"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Se pide el valor y el medio en una sola pantalla: en un mostrador,
+     dos pasos son dos oportunidades de equivocarse. -->
+<div class="modal" id="modal-caja" hidden>
+  <div class="caja-modal">
+    <h3 id="modal-titulo">Registrar</h3>
+    <label for="modal-valor">Valor</label>
+    <input id="modal-valor" type="text" inputmode="numeric" placeholder="15.000" autocomplete="off">
+    <div class="medios">
+      <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
+      <button class="medio" data-medio="transferencia">📲 Transferencia</button>
+    </div>
+    <label for="modal-nota">Nota <span class="mini">(opcional)</span></label>
+    <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
+    <div class="aviso mal" id="modal-err" hidden></div>
+    <div class="modal-pie">
+      <button class="btn" id="modal-cancelar">Cancelar</button>
+      <button class="btn primario" id="modal-guardar">Guardar</button>
     </div>
   </div>
 </div>
@@ -624,7 +925,7 @@ const CONFIG = {
   $('#salir').addEventListener('click', () => cerrarSesion());
 
   /* ---------- pestañas ---------- */
-  const PANELES = ['tablero', 'horario', 'pendientes'];
+  const PANELES = ['tablero', 'horario', 'pendientes', 'caja'];
   function verPanel(cual) {
     for (const p of PANELES) {
       $('#tab-' + p).setAttribute('aria-selected', String(p === cual));
