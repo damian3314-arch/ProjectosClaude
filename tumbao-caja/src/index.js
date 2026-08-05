@@ -13,8 +13,9 @@
  * Se podría abrir estas funciones a `anon` y que el panel hable con
  * Supabase de frente, como se va a hacer con los horarios. Para el
  * módulo que maneja plata no: así la única superficie pública son estos
- * cuatro endpoints, y no toda la API de Supabase dependiendo de que la
- * RLS de cada tabla esté perfecta.
+ * cinco endpoints, y no toda la API de Supabase dependiendo de que la
+ * RLS de cada tabla esté perfecta. Por eso mismo /api/reserva —apuntar a
+ * alguien a mano— también entra por aquí y no por n8n.
  *
  * LA DECISIÓN DE AUTORIZAR NO VIVE AQUÍ
  * Vive en verificar_token_admin() dentro de Postgres. Este archivo no
@@ -123,6 +124,25 @@ export default {
           p_valor: valor,
           p_medio: b.medio === 'transferencia' ? 'transferencia' : 'efectivo',
           p_nota: b.nota ? String(b.nota).slice(0, 200) : null,
+        });
+
+      } else if (ruta === '/api/reserva') {
+        // Apuntar a alguien a mano. La validación de verdad —nombre,
+        // celular, y sobre todo el aforo— vive en admin_crear_reserva,
+        // que pasa por tomar_cupo. Aquí solo se comprueba que el id de
+        // la clase tenga forma de uuid, para no mandar basura a la RPC.
+        const clase = String(b.clase_id || '');
+        if (!/^[0-9a-f-]{36}$/i.test(clase)) {
+          return json({ ok: false, error: 'CLASE_INVALIDA',
+            mensaje: 'No se reconoce la clase. Vuelve a abrirla y reintenta.' }, 400, origen);
+        }
+        r = await rpc(env, 'admin_crear_reserva', {
+          p_token: token,
+          p_clase_id: clase,
+          p_nombre: String(b.nombre || '').slice(0, 80),
+          p_telefono: String(b.telefono || '').slice(0, 20),
+          p_tipo: b.tipo === 'miembro' ? 'miembro' : 'suelta',
+          p_nota: b.nota ? String(b.nota).slice(0, 80) : null,
         });
 
       } else if (ruta === '/api/anular') {

@@ -490,6 +490,12 @@ const CONFIG = {
   .caja-modal h3 .pin{width:.6rem;height:.6rem;border-radius:99px;background:var(--ok);flex:none}
   .caja-modal h3.sale .pin{background:var(--bad)}
   .caja-modal label{display:block;font-size:.8rem;color:var(--tx-2);margin:0 0 .3rem}
+  .caja-modal .ap-clase{
+    margin:-.5rem 0 1rem;font-size:.85rem;color:var(--gold);font-weight:600;
+  }
+  .caja-modal .ap-pista{
+    margin:-.55rem 0 .9rem;font-size:.74rem;color:var(--tx-3);line-height:1.35;
+  }
   .caja-modal input{
     width:100%;background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
     border-radius:10px;padding:.7rem .85rem;font:inherit;font-size:1.15rem;
@@ -569,6 +575,7 @@ const CONFIG = {
           <button class="btn chico" id="puerta-volver">← Volver al día</button>
           <span class="rango" id="puerta-titulo">—</span>
           <span class="sp"></span>
+          <button class="btn chico" id="puerta-apuntar">+ Apuntar a alguien</button>
           <button class="btn chico" id="puerta-recargar">Recargar</button>
         </div>
 
@@ -686,6 +693,41 @@ const CONFIG = {
     <div class="modal-pie">
       <button class="btn" id="modal-cancelar">Cancelar</button>
       <button class="btn primario" id="modal-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Apuntar a mano a quien escribió por WhatsApp. El cupo lo sigue
+     dando tomar_cupo en Postgres: desde aquí no se puede meter a nadie
+     por encima del aforo, por mucho que insista. -->
+<div class="modal" id="modal-apuntar" hidden>
+  <div class="caja-modal">
+    <h3><span class="pin"></span>Apuntar a alguien</h3>
+    <p class="ap-clase" id="ap-clase">—</p>
+
+    <label for="ap-nombre">Nombre</label>
+    <input id="ap-nombre" type="text" maxlength="80" placeholder="Como se llama"
+           autocomplete="off" autocapitalize="words">
+
+    <label for="ap-tel">Celular</label>
+    <input id="ap-tel" type="tel" inputmode="numeric" maxlength="20"
+           placeholder="300 123 4567" autocomplete="off">
+
+    <label>Tipo</label>
+    <div class="medios">
+      <button class="medio on" data-tipo="suelta">Clase suelta</button>
+      <button class="medio" data-tipo="miembro">Tiene plan</button>
+    </div>
+    <p class="ap-pista" id="ap-pista">Queda confirmada: se apunta cuando ya llegó el comprobante.</p>
+
+    <label for="ap-nota">Nota <span class="suave">(opcional)</span></label>
+    <input id="ap-nota" type="text" maxlength="80" placeholder="Ej: pagó por Nequi la mamá"
+           autocomplete="off">
+
+    <div class="aviso mal" id="ap-err" hidden></div>
+    <div class="modal-pie">
+      <button class="btn" id="ap-cancelar">Cancelar</button>
+      <button class="btn primario" id="ap-guardar">Apuntar</button>
     </div>
   </div>
 </div>
@@ -1063,6 +1105,96 @@ const CONFIG = {
     // acaba de marcar. Va forzado: aquí la caché estorbaría, porque lo
     // que se acaba de cambiar es justo lo que hay que volver a leer.
     cargarTablero(true);
+  }
+
+  /* ---------- apuntar a alguien a mano ---------- */
+  // Mucha gente no autogestiona: escribe por WhatsApp, manda el
+  // comprobante y espera que recepción la anote. Sin esto tocaría abrir
+  // la página del cliente, llenar el formulario con datos de otra
+  // persona, pasar por la pantalla de pago y después aprobarla en la
+  // cola. Desde aquí es un botón, y el aforo lo sigue cuidando Postgres.
+  let apTipo = 'suelta';
+
+  $('#puerta-apuntar').addEventListener('click', abrirApuntar);
+  $('#ap-cancelar').addEventListener('click', cerrarApuntar);
+  $('#modal-apuntar').addEventListener('click', e => {
+    if (e.target.id === 'modal-apuntar') cerrarApuntar();
+  });
+  $('#modal-apuntar').querySelectorAll('[data-tipo]').forEach(b =>
+    b.addEventListener('click', () => {
+      apTipo = b.dataset.tipo;
+      $('#modal-apuntar').querySelectorAll('[data-tipo]')
+        .forEach(x => x.classList.toggle('on', x === b));
+      // Un miembro no paga: decirlo aquí evita que recepción cobre dos
+      // veces o se quede esperando un comprobante que no va a llegar.
+      $('#ap-pista').textContent = apTipo === 'miembro'
+        ? 'Con plan no se cobra. Si su plan no es de esta hora, Postgres lo rechaza.'
+        : 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
+    }));
+
+  function abrirApuntar() {
+    if (!puerta || !puerta.clase) return;
+    const c = puerta.clase;
+    apTipo = 'suelta';
+    $('#modal-apuntar').querySelectorAll('[data-tipo]')
+      .forEach(x => x.classList.toggle('on', x.dataset.tipo === 'suelta'));
+    $('#ap-pista').textContent = 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
+    $('#ap-clase').textContent = `${hora12(c.hora)} · ${fmtLargo(c.fecha)}`;
+    $('#ap-nombre').value = '';
+    $('#ap-tel').value = '';
+    $('#ap-nota').value = '';
+    aviso($('#ap-err'), '');
+    $('#modal-apuntar').hidden = false;
+    $('#ap-nombre').focus();
+  }
+
+  function cerrarApuntar() { $('#modal-apuntar').hidden = true; }
+
+  $('#ap-guardar').addEventListener('click', apuntar);
+  // Enter en cualquier campo apunta. En un mostrador con cola, obligar a
+  // buscar el botón con el mouse es tiempo que no hay.
+  ['#ap-nombre', '#ap-tel', '#ap-nota'].forEach(s =>
+    $(s).addEventListener('keydown', e => { if (e.key === 'Enter') apuntar(); }));
+
+  async function apuntar() {
+    if (!puerta || !puerta.clase) return;
+    const b = $('#ap-guardar');
+    if (b.disabled) return;
+
+    const nombre = $('#ap-nombre').value.trim();
+    const tel = $('#ap-tel').value.replace(/\D/g, '');
+    // Se avisa aquí de lo obvio para no gastar un viaje al servidor,
+    // pero quien manda sigue siendo admin_crear_reserva: si algo se
+    // cuela, allá se rechaza igual.
+    if (nombre.length < 2) { aviso($('#ap-err'), 'Escribe el nombre.', 'mal'); return; }
+    if (tel.replace(/^57/, '').length !== 10) {
+      aviso($('#ap-err'), 'El celular debe tener 10 dígitos.', 'mal'); return;
+    }
+
+    b.disabled = true;
+    const antes = b.textContent;
+    b.textContent = 'Apuntando…';
+    aviso($('#ap-err'), '');
+    try {
+      const r = await alWorker('reserva', {
+        clase_id: puerta.clase.clase_id,
+        nombre, telefono: tel, tipo: apTipo,
+        nota: $('#ap-nota').value.trim() || null,
+      });
+      cerrarApuntar();
+      // Se recarga la lista para que quien acaba de entrar aparezca
+      // donde la recepcionista va a buscarlo dentro de dos minutos.
+      await abrirPuerta(puerta.clase.clase_id);
+      aviso($('#msg-puerta'),
+        `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.`, 'bien');
+    } catch (e) {
+      // SIN_CUPO llega hasta aquí a propósito: es el único mensaje que
+      // no se puede tragar, porque significa que no se puede vender.
+      aviso($('#ap-err'), esc(e.message), 'mal');
+    } finally {
+      b.disabled = false;
+      b.textContent = antes;
+    }
   }
 
   async function abrirPuerta(claseId) {
@@ -1778,7 +1910,11 @@ const CONFIG = {
   // con const revienta el bloque entero con "already been declared", y
   // la caja simplemente deja de existir sin decir nada.
 
-  async function caja(ruta, cuerpo) {
+  // El Worker se llama "tumbao-caja" por lo primero que hizo, pero es la
+  // puerta estrecha del panel hacia Postgres en general: por aquí pasa
+  // también apuntar a alguien a mano. Cada llamada aquí es una que no
+  // gasta ejecución de n8n.
+  async function alWorker(ruta, cuerpo) {
     const res = await fetch(`${CONFIG.CAJA_BASE}/api/${ruta}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1800,7 +1936,7 @@ const CONFIG = {
     $('#cargando-caja').hidden = false;
     aviso($('#msg-caja'), '');
     try {
-      cajaDatos = await caja('dia', {});
+      cajaDatos = await alWorker('dia', {});
       pintarCaja();
     } catch (e) {
       aviso($('#msg-caja'), esc(e.message), 'mal');
@@ -1920,7 +2056,7 @@ const CONFIG = {
     if (an) {
       an.disabled = true;
       try {
-        const r = await caja('anular', { id: an.dataset.anular });
+        const r = await alWorker('anular', { id: an.dataset.anular });
         aviso($('#msg-caja'), `Anulado: ${esc(nombreConcepto(r.concepto))} ${pesos(r.valor_cop)}`, 'bien');
         await cargarCaja(true);
       } catch (e) { an.disabled = false; aviso($('#msg-caja'), esc(e.message), 'mal'); }
@@ -1973,7 +2109,7 @@ const CONFIG = {
     }
     $('#modal-guardar').disabled = true;
     try {
-      await caja('registrar', {
+      await alWorker('registrar', {
         sentido: cajaElegido.s, concepto: cajaElegido.c,
         valor, medio: cajaMedio, nota: $('#modal-nota').value,
       });
