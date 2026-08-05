@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-caja",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "observability": { "enabled": true },
+  "vars": {
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
+  }
+  // SECRETO — se pone en el dashboard, nunca aquí:
+  //   SUPABASE_SERVICE_KEY
+  //
+  // Sin él el Worker responde 503 con un mensaje claro en vez de
+  // fallar raro: así se sabe al instante que falta la llave.
+}
