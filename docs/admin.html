@@ -1678,7 +1678,9 @@ const CONFIG = {
   ];
 
   let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
-  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  // `pesos` ya existe más arriba, para el tablero. Volver a declararlo
+  // con const revienta el bloque entero con "already been declared", y
+  // la caja simplemente deja de existir sin decir nada.
 
   async function caja(ruta, cuerpo) {
     const res = await fetch(`${CONFIG.CAJA_BASE}/api/${ruta}`, {
