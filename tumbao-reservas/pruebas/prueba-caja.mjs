@@ -45,9 +45,16 @@ const falla = (t, d) => { mal++; console.log(`  ✗ ${t}${d ? '  → ' + d : ''}
 const navegador = await chromium.launch({ executablePath: CHROME });
 const pagina = await navegador.newPage({ viewport: { width: 1280, height: 900 } });
 
-// Lo que de verdad importa: cualquier error de consola es un fallo.
+// Lo que de verdad importa: cualquier error de JavaScript es un fallo.
+// Los 400 que esta prueba provoca a propósito los apunta el navegador
+// en la consola; ese ruido se descarta. Lo que NO se descarta es un
+// ReferenceError como "caja is not defined", que es exactamente lo que
+// se coló hasta producción por no pulsar el botón de cerrar.
 const errores = [];
-pagina.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
+const ruido = (t) => /Failed to load resource/.test(t);
+pagina.on('console', (m) => {
+  if (m.type() === 'error' && !ruido(m.text())) errores.push(m.text());
+});
 pagina.on('pageerror', (e) => errores.push('JS: ' + e.message));
 
 // ---- se finge el backend ----
@@ -81,6 +88,7 @@ const dia = () => ({
 // `hayBanco` en false simula que la migración 0027 todavía no se pegó.
 let hayBanco = false;
 let libres = [];
+let errorCierre = null;   // fuerza un fallo del servidor al cerrar
 const banco = () => {
   if (!hayBanco) return undefined;
   const sinResp = movimientos.filter(
@@ -120,6 +128,13 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
       medio: b.medio, nota: b.nota || null, hora: '10:0' + idSeq, quien: 'prueba',
       pago_id: b.pago_id || null, con_banco: !!b.pago_id });
     r = { ok: true, id: 'x' };
+  } else if (url.endsWith('/cerrar')) {
+    if (errorCierre) {
+      await route.fulfill({ status: 400, contentType: 'application/json',
+        body: JSON.stringify({ ok: false, error: errorCierre }) });
+      return;
+    }
+    r = { ok: true, dia: '2026-08-05' };
   } else if (url.endsWith('/anular')) {
     const m = movimientos.find((x) => x.id === b.id);
     movimientos = movimientos.filter((x) => x.id !== b.id);
@@ -188,6 +203,28 @@ await pagina.waitForTimeout(700);
 
 const nMovs = await pagina.locator('.mov').count();
 nMovs === 1 ? bien('aparece en la lista') : falla('aparece en la lista', `hay ${nMovs}`);
+
+// Guardar bien tiene que decir que fue bien. Esto se rompió sin que
+// nadie lo notara: cerrarModal() ponía cajaElegido en null y la línea
+// siguiente leía cajaElegido.n, así que el movimiento SÍ se guardaba
+// pero la pantalla decía "No se pudo registrar". La prueba pasaba
+// porque solo miraba que el saldo subiera.
+const trasGuardar = pagina.locator('#avisos .nota').first();
+const txtGuardar = (await trasGuardar.innerText()).replace(/\s+/g, ' ').trim();
+(await trasGuardar.evaluate(e => e.classList.contains('bien')))
+ && /Clase suelta/.test(txtGuardar)
+  ? bien('avisa que se guardó, con qué fue', txtGuardar)
+  : falla('el aviso de guardado', txtGuardar);
+
+// Y el aviso va en dos renglones: título y detalle eran spans sin
+// display:block, así que salía "Falta cuánto contasteEscribe el…".
+const renglones = await trasGuardar.evaluate(e => [
+  getComputedStyle(e.querySelector('.tit')).display,
+  getComputedStyle(e.querySelector('.det')).display,
+]);
+renglones.every(d => d === 'block')
+  ? bien('el aviso no sale con el texto pegado')
+  : falla('título y detalle pegados', renglones.join('/'));
 
 // Un egreso con monto libre
 await pagina.locator('.caja-btn', { hasText: 'Profesores' }).click();
@@ -388,11 +425,87 @@ const color = i => difs.nth(i).evaluate(e => getComputedStyle(e).color);
   ? bien('lo que falta por respaldar se pinta ámbar, no del oro del total')
   : falla('el color del sin respaldo', await color(1));
 
-// Lo que no puede pasar: que un descuadre del banco impida cerrar. El
-// cierre lo manda el efectivo, que es lo único que se cuenta a mano.
-await pagina.locator('#btn-cerrar-caja').isEnabled()
-  ? bien('el descuadre del banco NO bloquea el cierre')
-  : falla('el descuadre del banco NO bloquea el cierre', 'el botón quedó deshabilitado');
+// ═══════════════ avisos y cerrar el día ═══════════════
+// Antes aquí solo se comprobaba que el botón estuviera habilitado. Con
+// eso, "caja is not defined" —una llamada a una función renombrada—
+// llegó a producción y dejó el cierre roto. Ahora se pulsa de verdad.
+
+// 1. Falta el contado: tiene que avisar Y señalar el campo.
+await pagina.fill('#c-contado', '');
+await pagina.click('#btn-cerrar-caja');
+await pagina.waitForTimeout(300);
+
+const laNota = pagina.locator('#avisos .nota').first();
+(await laNota.count()) && /Falta cuánto contaste/.test(await laNota.innerText())
+  ? bien('el aviso sale flotando, no enterrado en la página',
+         (await laNota.innerText()).replace(/\s+/g, ' ').trim())
+  : falla('el aviso flotante', 'no salió');
+
+await pagina.locator('#c-contado').evaluate(e => e.classList.contains('malo-campo'))
+  ? bien('y marca en rojo el campo que falta')
+  : falla('marcar el campo', '#c-contado no quedó marcado');
+
+// El aviso está fijo arriba a la derecha: se ve aunque estemos mirando
+// el final del cierre, que es donde de verdad está la cajera.
+const pos = await laNota.evaluate(e => {
+  const r = e.getBoundingClientRect();
+  return { fijo: getComputedStyle(e.parentElement).position,
+           dentro: r.top >= 0 && r.right <= innerWidth + 1 };
+});
+pos.fijo === 'fixed' && pos.dentro
+  ? bien('queda a la vista mires donde mires')
+  : falla('la posición del aviso', JSON.stringify(pos));
+
+// Escribir en el campo le quita el rojo: si no, se queda marcado para
+// siempre y deja de significar algo.
+await pagina.fill('#c-contado', '50000');
+await pagina.waitForTimeout(150);
+!(await pagina.locator('#c-contado').evaluate(e => e.classList.contains('malo-campo')))
+  ? bien('al corregirlo se le quita el rojo')
+  : falla('el rojo se queda pegado');
+
+// 2. Dejar más de lo contado: se atrapa antes de salir al servidor y
+//    señala el otro campo, no el mismo.
+await pagina.fill('#c-dejado', '999999');
+await pagina.click('#btn-cerrar-caja');
+await pagina.waitForTimeout(300);
+(await pagina.locator('#c-dejado').evaluate(e => e.classList.contains('malo-campo')))
+  ? bien('señala el campo correcto de los dos')
+  : falla('señala el campo correcto', '#c-dejado no quedó marcado');
+await pagina.fill('#c-dejado', '100000');
+
+// 3. Un error del servidor llega traducido, no en clave.
+//    Se usa DIA_CERRADO y no DEJADO_MAYOR_QUE_CONTADO: ese texto es
+//    idéntico al de la validación del navegador, así que la prueba no
+//    podría distinguir cuál de las dos respondió — y de hecho antes
+//    pasaba por la del navegador sin llegar nunca al servidor.
+await pagina.fill('#c-contado', '150000');
+await pagina.fill('#c-dejado', '100000');
+errorCierre = 'DIA_CERRADO';
+await pagina.click('#btn-cerrar-caja');
+await pagina.waitForTimeout(500);
+const trad = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+/El día ya está cerrado/.test(trad) && !/DIA_CERRADO/.test(trad)
+  ? bien('el error del servidor llega en español, no en clave', trad.trim())
+  : falla('la traducción del error', trad);
+
+// 4. Y el camino bueno: cerrar el día de verdad. Esto es lo que estaba
+//    roto en producción y ninguna prueba tocaba.
+errorCierre = null;
+await pagina.click('#btn-cerrar-caja');
+await pagina.waitForTimeout(700);
+const okCierre = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+/Día cerrado/.test(okCierre)
+  ? bien('CERRAR EL DÍA funciona', okCierre.trim())
+  : falla('cerrar el día', okCierre);
+
+// Los avisos buenos se van solos; los malos se quedan hasta que alguien
+// los lea. Un error que desaparece a los 4 segundos no se leyó.
+await pagina.waitForTimeout(4500);
+const quedan = await pagina.locator('#avisos .nota').allInnerTexts();
+!quedan.some(t => /Día cerrado/.test(t)) && quedan.some(t => /ya está cerrado/.test(t))
+  ? bien('lo bueno se va solo, lo malo se queda')
+  : falla('la caducidad de los avisos', JSON.stringify(quedan));
 
 errores.length === 0
   ? bien('sin errores de consola', 'ninguno')

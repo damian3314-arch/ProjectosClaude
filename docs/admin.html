@@ -388,6 +388,52 @@ const CONFIG = {
   .aviso ul{margin:.4rem 0 0;padding-left:1.1rem}
 
   .cargando{color:var(--tx-3);padding:2rem;text-align:center}
+
+  /* ---------- avisos flotantes ----------
+     Antes los errores salían en una franja debajo de los botones. Si la
+     cajera estaba mirando el cierre —abajo del todo— el mensaje aparecía
+     fuera de la pantalla y ella solo veía que no pasaba nada. Esto sale
+     encima, siempre visible, sin importar dónde esté mirando. */
+  #avisos{
+    position:fixed;top:1rem;right:1rem;z-index:80;
+    display:flex;flex-direction:column;gap:.5rem;
+    width:min(23rem,calc(100vw - 2rem));pointer-events:none;
+  }
+  .nota{
+    pointer-events:auto;display:flex;gap:.6rem;align-items:flex-start;
+    background:var(--bg-3);border:1px solid var(--line-2);border-left-width:3px;
+    border-radius:12px;padding:.75rem .85rem;
+    box-shadow:0 16px 40px -18px rgba(0,0,0,.95);
+    animation:entra-nota .18s ease-out;
+  }
+  @keyframes entra-nota{from{opacity:0;transform:translateX(1.5rem)}to{opacity:1;transform:none}}
+  .nota.se-va{opacity:0;transform:translateX(1.5rem);transition:.25s}
+  .nota .ico{flex:none;font-size:.95rem;line-height:1.35}
+  /* Los tres van en bloque: como spans sueltos salía
+     "Falta cuánto contasteEscribe el efectivo…" todo pegado. */
+  .nota .cuerpo{flex:1;min-width:0;display:flex;flex-direction:column}
+  .nota .tit{display:block;font-size:.9rem;font-weight:650;line-height:1.3}
+  .nota .det{display:block;font-size:.78rem;color:var(--tx-2);margin-top:.2rem;line-height:1.4}
+  .nota .x{
+    flex:none;background:none;border:0;color:var(--tx-3);cursor:pointer;
+    font-size:1.1rem;line-height:1;padding:0 .1rem;
+  }
+  .nota .x:hover{color:var(--tx)}
+  .nota.mal {border-left-color:var(--bad)}
+  .nota.mal .tit{color:var(--bad)}
+  .nota.bien{border-left-color:var(--ok)}
+  .nota.ojo {border-left-color:var(--gold)}
+
+  /* El campo que hay que corregir. Se marca el sitio, no solo se avisa:
+     con tres campos en el cierre, "escribe cuánto contaste" no dice cuál. */
+  .malo-campo{
+    border-color:var(--bad)!important;
+    box-shadow:0 0 0 3px rgba(255,107,129,.14);
+  }
+  @media (prefers-reduced-motion:reduce){
+    .nota{animation:none}
+    .nota.se-va{transition:none}
+  }
   /* ---------- caja ---------- */
   /* Lo que entra y lo que sale se distinguían tres veces: por el punto
      del título, por una franja en cada botón y por el precio en verde.
@@ -733,7 +779,6 @@ const CONFIG = {
         <div class="caja-grid" id="caja-sale"></div>
       </div>
 
-      <div class="aviso" id="msg-caja" hidden></div>
       <div class="cargando" id="cargando-caja" hidden>Cargando…</div>
 
       <h3 class="caja-h" id="caja-h-mov">Movimientos de hoy</h3>
@@ -746,6 +791,10 @@ const CONFIG = {
 
 <!-- Se pide el valor y el medio en una sola pantalla: en un mostrador,
      dos pasos son dos oportunidades de equivocarse. -->
+<!-- Los avisos viven fuera de todo: se ven igual con el panel arriba,
+     abajo o con una ventana abierta encima. -->
+<div id="avisos" role="status" aria-live="polite"></div>
+
 <div class="modal" id="modal-caja" hidden>
   <div class="caja-modal">
     <h3 id="modal-titulo"><span class="pin"></span><span id="modal-texto">Registrar</span></h3>
@@ -774,7 +823,6 @@ const CONFIG = {
 
     <label for="modal-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
-    <div class="aviso mal" id="modal-err" hidden></div>
     <div class="modal-pie">
       <button class="btn" id="modal-cancelar">Cancelar</button>
       <button class="btn primario" id="modal-guardar">Guardar</button>
@@ -809,7 +857,6 @@ const CONFIG = {
     <input id="ap-nota" type="text" maxlength="80" placeholder="Ej: pagó por Nequi la mamá"
            autocomplete="off">
 
-    <div class="aviso mal" id="ap-err" hidden></div>
     <div class="modal-pie">
       <button class="btn" id="ap-cancelar">Cancelar</button>
       <button class="btn primario" id="ap-guardar">Apuntar</button>
@@ -900,6 +947,103 @@ const CONFIG = {
     el.hidden = !texto;
   }
 
+  /* ---------- avisos flotantes ----------
+     Un mensaje que aparece fuera de la pantalla es un mensaje que no
+     existe: la cajera está mirando el cierre, abajo del todo, y el error
+     salía arriba entre los botones. Estos salen encima de todo, a la
+     derecha, y los malos no se van solos — un error tiene que quedarse
+     hasta que alguien lo lea. */
+  const ICONOS = { mal: '⚠', bien: '✓', ojo: '•' };
+  const TITULOS = { mal: 'No se pudo', bien: 'Listo', ojo: 'Ojo' };
+
+  function nota(texto, clase, detalle) {
+    const cl = clase || 'ojo';
+    const el = document.createElement('div');
+    el.className = 'nota ' + cl;
+    el.innerHTML =
+      `<span class="ico" aria-hidden="true">${ICONOS[cl] || '•'}</span>` +
+      `<span class="cuerpo"><span class="tit">${esc(texto)}</span>` +
+        (detalle ? `<span class="det">${esc(detalle)}</span>` : '') +
+      `</span>` +
+      `<button class="x" type="button" aria-label="Cerrar aviso">×</button>`;
+
+    const quitar = () => {
+      el.classList.add('se-va');
+      setTimeout(() => el.remove(), 250);
+    };
+    el.querySelector('.x').addEventListener('click', quitar);
+    const caja = $('#avisos');
+    caja.prepend(el);
+    // Con cinco fallos encadenados la pila tapa media pantalla y no se
+    // lee ninguna. Se quedan las cuatro últimas.
+    while (caja.children.length > 4) caja.lastElementChild.remove();
+
+    // Lo bueno se va solo; lo malo se queda. Si un error desapareciera a
+    // los 4 segundos, quien estaba tecleando no llega a leerlo.
+    if (cl !== 'mal') setTimeout(quitar, 4000);
+    return el;
+  }
+
+  /* Los errores del servidor vienen en clave (SIN_CUPO, PAGO_YA_USADO).
+     Aquí se traducen a algo que se pueda leer en un mostrador, y se dice
+     cuál es el campo que hay que arreglar para poder marcarlo. */
+  const ERRORES = {
+    NO_AUTORIZADO:  ['La sesión ya no vale', 'Vuelve a entrar con tu token.'],
+    SIN_CUPO:       ['Esa clase está llena', 'No queda cupo; escoge otra hora.'],
+    CLASE_YA_PASO:  ['Esa clase ya pasó', 'No se puede apuntar a nadie a una clase que ya ocurrió.'],
+    MEMBRESIA_NO_ENCONTRADA: ['No aparece con plan',
+      'Ese celular no está en la lista de afiliados. Cóbrale como clase suelta.'],
+    NOMBRE_CORTO:   ['Falta el nombre', 'Escribe el nombre de la persona.', '#ap-nombre'],
+    CELULAR_INVALIDO: ['El celular no sirve', 'Tienen que ser 10 dígitos.', '#ap-tel'],
+    VALOR_INVALIDO: ['El valor no sirve', 'Escribe un número mayor que cero.', '#modal-valor'],
+    VALOR_SOSPECHOSO: ['Ese valor parece tener un cero de más', 'Revísalo antes de guardar.', '#modal-valor'],
+    VALOR_NO_COINCIDE: ['El valor no es el del depósito',
+      'El banco dice otra cifra. Puede que sea otro depósito.', '#modal-valor'],
+    PAGO_YA_USADO:  ['Ese depósito ya se lo adjudicaron',
+      'Recarga y escoge otro.', '#modal-dep-buscar'],
+    PAGO_NO_EXISTE: ['Ese depósito ya no está', 'Recarga la caja.'],
+    CONCEPTO_INVALIDO: ['Concepto no válido', 'Recarga la página.'],
+    CONTADO_INVALIDO: ['Falta cuánto contaste', 'Escribe el efectivo que hay en el cajón.', '#c-contado'],
+    DEJADO_INVALIDO: ['La base no sirve', 'Escribe cuánto dejas para mañana.', '#c-dejado'],
+    DEJADO_MAYOR_QUE_CONTADO: ['No puedes dejar más de lo que contaste',
+      'Revisa las dos cifras.', '#c-dejado'],
+    DIA_CERRADO:    ['El día ya está cerrado', 'El ajuste va mañana.'],
+    OTRO_DIA:       ['Solo se anulan movimientos de hoy', 'Lo de ayer se ajusta hoy, no se borra.'],
+    YA_ANULADO:     ['Ese movimiento ya estaba anulado', 'Recarga la caja.'],
+    SIN_LLAVE:      ['Falta configurar la caja', 'Avísale a Damián: falta el secreto del Worker.'],
+    FALLA:          ['No se pudo guardar', 'Vuelve a intentarlo en un momento.'],
+  };
+
+  // El campo se marca en rojo y se enfoca: con tres campos en el cierre,
+  // "escribe cuánto contaste" no dice cuál de los tres.
+  let marcado = null;
+  function marcar(sel) {
+    if (marcado) { marcado.classList.remove('malo-campo'); marcado = null; }
+    if (!sel) return;
+    const el = $(sel);
+    if (!el) return;
+    el.classList.add('malo-campo');
+    marcado = el;
+    try { el.focus({ preventScroll: false }); } catch (_) { el.focus(); }
+    const limpia = () => { el.classList.remove('malo-campo'); if (marcado === el) marcado = null; };
+    el.addEventListener('input', limpia, { once: true });
+  }
+
+  /* El punto único por donde salen los fallos: traduce, avisa y marca.
+     `e.clave` la pone alWorker/api con el código que devolvió Postgres. */
+  function fallo(e, porDefecto) {
+    const t = ERRORES[e && e.clave];
+    if (t) {
+      nota(t[0], 'mal', t[1]);
+      marcar(t[2]);
+      return;
+    }
+    // Sin traducción conocida se muestra lo que dijo el servidor, que
+    // ya viene en español desde Postgres, y si no, algo genérico.
+    nota(porDefecto || 'No se pudo completar', 'mal',
+         (e && e.message) || 'Vuelve a intentarlo.');
+  }
+
   /* ---------- llamadas ---------- */
   async function api(ruta, cuerpo) {
     const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/admin/${ruta}`, {
@@ -914,7 +1058,11 @@ const CONFIG = {
       throw new Error('no autorizado');
     }
     if (!res.ok || datos.ok === false) {
-      throw new Error(datos.mensaje || datos.error || `Error ${res.status}`);
+      // La clave viaja pegada al error para que `fallo()` la traduzca y
+      // sepa qué campo marcar. El mensaje suelto no dice cuál es.
+      const err = new Error(datos.mensaje || datos.error || `Error ${res.status}`);
+      err.clave = datos.error;
+      throw err;
     }
     return datos;
   }
@@ -1228,7 +1376,6 @@ const CONFIG = {
     $('#ap-nombre').value = '';
     $('#ap-tel').value = '';
     $('#ap-nota').value = '';
-    aviso($('#ap-err'), '');
     $('#modal-apuntar').hidden = false;
     $('#ap-nombre').focus();
   }
@@ -1251,15 +1398,20 @@ const CONFIG = {
     // Se avisa aquí de lo obvio para no gastar un viaje al servidor,
     // pero quien manda sigue siendo admin_crear_reserva: si algo se
     // cuela, allá se rechaza igual.
-    if (nombre.length < 2) { aviso($('#ap-err'), 'Escribe el nombre.', 'mal'); return; }
+    if (nombre.length < 2) {
+      nota('Falta el nombre', 'mal', 'Escribe el nombre de la persona.');
+      marcar('#ap-nombre');
+      return;
+    }
     if (tel.replace(/^57/, '').length !== 10) {
-      aviso($('#ap-err'), 'El celular debe tener 10 dígitos.', 'mal'); return;
+      nota('El celular no sirve', 'mal', 'Tienen que ser 10 dígitos.');
+      marcar('#ap-tel');
+      return;
     }
 
     b.disabled = true;
     const antes = b.textContent;
     b.textContent = 'Apuntando…';
-    aviso($('#ap-err'), '');
     try {
       const r = await alWorker('reserva', {
         clase_id: puerta.clase.clase_id,
@@ -1275,7 +1427,7 @@ const CONFIG = {
     } catch (e) {
       // SIN_CUPO llega hasta aquí a propósito: es el único mensaje que
       // no se puede tragar, porque significa que no se puede vender.
-      aviso($('#ap-err'), esc(e.message), 'mal');
+      fallo(e, 'No se pudo apuntar');
     } finally {
       b.disabled = false;
       b.textContent = antes;
@@ -2008,7 +2160,11 @@ const CONFIG = {
     let d = {};
     try { d = await res.json(); } catch (_) {}
     if (res.status === 401) { cerrarSesion('El token no sirve o fue revocado.'); throw new Error('401'); }
-    if (!res.ok || d.ok === false) throw new Error(d.mensaje || d.error || 'No se pudo.');
+    if (!res.ok || d.ok === false) {
+      const err = new Error(d.mensaje || d.error || 'No se pudo.');
+      err.clave = d.error;
+      throw err;
+    }
     return d;
   }
 
@@ -2019,12 +2175,11 @@ const CONFIG = {
     if (!forzar && esReciente('caja')) return;
     traido.set('caja', Date.now());
     $('#cargando-caja').hidden = false;
-    aviso($('#msg-caja'), '');
     try {
       cajaDatos = await alWorker('dia', {});
       pintarCaja();
     } catch (e) {
-      aviso($('#msg-caja'), esc(e.message), 'mal');
+      fallo(e, 'No se pudo cargar la caja');
       traido.delete('caja');
     } finally { $('#cargando-caja').hidden = true; }
   }
@@ -2258,22 +2413,35 @@ const CONFIG = {
       an.disabled = true;
       try {
         const r = await alWorker('anular', { id: an.dataset.anular });
-        aviso($('#msg-caja'), `Anulado: ${esc(nombreConcepto(r.concepto))} ${pesos(r.valor_cop)}`, 'bien');
+        nota('Anulado', 'bien',
+             `${nombreConcepto(r.concepto)} ${pesos(r.valor_cop)}` +
+             (r.libero_pago ? ' · el depósito vuelve a la lista' : ''));
         await cargarCaja(true);
-      } catch (e) { an.disabled = false; aviso($('#msg-caja'), esc(e.message), 'mal'); }
+      } catch (e) { an.disabled = false; fallo(e, 'No se pudo anular'); }
       return;
     }
 
     if (ev.target.id === 'btn-cerrar-caja') {
       const contado = ($('#c-contado').value || '').replace(/\D/g, '');
       const dejado  = ($('#c-dejado').value  || '').replace(/\D/g, '');
-      if (!contado) return aviso($('#msg-caja'), 'Escribe cuánto contaste.', 'mal');
+      if (!contado) {
+        nota('Falta cuánto contaste', 'mal', 'Escribe el efectivo que hay en el cajón.');
+        marcar('#c-contado');
+        return;
+      }
+      // Se comprueba aquí para poder señalar el campo; Postgres lo
+      // rechaza igual, pero desde allá no se sabe cuál de los dos es.
+      if (dejado && +dejado > +contado) {
+        nota('No puedes dejar más de lo que contaste', 'mal', 'Revisa las dos cifras.');
+        marcar('#c-dejado');
+        return;
+      }
       ev.target.disabled = true;
       try {
-        await caja('cerrar', { contado, base: cajaDatos.base_cop, dejado, nota: $('#c-nota').value });
+        await alWorker('cerrar', { contado, base: cajaDatos.base_cop, dejado, nota: $('#c-nota').value });
         await cargarCaja(true);
-        aviso($('#msg-caja'), 'Día cerrado.', 'bien');
-      } catch (e) { ev.target.disabled = false; aviso($('#msg-caja'), esc(e.message), 'mal'); }
+        nota('Día cerrado', 'bien', 'Ya puedes imprimir o guardar el cierre en PDF.');
+      } catch (e) { ev.target.disabled = false; fallo(e, 'No se pudo cerrar el día'); }
     }
   });
 
@@ -2288,7 +2456,6 @@ const CONFIG = {
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
     $('#modal-valor').value = x.v ? String(x.v) : '';
     $('#modal-nota').value = '';
-    $('#modal-err').hidden = true;
     for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === 'efectivo');
     // Arranca filtrando por el precio del concepto: para una mensualidad
     // de 125.000 la lista baja de setenta y pico a uno o dos.
@@ -2395,9 +2562,14 @@ const CONFIG = {
     if (!cajaElegido) return;
     const valor = ($('#modal-valor').value || '').replace(/\D/g, '');
     if (!valor || +valor <= 0) {
-      $('#modal-err').textContent = 'Escribe un valor mayor que cero.';
-      $('#modal-err').hidden = false; return;
+      nota('Falta el valor', 'mal', 'Escribe un número mayor que cero.');
+      marcar('#modal-valor');
+      return;
     }
+    // Se guarda antes de cerrar: cerrarModal() pone cajaElegido en null,
+    // y leerlo después reventaba con "Cannot read properties of null".
+    // El movimiento sí quedaba grabado, pero la pantalla decía que no.
+    const queEra = cajaElegido.n;
     $('#modal-guardar').disabled = true;
     try {
       await alWorker('registrar', {
@@ -2407,10 +2579,9 @@ const CONFIG = {
       });
       cerrarModal();
       await cargarCaja(true);
-      aviso($('#msg-caja'), `Registrado: ${esc(cajaElegido.n)} ${pesos(valor)}`, 'bien');
+      nota('Registrado', 'bien', `${queEra} ${pesos(valor)}`);
     } catch (e) {
-      $('#modal-err').textContent = e.message;
-      $('#modal-err').hidden = false;
+      fallo(e, 'No se pudo registrar');
     } finally { $('#modal-guardar').disabled = false; }
   });
 })();

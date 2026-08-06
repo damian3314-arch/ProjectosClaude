@@ -140,10 +140,13 @@ await pagina.waitForTimeout(600);
   ? bien('con SIN_CUPO la ventana NO se cierra')
   : falla('con SIN_CUPO la ventana NO se cierra', 'se cerró como si hubiera apuntado');
 
-const err = (await pagina.locator('#ap-err').innerText()).trim();
-/se llenó/.test(err)
-  ? bien('y el motivo se lee en pantalla', err)
-  : falla('y el motivo se lee en pantalla', err || '(vacío)');
+// El motivo sale en el aviso flotante, encima de la ventana: si
+// quedara dentro de la ventana y ésta estuviera a media pantalla en un
+// portátil pequeño, el mensaje no se vería.
+const err = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+/Esa clase está llena/.test(err)
+  ? bien('y el motivo se lee en pantalla, traducido', err.trim())
+  : falla('el motivo del rechazo', err || '(vacío)');
 
 // ---- el camino bueno ----
 respuesta = null;
@@ -183,9 +186,16 @@ await pagina.fill('#ap-nombre', 'Luis');
 await pagina.fill('#ap-tel', '30044');
 await pagina.click('#ap-guardar');
 await pagina.waitForTimeout(400);
-(loQuePidio === null && /10 dígitos/.test(await pagina.locator('#ap-err').innerText()))
+const corto = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+(loQuePidio === null && /10 dígitos/.test(corto))
   ? bien('un celular corto ni sale del navegador')
-  : falla('un celular corto ni sale del navegador', 'se mandó igual');
+  : falla('un celular corto ni sale del navegador', corto);
+
+// Y señala el campo, no solo avisa: en una ventana con nombre, celular
+// y nota, "el celular no sirve" no dice dónde hay que ir.
+(await pagina.locator('#ap-tel').evaluate(e => e.classList.contains('malo-campo')))
+  ? bien('y marca en rojo el celular')
+  : falla('marcar el celular', 'no quedó marcado');
 
 errores.length === 0
   ? bien('sin errores de consola', 'ninguno')
