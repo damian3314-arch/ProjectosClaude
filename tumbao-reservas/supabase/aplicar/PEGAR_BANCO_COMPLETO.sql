@@ -1,27 +1,40 @@
 -- =====================================================================
--- PEGAR EN EL EDITOR SQL DE SUPABASE
--- Conciliar depósito por depósito (reemplaza el enfoque de 0026)
---
--- POR QUÉ ESTE REEMPLAZA AL ANTERIOR
--- 0026 comparaba la suma del banco de hoy contra la suma de la caja de
--- hoy. Con eso, quien transfiere el lunes y aparece el miércoles hacía
--- que la pantalla marcara "comprobante sin confirmar" en rojo. Falsa
--- alarma casi diaria. Ese semáforo se retira aquí.
+-- TUMBAO · CONTROL DEL BANCO EN LA CAJA
+-- Pegar completo en el editor SQL de Supabase y darle Run.
 --
 -- QUÉ HACE
---   · caja_movimientos gana `pago_id`: el depósito del banco que
---     respalda cada cobro del mostrador.
---   · caja_registrar puede adjudicar un depósito (y valida que exista,
---     esté libre y el valor sea el mismo que dice el banco).
---   · caja_anular lo devuelve a la lista.
---   · caja_del_dia devuelve el inventario de depósitos sin dueño y la
---     lista para escoger, de los últimos 20 días.
+--   · La caja aprende a enlazar cada transferencia que cobra con el
+--     depósito que Bancolombia confirmó por correo.
+--   · La pestaña Caja gana una tarjeta: cuánto entró al banco hoy y
+--     cuánta plata sigue sin dueño.
 --
--- No borra ninguna fila. No toca la comparación con AdminGym. Se puede
--- correr dos veces. Si 0026 no se llegó a pegar, este funciona igual:
--- las columnas que necesita las crea 0026 y aquí solo se reusan... así
--- que PEGA PRIMERO PEGAR_CONTROL_BANCO.sql si no lo hiciste.
+-- POR QUÉ NO COMPARA DÍA CONTRA DÍA
+--   Porque quien transfiere el lunes puede aparecer el miércoles. Un
+--   depósito no pertenece a un día, pertenece a alguien. Lo que se
+--   controla es el inventario: qué plata del banco nadie ha reclamado.
+--
+-- SEGURIDAD
+--   No borra ninguna fila. No toca los datos de `pagos` ni de las
+--   reservas. No cambia la comparación con AdminGym. Se puede correr
+--   dos veces sin problema. Si algo saliera mal, la página sigue
+--   funcionando igual — la tarjeta simplemente no aparece.
 -- =====================================================================
+
+
+-- ---------------------------------------------------------------------
+-- 1. Constancia de lo que decía el banco al cerrar el día
+-- ---------------------------------------------------------------------
+alter table caja_cierres add column if not exists banco_cop            int;
+alter table caja_cierres add column if not exists banco_sin_ident_cop  int;
+
+comment on column caja_cierres.banco_cop is
+  'Lo que Bancolombia confirmó ese día. No lo teclea nadie: sale del correo.';
+
+-- Los sumatorios del día van por rango de fecha y no por ::date, para
+-- que este índice sirva: `x at time zone 'America/Bogota'` es STABLE,
+-- no IMMUTABLE, y envuelto en un ::date obliga a recorrer la tabla.
+create index if not exists pagos_por_fecha on pagos (fecha_pago);
+
 
 -- ---------------------------------------------------------------------
 -- 0027 — Conciliar depósito por depósito, no día contra día
