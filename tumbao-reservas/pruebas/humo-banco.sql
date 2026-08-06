@@ -1,26 +1,27 @@
 -- ---------------------------------------------------------------------
--- El banco como tercer testigo — prueba de humo
+-- Conciliar depósito por depósito — prueba de humo
 --
--- Lo que se comprueba no es que sume: es que la resta señale a la
--- persona correcta en los tres casos que importan.
+-- EL CASO QUE MANDA
+-- Transfiere el 3, llega el 5. Es lo que rompía el diseño anterior: la
+-- resta día contra día daba negativo el 5 y gritaba "comprobante falso"
+-- por algo perfectamente normal. Aquí se comprueba que el depósito del
+-- 3 sigue disponible el 5, que la cajera lo puede adjudicar, y que
+-- después de hacerlo no queda ninguna alarma encendida.
 --
---   1. Todo cuadra                  → sin identificar = 0
---   2. Entró plata que nadie apuntó  → sin identificar > 0
---   3. Se apuntó plata que el banco
---      nunca confirmó                → sin identificar < 0   ← el caro
+-- Lo demás que se comprueba:
+--   · un depósito no se puede adjudicar dos veces
+--   · el valor tiene que ser el del banco, no el que se tecleó
+--   · anular devuelve el depósito a la lista
+--   · una transferencia sin enlazar se cuenta aparte (Nequi, otra cuenta)
+--   · lo que ya casó solo con una reserva no aparece como libre
 --
--- Y uno más, que es la razón de que esto no bloquee el cierre: alguien
--- paga hoy una clase del martes. El banco lo ve hoy; la caja del día no.
+-- Ojo: en Postgres `null <> 0` no es true, así que un dato nulo pasaría
+-- de largo dando verde falso. Todo va con IS DISTINCT FROM.
 --
--- Ojo con las aserciones: en Postgres `null <> 0` no es true, así que un
--- dato que llegue nulo pasaría de largo dando un verde falso. Todo va
--- con IS DISTINCT FROM.
---
--- Se corre así, contra una base desechable con las 26 migraciones:
---   psql -d t26 -f humo-banco.sql
+--   psql -d t27 -f humo-banco.sql
 -- ---------------------------------------------------------------------
 \set ON_ERROR_STOP on
-set client_min_messages = warning;
+set client_min_messages = notice;
 
 create temp table fallos (que text, esperado text, obtenido text);
 
@@ -35,129 +36,141 @@ begin
   end if;
 end $$;
 
--- ---------------------------------------------------------------------
--- Montaje
--- ---------------------------------------------------------------------
 create temp table ctx (token text);
 insert into ctx select crear_token_admin('cajera de prueba')->>'token';
+create or replace function tk() returns text language sql stable as
+  $$ select token from ctx $$;
+create or replace function dia() returns jsonb language sql stable as
+  $$ select caja_del_dia(tk()) $$;
+create or replace function bco(k text) returns int language sql stable as
+  $$ select (dia()->'banco'->>k)::int $$;
 
--- Dos clases: una hoy y otra el martes que viene. La del martes es la
--- que desmonta cualquier intento de exigir que banco y caja cuadren.
 insert into clases (id, nombre, profesor, fecha_hora, cupo_total, precio_cop)
 values ('aaaaaaaa-0000-4000-8000-000000000001', 'Salsa hoy', 'Prof',
         (((now() at time zone 'America/Bogota')::date + time '18:00')
-          at time zone 'America/Bogota'), 20, 15000),
-       ('aaaaaaaa-0000-4000-8000-000000000002', 'Salsa martes', 'Prof',
-        (((now() at time zone 'America/Bogota')::date + 4 + time '18:00')
           at time zone 'America/Bogota'), 20, 15000);
 
--- Un momento de hoy que no se sale del día en Bogotá pase lo que pase.
-create or replace function hoy_a_las(h int) returns timestamptz language sql stable as $$
-  select (((now() at time zone 'America/Bogota')::date + make_time(h,0,0))
-          at time zone 'America/Bogota')
-$$;
-
 \echo ''
-\echo '-- 1. Todo cuadra --------------------------------------------------'
+\echo '-- 1. El depósito de hace dos días sigue estando ---------------------'
 
--- Una reserva de la página, pagada y casada con su aviso del banco.
+-- Camila transfirió el 3 y aparece el 5. Nadie ha reclamado esa plata.
 insert into pagos (id, banco, valor_cop, fecha_pago, referencia, remitente, consumido)
 values ('bbbbbbbb-0000-4000-8000-000000000001', 'bancolombia', 15000,
-        hoy_a_las(10), 'REF1', 'CAMILA ROJAS', true);
-insert into reservas (codigo, clase_id, nombre, telefono, estado, tipo, pago_id)
-values ('TB-0001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Camila Rojas',
-        '3001112233', 'confirmada', 'suelta', 'bbbbbbbb-0000-4000-8000-000000000001');
+        now() - interval '2 days', 'REF-CAMILA', 'CAMILA ROJAS', false);
 
--- Una transferencia del mostrador: la cajera la apunta Y el banco avisa.
-select caja_registrar((select token from ctx), 'ingreso', 'mensualidad',
-                      125000, 'transferencia', 'llave');
-insert into pagos (banco, valor_cop, fecha_pago, referencia, remitente, consumido)
-values ('bancolombia', 125000, hoy_a_las(11), 'REF2', 'LUIS PEREZ', false);
-
--- Y algo de efectivo, que con el banco no tiene nada que ver.
-select caja_registrar((select token from ctx), 'ingreso', 'clase_suelta',
-                      15000, 'efectivo', null);
-
-select chk('recibido en banco = 140.000',
-  (caja_del_dia((select token from ctx))->'banco'->>'recibido_cop')::int, 140000);
-select chk('de reservas = 15.000',
-  (caja_del_dia((select token from ctx))->'banco'->>'de_reservas_cop')::int, 15000);
-select chk('del mostrador = 125.000',
-  (caja_del_dia((select token from ctx))->'banco'->>'de_mostrador_cop')::int, 125000);
-select chk('sin identificar = 0',
-  (caja_del_dia((select token from ctx))->'banco'->>'sin_identificar_cop')::int, 0);
-select chk('el efectivo no ensucia el control del banco',
-  (caja_del_dia((select token from ctx))->>'ingreso_efectivo')::int, 15000);
+select chk('sale en la lista de libres',
+  (select count(*)::int from jsonb_array_elements(dia()->'pagos_libres') e
+    where e->>'id' = 'bbbbbbbb-0000-4000-8000-000000000001'), 1);
+select chk('la lista dice de cuántos días es',
+  (select (e->>'dias')::int from jsonb_array_elements(dia()->'pagos_libres') e
+    where e->>'id' = 'bbbbbbbb-0000-4000-8000-000000000001'), 2);
+select chk('el inventario libre son 15.000', bco('libre_cop'), 15000);
+select chk('y es un solo depósito', bco('libre_n'), 1);
+-- Lo que el diseño viejo hacía mal: hoy el banco no recibió nada, y eso
+-- no significa absolutamente nada.
+select chk('el banco no recibió nada HOY, y da igual', bco('recibido_cop'), 0);
 
 \echo ''
-\echo '-- 2. Entró plata que nadie apuntó ----------------------------------'
+\echo '-- 2. La cajera lo adjudica al cobrar --------------------------------'
 
-insert into pagos (banco, valor_cop, fecha_pago, remitente, consumido)
-values ('bancolombia', 50000, hoy_a_las(12), 'DESCONOCIDO', false);
+select chk('adjudicar sale bien',
+  (caja_registrar(tk(), 'ingreso', 'clase_suelta', 15000, 'transferencia',
+                  'llegó hoy, transfirió el lunes',
+                  'bbbbbbbb-0000-4000-8000-000000000001')->>'ok')::boolean, true);
 
-select chk('sin identificar se va a +50.000',
-  (caja_del_dia((select token from ctx))->'banco'->>'sin_identificar_cop')::int, 50000);
-
-\echo ''
-\echo '-- 3. Se apuntó plata que el banco nunca confirmó -------------------'
--- El caso caro: comprobante viejo o editado. La cajera lo cree, lo
--- registra, y el correo del banco no llega nunca.
-
-select caja_registrar((select token from ctx), 'ingreso', 'cumpleanos',
-                      250000, 'transferencia', 'comprobante que no existe');
-
-select chk('sin identificar se pone en NEGATIVO',
-  (caja_del_dia((select token from ctx))->'banco'->>'sin_identificar_cop')::int, -200000);
-select chk('y es negativo de verdad, no solo distinto',
-  ((caja_del_dia((select token from ctx))->'banco'->>'sin_identificar_cop')::int < 0), true);
+select chk('el depósito desaparece de los libres', bco('libre_cop'), 0);
+select chk('no queda nada sin respaldo', bco('sin_respaldo_cop'), 0);
+select chk('el movimiento queda marcado como respaldado',
+  (select (e->>'con_banco')::boolean from jsonb_array_elements(dia()->'movimientos') e
+    limit 1), true);
+-- Y la conciliación automática ya no puede tocarlo.
+select chk('el pago queda consumido',
+  (select consumido from pagos where id = 'bbbbbbbb-0000-4000-8000-000000000001'), true);
 
 \echo ''
-\echo '-- 4. Pago de hoy por una clase del martes --------------------------'
--- La razón de que esto sea informativo y no bloqueante.
+\echo '-- 3. Lo que no se puede hacer ---------------------------------------'
 
 insert into pagos (id, banco, valor_cop, fecha_pago, remitente, consumido)
-values ('bbbbbbbb-0000-4000-8000-000000000009', 'bancolombia', 15000,
-        hoy_a_las(19), 'ADELANTADA', true);
+values ('bbbbbbbb-0000-4000-8000-000000000002', 'bancolombia', 125000,
+        now() - interval '1 hour', 'LUIS PEREZ', false);
+
+select chk('no se adjudica un depósito ya usado',
+  caja_registrar(tk(), 'ingreso', 'clase_suelta', 15000, 'transferencia', null,
+                 'bbbbbbbb-0000-4000-8000-000000000001')->>'error', 'PAGO_YA_USADO');
+-- Si el valor no coincide es que se escogió el depósito equivocado.
+-- Dejarlo pasar metería una diferencia que después nadie sabe explicar.
+select chk('no se adjudica con un valor distinto al del banco',
+  caja_registrar(tk(), 'ingreso', 'mensualidad', 120000, 'transferencia', null,
+                 'bbbbbbbb-0000-4000-8000-000000000002')->>'error', 'VALOR_NO_COINCIDE');
+select chk('un egreso no puede enlazarse a un depósito',
+  caja_registrar(tk(), 'egreso', 'profesores', 125000, 'transferencia', null,
+                 'bbbbbbbb-0000-4000-8000-000000000002')->>'error', 'ENLACE_NO_APLICA');
+select chk('el efectivo tampoco',
+  caja_registrar(tk(), 'ingreso', 'mensualidad', 125000, 'efectivo', null,
+                 'bbbbbbbb-0000-4000-8000-000000000002')->>'error', 'ENLACE_NO_APLICA');
+select chk('tras los rechazos el depósito sigue libre', bco('libre_cop'), 125000);
+
+\echo ''
+\echo '-- 4. Transferencia sin depósito: se cuenta aparte, no grita ---------'
+-- Nequi, otra cuenta, o un comprobante que no era real. La pantalla no
+-- puede distinguirlos, así que los muestra y no acusa a nadie.
+
+select caja_registrar(tk(), 'ingreso', 'clase_suelta', 15000, 'transferencia',
+                      'dice que pagó por Nequi', null);
+
+select chk('queda contada como sin respaldo', bco('sin_respaldo_cop'), 15000);
+select chk('y se sabe cuántas son', bco('sin_respaldo_n'), 1);
+select chk('no toca el inventario de libres', bco('libre_cop'), 125000);
+
+\echo ''
+\echo '-- 5. Anular devuelve el depósito a la lista -------------------------'
+
+select caja_registrar(tk(), 'ingreso', 'mensualidad', 125000, 'transferencia', null,
+                      'bbbbbbbb-0000-4000-8000-000000000002');
+select chk('al adjudicarlo, el inventario baja a cero', bco('libre_cop'), 0);
+
+select chk('anular funciona',
+  (caja_anular(tk(), (select id from caja_movimientos
+                       where pago_id = 'bbbbbbbb-0000-4000-8000-000000000002'))
+   ->>'libero_pago')::boolean, true);
+select chk('y el depósito vuelve a estar libre', bco('libre_cop'), 125000);
+select chk('se puede volver a adjudicar',
+  (caja_registrar(tk(), 'ingreso', 'mensualidad', 125000, 'transferencia', null,
+                  'bbbbbbbb-0000-4000-8000-000000000002')->>'ok')::boolean, true);
+
+\echo ''
+\echo '-- 6. Lo que casó solo con una reserva no sale como libre ------------'
+
+insert into pagos (id, banco, valor_cop, fecha_pago, remitente, consumido)
+values ('bbbbbbbb-0000-4000-8000-000000000003', 'bancolombia', 15000,
+        now() - interval '3 hours', 'PAGO WEB', true);
 insert into reservas (codigo, clase_id, nombre, telefono, estado, tipo, pago_id)
-values ('TB-0009', 'aaaaaaaa-0000-4000-8000-000000000002', 'Adelantada',
-        '3009998877', 'confirmada', 'suelta', 'bbbbbbbb-0000-4000-8000-000000000009');
+values ('TB-0003', 'aaaaaaaa-0000-4000-8000-000000000001', 'Pago Web',
+        '3001112233', 'confirmada', 'suelta', 'bbbbbbbb-0000-4000-8000-000000000003');
 
-select chk('el banco SÍ lo ve hoy',
-  (caja_del_dia((select token from ctx))->'banco'->>'de_reservas_cop')::int, 30000);
--- `reservas_cop` va por fecha de CLASE: la del martes no cuenta hoy. Si
--- este número subiera, el cierre contra AdminGym se rompería, porque
--- AdminGym tampoco la cuenta hoy.
-select chk('pero la caja del día NO lo cuenta (clase del martes)',
-  (caja_del_dia((select token from ctx))->>'reservas_cop')::int, 15000);
-select chk('por eso el descuadre del banco NO puede bloquear el cierre',
-  ((caja_del_dia((select token from ctx))->'banco'->>'sin_identificar_cop')::int
-   is distinct from 0), true);
+select chk('la reserva de la página no aparece como libre', bco('libre_cop'), 0);
+select chk('pero sí cuenta como recibido hoy', bco('recibido_cop'), 15000 + 125000);
 
 \echo ''
-\echo '-- 5. El cierre guarda la foto del banco ----------------------------'
-
-select caja_cerrar((select token from ctx), 115000, 100000, null, 100000);
-
-select chk('el cierre guardó lo que decía el banco',
-  (select banco_cop from caja_cierres
-    where dia = (now() at time zone 'America/Bogota')::date), 205000);
-select chk('y guardó el descuadre del momento',
-  (select banco_sin_ident_cop from caja_cierres
-    where dia = (now() at time zone 'America/Bogota')::date), -200000);
--- Lo que de verdad manda en el cierre sigue siendo el efectivo.
-select chk('cerró aunque el banco no cuadre',
-  (caja_del_dia((select token from ctx))->>'cerrado')::boolean, true);
-select chk('el arqueo del efectivo es el que decide',
-  (caja_del_dia((select token from ctx))->'cierre'->>'diferencia_cop')::int, 0);
-
-\echo ''
-\echo '-- 6. Ayer no contamina hoy -----------------------------------------'
+\echo '-- 7. Muy viejo deja de ofrecerse -----------------------------------'
+-- La ventana son 20 días. Sin tope, la lista se vuelve un basurero y la
+-- cajera escoge cualquier cosa con tal de que el valor coincida.
 
 insert into pagos (banco, valor_cop, fecha_pago, remitente, consumido)
-values ('bancolombia', 999000, hoy_a_las(10) - interval '1 day', 'DE AYER', false);
+values ('bancolombia', 777000, now() - interval '40 days', 'MUY VIEJO', false);
 
-select chk('un pago de ayer no entra en el día de hoy',
-  (caja_del_dia((select token from ctx))->'banco'->>'recibido_cop')::int, 205000);
+select chk('un depósito de hace 40 días no se ofrece', bco('libre_cop'), 0);
+select chk('la pantalla dice cuál es la ventana',
+  (dia()->'banco'->>'ventana_dias')::int, 20);
+
+\echo ''
+\echo '-- 8. Nada de esto impide cerrar el día ------------------------------'
+
+select caja_cerrar(tk(), 100000, 100000, null, 100000);
+select chk('cierra aunque haya cosas sin identificar',
+  (dia()->>'cerrado')::boolean, true);
+select chk('el arqueo lo sigue mandando el efectivo',
+  (dia()->'cierre'->>'diferencia_cop')::int, 0);
 
 \echo ''
 select case when count(*) = 0 then 'todo en verde'

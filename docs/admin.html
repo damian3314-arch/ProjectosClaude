@@ -446,6 +446,32 @@ const CONFIG = {
   .mov .q small{display:block;color:var(--tx-3);font-size:.73rem;font-weight:400;margin-top:.1rem}
   .mov .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.98rem}
   .mov.sale .v{color:var(--bad)} .mov.entra .v{color:var(--ok)}
+  .mov .ok-banco{color:var(--ok);font-size:.8rem;margin-left:.35rem;font-weight:700}
+
+  /* ---- escoger el depósito del banco ---- */
+  #modal-banco{margin:-.35rem 0 .9rem}
+  #modal-depositos{
+    max-height:13rem;overflow-y:auto;display:grid;gap:.35rem;margin-bottom:.5rem;
+  }
+  .dep{
+    display:flex;align-items:center;gap:.7rem;width:100%;text-align:left;
+    background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
+    padding:.5rem .65rem;color:inherit;font:inherit;cursor:pointer;transition:.12s;
+  }
+  .dep:hover{border-color:var(--line-2)}
+  .dep.on{border-color:var(--ok);background:rgba(74,222,128,.1)}
+  .dep .v{
+    font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;
+    font-size:.92rem;color:var(--ok);
+  }
+  .dep .q{flex:1;min-width:0;font-size:.86rem;line-height:1.2}
+  .dep .q small{display:block;color:var(--tx-3);font-size:.72rem;margin-top:.1rem}
+  .dep-vacio{
+    margin:0 0 .5rem;font-size:.8rem;color:var(--gold);line-height:1.4;
+    background:rgba(255,193,77,.08);border:1px solid rgba(255,193,77,.25);
+    border-radius:10px;padding:.55rem .7rem;
+  }
+  .dep-aviso{margin:.45rem 0 0;font-size:.75rem;color:var(--tx-3);line-height:1.35}
 
   /* ---- cierre ---- */
   .cierre{
@@ -716,6 +742,21 @@ const CONFIG = {
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
       <button class="medio" data-medio="transferencia">📲 Transferencia</button>
     </div>
+
+    <!-- Aquí es donde de verdad se comprueba que la plata llegó. La foto
+         del comprobante no comprueba nada: puede ser vieja o editada. El
+         depósito en esta lista lo confirmó el banco. Y como la lista va
+         20 días atrás, quien transfirió el lunes y llega el miércoles
+         sigue estando. -->
+    <div id="modal-banco" hidden>
+      <label>¿Cuál de estos depósitos es?</label>
+      <div id="modal-depositos"></div>
+      <button class="btn chico" id="modal-sin-deposito" type="button">
+        No está en la lista
+      </button>
+      <p class="dep-aviso" id="modal-dep-aviso" hidden></p>
+    </div>
+
     <label for="modal-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
     <div class="aviso mal" id="modal-err" hidden></div>
@@ -2013,6 +2054,10 @@ const CONFIG = {
       `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
       `<span class="h">${esc(m.hora)}</span>` +
       `<span class="q">${esc(nombreConcepto(m.concepto))}` +
+      // Un visto junto a la transferencia que sí señala un depósito del
+      // banco. Lo que importa es el contraste: la que no lo tiene se ve
+      // sola de un vistazo.
+      (m.con_banco ? '<span class="ok-banco" title="Respaldado por el banco">✓</span>' : '') +
       `<small>${esc(m.medio)}${m.nota ? ' · ' + esc(m.nota) : ''}${m.quien ? ' · ' + esc(m.quien) : ''}</small></span>` +
       `<span class="v">${m.sentido === 'egreso' ? '−' : ''}${pesos(m.valor_cop)}</span>` +
       (d.cerrado ? '' : `<button class="btn chico" data-anular="${esc(m.id)}">Anular</button>`) +
@@ -2027,36 +2072,29 @@ const CONFIG = {
   /* ---------- el banco: el único dato que no teclea nadie ----------
      Todo lo demás en esta pantalla lo escribió alguien del mostrador,
      así que un error se copia igual a AdminGym y las dos columnas
-     cuadran estando mal. El correo de Bancolombia viene de fuera: es lo
-     único que puede desmentir al mostrador.
+     cuadran estando mal. El correo de Bancolombia viene de fuera.
 
-     No bloquea el cierre, y es a propósito. Alguien paga a las 7:45 pm
-     una clase del martes: el banco lo ve hoy, la clase entra el martes.
-     Exigir que cuadre obligaría a inventar ajustes para poder cerrar. */
+     LO QUE NO SE MIDE AQUÍ es "¿cuadró el día?". Un depósito no
+     pertenece a un día, pertenece a alguien: quien transfiere el lunes y
+     aparece el miércoles hace que cualquier resta día-contra-día dé un
+     negativo que no significa nada. Lo que se mide es el inventario:
+     cuánta plata sigue sin dueño. */
   function tarjetaBanco() {
     const b = cajaDatos && cajaDatos.banco;
-    // Si la migración 0026 todavía no está aplicada, esto no existe y la
+    // Si la migración 0027 todavía no está aplicada, esto no existe y la
     // tarjeta simplemente no sale. Nada más se rompe.
     if (!b) return '';
 
-    const n = Number(b.sin_identificar_cop || 0);
-    let cl, pista;
-    if (n === 0) {
-      cl = 'bueno';
-      pista = 'todo identificado';
-    } else if (n > 0) {
-      cl = 'ojo';
-      pista = `${pesos(n)} entró sin apuntar`;
-    } else {
-      // El caso caro: se registró una transferencia que el banco nunca
-      // confirmó. Comprobante viejo, editado, o de otra cuenta.
-      cl = 'malo';
-      pista = `⚠ faltan ${pesos(-n)} por llegar`;
-    }
+    const libre = Number(b.libre_cop || 0);
+    const n = Number(b.libre_n || 0);
+    const cl = libre > 0 ? 'ojo' : 'bueno';
+    const pista = libre > 0
+      ? `${pesos(libre)} sin identificar · ${n} ${n === 1 ? 'depósito' : 'depósitos'}`
+      : 'todo identificado';
 
     return `<div class="tile banco ${cl}">` +
       `<div class="n">${esc(pesos(b.recibido_cop || 0))}</div>` +
-      `<div class="k">recibido en banco</div>` +
+      `<div class="k">recibido en banco hoy</div>` +
       `<div class="pista">${esc(pista)}</div>` +
       `<div class="corte">${b.corte
         ? 'Bancolombia, hasta las ' + esc(hora12(b.corte))
@@ -2072,29 +2110,38 @@ const CONFIG = {
     const b = d.banco;
     if (!b) return '';
 
-    const n = Number(b.sin_identificar_cop || 0);
-    const fin = n === 0
-      ? { cl: 'bien', txt: pesos(0),
-          pie: 'Cada peso que entró al banco está apuntado en algún lado.' }
-      : n > 0
-      ? { cl: 'ojo', txt: '+' + pesos(n),
-          pie: 'Entró plata que nadie apuntó. Suele ser alguien que pagó ' +
-               'adelantado o que transfirió sin avisar — hay que buscarlo, ' +
-               'pero no frena el cierre.' }
-      : { cl: 'mal', txt: '−' + pesos(-n),
-          pie: 'Se apuntó una transferencia que el banco no ha confirmado. ' +
-               'Revisa ese comprobante hoy: puede ser viejo, editado o de ' +
-               'otra cuenta.' };
+    const libre = Number(b.libre_cop || 0);
+    const nLibre = Number(b.libre_n || 0);
+    const sinResp = Number(b.sin_respaldo_cop || 0);
+    const nSinResp = Number(b.sin_respaldo_n || 0);
+
+    // Dos preguntas distintas, y ninguna es "¿cuadró el día?".
+    const pie = !libre && !sinResp
+      ? 'Cada depósito del banco tiene dueño y cada transferencia ' +
+        'apuntada señala a un depósito. No hay nada que buscar.'
+      : [
+          libre ? 'Hay plata en la cuenta que nadie ha reclamado: alguien ' +
+                  'pagó y no se le registró el servicio. Al cobrarle, ' +
+                  'escoge su depósito de la lista y desaparece de aquí.' : '',
+          sinResp ? 'Y hay transferencias apuntadas que no señalan ningún ' +
+                    'depósito: o entraron por otra cuenta, o el comprobante ' +
+                    'no era real.' : '',
+        ].filter(Boolean).join(' ');
 
     return `<div class="grupo banco"><div class="et">Control del banco` +
         `<span class="et-x">no lo escribe nadie del mostrador</span></div>` +
       fila('Bancolombia confirmó hoy', pesos(b.recibido_cop || 0),
-           b.corte ? 'hasta las ' + hora12(b.corte) : null) +
-      fila('− Reservas ya casadas', pesos(b.de_reservas_cop || 0)) +
-      fila('− Transferencias del mostrador', pesos(b.de_mostrador_cop || 0)) +
-      `<div class="fila total"><span>Sin identificar</span>` +
-        `<span class="dif ${fin.cl}">${fin.txt}</span></div>` +
-      `<p class="suave">${fin.pie}</p>` +
+           b.corte ? 'hasta las ' + hora12(b.corte) : 'sin avisos todavía') +
+      `<div class="fila total"><span>Sin identificar` +
+        `<span class="ag">${nLibre} ${nLibre === 1 ? 'depósito' : 'depósitos'}` +
+        ` · últimos ${Number(b.ventana_dias || 20)} días</span></span>` +
+        `<span class="dif ${libre ? 'ojo' : 'bien'}">${pesos(libre)}</span></div>` +
+      (sinResp
+        ? `<div class="fila"><span>Apuntado sin respaldo del banco` +
+          `<span class="ag">${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'}` +
+          `</span></span><span class="dif ojo">${pesos(sinResp)}</span></div>`
+        : '') +
+      `<p class="suave">${pie}</p>` +
     `</div>`;
   }
 
@@ -2187,19 +2234,26 @@ const CONFIG = {
     }
   });
 
+  // El depósito del banco que la cajera escogió, si escogió alguno.
+  let cajaPago = null;
+
   function abrirModal(x) {
     cajaElegido = x;
     cajaMedio = 'efectivo';
+    cajaPago = null;
     $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
     $('#modal-valor').value = x.v ? String(x.v) : '';
     $('#modal-nota').value = '';
     $('#modal-err').hidden = true;
     for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === 'efectivo');
+    pintarDepositos();
     $('#modal-caja').hidden = false;
     setTimeout(() => $('#modal-valor').focus(), 60);
   }
-  const cerrarModal = () => { $('#modal-caja').hidden = true; cajaElegido = null; };
+  const cerrarModal = () => {
+    $('#modal-caja').hidden = true; cajaElegido = null; cajaPago = null;
+  };
   $('#modal-cancelar').addEventListener('click', cerrarModal);
   $('#modal-caja').addEventListener('click', e => { if (e.target.id === 'modal-caja') cerrarModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-caja').hidden) cerrarModal(); });
@@ -2207,8 +2261,66 @@ const CONFIG = {
     b.addEventListener('click', () => {
       cajaMedio = b.dataset.medio;
       for (const o of document.querySelectorAll('.medio')) o.classList.toggle('on', o === b);
+      // Al cambiar de efectivo a transferencia aparece la lista; al
+      // volver a efectivo se olvida el depósito, que si no quedaría
+      // enlazado a un cobro en billetes.
+      cajaPago = null;
+      pintarDepositos();
     });
   }
+
+  /* La lista de depósitos que el banco confirmó y nadie ha reclamado.
+     Solo tiene sentido para una transferencia que entra: un egreso o un
+     pago en efectivo no salen de esta cuenta. Viene dentro de la misma
+     respuesta de /api/dia, así que abrir la ventana no pide nada. */
+  function pintarDepositos() {
+    const caja = $('#modal-banco');
+    const aplica = cajaElegido && cajaElegido.s === 'ingreso' && cajaMedio === 'transferencia';
+    caja.hidden = !aplica;
+    $('#modal-dep-aviso').hidden = true;
+    if (!aplica) return;
+
+    const libres = (cajaDatos && cajaDatos.pagos_libres) || [];
+    if (!libres.length) {
+      $('#modal-depositos').innerHTML =
+        `<p class="dep-vacio">El banco no tiene depósitos sin reclamar. ` +
+        `Si la persona dice que transfirió, la plata no ha llegado a esta cuenta.</p>`;
+      return;
+    }
+
+    $('#modal-depositos').innerHTML = libres.map(p =>
+      `<button class="dep" type="button" data-pago="${esc(p.id)}" data-valor="${esc(p.valor_cop)}">` +
+        `<span class="v">${esc(pesos(p.valor_cop))}</span>` +
+        `<span class="q">${esc(p.remitente || 'sin nombre')}` +
+          `<small>${esc(p.cuando)}${Number(p.dias) > 0
+            ? ' · hace ' + p.dias + (Number(p.dias) === 1 ? ' día' : ' días') : ' · hoy'}</small>` +
+        `</span>` +
+      `</button>`).join('');
+
+    $('#modal-depositos').querySelectorAll('[data-pago]').forEach(b =>
+      b.addEventListener('click', () => {
+        const ya = cajaPago === b.dataset.pago;
+        cajaPago = ya ? null : b.dataset.pago;
+        $('#modal-depositos').querySelectorAll('[data-pago]')
+          .forEach(o => o.classList.toggle('on', !ya && o === b));
+        // El valor lo manda el banco. Postgres rechaza el enlace si no
+        // coinciden, así que mejor que aquí ya cuadre.
+        if (!ya) $('#modal-valor').value = b.dataset.valor;
+      }));
+  }
+
+  // Registrar sin enlazar: Nequi, otra cuenta, o el aviso que todavía no
+  // llega. Se permite, pero queda contado aparte en el cierre — no se
+  // esconde y tampoco se acusa a nadie.
+  $('#modal-sin-deposito').addEventListener('click', () => {
+    cajaPago = null;
+    $('#modal-depositos').querySelectorAll('[data-pago]').forEach(o => o.classList.remove('on'));
+    aviso($('#modal-dep-aviso'),
+      'Va a quedar apuntado sin respaldo del banco. Sale marcado en el cierre.', '');
+    $('#modal-dep-aviso').className = 'dep-aviso';
+    $('#modal-dep-aviso').hidden = false;
+  });
+
   $('#modal-valor').addEventListener('keydown', e => { if (e.key === 'Enter') $('#modal-guardar').click(); });
 
   $('#modal-guardar').addEventListener('click', async () => {
@@ -2223,6 +2335,7 @@ const CONFIG = {
       await alWorker('registrar', {
         sentido: cajaElegido.s, concepto: cajaElegido.c,
         valor, medio: cajaMedio, nota: $('#modal-nota').value,
+        pago_id: cajaMedio === 'transferencia' ? cajaPago : null,
       });
       cerrarModal();
       await cargarCaja(true);

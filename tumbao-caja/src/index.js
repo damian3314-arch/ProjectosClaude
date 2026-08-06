@@ -119,12 +119,27 @@ export default {
           return json({ ok: false, error: 'VALOR_INVALIDO',
             mensaje: 'Escribe un valor mayor que cero.' }, 400, origen);
         }
-        r = await rpc(env, 'caja_registrar', {
+        // El depósito del banco que respalda el cobro, si la cajera lo
+        // escogió de la lista. Postgres valida que exista, que esté
+        // libre y que el valor sea el mismo; aquí solo se comprueba la
+        // forma para no mandar basura a la RPC.
+        const pago = b.pago_id ? String(b.pago_id) : null;
+        if (pago && !/^[0-9a-f-]{36}$/i.test(pago)) {
+          return json({ ok: false, error: 'PAGO_INVALIDO',
+            mensaje: 'No se reconoce ese depósito. Recarga la lista.' }, 400, origen);
+        }
+        const args = {
           p_token: token, p_sentido: sentido, p_concepto: concepto,
           p_valor: valor,
           p_medio: b.medio === 'transferencia' ? 'transferencia' : 'efectivo',
           p_nota: b.nota ? String(b.nota).slice(0, 200) : null,
-        });
+        };
+        // Solo se manda cuando de verdad hay depósito escogido. PostgREST
+        // resuelve la función por los parámetros que recibe: mandar
+        // p_pago_id siempre obligaría a que la migración 0027 ya
+        // estuviera aplicada, y hasta entonces no se podría ni cobrar.
+        if (pago) args.p_pago_id = pago;
+        r = await rpc(env, 'caja_registrar', args);
 
       } else if (ruta === '/api/reserva') {
         // Apuntar a alguien a mano. La validación de verdad —nombre,

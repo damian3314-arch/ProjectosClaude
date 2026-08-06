@@ -73,21 +73,25 @@ const dia = () => ({
     dinero_en_caja: 100000 + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
   },
   banco: banco(),
+  pagos_libres: libres,
   cerrado: false, cierre: null,
 });
 
-// El control contra Bancolombia. `bancoRecibido` se mueve desde la
-// prueba para forzar los tres estados del semáforo.
-let bancoRecibido = null;   // null = la migración 0026 no está aplicada
+// El inventario del banco: depósitos que llegaron y nadie ha reclamado.
+// `hayBanco` en false simula que la migración 0027 todavía no se pegó.
+let hayBanco = false;
+let libres = [];
 const banco = () => {
-  if (bancoRecibido === null) return undefined;
-  const res = 15000;                      // reservas ya casadas
-  const most = suma('ingreso', 'transferencia');
+  if (!hayBanco) return undefined;
+  const sinResp = movimientos.filter(
+    m => m.sentido === 'ingreso' && m.medio === 'transferencia' && !m.pago_id);
   return {
-    recibido_cop: bancoRecibido,
-    de_reservas_cop: res,
-    de_mostrador_cop: most,
-    sin_identificar_cop: bancoRecibido - res - most,
+    recibido_cop: 15000,
+    libre_cop: libres.reduce((a, p) => a + p.valor_cop, 0),
+    libre_n: libres.length,
+    sin_respaldo_cop: sinResp.reduce((a, m) => a + m.valor_cop, 0),
+    sin_respaldo_n: sinResp.length,
+    ventana_dias: 20,
     corte: '19:42',
   };
 };
@@ -100,9 +104,14 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
   let r = { ok: true };
   if (url.endsWith('/dia')) r = dia();
   else if (url.endsWith('/registrar')) {
+    // Adjudicar un depósito lo saca del inventario, igual que en
+    // Postgres. Si no se sacara, la prueba del enlace pasaría sin que la
+    // pantalla estuviera mandando el pago_id.
+    if (b.pago_id) libres = libres.filter((p) => p.id !== b.pago_id);
     movimientos.unshift({ id: '00000000-0000-4000-8000-' + String(++idSeq).padStart(12, '0'),
       sentido: b.sentido, concepto: b.concepto, valor_cop: +b.valor,
-      medio: b.medio, nota: b.nota || null, hora: '10:0' + idSeq, quien: 'prueba' });
+      medio: b.medio, nota: b.nota || null, hora: '10:0' + idSeq, quien: 'prueba',
+      pago_id: b.pago_id || null, con_banco: !!b.pago_id });
     r = { ok: true, id: 'x' };
   } else if (url.endsWith('/anular')) {
     const m = movimientos.find((x) => x.id === b.id);
@@ -193,64 +202,118 @@ const hayCierre = await pagina.locator('#caja-cierre').innerText();
 hayCierre.includes('AdminGym')
   ? bien('el cierre muestra los nombres de AdminGym') : falla('el cierre', 'sin referencia a AdminGym');
 
-// ---- el control del banco ----
-// Primero: sin la migración 0026 aplicada, `banco` no viene. La tarjeta
-// no debe salir y nada más puede romperse — es el estado real de la
-// página entre que se despliega y se pega el SQL.
+// ═══════════════ el control del banco ═══════════════
+// Sin la migración 0027 aplicada, `banco` no viene. La tarjeta no debe
+// salir y nada más puede romperse: es el estado real de la página entre
+// que se despliega y se pega el SQL.
 (await pagina.locator('#caja-tiles .tile.banco').count()) === 0
-  ? bien('sin la migración 0026, la tarjeta no sale y nada revienta')
-  : falla('sin la migración 0026', 'salió la tarjeta igual');
+  ? bien('sin la migración 0027, la tarjeta no sale y nada revienta')
+  : falla('sin la migración 0027', 'salió la tarjeta igual');
 
 const recargar = async () => {
   await pagina.click('#caja-recargar');
   await pagina.waitForTimeout(700);
 };
 const tarjeta = pagina.locator('#caja-tiles .tile.banco');
-const semaforo = async () => (await tarjeta.getAttribute('class')).trim();
 const pista = async () => (await tarjeta.locator('.pista').innerText()).trim();
 
-// Estado 1 — cuadra. En la lista quedó una clase suelta de $15.000 en
-// efectivo, así que el mostrador aporta 0 en transferencias y el banco
-// solo tiene la reserva casada de $15.000.
-bancoRecibido = 15000;
+// EL CASO QUE MANDA: transfirió hace dos días, llega hoy. Es lo que
+// rompía el diseño anterior, que restaba el banco de hoy contra la caja
+// de hoy y daba un negativo que acusaba a un cliente honesto.
+hayBanco = true;
+libres = [{ id: 'cccccccc-0000-4000-8000-000000000001', valor_cop: 15000,
+            cuando: '03/08 14:12', dias: 2, remitente: 'CAMILA ROJAS' }];
 await recargar();
-(await semaforo()).includes('bueno') && /todo identificado/.test(await pista())
-  ? bien('cuando cuadra, la tarjeta va en verde', await pista())
-  : falla('cuando cuadra', `${await semaforo()} · ${await pista()}`);
+
+/15\.000 sin identificar · 1 depósito/.test(await pista())
+  ? bien('el depósito de hace dos días sigue contado', await pista())
+  : falla('el depósito de hace dos días', await pista());
 
 (await tarjeta.locator('.corte').innerText()).includes('7:42 pm')
   ? bien('dice hasta qué hora es la cifra', 'Bancolombia, hasta las 7:42 pm')
-  : falla('dice hasta qué hora es la cifra', await tarjeta.locator('.corte').innerText());
+  : falla('la hora de corte', await tarjeta.locator('.corte').innerText());
 
-// Estado 2 — entró plata que nadie apuntó. Molesta, pero no frena.
-bancoRecibido = 65000;
-await recargar();
-(await semaforo()).includes('ojo') && /50\.000 entró sin apuntar/.test(await pista())
-  ? bien('si entra plata sin apuntar, avisa en ámbar', await pista())
-  : falla('plata sin apuntar', `${await semaforo()} · ${await pista()}`);
+// La lista solo aparece para una transferencia que entra.
+await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
+await pagina.waitForTimeout(250);
+!(await pagina.locator('#modal-banco').isVisible())
+  ? bien('en efectivo no pide depósito')
+  : falla('en efectivo no pide depósito', 'salió la lista igual');
 
-// Estado 3 — EL CARO. Se apuntó una transferencia que el banco nunca
-// confirmó: comprobante viejo o editado. Tiene que gritar.
-bancoRecibido = 5000;
-await recargar();
-(await semaforo()).includes('malo') && /faltan \$10\.000/.test(await pista())
-  ? bien('si el banco no confirma lo apuntado, se pone en rojo', await pista())
-  : falla('el caso caro (negativo)', `${await semaforo()} · ${await pista()}`);
+await pagina.locator('.medio[data-medio="transferencia"]').click();
+await pagina.waitForTimeout(250);
+(await pagina.locator('#modal-banco').isVisible())
+  ? bien('al marcar transferencia aparecen los depósitos')
+  : falla('al marcar transferencia', 'la lista no salió');
+
+const dep = pagina.locator('.dep').first();
+const txtDep = (await dep.innerText()).replace(/\s+/g, ' ').trim();
+/CAMILA ROJAS/.test(txtDep) && /hace 2 días/.test(txtDep)
+  ? bien('el depósito dice de quién es y de cuándo', txtDep)
+  : falla('el depósito dice de quién es', txtDep);
+
+// Escogerlo trae el valor del banco: si la cajera teclea otra cosa,
+// Postgres rechaza el enlace, así que mejor que aquí ya cuadre.
+await pagina.fill('#modal-valor', '99999');
+await dep.click();
+await pagina.waitForTimeout(200);
+(await pagina.inputValue('#modal-valor')) === '15000'
+  ? bien('escoger el depósito trae el valor del banco')
+  : falla('el valor del depósito', await pagina.inputValue('#modal-valor'));
+
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(800);
+
+/todo identificado/.test(await pista())
+  ? bien('adjudicado, el inventario queda limpio', await pista())
+  : falla('tras adjudicar', await pista());
+
+(await pagina.locator('.mov .ok-banco').count()) === 1
+  ? bien('el movimiento queda con su visto de respaldado')
+  : falla('el visto de respaldado', `hay ${await pagina.locator('.mov .ok-banco').count()}`);
+
+// Registrar sin enlazar: Nequi, otra cuenta, o el aviso que no llegó.
+// Se permite, se cuenta aparte, y no se acusa a nadie.
+await pagina.locator('.caja-btn', { hasText: 'Mensualidad' }).click();
+await pagina.waitForTimeout(250);
+await pagina.locator('.medio[data-medio="transferencia"]').click();
+await pagina.waitForTimeout(200);
+(await pagina.locator('.dep-vacio').count()) === 1
+  ? bien('sin depósitos libres lo dice claro, no deja el hueco en blanco')
+  : falla('sin depósitos libres', 'no salió el aviso');
+
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(800);
 
 const cierreTxt = await pagina.locator('#caja-cierre').innerText();
-/Sin identificar/.test(cierreTxt) && /comprobante/.test(cierreTxt)
-  ? bien('y el cierre explica qué hacer con ese descuadre')
-  : falla('el cierre explica el descuadre', cierreTxt.slice(0, 120));
+/Apuntado sin respaldo del banco/.test(cierreTxt) && /125\.000/.test(cierreTxt)
+  ? bien('lo apuntado sin respaldo sale contado aparte en el cierre')
+  : falla('sin respaldo en el cierre', cierreTxt.slice(0, 160));
 
-// El color se comprueba de verdad, no por la clase: la fila del banco
+// Lo que ya no puede pasar: que un desfase de fechas se pinte de rojo.
+// Rojo estaba reservado para "comprobante falso" y disparaba solo por
+// llegar tarde, que es lo normal.
+const cls = await tarjeta.getAttribute('class');
+!cls.includes('malo')
+  ? bien('nunca se pone en rojo por un desfase de fechas')
+  : falla('rojo por desfase', cls);
+
+// El color se comprueba computado y no por la clase: la fila del banco
 // es una `.fila.total` y su cifra es el último hijo, así que el oro del
-// total le ganaba al rojo por especificidad y el descuadre se leía como
-// un número más del cierre.
-const rojo = await pagina.locator('#caja-cierre .grupo.banco .dif')
-  .evaluate(e => getComputedStyle(e).color);
-rojo === 'rgb(255, 107, 129)'
-  ? bien('y el descuadre se pinta rojo de verdad, no del oro del total')
-  : falla('el color del descuadre', rojo);
+// total le ganaba por especificidad y el semáforo no se veía.
+const difs = pagina.locator('#caja-cierre .grupo.banco .dif');
+const color = i => difs.nth(i).evaluate(e => getComputedStyle(e).color);
+
+// Fila 1: sin identificar. Está en cero, así que verde.
+(await color(0)) === 'rgb(74, 222, 128)'
+  ? bien('el inventario en cero se pinta verde')
+  : falla('el color del inventario', await color(0));
+
+// Fila 2: apuntado sin respaldo. Hay 125.000, así que ámbar — nunca
+// rojo, porque la pantalla no puede saber si fue Nequi o un engaño.
+(await color(1)) === 'rgb(255, 193, 77)'
+  ? bien('lo que falta por respaldar se pinta ámbar, no del oro del total')
+  : falla('el color del sin respaldo', await color(1));
 
 // Lo que no puede pasar: que un descuadre del banco impida cerrar. El
 // cierre lo manda el efectivo, que es lo único que se cuenta a mano.
