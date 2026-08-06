@@ -472,6 +472,16 @@ const CONFIG = {
     border-radius:10px;padding:.55rem .7rem;
   }
   .dep-aviso{margin:.45rem 0 0;font-size:.75rem;color:var(--tx-3);line-height:1.35}
+  #modal-dep-buscar{font-size:.88rem;padding:.45rem .65rem;margin-bottom:.45rem}
+
+  /* La cola histórica: va bajo la línea y en gris, porque no es de este
+     día y no exige hacer nada hoy. */
+  .cierre .grupo.banco .cola{
+    border-top:1px solid var(--line);margin-top:.6rem;padding-top:.5rem;
+    font-size:.73rem;color:var(--tx-3);line-height:1.45;
+  }
+  .cierre .grupo.banco .cola + .cola{border-top:0;margin-top:.25rem;padding-top:0}
+  .cierre .grupo.banco .cola b{color:var(--tx-2);font-weight:600}
 
   /* ---- cierre ---- */
   .cierre{
@@ -749,7 +759,9 @@ const CONFIG = {
          20 días atrás, quien transfirió el lunes y llega el miércoles
          sigue estando. -->
     <div id="modal-banco" hidden>
-      <label>¿Cuál de estos depósitos es?</label>
+      <label for="modal-dep-buscar">¿Cuál de estos depósitos es?</label>
+      <input id="modal-dep-buscar" type="search" autocomplete="off"
+             placeholder="Filtrar por valor o por quién lo mandó…">
       <div id="modal-depositos"></div>
       <button class="btn chico" id="modal-sin-deposito" type="button">
         No está en la lista
@@ -2085,20 +2097,28 @@ const CONFIG = {
     // tarjeta simplemente no sale. Nada más se rompe.
     if (!b) return '';
 
-    const libre = Number(b.libre_cop || 0);
-    const n = Number(b.libre_n || 0);
-    const cl = libre > 0 ? 'ojo' : 'bueno';
-    const pista = libre > 0
-      ? `${pesos(libre)} sin identificar · ${n} ${n === 1 ? 'depósito' : 'depósitos'}`
-      : 'todo identificado';
+    // Solo lo de HOY manda el color. El arrastre histórico —depósitos
+    // de antes de que existiera este módulo— nunca baja a cero, así que
+    // si mandara él la tarjeta viviría en ámbar y dejaría de decir nada.
+    const hoy = Number(b.libre_hoy_cop || 0);
+    const nHoy = Number(b.libre_hoy_n || 0);
+    const cl = hoy > 0 ? 'ojo' : 'bueno';
+    const pista = hoy > 0
+      ? `${pesos(hoy)} de hoy sin identificar · ${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'}`
+      : 'todo lo de hoy identificado';
+
+    const atras = Number(b.atras_cop || 0);
+    const pie = [
+      b.corte ? 'hasta las ' + hora12(b.corte) : 'sin avisos hoy',
+      b.mes_cop != null ? 'en el mes ' + pesos(b.mes_cop) : '',
+      atras > 0 ? `${pesos(atras)} por revisar de días atrás` : '',
+    ].filter(Boolean).join(' · ');
 
     return `<div class="tile banco ${cl}">` +
       `<div class="n">${esc(pesos(b.recibido_cop || 0))}</div>` +
       `<div class="k">recibido en banco hoy</div>` +
       `<div class="pista">${esc(pista)}</div>` +
-      `<div class="corte">${b.corte
-        ? 'Bancolombia, hasta las ' + esc(hora12(b.corte))
-        : 'sin avisos del banco hoy'}</div>` +
+      `<div class="corte">${esc(pie)}</div>` +
     `</div>`;
   }
 
@@ -2110,19 +2130,25 @@ const CONFIG = {
     const b = d.banco;
     if (!b) return '';
 
-    const libre = Number(b.libre_cop || 0);
-    const nLibre = Number(b.libre_n || 0);
+    const hoy = Number(b.libre_hoy_cop || 0);
+    const nHoy = Number(b.libre_hoy_n || 0);
+    const atras = Number(b.atras_cop || 0);
+    const nAtras = Number(b.atras_n || 0);
     const sinResp = Number(b.sin_respaldo_cop || 0);
     const nSinResp = Number(b.sin_respaldo_n || 0);
 
-    // Dos preguntas distintas, y ninguna es "¿cuadró el día?".
-    const pie = !libre && !sinResp
-      ? 'Cada depósito del banco tiene dueño y cada transferencia ' +
-        'apuntada señala a un depósito. No hay nada que buscar.'
+    // El pie habla solo de lo que exige hacer algo hoy. El arrastre se
+    // menciona como lo que es —cola vieja— y sin urgencia, porque
+    // urgirlo todos los días es la forma más rápida de que se ignore.
+    const pie = !hoy && !sinResp
+      ? 'Todo lo que entró hoy tiene dueño.' +
+        (atras ? ' Lo de días atrás se va limpiando solo: cada vez que ' +
+                 'alguien cobra una transferencia y escoge su depósito, ' +
+                 'sale de la cola.' : '')
       : [
-          libre ? 'Hay plata en la cuenta que nadie ha reclamado: alguien ' +
-                  'pagó y no se le registró el servicio. Al cobrarle, ' +
-                  'escoge su depósito de la lista y desaparece de aquí.' : '',
+          hoy ? 'Entró plata hoy que nadie ha reclamado: alguien pagó y no ' +
+                'se le registró el servicio. Al cobrarle, escoge su ' +
+                'depósito de la lista.' : '',
           sinResp ? 'Y hay transferencias apuntadas que no señalan ningún ' +
                     'depósito: o entraron por otra cuenta, o el comprobante ' +
                     'no era real.' : '',
@@ -2132,16 +2158,27 @@ const CONFIG = {
         `<span class="et-x">no lo escribe nadie del mostrador</span></div>` +
       fila('Bancolombia confirmó hoy', pesos(b.recibido_cop || 0),
            b.corte ? 'hasta las ' + hora12(b.corte) : 'sin avisos todavía') +
-      `<div class="fila total"><span>Sin identificar` +
-        `<span class="ag">${nLibre} ${nLibre === 1 ? 'depósito' : 'depósitos'}` +
-        ` · últimos ${Number(b.ventana_dias || 20)} días</span></span>` +
-        `<span class="dif ${libre ? 'ojo' : 'bien'}">${pesos(libre)}</span></div>` +
+      `<div class="fila total"><span>Sin identificar, de hoy` +
+        `<span class="ag">${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'}</span></span>` +
+        `<span class="dif ${hoy ? 'ojo' : 'bien'}">${pesos(hoy)}</span></div>` +
       (sinResp
         ? `<div class="fila"><span>Apuntado sin respaldo del banco` +
           `<span class="ag">${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'}` +
           `</span></span><span class="dif ojo">${pesos(sinResp)}</span></div>`
         : '') +
       `<p class="suave">${pie}</p>` +
+      // Debajo de la línea y en gris: no es de este día.
+      (atras
+        ? `<div class="cola">De días anteriores quedan ` +
+          `<b>${pesos(atras)}</b> en ${nAtras} ` +
+          `${nAtras === 1 ? 'depósito' : 'depósitos'} sin reclamar ` +
+          `(${Number(b.ventana_dias || 20)} días atrás). Casi todo es de antes ` +
+          `de que existiera esta pantalla.</div>`
+        : '') +
+      (b.mes_cop != null
+        ? `<div class="cola">En lo que va del mes han entrado ` +
+          `<b>${pesos(b.mes_cop)}</b> al banco.</div>`
+        : '') +
     `</div>`;
   }
 
@@ -2247,6 +2284,9 @@ const CONFIG = {
     $('#modal-nota').value = '';
     $('#modal-err').hidden = true;
     for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === 'efectivo');
+    // Arranca filtrando por el precio del concepto: para una mensualidad
+    // de 125.000 la lista baja de setenta y pico a uno o dos.
+    $('#modal-dep-buscar').value = x.v ? String(x.v) : '';
     pintarDepositos();
     $('#modal-caja').hidden = false;
     setTimeout(() => $('#modal-valor').focus(), 60);
@@ -2288,16 +2328,33 @@ const CONFIG = {
       return;
     }
 
-    $('#modal-depositos').innerHTML = libres.map(p =>
-      `<button class="dep" type="button" data-pago="${esc(p.id)}" data-valor="${esc(p.valor_cop)}">` +
-        `<span class="v">${esc(pesos(p.valor_cop))}</span>` +
-        `<span class="q">${esc(p.remitente || 'sin nombre')}` +
-          `<small>${esc(p.cuando)}${Number(p.dias) > 0
-            ? ' · hace ' + p.dias + (Number(p.dias) === 1 ? ' día' : ' días') : ' · hoy'}</small>` +
-        `</span>` +
-      `</button>`).join('');
+    // Con la cola histórica hay decenas de depósitos: sin filtrar, la
+    // lista es un muro y la cajera escoge el primero que le cuadre. El
+    // filtro arranca con el valor que ya está tecleado, que casi siempre
+    // deja uno o dos candidatos.
+    const q = plano($('#modal-dep-buscar').value);
+    const soloDigitos = q.replace(/\D/g, '');
+    const pasa = p =>
+      !q ? true
+      : soloDigitos ? String(p.valor_cop).includes(soloDigitos)
+      : plano(p.remitente).includes(q);
 
-    $('#modal-depositos').querySelectorAll('[data-pago]').forEach(b =>
+    const ver = libres.filter(pasa);
+    $('#modal-depositos').innerHTML = ver.length
+      ? ver.map(p =>
+          `<button class="dep" type="button" data-pago="${esc(p.id)}" data-valor="${esc(p.valor_cop)}">` +
+            `<span class="v">${esc(pesos(p.valor_cop))}</span>` +
+            `<span class="q">${esc(p.remitente || 'sin nombre')}` +
+              `<small>${esc(p.cuando)}${Number(p.dias) > 0
+                ? ' · hace ' + p.dias + (Number(p.dias) === 1 ? ' día' : ' días') : ' · hoy'}</small>` +
+            `</span>` +
+          `</button>`).join('')
+      : `<p class="dep-vacio">Ningún depósito de la cuenta coincide con ` +
+        `«${esc($('#modal-dep-buscar').value)}». Borra el filtro para verlos ` +
+        `todos, o registra sin enlazar si no está.</p>`;
+
+    $('#modal-depositos').querySelectorAll('[data-pago]').forEach(b => {
+      b.classList.toggle('on', cajaPago === b.dataset.pago);
       b.addEventListener('click', () => {
         const ya = cajaPago === b.dataset.pago;
         cajaPago = ya ? null : b.dataset.pago;
@@ -2306,8 +2363,13 @@ const CONFIG = {
         // El valor lo manda el banco. Postgres rechaza el enlace si no
         // coinciden, así que mejor que aquí ya cuadre.
         if (!ya) $('#modal-valor').value = b.dataset.valor;
-      }));
+      });
+    });
   }
+
+  // Al teclear en el filtro se repinta; el depósito ya escogido se
+  // mantiene marcado si sigue visible.
+  $('#modal-dep-buscar').addEventListener('input', pintarDepositos);
 
   // Registrar sin enlazar: Nequi, otra cuenta, o el aviso que todavía no
   // llega. Se permite, pero queda contado aparte en el cierre — no se

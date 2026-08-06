@@ -164,6 +164,35 @@ select chk('la pantalla dice cuál es la ventana',
   (dia()->'banco'->>'ventana_dias')::int, 20);
 
 \echo ''
+\echo '-- 7b. La alarma es la de hoy; el arrastre va aparte ------------------'
+-- En producción hay 75 depósitos sin reclamar de antes de que existiera
+-- este módulo. Si el titular contara esos, la tarjeta viviría en ámbar
+-- para siempre y dejaría de significar algo. Se separan.
+
+-- Este es de hoy y nadie lo ha reclamado: eso sí exige buscar a alguien.
+insert into pagos (banco, valor_cop, fecha_pago, remitente, consumido)
+values ('bancolombia', 40000, now() - interval '30 minutes', 'DE HOY', false);
+-- Y estos dos son la cola vieja.
+insert into pagos (banco, valor_cop, fecha_pago, remitente, consumido)
+values ('bancolombia', 300000, now() - interval '6 days',  'VIEJO 1', false),
+       ('bancolombia', 200000, now() - interval '11 days', 'VIEJO 2', false);
+
+select chk('lo sin identificar DE HOY son 40.000', bco('libre_hoy_cop'), 40000);
+select chk('y es un solo depósito de hoy', bco('libre_hoy_n'), 1);
+select chk('el arrastre viejo va aparte: 500.000', bco('atras_cop'), 500000);
+select chk('y son dos depósitos viejos', bco('atras_n'), 2);
+select chk('el inventario total sigue siendo la suma', bco('libre_cop'), 540000);
+-- Los viejos siguen ofreciéndose para escoger: es lo que permite cobrar
+-- el miércoles a quien transfirió el lunes.
+select chk('los viejos siguen en la lista para escoger',
+  (select count(*)::int from jsonb_array_elements(dia()->'pagos_libres')), 3);
+
+\echo ''
+\echo '-- 7c. El mes -------------------------------------------------------'
+select chk('el mes suma lo que va del mes, no solo hoy',
+  (bco('mes_cop') >= bco('recibido_cop')), true);
+
+\echo ''
 \echo '-- 8. Nada de esto impide cerrar el día ------------------------------'
 
 select caja_cerrar(tk(), 100000, 100000, null, 100000);

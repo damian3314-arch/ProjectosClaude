@@ -85,10 +85,17 @@ const banco = () => {
   if (!hayBanco) return undefined;
   const sinResp = movimientos.filter(
     m => m.sentido === 'ingreso' && m.medio === 'transferencia' && !m.pago_id);
+  const deHoy = libres.filter(p => Number(p.dias) === 0);
+  const suma = l => l.reduce((a, p) => a + p.valor_cop, 0);
   return {
-    recibido_cop: 15000,
-    libre_cop: libres.reduce((a, p) => a + p.valor_cop, 0),
+    recibido_cop: 330000,
+    libre_hoy_cop: suma(deHoy),
+    libre_hoy_n: deHoy.length,
+    libre_cop: suma(libres),
     libre_n: libres.length,
+    atras_cop: suma(libres) - suma(deHoy),
+    atras_n: libres.length - deHoy.length,
+    mes_cop: 4820000,
     sin_respaldo_cop: sinResp.reduce((a, m) => a + m.valor_cop, 0),
     sin_respaldo_n: sinResp.length,
     ventana_dias: 20,
@@ -217,21 +224,65 @@ const recargar = async () => {
 const tarjeta = pagina.locator('#caja-tiles .tile.banco');
 const pista = async () => (await tarjeta.locator('.pista').innerText()).trim();
 
-// EL CASO QUE MANDA: transfirió hace dos días, llega hoy. Es lo que
-// rompía el diseño anterior, que restaba el banco de hoy contra la caja
-// de hoy y daba un negativo que acusaba a un cliente honesto.
+// El tamaño real: 75 depósitos de arrastre histórico, de antes de que
+// existiera este módulo, más uno de hoy sin reclamar. Con datos de
+// juguete la pantalla parecía bien; con los de verdad, el arrastre se
+// comía la tarjeta y la dejaba en ámbar para siempre.
 hayBanco = true;
-libres = [{ id: 'cccccccc-0000-4000-8000-000000000001', valor_cop: 15000,
-            cuando: '03/08 14:12', dias: 2, remitente: 'CAMILA ROJAS' }];
+const arrastre = Array.from({ length: 74 }, (_, i) => ({
+  id: 'dddddddd-0000-4000-8000-' + String(i).padStart(12, '0'),
+  valor_cop: 40000 + i * 1000, cuando: '20/07 09:00',
+  dias: 3 + (i % 15), remitente: 'HISTORICO ' + i,
+}));
+libres = [
+  { id: 'cccccccc-0000-4000-8000-000000000001', valor_cop: 15000,
+    cuando: '05/08 14:12', dias: 0, remitente: 'CAMILA ROJAS' },
+  ...arrastre,
+];
 await recargar();
 
-/15\.000 sin identificar · 1 depósito/.test(await pista())
-  ? bien('el depósito de hace dos días sigue contado', await pista())
-  : falla('el depósito de hace dos días', await pista());
+// LO QUE SE ESTABA ROMPIENDO: el titular tiene que hablar de hoy. Con
+// el arrastre mandando decía "$3.211.000 sin identificar · 75
+// depósitos", un número que no baja nunca y que por tanto no se mira.
+/15\.000 de hoy sin identificar · 1 depósito/.test(await pista())
+  ? bien('el titular habla solo de hoy', await pista())
+  : falla('el titular habla solo de hoy', await pista());
 
-(await tarjeta.locator('.corte').innerText()).includes('7:42 pm')
-  ? bien('dice hasta qué hora es la cifra', 'Bancolombia, hasta las 7:42 pm')
-  : falla('la hora de corte', await tarjeta.locator('.corte').innerText());
+const pieTarjeta = (await tarjeta.locator('.corte').innerText()).replace(/\s+/g, ' ');
+/7:42 pm/.test(pieTarjeta) && /en el mes/.test(pieTarjeta) && /días atrás/.test(pieTarjeta)
+  ? bien('hora, mes y arrastre van en letra chica', pieTarjeta)
+  : falla('la letra chica', pieTarjeta);
+
+// Con 75 depósitos la lista es un muro: sin filtro la cajera escoge el
+// primero que le cuadre de valor, que es justo lo que hay que evitar.
+await pagina.locator('.caja-btn', { hasText: 'Mensualidad' }).click();
+await pagina.waitForTimeout(250);
+await pagina.locator('.medio[data-medio="transferencia"]').click();
+await pagina.waitForTimeout(250);
+(await pagina.inputValue('#modal-dep-buscar')) === '125000'
+  ? bien('el filtro arranca con el precio del concepto')
+  : falla('el filtro arranca con el precio', await pagina.inputValue('#modal-dep-buscar'));
+
+await pagina.fill('#modal-dep-buscar', 'camila');
+await pagina.waitForTimeout(250);
+(await pagina.locator('.dep').count()) === 1
+  ? bien('buscar por nombre deja un solo candidato de 75')
+  : falla('buscar por nombre', `quedaron ${await pagina.locator('.dep').count()}`);
+
+await pagina.fill('#modal-dep-buscar', '15000');
+await pagina.waitForTimeout(250);
+(await pagina.locator('.dep').count()) === 1
+  ? bien('buscar por valor también')
+  : falla('buscar por valor', `quedaron ${await pagina.locator('.dep').count()}`);
+
+await pagina.fill('#modal-dep-buscar', 'zzzz');
+await pagina.waitForTimeout(250);
+(await pagina.locator('.dep-vacio').count()) === 1
+  ? bien('si no coincide nada lo dice, no deja el hueco en blanco')
+  : falla('filtro sin resultados', 'no salió el aviso');
+
+await pagina.click('#modal-cancelar');
+await pagina.waitForTimeout(200);
 
 // La lista solo aparece para una transferencia que entra.
 await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
@@ -246,11 +297,26 @@ await pagina.waitForTimeout(250);
   ? bien('al marcar transferencia aparecen los depósitos')
   : falla('al marcar transferencia', 'la lista no salió');
 
+await pagina.fill('#modal-dep-buscar', 'camila');
+await pagina.waitForTimeout(250);
 const dep = pagina.locator('.dep').first();
 const txtDep = (await dep.innerText()).replace(/\s+/g, ' ').trim();
-/CAMILA ROJAS/.test(txtDep) && /hace 2 días/.test(txtDep)
-  ? bien('el depósito dice de quién es y de cuándo', txtDep)
-  : falla('el depósito dice de quién es', txtDep);
+/CAMILA ROJAS/.test(txtDep) && /· hoy/.test(txtDep)
+  ? bien('el depósito de hoy dice de quién es', txtDep)
+  : falla('el depósito de hoy', txtDep);
+
+// Y uno del arrastre tiene que decir cuántos días lleva esperando: es
+// lo que le dice a la cajera si ese depósito puede ser el de esta
+// persona o es de otra semana.
+await pagina.fill('#modal-dep-buscar', 'historico 7');
+await pagina.waitForTimeout(250);
+const viejo = (await pagina.locator('.dep').first().innerText()).replace(/\s+/g, ' ');
+/hace \d+ días/.test(viejo)
+  ? bien('uno viejo dice cuántos días lleva esperando', viejo)
+  : falla('los días del depósito viejo', viejo);
+
+await pagina.fill('#modal-dep-buscar', 'camila');
+await pagina.waitForTimeout(250);
 
 // Escogerlo trae el valor del banco: si la cajera teclea otra cosa,
 // Postgres rechaza el enlace, así que mejor que aquí ya cuadre.
@@ -264,8 +330,8 @@ await pagina.waitForTimeout(200);
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(800);
 
-/todo identificado/.test(await pista())
-  ? bien('adjudicado, el inventario queda limpio', await pista())
+/todo lo de hoy identificado/.test(await pista())
+  ? bien('adjudicado, lo de hoy queda limpio', await pista())
   : falla('tras adjudicar', await pista());
 
 (await pagina.locator('.mov .ok-banco').count()) === 1
@@ -278,9 +344,14 @@ await pagina.locator('.caja-btn', { hasText: 'Mensualidad' }).click();
 await pagina.waitForTimeout(250);
 await pagina.locator('.medio[data-medio="transferencia"]').click();
 await pagina.waitForTimeout(200);
-(await pagina.locator('.dep-vacio').count()) === 1
-  ? bien('sin depósitos libres lo dice claro, no deja el hueco en blanco')
-  : falla('sin depósitos libres', 'no salió el aviso');
+// Ningún depósito del arrastre vale 125.000, así que el filtro no
+// puede ofrecer un candidato: lo peor que podría pasar aquí es que
+// mostrara uno cualquiera y la cajera lo diera por bueno.
+(await pagina.locator('.dep').count()) === 0
+ && (await pagina.locator('.dep-vacio').count()) === 1
+  ? bien('si ningún depósito cuadra con el precio, no ofrece ninguno')
+  : falla('el filtro ofreció un candidato que no cuadra',
+          `${await pagina.locator('.dep').count()} visibles`);
 
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(800);
