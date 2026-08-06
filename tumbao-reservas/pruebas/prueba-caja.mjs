@@ -72,8 +72,25 @@ const dia = () => ({
     retirar_dinero_de_caja: suma('egreso', 'efectivo'),
     dinero_en_caja: 100000 + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
   },
+  banco: banco(),
   cerrado: false, cierre: null,
 });
+
+// El control contra Bancolombia. `bancoRecibido` se mueve desde la
+// prueba para forzar los tres estados del semáforo.
+let bancoRecibido = null;   // null = la migración 0026 no está aplicada
+const banco = () => {
+  if (bancoRecibido === null) return undefined;
+  const res = 15000;                      // reservas ya casadas
+  const most = suma('ingreso', 'transferencia');
+  return {
+    recibido_cop: bancoRecibido,
+    de_reservas_cop: res,
+    de_mostrador_cop: most,
+    sin_identificar_cop: bancoRecibido - res - most,
+    corte: '19:42',
+  };
+};
 const suma = (s, m) => movimientos.filter((x) => x.sentido === s && x.medio === m)
                                   .reduce((a, b) => a + b.valor_cop, 0);
 
@@ -175,6 +192,71 @@ tras === '$115.000' ? bien('anular devuelve el cupo de plata') : falla('anular',
 const hayCierre = await pagina.locator('#caja-cierre').innerText();
 hayCierre.includes('AdminGym')
   ? bien('el cierre muestra los nombres de AdminGym') : falla('el cierre', 'sin referencia a AdminGym');
+
+// ---- el control del banco ----
+// Primero: sin la migración 0026 aplicada, `banco` no viene. La tarjeta
+// no debe salir y nada más puede romperse — es el estado real de la
+// página entre que se despliega y se pega el SQL.
+(await pagina.locator('#caja-tiles .tile.banco').count()) === 0
+  ? bien('sin la migración 0026, la tarjeta no sale y nada revienta')
+  : falla('sin la migración 0026', 'salió la tarjeta igual');
+
+const recargar = async () => {
+  await pagina.click('#caja-recargar');
+  await pagina.waitForTimeout(700);
+};
+const tarjeta = pagina.locator('#caja-tiles .tile.banco');
+const semaforo = async () => (await tarjeta.getAttribute('class')).trim();
+const pista = async () => (await tarjeta.locator('.pista').innerText()).trim();
+
+// Estado 1 — cuadra. En la lista quedó una clase suelta de $15.000 en
+// efectivo, así que el mostrador aporta 0 en transferencias y el banco
+// solo tiene la reserva casada de $15.000.
+bancoRecibido = 15000;
+await recargar();
+(await semaforo()).includes('bueno') && /todo identificado/.test(await pista())
+  ? bien('cuando cuadra, la tarjeta va en verde', await pista())
+  : falla('cuando cuadra', `${await semaforo()} · ${await pista()}`);
+
+(await tarjeta.locator('.corte').innerText()).includes('7:42 pm')
+  ? bien('dice hasta qué hora es la cifra', 'Bancolombia, hasta las 7:42 pm')
+  : falla('dice hasta qué hora es la cifra', await tarjeta.locator('.corte').innerText());
+
+// Estado 2 — entró plata que nadie apuntó. Molesta, pero no frena.
+bancoRecibido = 65000;
+await recargar();
+(await semaforo()).includes('ojo') && /50\.000 entró sin apuntar/.test(await pista())
+  ? bien('si entra plata sin apuntar, avisa en ámbar', await pista())
+  : falla('plata sin apuntar', `${await semaforo()} · ${await pista()}`);
+
+// Estado 3 — EL CARO. Se apuntó una transferencia que el banco nunca
+// confirmó: comprobante viejo o editado. Tiene que gritar.
+bancoRecibido = 5000;
+await recargar();
+(await semaforo()).includes('malo') && /faltan \$10\.000/.test(await pista())
+  ? bien('si el banco no confirma lo apuntado, se pone en rojo', await pista())
+  : falla('el caso caro (negativo)', `${await semaforo()} · ${await pista()}`);
+
+const cierreTxt = await pagina.locator('#caja-cierre').innerText();
+/Sin identificar/.test(cierreTxt) && /comprobante/.test(cierreTxt)
+  ? bien('y el cierre explica qué hacer con ese descuadre')
+  : falla('el cierre explica el descuadre', cierreTxt.slice(0, 120));
+
+// El color se comprueba de verdad, no por la clase: la fila del banco
+// es una `.fila.total` y su cifra es el último hijo, así que el oro del
+// total le ganaba al rojo por especificidad y el descuadre se leía como
+// un número más del cierre.
+const rojo = await pagina.locator('#caja-cierre .grupo.banco .dif')
+  .evaluate(e => getComputedStyle(e).color);
+rojo === 'rgb(255, 107, 129)'
+  ? bien('y el descuadre se pinta rojo de verdad, no del oro del total')
+  : falla('el color del descuadre', rojo);
+
+// Lo que no puede pasar: que un descuadre del banco impida cerrar. El
+// cierre lo manda el efectivo, que es lo único que se cuenta a mano.
+await pagina.locator('#btn-cerrar-caja').isEnabled()
+  ? bien('el descuadre del banco NO bloquea el cierre')
+  : falla('el descuadre del banco NO bloquea el cierre', 'el botón quedó deshabilitado');
 
 errores.length === 0
   ? bien('sin errores de consola', 'ninguno')

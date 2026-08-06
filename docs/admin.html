@@ -254,6 +254,17 @@ const CONFIG = {
   #caja-tiles .tile.cajon .n{color:var(--gold);font-size:2.1rem}
   #caja-tiles .tile.cajon .k{color:var(--tx-2)}
 
+  /* La del banco es distinta de las otras cuatro: no es plata de la
+     caja, es el contraste contra alguien de fuera. Va con borde punteado
+     para que no se lea como una quinta cifra del cierre. */
+  #caja-tiles .tile.banco{border-style:dashed}
+  #caja-tiles .tile.banco .n{color:var(--tx)}
+  #caja-tiles .tile.banco .pista{font-style:normal;font-weight:600}
+  #caja-tiles .tile.banco.bueno .pista{color:var(--ok)}
+  #caja-tiles .tile.banco.ojo   .pista{color:var(--gold)}
+  #caja-tiles .tile.banco.malo  .pista{color:var(--bad)}
+  #caja-tiles .tile.banco .corte{font-size:.68rem;color:var(--tx-3);margin-top:.25rem}
+
   .clases-tab{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
   .clase-card{
     background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:1rem;
@@ -461,8 +472,26 @@ const CONFIG = {
     font-weight:700;font-size:1rem;
   }
   .cierre .fila.total > span:last-child{color:var(--gold);font-size:1.15rem}
+  /* El semáforo tiene que ganarle al oro del total: la fila del banco es
+     una fila total y su cifra es el último hijo, así que sin esto un
+     descuadre en rojo se pintaba de oro y parecía un número más. */
+  .cierre .fila.total > span.dif.mal {color:var(--bad)}
+  .cierre .fila.total > span.dif.bien{color:var(--ok)}
+  .cierre .fila.total > span.dif.ojo {color:var(--gold)}
   .cierre .dif{font-weight:800;font-size:1.1rem}
   .cierre .dif.mal{color:var(--bad)} .cierre .dif.bien{color:var(--ok)}
+  .cierre .dif.ojo{color:var(--gold)}
+
+  /* El control del banco se separa del resto: no compara dos columnas
+     del mostrador, compara el mostrador contra alguien de fuera. */
+  .cierre .grupo.banco{
+    border:1px dashed var(--line-2);border-radius:12px;
+    padding:.8rem .9rem .55rem;background:rgba(0,0,0,.18);
+  }
+  .cierre .grupo.banco > .et{display:flex;flex-wrap:wrap;gap:.45rem;align-items:baseline}
+  .cierre .grupo.banco .et-x{
+    text-transform:none;letter-spacing:0;font-weight:400;color:var(--tx-3);font-size:.7rem;
+  }
   .cierre label{display:block;font-size:.82rem;color:var(--tx-2);margin:.7rem 0 .3rem}
   /* `.mini` ya existe arriba y es una rejilla de 4 columnas: usarla aquí
      partía "Nota (opcional)" en dos renglones. Esta es la de texto. */
@@ -1962,7 +1991,7 @@ const CONFIG = {
         `<div class="k">${esc(k)}</div>` +
         `<div class="pista">${esc(pista)}</div>` +
       `</div>`
-    ).join('');
+    ).join('') + tarjetaBanco();
 
     // Cada sección pinta solo lo suyo. El índice sigue siendo el de
     // CONCEPTOS, para que el clic no dependa de en qué grupo cayó.
@@ -1995,34 +2024,116 @@ const CONFIG = {
 
   const nombreConcepto = c => (CONCEPTOS.find(x => x.c === c) || {}).n || c;
 
+  /* ---------- el banco: el único dato que no teclea nadie ----------
+     Todo lo demás en esta pantalla lo escribió alguien del mostrador,
+     así que un error se copia igual a AdminGym y las dos columnas
+     cuadran estando mal. El correo de Bancolombia viene de fuera: es lo
+     único que puede desmentir al mostrador.
+
+     No bloquea el cierre, y es a propósito. Alguien paga a las 7:45 pm
+     una clase del martes: el banco lo ve hoy, la clase entra el martes.
+     Exigir que cuadre obligaría a inventar ajustes para poder cerrar. */
+  function tarjetaBanco() {
+    const b = cajaDatos && cajaDatos.banco;
+    // Si la migración 0026 todavía no está aplicada, esto no existe y la
+    // tarjeta simplemente no sale. Nada más se rompe.
+    if (!b) return '';
+
+    const n = Number(b.sin_identificar_cop || 0);
+    let cl, pista;
+    if (n === 0) {
+      cl = 'bueno';
+      pista = 'todo identificado';
+    } else if (n > 0) {
+      cl = 'ojo';
+      pista = `${pesos(n)} entró sin apuntar`;
+    } else {
+      // El caso caro: se registró una transferencia que el banco nunca
+      // confirmó. Comprobante viejo, editado, o de otra cuenta.
+      cl = 'malo';
+      pista = `⚠ faltan ${pesos(-n)} por llegar`;
+    }
+
+    return `<div class="tile banco ${cl}">` +
+      `<div class="n">${esc(pesos(b.recibido_cop || 0))}</div>` +
+      `<div class="k">recibido en banco</div>` +
+      `<div class="pista">${esc(pista)}</div>` +
+      `<div class="corte">${b.corte
+        ? 'Bancolombia, hasta las ' + esc(hora12(b.corte))
+        : 'sin avisos del banco hoy'}</div>` +
+    `</div>`;
+  }
+
+  // El bloque que explica la resta. Va después de "no pasó por el
+  // cajón" porque es sobre esa plata: la que se ve en el banco y no en
+  // el cajón. Es lo único del cierre que no lo escribió el mostrador.
+  function bloqueBanco() {
+    const d = cajaDatos;
+    const b = d.banco;
+    if (!b) return '';
+
+    const n = Number(b.sin_identificar_cop || 0);
+    const fin = n === 0
+      ? { cl: 'bien', txt: pesos(0),
+          pie: 'Cada peso que entró al banco está apuntado en algún lado.' }
+      : n > 0
+      ? { cl: 'ojo', txt: '+' + pesos(n),
+          pie: 'Entró plata que nadie apuntó. Suele ser alguien que pagó ' +
+               'adelantado o que transfirió sin avisar — hay que buscarlo, ' +
+               'pero no frena el cierre.' }
+      : { cl: 'mal', txt: '−' + pesos(-n),
+          pie: 'Se apuntó una transferencia que el banco no ha confirmado. ' +
+               'Revisa ese comprobante hoy: puede ser viejo, editado o de ' +
+               'otra cuenta.' };
+
+    return `<div class="grupo banco"><div class="et">Control del banco` +
+        `<span class="et-x">no lo escribe nadie del mostrador</span></div>` +
+      fila('Bancolombia confirmó hoy', pesos(b.recibido_cop || 0),
+           b.corte ? 'hasta las ' + hora12(b.corte) : null) +
+      fila('− Reservas ya casadas', pesos(b.de_reservas_cop || 0)) +
+      fila('− Transferencias del mostrador', pesos(b.de_mostrador_cop || 0)) +
+      `<div class="fila total"><span>Sin identificar</span>` +
+        `<span class="dif ${fin.cl}">${fin.txt}</span></div>` +
+      `<p class="suave">${fin.pie}</p>` +
+    `</div>`;
+  }
+
+  // Una fila del cierre. `sub` es la línea chica de debajo: en los
+  // bloques de AdminGym lleva su nombre de campo, en el del banco lleva
+  // la hora de corte. Vive fuera de pintarCierre porque bloqueBanco
+  // también la usa.
+  const fila = (t, v, sub, cl) =>
+    `<div class="fila ${cl || ''}"><span>${esc(t)}` +
+    (sub ? `<span class="ag">${esc(sub)}</span>` : '') +
+    `</span><span>${v}</span></div>`;
+
+  const campoAG = n => 'AdminGym · ' + n;
+
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
-    // Tres bloques, en el orden en que se cuadra una caja: primero el
+    // Los bloques van en el orden en que se cuadra una caja: primero el
     // cajón —lo único que se cuenta a mano—, después lo que no pasó por
-    // él, y al final el arqueo. Mezclarlos es lo que hace que un cierre
-    // no sirva.
-    const fila = (t, v, ag, cl) =>
-      `<div class="fila ${cl || ''}"><span>${t}` +
-      (ag ? `<span class="ag">AdminGym · ${esc(ag)}</span>` : '') +
-      `</span><span>${v}</span></div>`;
-
+    // él, después el contraste con el banco, y al final el arqueo.
+    // Mezclarlos es lo que hace que un cierre no sirva.
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
       `<p class="sub-c">Los nombres de AdminGym van al lado: cuadrar es comparar dos columnas.</p>` +
 
       `<div class="grupo"><div class="et">En el cajón</div>` +
         fila('Base con la que abrió', pesos(d.base_cop)) +
-        fila('Efectivo recibido', pesos(a.venta_membresias), 'Venta Membresías') +
-        fila('Salidas en efectivo', '−' + pesos(a.retirar_dinero_de_caja), 'Retirar Dinero') +
-        fila('Debería haber', pesos(a.dinero_en_caja), 'DINERO EN CAJA', 'total') +
+        fila('Efectivo recibido', pesos(a.venta_membresias), campoAG('Venta Membresías')) +
+        fila('Salidas en efectivo', '−' + pesos(a.retirar_dinero_de_caja), campoAG('Retirar Dinero')) +
+        fila('Debería haber', pesos(a.dinero_en_caja), campoAG('DINERO EN CAJA'), 'total') +
       `</div>` +
 
       `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
         fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
         fila('Reservas de la página', pesos(d.reservas_cop)) +
-        fila('Total a banco', pesos(a.ingresos_a_banco), 'Ingresos a Banco', 'total') +
+        fila('Total a banco', pesos(a.ingresos_a_banco), campoAG('Ingresos a Banco'), 'total') +
       `</div>` +
+
+      bloqueBanco() +
 
       (d.cerrado
         ? `<div class="grupo"><div class="et">Arqueo</div>` +
