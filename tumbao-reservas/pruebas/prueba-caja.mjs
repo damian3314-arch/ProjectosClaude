@@ -375,10 +375,12 @@ const cls = await tarjeta.getAttribute('class');
 const difs = pagina.locator('#caja-cierre .grupo.banco .dif');
 const color = i => difs.nth(i).evaluate(e => getComputedStyle(e).color);
 
-// Fila 1: sin identificar. Está en cero, así que verde.
-(await color(0)) === 'rgb(74, 222, 128)'
-  ? bien('el inventario en cero se pinta verde')
-  : falla('el color del inventario', await color(0));
+// Fila 1: sin identificar, en cero. Va SIN color: que no haya nada
+// pendiente es lo normal, y anunciar lo normal en verde es parte de lo
+// que saturaba la pantalla. Tiene que heredar el gris del texto.
+(await color(0)) === 'rgb(244, 239, 246)'
+  ? bien('el cero no se anuncia con color')
+  : falla('el cero debería ir sin color', await color(0));
 
 // Fila 2: apuntado sin respaldo. Hay 125.000, así que ámbar — nunca
 // rojo, porque la pantalla no puede saber si fue Nequi o un engaño.

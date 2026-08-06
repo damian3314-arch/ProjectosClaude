@@ -236,33 +236,30 @@ const CONFIG = {
   .tile.hot   .n{color:var(--hot-2)}
   .tile.malo  .n{color:var(--bad)}
 
-  /* En la caja los cuatro números no pesan igual: el del cajón es el
-     único que se cuenta a mano, así que va marcado y los otros tres
-     acompañan. Una franja arriba dice de un vistazo si entra o sale. */
-  #caja-tiles .tile{position:relative;overflow:hidden}
-  #caja-tiles .tile::before{
-    content:'';position:absolute;left:0;right:0;top:0;height:2px;background:var(--line-2);
-  }
-  #caja-tiles .tile.bueno::before{background:var(--ok)}
-  #caja-tiles .tile.ojo::before  {background:var(--gold)}
-  #caja-tiles .tile.malo::before {background:var(--bad)}
+  /* ---------- caja: el color se racionó ----------
+     Cuando los cinco recuadros iban en verde, oro y rojo, ninguno
+     destacaba: cinco acentos son cero acentos. La regla aquí es que el
+     color marca lo que pide una acción, y nada más.
+
+     El del cajón se queda con el oro porque es el único número que
+     alguien tiene que contar a mano y comparar. Los otros tres son
+     lectura, así que van en el gris del texto normal. */
+  #caja-tiles .tile .n{color:var(--tx)}
   #caja-tiles .tile.cajon{
-    background:linear-gradient(160deg,rgba(255,193,77,.09),var(--bg-2));
-    border-color:rgba(255,193,77,.32);
+    background:linear-gradient(160deg,rgba(255,193,77,.07),var(--bg-2));
+    border-color:rgba(255,193,77,.28);
   }
-  #caja-tiles .tile.cajon::before{background:var(--gold)}
   #caja-tiles .tile.cajon .n{color:var(--gold);font-size:2.1rem}
   #caja-tiles .tile.cajon .k{color:var(--tx-2)}
 
-  /* La del banco es distinta de las otras cuatro: no es plata de la
-     caja, es el contraste contra alguien de fuera. Va con borde punteado
-     para que no se lea como una quinta cifra del cierre. */
+  /* La del banco no es plata de la caja: es el contraste contra alguien
+     de fuera. Se distingue por textura —borde punteado— y no por color,
+     que es lo que deja el color libre para avisar. */
   #caja-tiles .tile.banco{border-style:dashed}
-  #caja-tiles .tile.banco .n{color:var(--tx)}
-  #caja-tiles .tile.banco .pista{font-style:normal;font-weight:600}
-  #caja-tiles .tile.banco.bueno .pista{color:var(--ok)}
-  #caja-tiles .tile.banco.ojo   .pista{color:var(--gold)}
-  #caja-tiles .tile.banco.malo  .pista{color:var(--bad)}
+  #caja-tiles .tile.banco .pista{font-style:normal}
+  /* Solo se enciende cuando hay algo de HOY que buscar. "Todo bien" en
+     verde también es ruido: lo normal no necesita anunciarse. */
+  #caja-tiles .tile.banco.ojo .pista{color:var(--gold);font-weight:600}
   #caja-tiles .tile.banco .corte{font-size:.68rem;color:var(--tx-3);margin-top:.25rem}
 
   .clases-tab{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
@@ -392,8 +389,10 @@ const CONFIG = {
 
   .cargando{color:var(--tx-3);padding:2rem;text-align:center}
   /* ---------- caja ---------- */
-  /* Dos mundos que no se pueden confundir: lo que entra y lo que sale.
-     El color es la señal rápida; el título de sección es la lenta. */
+  /* Lo que entra y lo que sale se distinguían tres veces: por el punto
+     del título, por una franja en cada botón y por el precio en verde.
+     Tres señales para el mismo dato es lo que saturaba la pantalla. Se
+     deja una —el punto del título— y el resto va plano. */
   .caja-seccion{margin:0 0 1.3rem}
   .caja-seccion > h4{
     display:flex;align-items:center;gap:.5rem;margin:0 0 .6rem;
@@ -407,22 +406,17 @@ const CONFIG = {
 
   .caja-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.65rem}
   .caja-btn{
-    position:relative;overflow:hidden;
     background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:.9rem .85rem .85rem 1.05rem;color:inherit;font:inherit;cursor:pointer;text-align:left;
+    padding:.9rem .85rem;color:inherit;font:inherit;cursor:pointer;text-align:left;
     transition:.16s;display:flex;flex-direction:column;gap:.2rem;min-height:4.9rem;
   }
-  /* La franja de color a la izquierda: se lee antes que el texto. */
-  .caja-btn::before{
-    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ok);
-  }
-  .caja-btn.sale::before{background:var(--bad)}
   .caja-btn:hover{border-color:var(--line-2);transform:translateY(-2px);
     box-shadow:0 8px 22px -14px rgba(0,0,0,.9)}
   .caja-btn:active{transform:translateY(0)}
   .caja-btn .q{font-weight:650;font-size:.97rem;line-height:1.25}
-  .caja-btn .v{font-size:.83rem;color:var(--ok);font-variant-numeric:tabular-nums;font-weight:600}
-  .caja-btn.sale .v{color:var(--tx-3);font-weight:500}
+  /* El precio es un dato, no un aviso: iba en verde y con nueve botones
+     eso son nueve acentos compitiendo entre ellos. */
+  .caja-btn .v{font-size:.83rem;color:var(--tx-2);font-variant-numeric:tabular-nums;font-weight:600}
   .caja-btn .v.libre{color:var(--tx-3);font-weight:500}
 
   .caja-h{
@@ -434,19 +428,21 @@ const CONFIG = {
     text-transform:none;letter-spacing:0;font-weight:500;color:var(--tx-3);font-size:.78rem;
   }
 
+  /* Antes cada fila llevaba 3px de color saturado a la izquierda. Con
+     veinte movimientos eso es una columna de semáforos. Se quita: lo
+     que entra y lo que sale ya se distinguen por el signo menos y por
+     el rojo de la cifra, que es como se lee cualquier estado de cuenta. */
   .mov{
     display:flex;align-items:center;gap:.8rem;padding:.65rem .9rem;
-    background:var(--bg-2);border:1px solid var(--line);border-left-width:3px;
+    background:var(--bg-2);border:1px solid var(--line);
     border-radius:10px;margin-bottom:.45rem;
   }
-  .mov.entra{border-left-color:var(--ok)}
-  .mov.sale{border-left-color:var(--bad)}
   .mov .h{font-size:.76rem;color:var(--tx-3);font-variant-numeric:tabular-nums;flex:none;width:2.6rem}
   .mov .q{flex:1;min-width:0;font-size:.92rem;font-weight:550}
   .mov .q small{display:block;color:var(--tx-3);font-size:.73rem;font-weight:400;margin-top:.1rem}
   .mov .v{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.98rem}
-  .mov.sale .v{color:var(--bad)} .mov.entra .v{color:var(--ok)}
-  .mov .ok-banco{color:var(--ok);font-size:.8rem;margin-left:.35rem;font-weight:700}
+  .mov.sale .v{color:var(--bad)}
+  .mov .ok-banco{color:var(--tx-3);font-size:.8rem;margin-left:.35rem;font-weight:700}
 
   /* ---- escoger el depósito del banco ---- */
   #modal-banco{margin:-.35rem 0 .9rem}
@@ -459,16 +455,20 @@ const CONFIG = {
     padding:.5rem .65rem;color:inherit;font:inherit;cursor:pointer;transition:.12s;
   }
   .dep:hover{border-color:var(--line-2)}
-  .dep.on{border-color:var(--ok);background:rgba(74,222,128,.1)}
+  /* El escogido usa el oro del panel —el mismo del foco de los campos—
+     en vez de un verde que solo existía aquí. Un acento por pantalla. */
+  .dep.on{border-color:var(--gold);background:rgba(255,193,77,.09)}
   .dep .v{
     font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;
-    font-size:.92rem;color:var(--ok);
+    font-size:.92rem;color:var(--tx);
   }
   .dep .q{flex:1;min-width:0;font-size:.86rem;line-height:1.2}
   .dep .q small{display:block;color:var(--tx-3);font-size:.72rem;margin-top:.1rem}
+  /* No es una alarma, es una instrucción: gris. Pintarlo de oro lo
+     ponía al nivel de las cifras que sí piden decidir algo. */
   .dep-vacio{
-    margin:0 0 .5rem;font-size:.8rem;color:var(--gold);line-height:1.4;
-    background:rgba(255,193,77,.08);border:1px solid rgba(255,193,77,.25);
+    margin:0 0 .5rem;font-size:.8rem;color:var(--tx-2);line-height:1.4;
+    background:var(--bg);border:1px solid var(--line);
     border-radius:10px;padding:.55rem .7rem;
   }
   .dep-aviso{margin:.45rem 0 0;font-size:.75rem;color:var(--tx-3);line-height:1.35}
@@ -507,7 +507,10 @@ const CONFIG = {
     border-top:1px solid var(--line-2);margin-top:.45rem;padding-top:.65rem;
     font-weight:700;font-size:1rem;
   }
-  .cierre .fila.total > span:last-child{color:var(--gold);font-size:1.15rem}
+  .cierre .fila.total > span:last-child{color:var(--tx);font-size:1.1rem}
+  /* Solo el arqueo del efectivo se queda con el oro: es el número que
+     hay que enfrentar contra AdminGym contando billetes. */
+  .cierre .fila.total.arqueo > span:last-child{color:var(--gold)}
   /* El semáforo tiene que ganarle al oro del total: la fila del banco es
      una fila total y su cifra es el último hijo, así que sin esto un
      descuadre en rojo se pintaba de oro y parecía un número más. */
@@ -2160,7 +2163,10 @@ const CONFIG = {
            b.corte ? 'hasta las ' + hora12(b.corte) : 'sin avisos todavía') +
       `<div class="fila total"><span>Sin identificar, de hoy` +
         `<span class="ag">${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'}</span></span>` +
-        `<span class="dif ${hoy ? 'ojo' : 'bien'}">${pesos(hoy)}</span></div>` +
+        // En cero va sin color: que no haya nada pendiente es lo normal,
+        // y lo normal no necesita anunciarse. El verde se guarda para el
+        // arqueo del efectivo, que sí confirma algo que acabas de hacer.
+        `<span class="dif ${hoy ? 'ojo' : ''}">${pesos(hoy)}</span></div>` +
       (sinResp
         ? `<div class="fila"><span>Apuntado sin respaldo del banco` +
           `<span class="ag">${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'}` +
@@ -2208,7 +2214,7 @@ const CONFIG = {
         fila('Base con la que abrió', pesos(d.base_cop)) +
         fila('Efectivo recibido', pesos(a.venta_membresias), campoAG('Venta Membresías')) +
         fila('Salidas en efectivo', '−' + pesos(a.retirar_dinero_de_caja), campoAG('Retirar Dinero')) +
-        fila('Debería haber', pesos(a.dinero_en_caja), campoAG('DINERO EN CAJA'), 'total') +
+        fila('Debería haber', pesos(a.dinero_en_caja), campoAG('DINERO EN CAJA'), 'total arqueo') +
       `</div>` +
 
       `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
