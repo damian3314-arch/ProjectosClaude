@@ -22,13 +22,25 @@ Lleva fallando dos veces al día (9:30 pm y 8:00 am) desde principios de
 agosto. Los correos van a `bailatumbao@gmail.com` — si no los has visto,
 mira en spam.
 
+**Comprobado el 8 de agosto:** la carpeta que vigila n8n tiene 27
+archivos y **ninguno posterior al 30 de julio** — ni el reporte de
+afiliados ni los cierres de caja diarios. Lo que se suba a otra carpeta
+es invisible para el sistema.
+
 Qué hacer:
 
 1. Exportar de AdminGym el listado de afiliados activos.
-2. Guardarlo en la carpeta de reportes de Drive con el nombre exacto
-   `Afiliados activos AAAA-MM-DD.xlsx` (la fecha en ese orden; los
-   cierres de caja usan `DD-MM-AAAA` y el workflow los distingue por ahí).
-3. Confirmar que la corrida de las 9:30 pm pasa a verde.
+2. Guardarlo **en esta carpeta**, no en otra:
+   `https://drive.google.com/drive/folders/1aqP6ZmNCUEBpLe9Nkfbf8aKEZdmMnJYp`
+3. Con la fecha en el nombre en formato `AAAA-MM-DD`, por ejemplo
+   `Afiliados activos 2026-08-08.xlsx`. Vale que diga "afiliados" o
+   "miembros", pero la fecha va en ese orden: los cierres de caja usan
+   `DD-MM-AAAA` y el sistema los distingue por ahí.
+4. Confirmar que la corrida de las 9:30 pm pasa a verde.
+
+No se usa la fecha de subida de Drive a propósito: lo que importa es de
+qué día son los datos, no cuándo se guardó el archivo. Un reporte de
+julio subido hoy sigue teniendo datos de julio.
 
 Y luego, **todos los días**. Es el único paso manual del que depende que
 los cupos sean ciertos.
