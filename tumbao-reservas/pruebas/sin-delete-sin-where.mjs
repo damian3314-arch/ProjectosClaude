@@ -36,6 +36,12 @@ for (const archivo of readdirSync(DIR).filter(f => f.endsWith('.sql')).sort()) {
     // son bloqueo de fila, no sentencias UPDATE. No llevan WHERE propio.
     if (/\bfor\s*$/i.test(codigo.slice(0, m.index))) continue;
 
+    // En "grant select, insert, update on table x", update es un permiso,
+    // no una sentencia. Igual en revoke. Sin esto el guardián empieza a
+    // dar falsos positivos en cada tabla nueva que se otorgue — y un
+    // guardián que grita en falso es un guardián que se desactiva.
+    if (/^\s*(grant|revoke)\b/i.test(codigo)) continue;
+
     // Un DELETE/UPDATE puede llevar el WHERE varias líneas más abajo. Se
     // mira desde aquí hasta el punto y coma que cierra la sentencia.
     let sentencia = codigo.slice(m.index);

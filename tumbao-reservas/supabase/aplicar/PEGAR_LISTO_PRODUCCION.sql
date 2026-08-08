@@ -1,31 +1,37 @@
 -- =====================================================================
--- TUMBAO · CONTROL DEL BANCO EN LA CAJA
--- Pegar completo en el editor SQL de Supabase y darle Run.
+-- TUMBAO · LISTO PARA PRODUCCIÓN
+-- Pegar completo en el editor SQL de Supabase y darle Run. Una sola vez.
 --
--- QUÉ HACE
---   · La caja aprende a enlazar cada transferencia que cobra con el
---     depósito que Bancolombia confirmó por correo.
---   · La pestaña Caja gana una tarjeta: cuánto entró al banco hoy y,
---     de eso, cuánto sigue sin dueño.
+-- TRAE DOS COSAS
 --
--- POR QUÉ LA ALARMA ES SOLO LA DE HOY
---   Hay 75 depósitos sin reclamar de antes de que existiera este
---   módulo. Ese número no baja a cero nunca, así que como alarma diaria
---   no sirve: se ignora a los tres días. Lo de hoy sí cierra en cero, y
---   si no cierra hay algo concreto que buscar. El arrastre viejo sigue
---   ofreciéndose en la lista para escoger —quien transfirió el lunes
---   tiene que poder aparecer el miércoles— pero va en letra chica.
+-- 1. CONTROL DEL BANCO
+--    La caja aprende a enlazar cada transferencia que cobra con el
+--    depósito que Bancolombia confirmó por correo, y la pestaña Caja
+--    gana una tarjeta con lo que entró al banco hoy.
 --
--- SEGURIDAD
---   No borra ninguna fila. No toca los datos de `pagos` ni de las
---   reservas. No cambia la comparación con AdminGym. Se puede correr
---   dos veces sin problema. Si algo saliera mal, la página sigue
---   funcionando igual — la tarjeta simplemente no aparece.
+-- 2. CORTE DE PRODUCCIÓN
+--    Fija hoy como fecha de arranque. La cola de "Por validar" deja de
+--    enseñar lo que quedó a medias en julio, y el banco deja de
+--    arrastrar los depósitos de antes de que existiera la pantalla.
+--
+--    Se filtra por la fecha de la CLASE, no por la de la reserva: una
+--    reserva vieja de una clase futura todavía ocupa un cupo, así que
+--    esa sigue saliendo pase lo que pase. Esconderla sería vender el
+--    mismo puesto dos veces.
+--
+-- QUÉ NO HACE
+--    No borra ni una fila. Julio sigue entero en la base para lo que
+--    haga falta; simplemente deja de aparecer en las pantallas del día
+--    a día. No cambia la comparación con AdminGym. Se puede correr dos
+--    veces sin problema.
+--
+-- CAMBIAR LA FECHA DE ARRANQUE DESPUÉS
+--    update ajustes set valor = '2026-08-15' where clave = 'inicio_produccion';
 -- =====================================================================
 
 
 -- ---------------------------------------------------------------------
--- 1. Constancia de lo que decía el banco al cerrar el día
+-- Constancia de lo que decía el banco al cerrar el día
 -- ---------------------------------------------------------------------
 alter table caja_cierres add column if not exists banco_cop            int;
 alter table caja_cierres add column if not exists banco_sin_ident_cop  int;
@@ -510,30 +516,150 @@ grant  execute on function caja_cerrar(text, int, int, text, int)            to 
 
 
 -- ---------------------------------------------------------------------
--- 0028 — La alarma es la de hoy; el resto es histórico
+-- 0029 — Corte de producción
 --
--- QUÉ SALIÓ MAL EN 0027
--- La tarjeta mostraba el inventario completo de depósitos sin reclamar:
--- 75 depósitos, $3.211.000. Casi todo es de antes de que este módulo
--- existiera — plata que entró cuando nadie la enlazaba porque no había
--- dónde enlazarla. Ese número no baja a cero nunca, así que como alarma
--- diaria no sirve: se ignora a los tres días, y una alarma ignorada es
--- ruido con presupuesto.
+-- EL PROBLEMA
+-- La cola de "Por validar" enseña todo lo que alguna vez quedó a medias,
+-- desde el primer día de pruebas. En el estreno eso significa abrir el
+-- panel y encontrarse veintitantas reservas de julio que nadie va a
+-- resolver nunca — reservas de prueba, abandonos, gente que se arrepintió
+-- cuando la página todavía no existía para el público.
 --
--- LO QUE SÍ ES ACCIONABLE
--- De lo que entró HOY, cuánto sigue sin dueño. Ese número sí cierra en
--- cero al final del día, y si no cierra hay algo concreto que buscar:
--- alguien pagó hoy y no se le registró el servicio.
+-- Una bandeja de entrada que arranca con basura no se vacía nunca, y una
+-- que no se vacía deja de mirarse. Lo mismo con los 73 depósitos sin
+-- reclamar del banco: son de antes de que hubiera dónde reclamarlos.
 --
--- El histórico no desaparece —la lista para escoger lo sigue usando,
--- porque quien transfirió el lunes tiene que poder aparecer el
--- miércoles— pero baja a letra chica, que es donde va lo que no exige
--- una acción hoy.
+-- LO QUE HACE
+-- Fija una fecha de arranque. Todo lo anterior sigue en la base —no se
+-- borra ni una fila, la contabilidad de julio queda intacta— pero deja
+-- de aparecer en las pantallas de trabajo del día a día.
 --
--- Y SE AÑADE EL MES
--- Cuánto ha entrado al banco en lo que va del mes. No cuadra contra
--- nada: sirve para ver de un vistazo si la plata está entrando al ritmo
--- que debería.
+-- POR QUÉ SE FILTRA POR LA FECHA DE LA CLASE Y NO POR LA DE LA RESERVA
+-- Porque una reserva a medias de una clase que ya pasó no tiene arreglo:
+-- da igual resolverla. Pero una reserva vieja de una clase FUTURA sigue
+-- ocupando un cupo, así que tiene que seguir viéndose pase lo que pase.
+-- Filtrar por la fecha de la clase da las dos cosas de una: lo que ya no
+-- importa desaparece y lo que todavía tiene un cupo vivo no se puede
+-- esconder. Filtrar por `created_at` habría escondido justo eso.
+--
+-- CÓMO SE CAMBIA LA FECHA DESPUÉS
+--   update ajustes set valor = '2026-08-10' where clave = 'inicio_produccion';
+-- ---------------------------------------------------------------------
+
+create table if not exists ajustes (
+  clave      text primary key,
+  valor      text not null,
+  nota       text,
+  updated_at timestamptz not null default now()
+);
+
+comment on table ajustes is
+  'Cuatro cosas que se ajustan sin migración. No es un cajón de sastre: si algo necesita validación propia, va en su tabla.';
+
+-- Arranca hoy. Si se pega esto un día antes del estreno, se cambia con
+-- el update de arriba — por eso es una fila y no una constante en el
+-- código.
+insert into ajustes (clave, valor, nota)
+values ('inicio_produccion',
+        ((now() at time zone 'America/Bogota')::date)::text,
+        'Desde esta fecha cuentan las pantallas de trabajo. Lo anterior sigue guardado pero no se muestra.')
+on conflict (clave) do nothing;
+
+create or replace function inicio_produccion()
+returns date
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  -- El coalesce es la red: si alguien borra la fila, el panel enseña
+  -- todo en vez de quedarse en blanco. Fallar mostrando de más es
+  -- recuperable; fallar escondiendo no se nota hasta que es tarde.
+  select coalesce((select valor::date from ajustes where clave = 'inicio_produccion'),
+                  date '2000-01-01')
+$$;
+
+revoke execute on function inicio_produccion() from public, anon, authenticated;
+grant  execute on function inicio_produccion() to service_role;
+
+
+-- ---------------------------------------------------------------------
+-- admin_pendientes — la cola arranca vacía el día del estreno
+-- ---------------------------------------------------------------------
+create or replace function admin_pendientes(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_admin uuid;
+  v_out   jsonb;
+  v_desde timestamptz;
+begin
+  v_admin := verificar_token_admin(p_token);
+  if v_admin is null then
+    return jsonb_build_object('ok', false, 'error', 'NO_AUTORIZADO');
+  end if;
+
+  v_desde := inicio_produccion()::timestamp at time zone 'America/Bogota';
+
+  select coalesce(jsonb_agg(x order by x->>'creada_at'), '[]'::jsonb) into v_out
+  from (
+    select jsonb_build_object(
+      'codigo',      r.codigo,
+      'nombre',      r.nombre,
+      'telefono',    r.telefono,
+      'estado',      r.estado,
+      'tipo',        r.tipo,
+      'creada_at',   r.created_at,
+      'pagado_en',   r.pagado_en,
+      'pagador',     r.pagador_nombre,
+      'referencia',  r.referencia_pago,
+      'clase_id',    c.id,
+      'clase',       c.nombre,
+      'fecha_hora',  c.fecha_hora,
+      'precio_cop',  c.precio_cop,
+      'pagos_sueltos', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                 'pago_id',   p.id,
+                 'valor_cop', p.valor_cop,
+                 'fecha',     p.fecha_pago,
+                 'remitente', p.remitente,
+                 'parecido',  round(similitud_nombre(
+                                coalesce(r.pagador_nombre, r.nombre), p.remitente), 2),
+                 'minutos',   case when r.pagado_en is null then null
+                              else round(extract(epoch from
+                                     (p.fecha_pago - r.pagado_en)) / 60) end)
+               order by case when r.pagado_en is null then 0
+                        else abs(extract(epoch from (p.fecha_pago - r.pagado_en))) end)
+          from pagos p
+         where p.valor_cop = c.precio_cop
+           and p.fecha_pago between coalesce(r.pagado_en, r.created_at) - interval '1 hour'
+                               and coalesce(r.pagado_en, r.created_at) + interval '3 hours'
+           and not exists (select 1 from reservas r2 where r2.pago_id = p.id)
+      ), '[]'::jsonb)
+    ) as x
+    from reservas r
+    join clases c on c.id = r.clase_id
+   where r.estado in ('pendiente_validacion', 'verificando')
+     -- Por la fecha de la CLASE: lo de clases pasadas ya no tiene
+     -- arreglo, y lo de clases futuras sigue ocupando cupo aunque la
+     -- reserva sea vieja, así que no se puede esconder.
+     and c.fecha_hora >= v_desde
+  ) s;
+
+  return jsonb_build_object('ok', true, 'reservas', v_out);
+end;
+$$;
+
+
+-- ---------------------------------------------------------------------
+-- caja_del_dia — el banco tampoco arrastra lo de antes
+--
+-- Eran 73 depósitos y $3.2 millones sin reclamar, todos de cuando no
+-- existía la pantalla para reclamarlos. Mostrarlos como pendientes hacía
+-- que "pendiente" no significara nada.
 -- ---------------------------------------------------------------------
 create or replace function caja_del_dia(p_token text, p_dia date default null)
 returns jsonb
@@ -548,14 +674,14 @@ declare
   v_cierre caja_cierres;
   v_ing_ef int; v_ing_tr int; v_egr_ef int; v_egr_tr int;
   v_reservas int; v_base int;
-  v_desde timestamptz; v_hasta timestamptz;
+  v_desde timestamptz; v_hasta timestamptz; v_corte timestamptz;
   v_recibido int; v_ultimo timestamptz;
   v_libre_hoy int; v_libre_hoy_n int;
   v_libre int; v_libre_n int;
   v_mes int;
   v_sin_resp int; v_sin_resp_n int;
   v_libres jsonb;
-  c_dias constant int := 20;   -- cuánto atrás se ofrecen los depósitos
+  c_dias constant int := 20;
 begin
   v_admin := verificar_token_admin(p_token);
   if v_admin is null then
@@ -584,30 +710,25 @@ begin
 
   v_desde := v_dia::timestamp        at time zone 'America/Bogota';
   v_hasta := (v_dia + 1)::timestamp  at time zone 'America/Bogota';
+  -- Nada de antes del estreno entra en el inventario ni en la lista.
+  v_corte := greatest(v_hasta - make_interval(days => c_dias),
+                      inicio_produccion()::timestamp at time zone 'America/Bogota');
 
-  -- Lo del día: total recibido, y cuánto de eso sigue sin dueño. Esta
-  -- segunda cifra es la única que exige hacer algo hoy.
-  select
-    coalesce(sum(valor_cop), 0),
-    max(fecha_pago),
-    coalesce(sum(valor_cop) filter (where not consumido), 0),
-    count(*) filter (where not consumido)
-  into v_recibido, v_ultimo, v_libre_hoy, v_libre_hoy_n
-  from pagos where fecha_pago >= v_desde and fecha_pago < v_hasta;
+  select coalesce(sum(valor_cop), 0), max(fecha_pago),
+         coalesce(sum(valor_cop) filter (where not consumido), 0),
+         count(*) filter (where not consumido)
+    into v_recibido, v_ultimo, v_libre_hoy, v_libre_hoy_n
+    from pagos where fecha_pago >= v_desde and fecha_pago < v_hasta;
 
-  -- El histórico: todo lo que la lista puede ofrecer. Incluye lo de
-  -- antes del módulo, así que arranca alto y baja despacio. Va a letra
-  -- chica a propósito.
   select coalesce(sum(valor_cop), 0), count(*)
     into v_libre, v_libre_n
-    from pagos
-   where not consumido
-     and fecha_pago >= v_hasta - make_interval(days => c_dias);
+    from pagos where not consumido and fecha_pago >= v_corte;
 
-  -- Lo que va del mes. Informativo puro: si la plata está entrando.
   select coalesce(sum(valor_cop), 0) into v_mes
     from pagos
-   where fecha_pago >= date_trunc('month', v_dia)::timestamp at time zone 'America/Bogota'
+   where fecha_pago >= greatest(
+           date_trunc('month', v_dia)::timestamp at time zone 'America/Bogota',
+           inicio_produccion()::timestamp at time zone 'America/Bogota')
      and fecha_pago < v_hasta;
 
   select coalesce(jsonb_agg(x order by x->>'fecha_pago' desc), '[]'::jsonb)
@@ -623,8 +744,7 @@ begin
                'remitente', p.remitente,
                'referencia', p.referencia) as x
         from pagos p
-       where not p.consumido
-         and p.fecha_pago >= v_hasta - make_interval(days => c_dias)
+       where not p.consumido and p.fecha_pago >= v_corte
        order by p.fecha_pago desc
        limit 120
     ) s;
@@ -644,9 +764,7 @@ begin
   select * into v_cierre from caja_cierres where dia = v_dia;
 
   select coalesce(c.dejado_cop, 100000) into v_base
-    from caja_cierres c
-   where c.dia < v_dia
-   order by c.dia desc limit 1;
+    from caja_cierres c where c.dia < v_dia order by c.dia desc limit 1;
   v_base := coalesce(v_cierre.base_cop, v_base, 100000);
 
   return jsonb_build_object(
@@ -674,7 +792,6 @@ begin
       'libre_hoy_n', v_libre_hoy_n,
       'libre_cop', v_libre,
       'libre_n', v_libre_n,
-      -- Lo de días anteriores, ya restado: es el arrastre histórico.
       'atras_cop', v_libre - v_libre_hoy,
       'atras_n', v_libre_n - v_libre_hoy_n,
       'mes_cop', v_mes,
@@ -700,9 +817,9 @@ begin
 end;
 $$;
 
--- El cierre guarda lo del día, no el arrastre. Guardar el histórico
--- dejaría en cada cierre un número que solo dice cuántos días llevaba
--- acumulándose, que no es información de ese día.
+-- caja_cerrar guarda la misma cifra que enseña la pantalla; si una
+-- filtrara por el corte y la otra no, el cierre archivado no cuadraría
+-- con lo que la cajera vio al firmarlo.
 create or replace function caja_cerrar(
   p_token   text,
   p_contado int,
@@ -785,10 +902,15 @@ begin
 end;
 $$;
 
-comment on column caja_cierres.banco_sin_ident_cop is
-  'De lo que entró al banco ESE día, cuánto seguía sin dueño al cerrar.';
+-- La tabla de ajustes no la toca la llave pública: quien pudiera
+-- escribirla movería el corte y escondería la cola entera.
+alter table ajustes enable row level security;
+revoke all on table ajustes from public, anon, authenticated;
+grant  select, insert, update on table ajustes to service_role;
 
+revoke execute on function admin_pendientes(text)                 from public, anon, authenticated;
 revoke execute on function caja_del_dia(text, date)               from public, anon, authenticated;
 revoke execute on function caja_cerrar(text, int, int, text, int) from public, anon, authenticated;
+grant  execute on function admin_pendientes(text)                 to service_role;
 grant  execute on function caja_del_dia(text, date)               to service_role;
 grant  execute on function caja_cerrar(text, int, int, text, int) to service_role;

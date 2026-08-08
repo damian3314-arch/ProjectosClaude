@@ -45,6 +45,14 @@ create or replace function dia() returns jsonb language sql stable as
 create or replace function bco(k text) returns int language sql stable as
   $$ select (dia()->'banco'->>k)::int $$;
 
+-- El corte de producción (0029) esconde del inventario todo depósito
+-- anterior al estreno, y por defecto el estreno es hoy. Esta prueba usa
+-- depósitos de hace días a propósito —el caso del lunes que aparece el
+-- miércoles— así que se retrasa el corte. Sin esto los 8 casos de fecha
+-- pasada dan cero, que es lo correcto pero no es lo que se mide aquí.
+update ajustes set valor = ((now() at time zone 'America/Bogota')::date - 60)::text
+ where clave = 'inicio_produccion';
+
 insert into clases (id, nombre, profesor, fecha_hora, cupo_total, precio_cop)
 values ('aaaaaaaa-0000-4000-8000-000000000001', 'Salsa hoy', 'Prof',
         (((now() at time zone 'America/Bogota')::date + time '18:00')
