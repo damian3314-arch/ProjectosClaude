@@ -1,8 +1,9 @@
 # Cheo — el hijo de Tumbao
 
-Agente de feedback para tumbaobaila.com. Vive como burbuja en la página,
-tiene página propia con link directo, escucha sugerencias / quejas /
-reclamos / dudas, guarda todo, y **cada lunes a las 7am manda un reporte
+Agente de feedback para tumbaobaila.com. Vive como burbuja en la página y
+tiene página propia con link directo. Recibe **texto, notas de voz y fotos**,
+conversa como una persona —mensajitos cortos, no párrafos—, saca el contexto
+que hay detrás de cada queja, y **cada lunes a las 7am manda un reporte
 consolidado** a `bailatumbao@gmail.com`.
 
 Todo está funcionando y probado en producción. Falta **un solo paso** de tu
@@ -75,6 +76,8 @@ llave nunca sale del servidor.
 |---|---|
 | [`Tumbao · Cheo (chat)`](https://barragan.app.n8n.cloud/workflow/ivsapLSekRV9sFv8) | Los tres webhooks que consume la página |
 | [`Tumbao · Cheo (insights)`](https://barragan.app.n8n.cloud/workflow/YcOzbznaDK2sx5qF) | Clasifica cada 30 min y manda el reporte los lunes |
+| [`Tumbao · Cheo (voz y fotos)`](https://barragan.app.n8n.cloud/workflow/rxSWOKCPlASpl1bM) | Transcribe notas de voz y mira fotos |
+| [`Tumbao · Cheo (vista previa)`](https://barragan.app.n8n.cloud/workflow/yp8ANcYd2ioJ542k) | URL para probar sin tocar el sitio real |
 
 Ambos con el workflow de avisos de fallo enganchado y `timezone`
 `America/Bogota`, así que la hora del cron es literal.
@@ -82,10 +85,16 @@ Ambos con el workflow de avisos de fallo enganchado y `timezone`
 **Endpoints:**
 
 ```
-POST /tumbao/cheo            { sesion_id, mensaje }  ó  { sesion_id, saludo: true }
-POST /tumbao/cheo/historial  { sesion_id }            -> lo ya dicho, sin llamar al modelo
+POST /tumbao/cheo            { sesion_id, mensaje, medio }  ó  { sesion_id, saludo: true }
+                             -> { mensajes: [...] }  varios globos cortos
+POST /tumbao/cheo/historial  { sesion_id }        -> lo ya dicho, sin llamar al modelo
 POST /tumbao/cheo/contacto   { sesion_id, nombre, telefono, habeas }
+POST /tumbao/cheo/voz        { audio: dataURL }   -> { texto }
+POST /tumbao/cheo/foto       { imagen: dataURL }  -> { descripcion }
 ```
+
+`medio` es `texto`, `voz` o `foto`, y queda guardado en cada mensaje. Sirve para
+saber si la gente prefiere hablar a escribir: sale contado en el reporte semanal.
 
 Base: `https://barragan.app.n8n.cloud/webhook`
 
@@ -106,8 +115,13 @@ Para probar en local: `cd web && python3 -m http.server 8765` y abre
 <script src="/cheo.js"
         data-acento="#c2410c"
         data-api="https://barragan.app.n8n.cloud/webhook"
+        data-voz="0"
+        data-foto="0"
         defer></script>
 ```
+
+`data-voz="0"` o `data-foto="0"` esconden esos botones. El micrófono además se
+esconde solo si el navegador no sabe grabar o la página no está en HTTPS.
 
 También puedes abrirlo desde un botón propio: `<button onclick="Cheo.abrir()">`.
 
@@ -143,6 +157,30 @@ No se pide nombre ni teléfono de entrada: solo después de conversar, y opciona
 
 **Tope de 120 mensajes por conversación.** Lo aplica Postgres, no el front. Es
 contra bucles y bots, no contra gente que hable mucho.
+
+**Cheo manda varios mensajitos cortos, no párrafos.** Aparecen uno por uno con
+la pausa que tomaría escribirlos. Ver un bloque de texto aparecer de golpe es lo
+que más delata a un bot; el promedio quedó en ~110 caracteres por mensaje.
+
+**La transcripción se muestra antes de guardarla.** La nota de voz va a un
+endpoint aparte que devuelve el texto, se pinta en el chat, y solo entonces se
+manda. Si Whisper entendió mal, la persona lo ve y lo corrige. Meterlo todo en
+un solo paso habría escondido ese error.
+
+**Whisper alucina con el silencio.** Con audio sin voz no devuelve vacío:
+devuelve frases de subtítulos de YouTube que se aprendió de memoria. Hay un
+filtro para eso, porque si no Cheo le respondería a algo que nadie dijo y eso
+terminaría en el reporte del lunes.
+
+**Las fotos NO se guardan.** Se miran, se saca una frase de lo que hay, y se
+sueltan. Lo que queda en la base es la frase. Misma decisión que con los
+comprobantes de pago. Si algún día se quieren guardar, hay que abrir un bucket
+en Supabase y decidir cuánto tiempo se conservan — es una decisión de
+privacidad, no técnica.
+
+**A Cheo se le prohibieron las groserías explícitamente.** Pedirle "colombiano
+natural" lo llevó a soltar un *qué chimba* en pruebas. Le escribe a clientes,
+no a amigos.
 
 ---
 
