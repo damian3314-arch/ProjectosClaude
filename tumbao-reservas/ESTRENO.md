@@ -7,43 +7,44 @@ Escrito el 8 de agosto de 2026, antes del estreno con clientes reales en
 
 ## 🔴 Lo que hay que hacer ANTES de abrirle a la gente
 
-### 1. Subir el reporte de afiliados a Drive
+### 1. ~~Subir el reporte de afiliados~~ ✅ resuelto el 8 de agosto
 
-**Este es el bloqueo de verdad.** El reporte más nuevo en la carpeta de
-Drive es `Afiliados activos 2026-07-30.xlsx`, de hace 9 días.
+`Afiliados activos 2026-08-08.xlsx` importado: **63 afiliados, 0
+descartados, 15 clases recalculadas, 0 clases apretadas**.
 
-El workflow que reparte los cupos entre afiliados y clases sueltas se
-niega a importar nada con más de 7 días de atraso, y hace bien: con la
-lista vieja, quien se afilió después del 30 de julio no existe para el
-sistema, así que la página ofrece clases sueltas en puestos que ya tienen
-dueño. **Sobrevende.**
+El reparto que quedó vivo:
 
-Lleva fallando dos veces al día (9:30 pm y 8:00 am) desde principios de
-agosto. Los correos van a `bailatumbao@gmail.com` — si no los has visto,
-mira en spam.
+| Clase | Con plan |
+|---|---|
+| 7:00 am | 21 |
+| 6:00 pm | 24 |
+| 7:00 pm | 18 |
 
-**Comprobado el 8 de agosto:** la carpeta que vigila n8n tiene 27
-archivos y **ninguno posterior al 30 de julio** — ni el reporte de
-afiliados ni los cierres de caja diarios. Lo que se suba a otra carpeta
-es invisible para el sistema.
+Y comprobado contra la página pública: el lunes 10 salen 12 libres a las
+7 am, 6 a las 6 pm y 14 a las 7 pm. Los números cambian de un día a otro
+porque las membresías vencen en fechas distintas y se descuentan solas.
 
-Qué hacer:
+**Lo que había pasado:** los reportes se guardan en una carpeta por mes
+y el workflow apuntaba a la de julio. Ya no depende de la carpeta —
+busca el archivo por nombre en todo el Drive, así que el 1 de septiembre
+no se vuelve a romper.
 
-1. Exportar de AdminGym el listado de afiliados activos.
-2. Guardarlo **en esta carpeta**, no en otra:
-   `https://drive.google.com/drive/folders/1aqP6ZmNCUEBpLe9Nkfbf8aKEZdmMnJYp`
-3. Con la fecha en el nombre en formato `AAAA-MM-DD`, por ejemplo
-   `Afiliados activos 2026-08-08.xlsx`. Vale que diga "afiliados" o
-   "miembros", pero la fecha va en ese orden: los cierres de caja usan
-   `DD-MM-AAAA` y el sistema los distingue por ahí.
-4. Confirmar que la corrida de las 9:30 pm pasa a verde.
+**Sigue siendo el único paso manual del que dependen los cupos.** Cada
+día hay que exportar de AdminGym y guardar en Drive con la fecha en el
+nombre:
+
+    Afiliados activos AAAA-MM-DD.xlsx
+
+Vale que diga "afiliados" o "miembros", en cualquier carpeta, pero la
+fecha va en ese orden: los cierres de caja usan `DD-MM-AAAA` y el
+sistema los distingue por ahí. Si el archivo no trae fecha en el nombre,
+se ignora y el error lo dice — ya pasó con `Afiliados activos.xls` y
+`Afiliados 2.xls`, que siguen ahí sin usarse.
 
 No se usa la fecha de subida de Drive a propósito: lo que importa es de
-qué día son los datos, no cuándo se guardó el archivo. Un reporte de
-julio subido hoy sigue teniendo datos de julio.
-
-Y luego, **todos los días**. Es el único paso manual del que depende que
-los cupos sean ciertos.
+qué día son los datos, no cuándo se guardó. Un reporte de julio subido
+hoy sigue teniendo datos de julio. Si pasan más de 7 días sin subir
+nada, el import se frena en vez de vender cupos que no existen.
 
 ### 2. Pegar `aplicar/PEGAR_LISTO_PRODUCCION.sql` en Supabase
 

@@ -114,3 +114,23 @@ return [{ json: {
   // corrida de la manana el mas nuevo es el de ayer.
   aviso: atraso > 2 ? "El reporte tiene " + atraso + " dias de atraso." : null
 } }];
+
+// ---------------------------------------------------------------------
+// CÓMO BUSCA EL ARCHIVO EL NODO DE DRIVE
+//
+// No por carpeta. Los reportes se guardan en una carpeta por mes, así
+// que un folderId fijo se rompe el día 1 de cada mes — y se rompió: el
+// workflow miraba la de julio mientras el archivo de agosto estaba en la
+// suya, y el error decía "el más nuevo es de hace 9 días" sin mencionar
+// que existía uno nuevo en otra parte.
+//
+// La consulta que usa el nodo:
+//
+//   (name contains 'afiliados' or name contains 'miembros')
+//     and trashed = false
+//     and mimeType != 'application/vnd.google-apps.folder'
+//
+// Lo que protege contra importar cualquier cosa no es la carpeta, es lo
+// de aquí abajo: exigir AAAA-MM-DD en el nombre y menos de 7 días de
+// atraso. La carpeta nunca fue una garantía.
+// ---------------------------------------------------------------------
