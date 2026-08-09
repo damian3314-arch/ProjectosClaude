@@ -183,3 +183,25 @@ el primer reporte real salga limpio.
 - Avisar por WhatsApp cuando entre algo de urgencia 5, sin esperar al lunes.
 - Que el bot de WhatsApp pase el `sesion_id` en el link, para que la
   conversación de WhatsApp y la de Cheo sean la misma.
+
+---
+
+## Probarlo sin tocar tumbaobaila.com
+
+Hay una URL de vista previa servida por el propio n8n
+([`Tumbao · Cheo (vista previa)`](https://barragan.app.n8n.cloud/workflow/yp8ANcYd2ioJ542k)):
+
+- Página propia: `https://barragan.app.n8n.cloud/webhook/tumbao/cheo/probar`
+- Burbuja sobre una página: `https://barragan.app.n8n.cloud/webhook/tumbao/cheo/probar?burbuja=1`
+
+Habla con el Cheo real y guarda en las tablas reales, así que lo que escribas
+ahí va a salir en el reporte del lunes. Para pruebas está bien; si no quieres
+que aparezca, borra la conversación de `cheo_conversaciones`.
+
+El HTML lo arma n8n y el `cheo.js` se trae de jsDelivr apuntando a un commit
+fijo de este repo. **Ojo: la vista previa queda congelada en ese commit.** Si
+cambias `cheo.js`, hay que actualizar el SHA de la constante `CDN` en ese
+workflow para verlo reflejado.
+
+Cuando ya subas los archivos al sitio real, ese workflow se puede desactivar:
+la página real no lo usa.
