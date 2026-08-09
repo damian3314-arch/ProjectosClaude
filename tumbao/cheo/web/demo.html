@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo · cómo se ve Cheo encima de una página</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:#faf9f7;color:#1c1917;line-height:1.6}
+  .caja{max-width:680px;margin:0 auto;padding:56px 22px 140px}
+  h1{font-size:30px;margin:0 0 8px;letter-spacing:-.015em}
+  p.sub{color:#78716c;margin:0 0 34px}
+  .falso{background:#fff;border:1px solid #e7e5e4;border-radius:14px;padding:22px;margin:0 0 16px}
+  .falso h2{font-size:17px;margin:0 0 6px}
+  .falso p{margin:0;color:#78716c;font-size:14px}
+</style>
+</head>
+<body>
+  <div class="caja">
+    <h1>Página de prueba</h1>
+    <p class="sub">Esto simula tumbaobaila.com. La burbuja de Cheo debe aparecer abajo a la derecha.</p>
+
+    <div class="falso"><h2>Reserva tu clase</h2><p>Elige día y hora.</p></div>
+    <div class="falso"><h2>Plan mensual</h2><p>Entre semana, todas las que quieras.</p></div>
+    <div class="falso"><h2>Clase suelta</h2><p>Paga solo la que vas a tomar.</p></div>
+  </div>
+
+  <!-- Esto es exactamente lo que hay que pegar en la página real -->
+  <script src="./cheo.js" defer></script>
+</body>
+</html>

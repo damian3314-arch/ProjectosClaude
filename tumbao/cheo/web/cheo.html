@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cuéntale a Cheo · Tumbao</title>
+<meta name="description" content="Cheo es el hijo de Tumbao. Escucha tus sugerencias, quejas e ideas, y se las lleva al equipo.">
+<meta name="robots" content="noindex">
+
+<meta property="og:title" content="Cuéntale a Cheo · Tumbao">
+<meta property="og:description" content="Sugerencias, quejas, ideas. Cheo escucha y el equipo de Tumbao lo lee.">
+<meta property="og:type" content="website">
+
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --acento:#c2410c;
+    --tinta:#1c1917;
+    --suave:#78716c;
+    --linea:#e7e5e4;
+    --fondo:#faf9f7;
+    --tarjeta:#fff;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--tinta:#fafaf9;--suave:#a8a29e;--linea:#292524;--fondo:#0c0a09;--tarjeta:#1c1917}
+  }
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--fondo);color:var(--tinta);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:26px 18px 22px;
+  }
+  .envoltura{width:100%;max-width:660px;display:flex;flex-direction:column;flex:1;min-height:0}
+
+  header{text-align:center;margin:0 0 20px}
+  .marca{
+    display:inline-flex;align-items:center;gap:9px;
+    font-size:12px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--suave);margin:0 0 14px;
+  }
+  .marca span{width:22px;height:1px;background:var(--linea)}
+  h1{
+    font-size:clamp(24px,5.4vw,33px);line-height:1.2;font-weight:600;
+    margin:0 0 11px;letter-spacing:-.015em;
+  }
+  h1 em{font-style:normal;color:var(--acento)}
+  .bajada{
+    margin:0 auto;max-width:470px;font-size:15px;line-height:1.6;color:var(--suave);
+  }
+
+  .chat{
+    flex:1;min-height:440px;
+    background:var(--tarjeta);
+    border:1px solid var(--linea);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 2px 18px rgba(0,0,0,.05);
+    display:flex;
+  }
+  .chat > *{flex:1;min-width:0}
+
+  .patas{
+    margin:16px 0 0;text-align:center;
+    font-size:12px;line-height:1.6;color:var(--suave);
+  }
+  .patas a{color:var(--suave)}
+  .patas strong{font-weight:600;color:var(--tinta)}
+
+  @media (max-width:520px){
+    body{padding:18px 12px 14px}
+    .chat{min-height:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="envoltura">
+
+  <header>
+    <p class="marca"><span></span> Tumbao <span></span></p>
+    <h1>Cuéntale a <em>Cheo</em></h1>
+    <p class="bajada">
+      Una idea, algo que no te funcionó, una queja de verdad o algo que te
+      encantó. Cheo escucha, pregunta lo que falte, y todo eso llega al
+      equipo de Tumbao. Así vamos construyendo esto entre todos.
+    </p>
+  </header>
+
+  <main class="chat">
+    <div id="cheo-aqui"></div>
+  </main>
+
+  <p class="patas">
+    <strong>Cheo es una inteligencia artificial.</strong>
+    Lo que escribas queda guardado y lo lee el equipo de Tumbao.
+    No compartas datos de tu tarjeta ni contraseñas.
+    <br>
+    ¿Necesitas algo urgente con un pago o un cupo?
+    <a href="https://tumbaobaila.com">Escríbenos por WhatsApp</a>.
+  </p>
+
+</div>
+
+<script src="./cheo.js" data-modo="pagina" defer></script>
+
+</body>
+</html>
