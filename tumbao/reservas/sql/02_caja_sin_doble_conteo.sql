@@ -1,0 +1,32 @@
+-- El cierre de caja contaba dos veces la misma plata.
+--
+-- caja_del_dia mostraba:
+--   total_ingresos = efectivo + transferencias de caja + reservas sueltas
+--                    confirmadas del dia
+--
+-- Pero "reservas sueltas confirmadas" incluia tambien las que el cajero
+-- confirmo A MANO en el mostrador, cuya plata YA habia registrado el como
+-- movimiento de caja. Misma plata, dos puertas, sumada dos veces.
+--
+-- Paso el 10 de agosto de 2026: yira zahira (MG5GRX, confirmada 17:18) y
+-- doris (UU7KK7, confirmada 17:22) estaban en las dos partes. El cierre iba
+-- a mostrar $1.215.000 cuando lo real era $1.185.000.
+--
+-- Arreglo: reservas_cop cuenta SOLO las que cruzo la pagina sola (pago_id
+-- no nulo). Esas viven en el banco y nunca pasan por caja_movimientos, asi
+-- que sumarlas es correcto. Las confirmadas a mano no se suman.
+--
+-- Las confirmadas a mano NO se borran del reporte: salen aparte en
+-- reservas_a_mano_cop / reservas_a_mano_n. Si alguna vez alguien confirma a
+-- mano y se le olvida registrarla en Caja, ese numero deja de cuadrar con
+-- lo que hay en Caja y se nota. Quitarlas en silencio habria cambiado un
+-- error visible por uno invisible, que es peor.
+--
+-- caja_cerrar NO se toco: ese solo cuadra el efectivo del cajon
+-- (base + ingresos efectivo - egresos efectivo), que siempre estuvo bien.
+-- El doble conteo era solo en lo que VE el cajero, que es justo lo que
+-- venia causando la confusion.
+--
+-- La definicion completa de caja_del_dia quedo aplicada en Supabase con la
+-- migracion "caja_sin_doble_conteo_de_sueltas". Este archivo documenta el
+-- porque; para el cuerpo actual, ver la funcion en la base.
