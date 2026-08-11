@@ -430,6 +430,14 @@ const CONFIG = {
     border-color:var(--bad)!important;
     box-shadow:0 0 0 3px rgba(255,107,129,.14);
   }
+  /* En pantalla de celular los avisos ocupan casi todo el ancho, así que
+     se hacen más bajos: dos apilados tienen que dejar ver la cabecera. */
+  @media (max-width:560px){
+    #avisos{top:.5rem;right:.5rem;left:.5rem;width:auto}
+    .nota{padding:.6rem .7rem;border-radius:10px}
+    .nota .tit{font-size:.85rem}
+    .nota .det{font-size:.74rem}
+  }
   @media (prefers-reduced-motion:reduce){
     .nota{animation:none}
     .nota.se-va{transition:none}
@@ -777,6 +785,13 @@ const CONFIG = {
 
       <!-- Lo que hay que saber sin pensar: cuánto debería haber en el
            cajón. Va primero y grande. -->
+      <!-- Durante el turno NO se enseña ningún total acumulado. El cajero
+           veía la plata sumándose mientras atendía y al cerrar contaba el
+           cajón contra un número que ya se sabía de memoria: eso no es
+           contar, es confirmar. Un arqueo solo vale si la cifra contada
+           sale de los billetes y no de la pantalla.
+           Lo único que se deja es con cuánto abrió, que es el dato que
+           ella no puede deducir de nada. -->
       <div class="tiles" id="caja-tiles"></div>
 
       <div class="caja-seccion" id="sec-entra">
@@ -790,8 +805,13 @@ const CONFIG = {
 
       <div class="cargando" id="cargando-caja" hidden>Cargando…</div>
 
+      <!-- El listado arranca cerrado. No se quita del todo a propósito:
+           es la única forma de anular algo mal registrado, y sin él no
+           habría manera de deshacer un error a media tarde. -->
       <h3 class="caja-h" id="caja-h-mov">Movimientos de hoy</h3>
-      <div id="caja-lista"></div>
+      <button class="btn chico" id="caja-ver-movs" type="button"
+              aria-expanded="false" aria-controls="caja-lista">Ver movimientos de hoy</button>
+      <div id="caja-lista" hidden></div>
 
       <div class="cierre" id="caja-cierre"></div>
     </div>
@@ -983,9 +1003,12 @@ const CONFIG = {
     el.querySelector('.x').addEventListener('click', quitar);
     const caja = $('#avisos');
     caja.prepend(el);
-    // Con cinco fallos encadenados la pila tapa media pantalla y no se
-    // lee ninguna. Se quedan las cuatro últimas.
-    while (caja.children.length > 4) caja.lastElementChild.remove();
+    // Cuántos caben depende de la pantalla. En un celular de 414px cuatro
+    // avisos tapan la cabecera, las tarjetas y parte de los botones — y
+    // el mostrador se atiende justamente desde el celular. En escritorio
+    // caben cuatro sin estorbar.
+    const tope = window.innerWidth < 560 ? 2 : 4;
+    while (caja.children.length > tope) caja.lastElementChild.remove();
 
     // Lo bueno se va solo; lo malo se queda. Si un error desapareciera a
     // los 4 segundos, quien estaba tecleando no llega a leerlo.
@@ -2160,6 +2183,10 @@ const CONFIG = {
   ];
 
   let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
+  // Los dos arrancan cerrados a propósito: ver el listado no hace daño,
+  // pero ver los totales sí, y el que los destapa es el cajero cuando
+  // decide que terminó.
+  let cajaMovsAbiertos = false, cajaCierreAbierto = false;
   // `pesos` ya existe más arriba, para el tablero. Volver a declararlo
   // con const revienta el bloque entero con "already been declared", y
   // la caja simplemente deja de existir sin decir nada.
@@ -2205,15 +2232,24 @@ const CONFIG = {
     const d = cajaDatos; if (!d) return;
     $('#caja-dia').textContent = 'Caja · ' + conFecha(d.dia, { weekday:'long', day:'numeric', month:'long' });
 
-    // Lo primero y más grande: cuánto debería haber en el cajón. Las
-    // clases son las mismas del tablero (.n/.k/.pista), que son las que
-    // el CSS conoce — con <b><span><small> el texto salía todo pegado.
-    $('#caja-tiles').innerHTML = [
-      ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
-      ['bueno', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
-      ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
-      ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
-    ].map(([cl, n, k, pista]) =>
+    // Durante el turno: un solo dato, y uno que no se mueve. Enseñar
+    // "en el cajón" todo el día le daba al cajero la respuesta antes de
+    // contar, y un arqueo contra una cifra ya sabida no comprueba nada.
+    // Los totales aparecen al pedir el cierre, que es cuando sirven.
+    //
+    // Si el día ya está cerrado no hay nada que anclar, así que se
+    // enseña todo: a esa hora el número ya es historia.
+    $('#caja-tiles').innerHTML = (cajaCierreAbierto || d.cerrado
+      ? [
+          ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
+          ['bueno', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
+          ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
+          ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
+        ]
+      : [
+          ['cajon', pesos(d.base_cop), 'abrió con', 'lo que quedó de ayer'],
+        ]
+    ).map(([cl, n, k, pista]) =>
       `<div class="tile ${cl}">` +
         `<div class="n">${esc(n)}</div>` +
         `<div class="k">${esc(k)}</div>` +
@@ -2237,6 +2273,18 @@ const CONFIG = {
     const ms = d.movimientos || [];
     $('#caja-h-mov').innerHTML = 'Movimientos de hoy' +
       (ms.length ? `<span class="cuenta">${ms.length}</span>` : '');
+
+    // El botón dice cuántos hay sin abrir la lista: saber que van 12 no
+    // ancla nada, y ahorra abrirla solo para mirar.
+    const verMovs = $('#caja-ver-movs');
+    verMovs.textContent = ms.length
+      ? (cajaMovsAbiertos ? `Ocultar movimientos (${ms.length})`
+                          : `Ver movimientos de hoy (${ms.length})`)
+      : 'Todavía no hay movimientos hoy';
+    verMovs.disabled = ms.length === 0;
+    verMovs.setAttribute('aria-expanded', String(cajaMovsAbiertos && ms.length > 0));
+    $('#caja-lista').hidden = !cajaMovsAbiertos || ms.length === 0;
+
     $('#caja-lista').innerHTML = ms.length ? ms.map(m =>
       `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
       `<span class="h">${esc(m.hora)}</span>` +
@@ -2374,6 +2422,20 @@ const CONFIG = {
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
+
+    // Mientras el turno corre, ni un número. Solo el botón. Destaparlos
+    // es una decisión del cajero: "ya terminé, cuadremos". Si estuvieran
+    // a la vista todo el día, al contar el cajón ya sabría qué le tiene
+    // que dar, y entonces el arqueo no comprueba nada.
+    if (!cajaCierreAbierto && !d.cerrado) {
+      $('#caja-cierre').innerHTML =
+        `<h3>Cierre del día</h3>` +
+        `<p class="sub-c">Los totales aparecen cuando cierres. Durante el ` +
+        `turno se mantienen ocultos a propósito: contar el cajón sabiendo ` +
+        `de antemano la cifra no es contarlo.</p>` +
+        `<button class="btn primario" id="btn-abrir-cierre">Cerrar el día</button>`;
+      return;
+    }
     // Los bloques van en el orden en que se cuadra una caja: primero el
     // cajón —lo único que se cuenta a mano—, después lo que no pasó por
     // él, después el contraste con el banco, y al final el arqueo.
@@ -2449,6 +2511,19 @@ const CONFIG = {
              (r.libero_pago ? ' · el depósito vuelve a la lista' : ''));
         await cargarCaja(true);
       } catch (e) { an.disabled = false; fallo(e, 'No se pudo anular'); }
+      return;
+    }
+
+    if (ev.target.id === 'caja-ver-movs') {
+      cajaMovsAbiertos = !cajaMovsAbiertos;
+      pintarCaja();
+      return;
+    }
+
+    if (ev.target.id === 'btn-abrir-cierre') {
+      cajaCierreAbierto = true;
+      pintarCaja();          // repinta también las tarjetas con los totales
+      $('#caja-cierre').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 

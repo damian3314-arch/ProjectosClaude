@@ -142,7 +142,32 @@ async function transcribir(env, archivo) {
     body: fd,
   });
   if (!r.ok) throw new Error(`Whisper ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  return (await r.json()).text?.trim() || '';
+  return limpiarTranscripcion((await r.json()).text?.trim() || '');
+}
+
+// Con audio en silencio o puro ruido, Whisper no devuelve vacío: devuelve
+// frases de subtítulos de YouTube que se aprendió de memoria. Si eso pasa,
+// entra al chat como si la persona lo hubiera dicho, el bot le responde a
+// algo que nadie dijo, y termina en la ficha, en la hoja y en el reporte
+// del lunes como si fuera la opinión de un cliente.
+//
+// El tope de largo importa: una nota larga y real que de casualidad diga
+// "gracias por ver" no se puede tirar a la basura. Las alucinaciones
+// siempre son cortas.
+const ALUCINACIONES = [
+  /gracias por ver/i,
+  /subt[ií]tulos/i,
+  /amara\.org/i,
+  /thanks? for watching/i,
+  /suscr[ií]b[ae]/i,
+  /^\W+$/,
+];
+
+function limpiarTranscripcion(texto) {
+  const t = String(texto || '').trim();
+  if (t.length < 2) return '';
+  if (t.length < 60 && ALUCINACIONES.some((r) => r.test(t))) return '';
+  return t;
 }
 
 async function describirImagen(env, dataUrl) {
@@ -308,7 +333,12 @@ export default {
         const audio = fd.get('audio');
         if (!audio) return json({ error: 'sin_audio' }, 400);
         // El audio se transcribe y se suelta. No se guarda en ninguna parte.
-        return json({ texto: await transcribir(env, audio) });
+        const dicho = await transcribir(env, audio);
+        // Vacío quiere decir que no se entendió nada, o que lo único que
+        // llegó fue una alucinación de Whisper. Se le pide otra en vez de
+        // meter al chat algo que la persona nunca dijo.
+        if (!dicho) return json({ error: 'no_se_entendio' }, 200);
+        return json({ texto: dicho });
       }
 
       // ── imagen ──

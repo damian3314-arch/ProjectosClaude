@@ -31,6 +31,22 @@ hipotética. Preguntar "¿qué no te gustó?" de frente produce "todo bien".
 - **No se guarda** el audio de las notas de voz. Se transcribe con
   Whisper y se suelta, igual que las capturas de comprobantes.
 
+## Whisper alucina con el silencio
+
+Con audio en silencio o puro ruido, Whisper no devuelve vacío: devuelve
+frases de subtítulos de YouTube que se aprendió de memoria — *"Gracias
+por ver el video"*, *"Subtítulos por la comunidad de Amara.org"*.
+
+Sin filtro eso entraba al chat como si la persona lo hubiera dicho, el
+bot le respondía a algo que nadie dijo, y terminaba en la ficha, en la
+hoja y en el reporte del lunes como si fuera la opinión de un cliente.
+
+`limpiarTranscripcion()` las descarta. El tope de 60 caracteres no
+sobra: una nota larga y real que de casualidad diga "gracias por ver" no
+se puede tirar a la basura, y las alucinaciones siempre son cortas.
+Cuando descarta, `/api/voz` responde sin `texto` y la página pide otra
+nota, que es lo que ya hacía cuando no se entendía nada.
+
 D1 es la verdad; Google Sheets es la vista. Si Google falla justo cuando
 alguien termina de contar algo importante, el dato ya está a salvo.
 

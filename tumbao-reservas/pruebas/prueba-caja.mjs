@@ -179,9 +179,22 @@ visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el pan
 const nTarjetas = await pagina.locator('.caja-btn').count();
 nTarjetas === 9 ? bien('salen las 9 tarjetas') : falla('salen las 9 tarjetas', `salieron ${nTarjetas}`);
 
+// Durante el turno hay UNA sola tarjeta y dice con cuánto abrió. Ver
+// "en el cajón" sumándose todo el día le da al cajero la respuesta antes
+// de contar, y un arqueo contra una cifra ya sabida no comprueba nada:
+// deja de ser contar y pasa a ser confirmar.
 const enCajon = async () => (await pagina.locator('#caja-tiles .tile .n').first().innerText()).trim();
 (await enCajon()) === '$100.000'
-  ? bien('arranca en $100.000') : falla('arranca en $100.000', await enCajon());
+  ? bien('arranca enseñando la base, $100.000') : falla('la base', await enCajon());
+
+(await pagina.locator('#caja-tiles .tile').count()) === 1
+  ? bien('y es la única tarjeta durante el turno')
+  : falla('tarjetas durante el turno',
+          `hay ${await pagina.locator('#caja-tiles .tile').count()}`);
+
+/abrió con/i.test(await pagina.locator('#caja-tiles .tile .k').first().innerText())
+  ? bien('dice "abrió con", no "en el cajón"')
+  : falla('la etiqueta', await pagina.locator('#caja-tiles .tile .k').first().innerText());
 
 // Los recuadros se pintaban con <b><span><small>, etiquetas que el CSS
 // del panel no conoce: salía "$100.000en el cajónbase + efectivo".
@@ -203,8 +216,28 @@ valorPrecargado === '15000'
 
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(700);
-(await enCajon()) === '$115.000'
-  ? bien('al guardar sube a $115.000') : falla('al guardar sube a $115.000', await enCajon());
+
+// LO QUE IMPORTA: el número NO se mueve. Si subiera a $115.000 estaría
+// otra vez cantándole el resultado al cajero mientras atiende.
+(await enCajon()) === '$100.000'
+  ? bien('al guardar, la base NO se mueve', 'sigue en $100.000')
+  : falla('el total se movió durante el turno', await enCajon());
+
+// El listado arranca cerrado: hay que abrirlo. No se quitó del todo
+// porque es la única forma de anular algo mal registrado.
+const btnMovs = pagina.locator('#caja-ver-movs');
+/Ver movimientos de hoy \(1\)/.test(await btnMovs.innerText())
+  ? bien('el botón dice cuántos hay sin abrir la lista', (await btnMovs.innerText()).trim())
+  : falla('el botón de movimientos', await btnMovs.innerText());
+
+(await pagina.locator('#caja-lista').isHidden())
+  ? bien('la lista arranca cerrada')
+  : falla('la lista arranca cerrada', 'salió abierta');
+
+await btnMovs.click();
+await pagina.waitForTimeout(300);
+(await pagina.locator('#caja-lista').isVisible())
+  ? bien('y se abre al pedirla') : falla('abrir la lista', 'siguió oculta');
 
 const nMovs = await pagina.locator('.mov').count();
 nMovs === 1 ? bien('aparece en la lista') : falla('aparece en la lista', `hay ${nMovs}`);
@@ -237,16 +270,36 @@ await pagina.waitForTimeout(300);
 await pagina.fill('#modal-valor', '80.000');           // con punto, como teclea la cajera
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(700);
-(await enCajon()) === '$35.000'
-  ? bien('el egreso resta y entiende "80.000"') : falla('el egreso resta', await enCajon());
+(await pagina.locator('.mov').count()) === 2
+  ? bien('el egreso entra en la lista y entiende "80.000"')
+  : falla('el egreso', `hay ${await pagina.locator('.mov').count()} movimientos`);
+(await enCajon()) === '$100.000'
+  ? bien('y la base sigue sin moverse') : falla('la base se movió', await enCajon());
 
 // Anular
 await pagina.locator('[data-anular]').first().click();
 await pagina.waitForTimeout(700);
-const tras = await enCajon();
-tras === '$115.000' ? bien('anular devuelve el cupo de plata') : falla('anular', tras);
+(await pagina.locator('.mov').count()) === 1
+  ? bien('anular quita el movimiento de la lista')
+  : falla('anular', `quedaron ${await pagina.locator('.mov').count()}`);
 
-// El cierre está a la vista
+// El cierre no enseña ni un número hasta que el cajero lo pide. Eso es
+// lo que impide que cuadre de cabeza contra un total que ya vio.
+const antesDeCerrar = await pagina.locator('#caja-cierre').innerText();
+!/\$/.test(antesDeCerrar) && /Cerrar el día/.test(antesDeCerrar)
+  ? bien('durante el turno el cierre no enseña ni una cifra')
+  : falla('el cierre enseña cifras antes de tiempo',
+          antesDeCerrar.replace(/\s+/g, ' ').slice(0, 120));
+
+await pagina.click('#btn-abrir-cierre');
+await pagina.waitForTimeout(500);
+
+// Y al pedirlo aparecen también las cuatro tarjetas de arriba.
+(await pagina.locator('#caja-tiles .tile').count()) >= 4
+  ? bien('al pedir el cierre aparecen los totales')
+  : falla('los totales al cerrar',
+          `${await pagina.locator('#caja-tiles .tile').count()} tarjetas`);
+
 const hayCierre = await pagina.locator('#caja-cierre').innerText();
 hayCierre.includes('AdminGym')
   ? bien('el cierre muestra los nombres de AdminGym') : falla('el cierre', 'sin referencia a AdminGym');
@@ -534,6 +587,39 @@ const quedan = await pagina.locator('#avisos .nota').allInnerTexts();
 !quedan.some(t => /Día cerrado/.test(t)) && quedan.some(t => /ya está cerrado/.test(t))
   ? bien('lo bueno se va solo, lo malo se queda')
   : falla('la caducidad de los avisos', JSON.stringify(quedan));
+
+// En celular la pila de avisos tapaba la cabecera y las tarjetas. Se
+// comprueba en 414px de ancho, que es donde se atiende el mostrador.
+await pagina.setViewportSize({ width: 414, height: 900 });
+await pagina.waitForTimeout(200);
+for (let i = 0; i < 4; i++) {
+  await pagina.evaluate(() => document.querySelector('#caja-recargar').click());
+  await pagina.waitForTimeout(120);
+}
+await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).first().click();
+await pagina.waitForTimeout(250);
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(400);
+await pagina.locator('.caja-btn', { hasText: 'Cumpleaños' }).first().click();
+await pagina.waitForTimeout(250);
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(500);
+
+const apilados = await pagina.locator('#avisos .nota').count();
+apilados <= 2
+  ? bien('en celular no se apilan más de dos avisos', `${apilados}`)
+  : falla('los avisos tapan la pantalla en celular', `${apilados} apilados`);
+
+// Y la cabecera tiene que seguir viéndose por debajo de ellos.
+const tapada = await pagina.locator('#avisos').evaluate((e) => {
+  const a = e.getBoundingClientRect();
+  return a.height > window.innerHeight * 0.4;
+});
+!tapada
+  ? bien('y no se comen media pantalla')
+  : falla('los avisos ocupan más del 40% del alto en celular');
+
+await pagina.setViewportSize({ width: 1280, height: 900 });
 
 errores.length === 0
   ? bien('sin errores de consola', 'ninguno')
