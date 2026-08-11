@@ -9,6 +9,9 @@
    Lo único que hay que tocar si cambia el dominio de n8n.
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
+  // El panel ya NO usa n8n: todas sus llamadas van al Worker (CAJA_BASE).
+  // Se deja la base apuntada por si algo viejo la necesita, pero si vas a
+  // añadir una ruta nueva, va al Worker. n8n cobra por ejecución.
   N8N_BASE: 'https://barragan.app.n8n.cloud/webhook',
   // La caja NO pasa por n8n: cada venta sería una ejecución del plan.
   // Va por un Worker de Cloudflare, que además guarda la llave de
@@ -1077,8 +1080,17 @@ const CONFIG = {
   }
 
   /* ---------- llamadas ---------- */
+  /* Todo el panel pasa por aquí, y desde el 11 de agosto va al Worker y
+     no a n8n. n8n cobra por ejecución y esto gastaba una POR CLIC: 483 en
+     un solo día contra un plan de 2.500 al mes. Cuando ese plan se agota
+     no cae solo el panel — la página pública reserva por n8n también, así
+     que un cajero repasando el tablero podía dejar sin reservar a los
+     clientes. En el Worker caben 100.000 diarias y no cuestan nada.
+
+     La autorización no se movió: sigue en verificar_token_admin() dentro
+     de Postgres. El Worker solo traduce la ruta a una llamada de RPC. */
   async function api(ruta, cuerpo) {
-    const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/admin/${ruta}`, {
+    const res = await fetch(`${CONFIG.CAJA_BASE}/api/admin/${ruta}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ token }, cuerpo || {}))

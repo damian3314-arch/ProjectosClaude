@@ -175,8 +175,12 @@ createServer(async (req, res) => {
     return res.end(html);
   }
   if (url.pathname === '/admin' || url.pathname === '/admin.html') {
+    // Desde el 11 de agosto el panel llama al Worker (/api/admin/...) y
+    // no a n8n. El espejo atiende las dos formas, así que aquí se
+    // reescriben las dos bases al mismo sitio.
     const html = readFileSync(join(WEB, 'admin.html'), 'utf8')
-      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
+      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`)
+      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
   }
@@ -188,7 +192,10 @@ createServer(async (req, res) => {
   }
 
   // ---- panel de admin ----
-  if (url.pathname.startsWith('/webhook/tumbao/admin/') && req.method === 'POST') {
+  // El panel ahora pega en /api/admin/<ruta> (Worker). Se acepta también
+  // la forma vieja de n8n para no romper nada que todavía la use.
+  if ((url.pathname.startsWith('/webhook/tumbao/admin/') ||
+       url.pathname.startsWith('/api/admin/')) && req.method === 'POST') {
     const b = await leerCuerpo(req);
     if (b.token !== TOKEN_ADMIN) {
       return json(res, 401, { ok: false, error: 'NO_AUTORIZADO' });

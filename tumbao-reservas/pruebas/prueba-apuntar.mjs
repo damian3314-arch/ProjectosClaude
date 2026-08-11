@@ -61,12 +61,14 @@ let gente = [{ codigo: 'TB-0001', nombre: 'Ana Ruiz', telefono: '3001112233',
 let loQuePidio = null;       // lo último que el panel mandó a /api/reserva
 let respuesta = null;        // qué se le va a contestar
 
-await pagina.route('**/barragan.app.n8n.cloud/**', async (route) => {
+// El panel ya no llama a n8n: el tablero y la lista de la clase van
+// al Worker, en /api/admin/<ruta>.
+await pagina.route('**/api/admin/**', async (route) => {
   const u = route.request().url();
   let r = { ok: true };
-  if (u.includes('/semana')) r = { ok: true, dias: [] };
-  else if (u.includes('/pendientes')) r = { ok: true, reservas: [] };
-  else if (u.includes('/tablero')) r = {
+  if (u.endsWith('/semana')) r = { ok: true, dias: [] };
+  else if (u.endsWith('/pendientes')) r = { ok: true, reservas: [] };
+  else if (u.endsWith('/tablero')) r = {
     ok: true, dia: '2026-08-05',
     clases: [{ clase_id: CLASE, hora: '18:00', aforo: 20, libres: 5, en_sala: 15,
                con_plan: 10, reservadas: gente.length, a_la_venta: 10, vencen: 0,
@@ -74,7 +76,7 @@ await pagina.route('**/barragan.app.n8n.cloud/**', async (route) => {
     resumen: { libres: 5, en_sala: 15, reservadas: gente.length, confirmadas: gente.length,
                por_validar: 0, ingreso_cop: 0, aforo: 20 },
   };
-  else if (u.includes('/lista')) r = {
+  else if (u.endsWith('/lista')) r = {
     ok: true,
     clase: { clase_id: CLASE, hora: '18:00', fecha: '2026-08-05' },
     resumen: { entraron: 0, esperados: gente.length, sin_confirmar: 0 },
@@ -85,6 +87,11 @@ await pagina.route('**/barragan.app.n8n.cloud/**', async (route) => {
 
 await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
   const url = route.request().url();
+  // Playwright resuelve la ruta registrada MÁS TARDE primero, y este
+  // patrón también casa con /api/admin/*. Sin este fallback se tragaba
+  // el tablero y la lista de la clase, y la prueba fallaba diciendo que
+  // no había clases cuando el problema era el orden de los simulacros.
+  if (url.includes('/api/admin/')) return route.fallback();
   const b = JSON.parse(route.request().postData() || '{}');
   if (!url.endsWith('/reserva')) {
     await route.fulfill({ status: 200, contentType: 'application/json',

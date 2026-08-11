@@ -46,13 +46,33 @@ qué día son los datos, no cuándo se guardó. Un reporte de julio subido
 hoy sigue teniendo datos de julio. Si pasan más de 7 días sin subir
 nada, el import se frena en vez de vender cupos que no existen.
 
-### 2. Pegar `aplicar/PEGAR_LISTO_PRODUCCION.sql` en Supabase
+### 2. ~~Pegar el SQL~~ ✅ aplicado
 
-Trae el control del banco y el corte de producción. No borra nada y se
-puede correr dos veces.
+Verificado contra la base el 11 de agosto: el corte de producción está en
+`2026-08-08`, la cola de "Por validar" está en cero, `admin_pendientes`
+filtra por el corte y `caja_del_dia` trae el control del banco **y** el
+arreglo del doble conteo.
 
-Después de pegarlo, la cola de "Por validar" arranca vacía y el banco
-deja de arrastrar los 73 depósitos viejos.
+> El archivo `PEGAR_LISTO_PRODUCCION.sql` **se borró**. Reemplazaba
+> `caja_del_dia` entera, y después de aplicarlo otra sesión arregló un
+> doble conteo de plata dentro de esa misma función. Volver a pegarlo lo
+> habría deshecho en silencio. Ver `aplicar/LEEME-ANTES-DE-PEGAR.md`.
+
+### 2b. ~~El panel gastaba n8n por clic~~ ✅ resuelto el 11 de agosto
+
+Medido: **483 ejecuciones del workflow del panel en 24 horas**, contra un
+plan de 2.500 al mes. Cinco días de vida. Y al agotarse no caía solo el
+panel: la página pública reserva por n8n también, así que un cajero
+repasando el tablero podía dejar sin reservar a los clientes.
+
+Las nueve rutas del panel se movieron al Worker `tumbao-caja`, que ya
+tenía el secreto y el CORS configurados — por eso no hubo nada que
+configurar. Ahí caben 100.000 peticiones diarias y no cuestan nada.
+
+El workflow `Tumbao · Panel de admin` se deja **activo a propósito**: un
+webhook en reposo no gasta nada, y si a alguien le quedó la página vieja
+abierta en el celular, sus clics siguen funcionando en vez de dar 404.
+Se puede apagar cuando lleve un día sin recibir llamadas.
 
 ### 3. Revocar los tokens de prueba
 
@@ -111,7 +131,7 @@ node sin-delete-sin-where.mjs
 | Qué | Dónde | Qué significa si se tuerce |
 |---|---|---|
 | El reporte de afiliados importa | correo de fallos de n8n | Si falla, los cupos mienten |
-| Consumo de n8n | panel de n8n | El plan son 2.500/mes; medido ~2.500-3.000 |
+| Consumo de n8n | panel de n8n | El plan son 2.500/mes. Con el panel fuera debería bajar a ~600-900 |
 | "Sin identificar, de hoy" | pestaña Caja | Si no baja a cero, alguien pagó y no se registró |
 | "Apuntado sin respaldo" | pestaña Caja | Transferencias que el banco no confirmó |
 | Cola de "Por validar" | pestaña Por validar | Tiene que vaciarse cada día |

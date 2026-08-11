@@ -366,13 +366,13 @@ if (await btnEste.count() > 0) {
   // distinta para los pasos que vienen. Lo que se mide es la ruta, y eso
   // ya se sabe antes de que la petición salga.
   const rutas = [];
-  await p.route('**/tumbao/admin/**', async (route) => {
+  await p.route('**/api/admin/**', async (route) => {
     rutas.push(new URL(route.request().url()).pathname.split('/').pop());
     await route.abort();
   });
   await btnEste.click();
   await p.waitForTimeout(900);
-  await p.unroute('**/tumbao/admin/**');
+  await p.unroute('**/api/admin/**');
 
   ok('"Es este" llama a /confirmar, no al código de la reserva',
      rutas.includes('confirmar'), rutas.join(', ') || '(no pidió nada)');

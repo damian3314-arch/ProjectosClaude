@@ -149,12 +149,15 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
 });
 
 // n8n: lo mínimo para que el panel arranque y no estorbe.
-await pagina.route('**/barragan.app.n8n.cloud/**', async (route) => {
+// El panel ya no llama a n8n: sus rutas van al Worker, en
+// /api/admin/<ruta>. Se interceptan ahí para que la pestaña Caja
+// arranque sin tocar nada de verdad.
+await pagina.route('**/api/admin/**', async (route) => {
   const u = route.request().url();
   let r = { ok: true };
-  if (u.includes('/semana')) r = { ok: true, dias: [] };
-  else if (u.includes('/pendientes')) r = { ok: true, reservas: [] };
-  else if (u.includes('/tablero')) r = { ok: true, dia: '2026-08-05', clases: [],
+  if (u.endsWith('/semana')) r = { ok: true, dias: [] };
+  else if (u.endsWith('/pendientes')) r = { ok: true, reservas: [] };
+  else if (u.endsWith('/tablero')) r = { ok: true, dia: '2026-08-05', clases: [],
     resumen: { libres: 0, en_sala: 0, reservadas: 0, confirmadas: 0, por_validar: 0, ingreso_cop: 0 } };
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r) });
 });

@@ -1,21 +1,29 @@
 /**
- * Tumbao · caja de mostrador
+ * Tumbao · el panel entero contra Supabase
  *
- * Una puerta estrecha entre el panel y Supabase. El panel manda el token
- * de admin —el mismo de siempre— y este Worker lo pasa a la función de
+ * Una puerta estrecha entre el panel de admin y Postgres. El panel manda
+ * el token —el mismo de siempre— y este Worker lo pasa a la función de
  * Postgres, que es la que de verdad decide si vale.
  *
  * POR QUÉ UN WORKER Y NO n8n
- * Cada venta sería una ejecución. Con 20–30 operaciones diarias son
- * 600–900 al mes sobre un plan de 2.500. Aquí caben 100.000 al día.
+ * n8n cobra por ejecución y el panel gasta una POR CLIC. Medido el 11 de
+ * agosto: 483 ejecuciones del workflow del panel en 24 horas, contra un
+ * plan de 2.500 AL MES. Eso son cinco días de vida.
+ *
+ * Y cuando el plan se agota no cae solo el panel: la página pública
+ * reserva por n8n también. O sea que un cajero repasando el tablero
+ * podía dejar sin reservas a los clientes. Aquí caben 100.000 peticiones
+ * diarias y no cuestan nada.
+ *
+ * El nombre del Worker sigue siendo "tumbao-caja" por lo primero que
+ * hizo. Cambiarlo obligaría a mover la URL y a reconfigurar el secreto
+ * un día en que lo urgente es dejar de gastar.
  *
  * POR QUÉ UN WORKER Y NO SUPABASE DIRECTO
  * Se podría abrir estas funciones a `anon` y que el panel hable con
- * Supabase de frente, como se va a hacer con los horarios. Para el
- * módulo que maneja plata no: así la única superficie pública son estos
- * cinco endpoints, y no toda la API de Supabase dependiendo de que la
- * RLS de cada tabla esté perfecta. Por eso mismo /api/reserva —apuntar a
- * alguien a mano— también entra por aquí y no por n8n.
+ * Supabase de frente. No: así la única superficie pública son estas
+ * rutas, y no toda la API de Supabase dependiendo de que la RLS de cada
+ * tabla esté perfecta.
  *
  * LA DECISIÓN DE AUTORIZAR NO VIVE AQUÍ
  * Vive en verificar_token_admin() dentro de Postgres. Este archivo no
@@ -73,6 +81,55 @@ const CONCEPTOS = {
   egreso:  new Set(['profesores', 'cafeteria', 'aseo', 'papeleria', 'otro_egreso']),
 };
 
+/* ---------------------------------------------------------------------
+ * El panel de admin
+ *
+ * Una tabla en vez de una escalera de ifs: cada ruta dice a qué función
+ * de Postgres va y cómo se arman sus argumentos. Añadir una es una línea,
+ * y se ve de un vistazo que ninguna hace nada raro.
+ *
+ * Los validadores no repiten lo que ya valida Postgres —los permisos y
+ * las reglas de negocio viven allá— sino que atajan la basura evidente
+ * para no gastar un viaje: un uuid que no es uuid, una fecha que no es
+ * fecha. Si algo se cuela, Postgres lo rechaza igual.
+ * ------------------------------------------------------------------- */
+const UUID  = (v) => (/^[0-9a-f-]{36}$/i.test(String(v || '')) ? String(v) : null);
+const FECHA = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null);
+const TXT   = (v, max) => (v == null ? null : String(v).slice(0, max));
+
+const ADMIN = {
+  tablero:    { fn: 'admin_tablero',
+                args: (b) => ({ p_dia: FECHA(b.dia) }) },
+  semana:     { fn: 'admin_semana',
+                args: (b) => ({ p_desde: FECHA(b.desde) }) },
+  guardar:    { fn: 'admin_guardar_semana',
+                args: (b) => (Array.isArray(b.celdas)
+                  ? { p_celdas: b.celdas }
+                  : { _error: 'CELDAS_INVALIDAS' }) },
+  pendientes: { fn: 'admin_pendientes',
+                args: () => ({}) },
+  lista:      { fn: 'admin_lista_clase',
+                args: (b) => (UUID(b.clase_id)
+                  ? { p_clase_id: UUID(b.clase_id) }
+                  : { _error: 'CLASE_INVALIDA' }) },
+  asistencia: { fn: 'admin_marcar_asistencia',
+                args: (b) => (UUID(b.clase_id)
+                  ? { p_clase_id: UUID(b.clase_id), p_ref: TXT(b.ref, 80),
+                      p_asistio: b.asistio === true }
+                  : { _error: 'CLASE_INVALIDA' }) },
+  deshacer:   { fn: 'admin_deshacer',
+                args: (b) => ({ p_codigo: TXT(b.codigo, 40) }) },
+  // pago_id opcional: es el que enlaza la reserva con el depósito del
+  // banco cuando se resuelve desde la cola con el botón "Es este".
+  confirmar:  { fn: 'admin_confirmar',
+                args: (b) => ({ p_codigo: TXT(b.codigo, 40),
+                                p_pago_id: UUID(b.pago_id) }) },
+  // El panel manda pago_id también aquí, pero rechazar no lo usa: no hay
+  // nada que enlazar cuando se descarta.
+  rechazar:   { fn: 'admin_rechazar',
+                args: (b) => ({ p_codigo: TXT(b.codigo, 40) }) },
+};
+
 export default {
   async fetch(request, env) {
     const origen = request.headers.get('Origin');
@@ -99,7 +156,19 @@ export default {
     try {
       let r;
 
-      if (ruta === '/api/dia') {
+      // ── el panel de admin ──
+      if (ruta.startsWith('/api/admin/')) {
+        const cual = ADMIN[ruta.slice('/api/admin/'.length)];
+        if (!cual) return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);
+
+        const args = cual.args(b);
+        if (args._error) {
+          return json({ ok: false, error: args._error,
+            mensaje: 'Faltan datos o no se reconocen. Recarga la página.' }, 400, origen);
+        }
+        r = await rpc(env, cual.fn, { p_token: token, ...args });
+
+      } else if (ruta === '/api/dia') {
         r = await rpc(env, 'caja_del_dia', {
           p_token: token,
           p_dia: /^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : null,
