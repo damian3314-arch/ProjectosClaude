@@ -210,6 +210,17 @@ export default {
         if (pago) args.p_pago_id = pago;
         r = await rpc(env, 'caja_registrar', args);
 
+      } else if (ruta === '/api/abrir') {
+        const contado = parseInt(String(b.contado ?? '').replace(/[^\d]/g, ''), 10);
+        if (!Number.isFinite(contado) || contado < 0) {
+          return json({ ok: false, error: 'CONTADO_INVALIDO',
+            mensaje: 'Escribe cuánto hay en el cajón.' }, 400, origen);
+        }
+        r = await rpc(env, 'caja_abrir', {
+          p_token: token, p_contado: contado,
+          p_nota: b.nota ? String(b.nota).slice(0, 300) : null,
+        });
+
       } else if (ruta === '/api/reserva') {
         // Apuntar a alguien a mano. La validación de verdad —nombre,
         // celular, y sobre todo el aforo— vive en admin_crear_reserva,
@@ -243,11 +254,25 @@ export default {
             mensaje: 'Escribe cuánto contaste en el cajón.' }, 400, origen);
         }
         const base = parseInt(String(b.base ?? '100000').replace(/[^\d]/g, ''), 10);
-        r = await rpc(env, 'caja_cerrar', {
+        const dejado = parseInt(String(b.dejado ?? '100000').replace(/[^\d]/g, ''), 10);
+        const arg = {
           p_token: token, p_contado: contado,
           p_base: Number.isFinite(base) ? base : 100000,
           p_nota: b.nota ? String(b.nota).slice(0, 300) : null,
-        });
+          p_dejado: Number.isFinite(dejado) ? dejado : 100000,
+        };
+        // Rehacer un cierre ya hecho se pide a propósito y con motivo.
+        // Los dos parámetros se mandan SOLO cuando de verdad se está
+        // rehaciendo: PostgREST resuelve la función por los parámetros
+        // que recibe, así que mandarlos siempre exigiría tener ya
+        // aplicada la migración 0031 — y hasta entonces no se podría ni
+        // cerrar el día. Ese fallo se coló en el despliegue de esta
+        // noche y dejó la caja sin cerrar durante unos minutos.
+        if (b.rehacer === true) {
+          arg.p_rehacer = true;
+          arg.p_motivo = b.motivo ? String(b.motivo).slice(0, 300) : null;
+        }
+        r = await rpc(env, 'caja_cerrar', arg);
 
       } else {
         return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);

@@ -64,10 +64,11 @@ let idSeq = 0;
 const dia = () => ({
   ok: true, dia: '2026-08-05',
   movimientos,
-  base_cop: 100000,
+  base_cop: apertura ? apertura.contado_cop : 100000,
   ingreso_efectivo: suma('ingreso', 'efectivo'),
   egreso_efectivo: suma('egreso', 'efectivo'),
-  esperado_efectivo: 100000 + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
+  esperado_efectivo: (apertura ? apertura.contado_cop : 100000)
+    + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
   ingreso_transferencia: suma('ingreso', 'transferencia'),
   egreso_transferencia: suma('egreso', 'transferencia'),
   reservas_cop: 15000,
@@ -82,12 +83,40 @@ const dia = () => ({
     venta_membresias: suma('ingreso', 'efectivo'),
     ingresos_a_banco: suma('ingreso', 'transferencia') + 15000,
     retirar_dinero_de_caja: suma('egreso', 'efectivo'),
-    dinero_en_caja: 100000 + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
+    dinero_en_caja: (apertura ? apertura.contado_cop : 100000)
+      + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
   },
   banco: banco(),
   pagos_libres: libres,
-  cerrado: false, cierre: null,
+  resumen_conceptos: resumen(),
+  abierta: sinAbrirSoportado ? undefined : apertura !== null,
+  apertura: sinAbrirSoportado ? undefined : apertura,
+  cerrado: cierre !== null,
+  cierre,
 });
+
+// Estado de la caja en el simulacro. Arranca sin abrir, que es como
+// amanece de verdad.
+let apertura = null;
+let cierre = null;
+// Con esto en true, el simulacro finge ser el servidor de ANTES de la
+// migración 0031: no manda `abierta` ni `apertura`.
+let sinAbrirSoportado = false;
+
+// Lo que necesita la tirilla: agrupado por concepto, no movimiento a
+// movimiento. Veinte líneas de "Clase suelta $15.000" no dicen más que
+// una que diga "x20".
+const resumen = () => {
+  const m = new Map();
+  for (const x of movimientos) {
+    const k = `${x.sentido}|${x.concepto}|${x.medio}`;
+    const v = m.get(k) || { sentido: x.sentido, concepto: x.concepto,
+                            medio: x.medio, n: 0, valor_cop: 0 };
+    v.n++; v.valor_cop += x.valor_cop;
+    m.set(k, v);
+  }
+  return [...m.values()];
+};
 
 // El inventario del banco: depósitos que llegaron y nadie ha reclamado.
 // `hayBanco` en false simula que la migración 0027 todavía no se pegó.
@@ -133,12 +162,28 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
       medio: b.medio, nota: b.nota || null, hora: '10:0' + idSeq, quien: 'prueba',
       pago_id: b.pago_id || null, con_banco: !!b.pago_id });
     r = { ok: true, id: 'x' };
+  } else if (url.endsWith('/abrir')) {
+    const contado = +String(b.contado).replace(/\D/g, '');
+    apertura = { contado_cop: contado, esperado_cop: 100000,
+                 diferencia_cop: contado - 100000, nota: b.nota || null,
+                 quien: 'prueba', hora: '07:12' };
+    r = { ok: true, ...apertura };
   } else if (url.endsWith('/cerrar')) {
     if (errorCierre) {
       await route.fulfill({ status: 400, contentType: 'application/json',
         body: JSON.stringify({ ok: false, error: errorCierre }) });
       return;
     }
+    const base = apertura ? apertura.contado_cop : 100000;
+    const esp = base + suma('ingreso','efectivo') - suma('egreso','efectivo');
+    const contado = +String(b.contado).replace(/\D/g, '');
+    const dejado = +String(b.dejado || 0).replace(/\D/g, '');
+    cierre = { contado_cop: contado, esperado_cop: esp,
+               diferencia_cop: contado - esp, dejado_cop: dejado,
+               retirado_cop: contado - dejado, banco_cop: 330000,
+               banco_sin_ident_cop: 0, rehecho_n: b.rehacer ? 1 : 0,
+               rehecho_motivo: b.motivo || null, quien: 'prueba',
+               nota: b.nota || null, hora: '21:03' };
     r = { ok: true, dia: '2026-08-05' };
   } else if (url.endsWith('/anular')) {
     const m = movimientos.find((x) => x.id === b.id);
@@ -182,13 +227,70 @@ visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el pan
 const nTarjetas = await pagina.locator('.caja-btn').count();
 nTarjetas === 9 ? bien('salen las 9 tarjetas') : falla('salen las 9 tarjetas', `salieron ${nTarjetas}`);
 
+// ═══════════════ sin la migración 0031 ═══════════════
+// El estado real entre que se despliega la página y se pega el SQL: el
+// servidor no devuelve `abierta`. La pantalla NO puede pedir abrir una
+// caja que el servidor todavía no sabe abrir — el botón daría 502.
+// Este fallo se coló en el despliegue de esta noche y por eso tiene
+// prueba propia.
+sinAbrirSoportado = true;
+await pagina.click('#caja-recargar');
+await pagina.waitForTimeout(700);
+!/Abrir la caja/.test(await pagina.locator('#caja-cierre').innerText())
+  ? bien('sin la migración 0031, no pide abrir la caja')
+  : falla('pide abrir sin que el servidor sepa hacerlo');
+sinAbrirSoportado = false;
+await pagina.click('#caja-recargar');
+await pagina.waitForTimeout(700);
+
+// ═══════════════ abrir la caja ═══════════════
+// La caja amanece sin abrir. Lo primero que se ve es el conteo, no los
+// botones de venta: contar al abrir es lo que parte un descuadre en "lo
+// de anoche" y "lo de hoy". Sin eso, un faltante aparece a las nueve
+// mezclado con las ventas del día.
+const pantallaApertura = await pagina.locator('#caja-cierre').innerText();
+/Abrir la caja/.test(pantallaApertura)
+  ? bien('sin abrir, lo primero que pide es contar el cajón')
+  : falla('la pantalla de apertura', pantallaApertura.slice(0, 90));
+
+/Anoche se dejó/.test(pantallaApertura) && /100\.000/.test(pantallaApertura)
+  ? bien('y dice cuánto se dejó anoche, para comparar')
+  : falla('lo que se dejó anoche', pantallaApertura.slice(0, 120));
+
+// Sin contar no se abre.
+await pagina.click('#btn-abrir-caja');
+await pagina.waitForTimeout(400);
+(await pagina.locator('#a-contado').evaluate(e => e.classList.contains('malo-campo')))
+  ? bien('sin escribir el conteo, señala el campo')
+  : falla('el campo de conteo', 'no quedó marcado');
+
+// Se abre con MENOS de lo que decía el papel: es el caso que hace que
+// esto valga la pena.
+await pagina.fill('#a-contado', '95.000');
+await pagina.fill('#a-nota', 'faltaban 5 mil');
+await pagina.click('#btn-abrir-caja');
+await pagina.waitForTimeout(800);
+
+const avisoAp = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+/Faltan \$5\.000/.test(avisoAp)
+  ? bien('avisa la diferencia con lo de anoche', avisoAp.trim())
+  : falla('el aviso de apertura', avisoAp);
+
+// Y LO IMPORTANTE: el día corre sobre lo contado, no sobre el papel. Si
+// arrastrara los 100.000, el faltante de anoche se mezclaría con el
+// arqueo de esta noche y ya no se sabría de qué turno fue.
+const trasAbrir = await pagina.locator('#caja-tiles .tile .n').first().innerText();
+trasAbrir.trim() === '$95.000'
+  ? bien('el día corre sobre lo CONTADO, no sobre lo heredado', trasAbrir.trim())
+  : falla('la base tras abrir', trasAbrir);
+
 // Durante el turno hay UNA sola tarjeta y dice con cuánto abrió. Ver
 // "en el cajón" sumándose todo el día le da al cajero la respuesta antes
 // de contar, y un arqueo contra una cifra ya sabida no comprueba nada:
 // deja de ser contar y pasa a ser confirmar.
 const enCajon = async () => (await pagina.locator('#caja-tiles .tile .n').first().innerText()).trim();
-(await enCajon()) === '$100.000'
-  ? bien('arranca enseñando la base, $100.000') : falla('la base', await enCajon());
+(await enCajon()) === '$95.000'
+  ? bien('la tarjeta enseña la base contada') : falla('la base', await enCajon());
 
 (await pagina.locator('#caja-tiles .tile').count()) === 1
   ? bien('y es la única tarjeta durante el turno')
@@ -222,8 +324,8 @@ await pagina.waitForTimeout(700);
 
 // LO QUE IMPORTA: el número NO se mueve. Si subiera a $115.000 estaría
 // otra vez cantándole el resultado al cajero mientras atiende.
-(await enCajon()) === '$100.000'
-  ? bien('al guardar, la base NO se mueve', 'sigue en $100.000')
+(await enCajon()) === '$95.000'
+  ? bien('al guardar, la base NO se mueve', 'sigue en $95.000')
   : falla('el total se movió durante el turno', await enCajon());
 
 // El listado arranca cerrado: hay que abrirlo. No se quitó del todo
@@ -276,7 +378,7 @@ await pagina.waitForTimeout(700);
 (await pagina.locator('.mov').count()) === 2
   ? bien('el egreso entra en la lista y entiende "80.000"')
   : falla('el egreso', `hay ${await pagina.locator('.mov').count()} movimientos`);
-(await enCajon()) === '$100.000'
+(await enCajon()) === '$95.000'
   ? bien('y la base sigue sin moverse') : falla('la base se movió', await enCajon());
 
 // Anular
@@ -623,6 +725,85 @@ const tapada = await pagina.locator('#avisos').evaluate((e) => {
   : falla('los avisos ocupan más del 40% del alto en celular');
 
 await pagina.setViewportSize({ width: 1280, height: 900 });
+
+// ═══════════════ la tirilla ═══════════════
+// El día ya quedó cerrado unas líneas más arriba.
+await pagina.click('#caja-recargar');
+await pagina.waitForTimeout(700);
+
+(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir la tirilla')
+  ? bien('cerrado, ofrece imprimir la tirilla')
+  : falla('el botón de la tirilla', 'no salió');
+
+// LO QUE GARANTIZA EL CIERRE: con el día cerrado no entra nada más. Sin
+// esto se podía cerrar a las 9, vender a las 9:05, y el papel impreso
+// quedaba mintiendo.
+await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).first().click();
+await pagina.waitForTimeout(250);
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(600);
+// El simulacro deja pasar el registro, así que lo que se comprueba aquí
+// es que la pantalla NO invente movimientos sobre un día cerrado: la
+// puerta de verdad es la de Postgres, y esa tiene su prueba en
+// humo-abrir-cerrar.sql. Aquí basta con que el cierre siga en pie.
+(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir la tirilla')
+  ? bien('el cierre sigue en pie después de intentar registrar')
+  : falla('el cierre se deshizo');
+
+// ---- la tirilla ----
+await pagina.evaluate(() => document.querySelector('#btn-tirilla').click());
+await pagina.waitForTimeout(400);
+
+const tirilla = (await pagina.locator('#tirilla').innerText({ timeout: 3000 })
+  .catch(() => '')) || await pagina.locator('#tirilla').evaluate(e => e.textContent);
+const t = tirilla.replace(/\s+/g, ' ');
+
+/TUMBAO/.test(t) && /CIERRE DE CAJA/.test(t)
+  ? bien('la tirilla lleva encabezado')
+  : falla('el encabezado de la tirilla', t.slice(0, 80));
+
+// Tiene que decir de QUÉ fue la plata. Una tirilla con solo totales
+// obliga a volver a la pantalla, y entonces no reemplaza a la pantalla.
+/ENTRÓ/.test(t) && /SALIÓ/.test(t) && /Clase suelta/.test(t)
+  ? bien('desglosa por concepto, no solo totales')
+  : falla('el desglose', t.slice(0, 220));
+
+// Y agrupa: veinte líneas iguales no caben en un rollo de 80mm.
+/Clase suelta x\d/.test(t)
+  ? bien('agrupa los repetidos con su cantidad',
+         (t.match(/Clase suelta x\d/) || [])[0])
+  : falla('no agrupó los repetidos', t.slice(0, 220));
+
+// El signo, delante del peso. "$-5.000" en papel se lee mal.
+!/\$-/.test(t)
+  ? bien('los negativos salen como −$5.000, no $-5.000')
+  : falla('el signo del negativo', (t.match(/\$-[\d.]+/) || [])[0]);
+
+/APERTURA/.test(t) && /95\.000/.test(t)
+  ? bien('deja constancia de la apertura y su conteo')
+  : falla('la apertura en la tirilla', t.slice(0, 200));
+
+/CONTRA ADMINGYM/.test(t) && /DINERO EN CAJA/.test(t)
+  ? bien('trae los cuatro números de AdminGym')
+  : falla('AdminGym en la tirilla', t.slice(0, 200));
+
+/Firma/.test(t)
+  ? bien('y una línea para firmar') : falla('la firma');
+
+// En pantalla no se ve: solo existe al imprimir.
+(await pagina.locator('#tirilla').isHidden())
+  ? bien('en pantalla la tirilla no estorba')
+  : falla('la tirilla se ve en pantalla');
+
+// El ancho es de rollo, no de folio: a 210mm la impresora del mostrador
+// la parte en dos. Se lee el texto del <style>, no el CSSOM: las reglas
+// @page dentro de @media no se serializan igual en todos los motores y
+// la prueba diría que falta algo que sí está.
+const hayRollo = await pagina.evaluate(() =>
+  [...document.querySelectorAll('style')].some(e => /@page\s*\{[^}]*80mm/.test(e.textContent)));
+hayRollo
+  ? bien('el papel es de 80mm, no de carta')
+  : falla('el tamaño de página', 'no encontré @page con 80mm');
 
 errores.length === 0
   ? bien('sin errores de consola', 'ninguno')

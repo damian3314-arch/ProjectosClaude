@@ -645,11 +645,42 @@ const CONFIG = {
   .medio.on{border-color:var(--gold);color:var(--tx);background:rgba(255,193,77,.12)}
   .modal-pie{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.3rem}
 
+  /* ---------- la tirilla ----------
+     Imprimir la pantalla daba una captura del sistema: colores, tarjetas,
+     botones y la mitad de la información que solo tiene sentido en un
+     navegador. Una tirilla es otra cosa — cabe en el rollo de 80mm de la
+     impresora del mostrador, se archiva junto al efectivo, y dice lo que
+     hay que saber sin tener que abrir nada.
+
+     No se genera con una librería de PDF: se imprime a "Guardar como
+     PDF", que es lo que ya sabe hacer cualquier navegador y funciona
+     igual en el celular de la cajera. Una dependencia menos que mantener. */
+  #tirilla{display:none}
+
   @media print{
-    header,.tabs,.semana-bar,.caja-seccion,.modal,.caja-h,#caja-lista,.btn{display:none!important}
-    body{background:#fff;color:#000}
-    .cierre{background:#fff;border-color:#999;color:#000}
-    .cierre .fila.total span:last-child{color:#000}
+    /* Todo lo demás desaparece. Solo el papel. */
+    body > *:not(#tirilla){display:none!important}
+    body{background:#fff;color:#000;margin:0}
+    @page{size:80mm auto;margin:4mm}
+
+    #tirilla{
+      display:block;width:72mm;margin:0 auto;color:#000;background:#fff;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:9pt;line-height:1.35;
+    }
+    #tirilla h1{font-size:12pt;margin:0;letter-spacing:.12em;text-align:center}
+    #tirilla .sub{text-align:center;font-size:8pt;margin:.5mm 0 2mm}
+    #tirilla hr{border:0;border-top:1px dashed #000;margin:2mm 0}
+    #tirilla .t{font-weight:700;font-size:8pt;letter-spacing:.06em;margin:2mm 0 .8mm}
+    #tirilla .l{display:flex;justify-content:space-between;gap:3mm}
+    #tirilla .l span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+    #tirilla .l.g{font-weight:700;border-top:1px solid #000;margin-top:1mm;padding-top:1mm}
+    #tirilla .peq{font-size:7.5pt}
+    #tirilla .firma{margin-top:8mm;border-top:1px solid #000;padding-top:1mm;
+      text-align:center;font-size:7.5pt}
+    /* Un descuadre no puede pasar desapercibido en papel en blanco y
+       negro, donde el color no existe: se marca con recuadro. */
+    #tirilla .ojo{border:1px solid #000;padding:1mm 1.5mm;margin:1mm 0;font-weight:700}
   }
 
 </style>
@@ -826,6 +857,9 @@ const CONFIG = {
 <!-- Los avisos viven fuera de todo: se ven igual con el panel arriba,
      abajo o con una ventana abierta encima. -->
 <div id="avisos" role="status" aria-live="polite"></div>
+
+<!-- La tirilla. Vacía hasta que se cierra el día; solo existe al imprimir. -->
+<div id="tirilla" aria-hidden="true"></div>
 
 <div class="modal" id="modal-caja" hidden>
   <div class="caja-modal">
@@ -2199,6 +2233,9 @@ const CONFIG = {
   // pero ver los totales sí, y el que los destapa es el cajero cuando
   // decide que terminó.
   let cajaMovsAbiertos = false, cajaCierreAbierto = false;
+  // Motivo con el que se está rehaciendo un cierre ya guardado. Null es
+  // el caso normal: se cierra una vez y ya.
+  let cajaRehacer = null;
   // `pesos` ya existe más arriba, para el tablero. Volver a declararlo
   // con const revienta el bloque entero con "already been declared", y
   // la caja simplemente deja de existir sin decir nada.
@@ -2431,9 +2468,148 @@ const CONFIG = {
 
   const campoAG = n => 'AdminGym · ' + n;
 
+  /* ---------- la tirilla ----------
+     Lo que se archiva junto al efectivo. Cabe en el rollo de 80mm y dice
+     todo lo que hay que saber sin abrir el sistema: con cuánto se abrió,
+     de qué fue cada peso, cómo cuadró el arqueo y los cuatro números que
+     se enfrentan a AdminGym.
+
+     Va agrupada por concepto y no movimiento por movimiento: veinte
+     líneas de "Clase suelta $15.000" no dicen más que "Clase suelta ×20
+     $300.000", y la tirilla tiene que caber en una mano. */
+  // En papel, "$-5.000" se lee mal y "-$5.000" se lee bien. El signo va
+  // delante del peso, no entre el peso y el número.
+  const conSigno = (n) => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
+
+  function pintarTirilla() {
+    const d = cajaDatos; if (!d) return;
+    const c = d.cierre || {};
+    const a = d.contra_admingym || {};
+    const b = d.banco || {};
+
+    const linea = (t, v, cl) =>
+      `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
+    const titulo = t => `<div class="t">${esc(t)}</div>`;
+
+    const conceptos = (sentido) => (d.resumen_conceptos || [])
+      .filter(x => x.sentido === sentido)
+      .map(x => linea(
+        `${nombreConcepto(x.concepto)}${x.n > 1 ? ' x' + x.n : ''}` +
+        (x.medio === 'transferencia' ? ' (transf.)' : ''),
+        pesos(x.valor_cop)))
+      .join('') || `<div class="l peq"><span>—</span><span></span></div>`;
+
+    const dif = Number(c.diferencia_cop || 0);
+
+    $('#tirilla').innerHTML =
+      `<h1>TUMBAO</h1>` +
+      `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
+      `<hr>` +
+
+      (d.apertura
+        ? titulo('APERTURA') +
+          linea(`${d.apertura.hora} · ${d.apertura.quien || 'sin nombre'}`, '') +
+          linea('Contado al abrir', pesos(d.apertura.contado_cop)) +
+          (Number(d.apertura.diferencia_cop || 0) !== 0
+            ? `<div class="ojo">` +
+              linea('Diferencia con anoche', conSigno(d.apertura.diferencia_cop)) +
+              `</div>`
+            : '') +
+          (d.apertura.nota ? `<div class="peq">${esc(d.apertura.nota)}</div>` : '')
+        // Si nadie abrió, la tirilla lo dice. Callarlo haría parecer que
+        // la base salió de un conteo que no existió.
+        : titulo('APERTURA') +
+          `<div class="peq">No se abrió la caja. La base viene del cierre anterior.</div>` +
+          linea('Base', pesos(d.base_cop))) +
+
+      `<hr>` + titulo('ENTRÓ') + conceptos('ingreso') +
+      titulo('SALIÓ') + conceptos('egreso') +
+
+      `<hr>` + titulo('EFECTIVO EN EL CAJÓN') +
+      linea('Base', pesos(d.base_cop)) +
+      linea('+ Entró en efectivo', pesos(d.ingreso_efectivo)) +
+      linea('− Salió en efectivo', pesos(d.egreso_efectivo)) +
+      linea('Debería haber', pesos(d.esperado_efectivo), 'g') +
+      linea('Contado', pesos(c.contado_cop || 0)) +
+      (dif === 0
+        ? linea('Diferencia', '0', 'g')
+        : `<div class="ojo">` + linea('DIFERENCIA', conSigno(dif)) + `</div>`) +
+      // Los dos van planos: son el reparto de lo contado, no un total
+      // que sume con lo de arriba. En negrita parecía que "Se retiró"
+      // cerraba una cuenta, y no cierra ninguna.
+      linea('Se dejó para mañana', pesos(c.dejado_cop || 0)) +
+      linea('Se retiró', pesos(c.retirado_cop || 0)) +
+
+      `<hr>` + titulo('NO PASÓ POR EL CAJÓN') +
+      linea('Transferencias', pesos(d.ingreso_transferencia)) +
+      linea('Reservas de la página', pesos(d.reservas_cop)) +
+      linea('Total a banco', pesos(a.ingresos_a_banco), 'g') +
+      (Number(d.reservas_a_mano_n || 0) > 0
+        ? `<div class="peq">Confirmadas en mostrador: ${d.reservas_a_mano_n} ` +
+          `(${pesos(d.reservas_a_mano_cop)}) — ya contadas arriba</div>`
+        : '') +
+
+      `<hr>` + titulo('CONTRA ADMINGYM') +
+      linea('Venta Membresías', pesos(a.venta_membresias)) +
+      linea('Ingresos a Banco', pesos(a.ingresos_a_banco)) +
+      linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
+      linea('DINERO EN CAJA', pesos(a.dinero_en_caja), 'g') +
+
+      (b.recibido_cop != null
+        ? `<hr>` + titulo('BANCO') +
+          linea('Bancolombia confirmó', pesos(b.recibido_cop)) +
+          (Number(b.libre_hoy_cop || 0) > 0
+            ? `<div class="ojo">` +
+              linea('Sin identificar', pesos(b.libre_hoy_cop)) + `</div>`
+            : linea('Sin identificar', '0'))
+        : '') +
+
+      `<hr>` +
+      `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
+      (c.nota ? `<div class="peq">${esc(c.nota)}</div>` : '') +
+      (Number(c.rehecho_n || 0) > 0
+        ? `<div class="ojo peq">Cierre rehecho ${c.rehecho_n} ` +
+          `${Number(c.rehecho_n) === 1 ? 'vez' : 'veces'}` +
+          (c.rehecho_motivo ? `: ${esc(c.rehecho_motivo)}` : '') + `</div>`
+        : '') +
+      `<div class="firma">Firma</div>`;
+  }
+
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
+
+    // Sin abrir: lo primero es contar los billetes. No se bloquea el
+    // turno —hoy la caja ya se usó sin apertura y bloquearla habría sido
+    // el peor cambio posible— pero se pide, porque contar al abrir es lo
+    // que parte un descuadre en "lo de anoche" y "lo de hoy". Sin eso,
+    // un faltante aparece a las 9 de la noche mezclado con las ventas
+    // del día y ya no hay forma de saber de qué turno fue.
+    // `=== false` y no `!d.abierta`: antes de aplicar la migración 0031
+    // el campo no existe y vale undefined. Con `!` la pantalla pediría
+    // abrir una caja que el servidor todavía no sabe abrir, y el botón
+    // daría error 502. Así, mientras el SQL no esté, esto sencillamente
+    // no aparece y la caja funciona igual que hasta ahora.
+    if (d.abierta === false && !d.cerrado) {
+      $('#caja-cierre').innerHTML =
+        `<h3>Abrir la caja</h3>` +
+        `<p class="sub-c">Cuenta lo que hay en el cajón antes de empezar. ` +
+        `Si no cuadra con lo que se dejó anoche, es mejor saberlo ahora ` +
+        `que a las nueve mezclado con las ventas del día.</p>` +
+        `<div class="grupo">` +
+          fila('Anoche se dejó', pesos(d.base_cop)) +
+          `<label for="a-contado">¿Cuánto hay ahora en el cajón?</label>` +
+          `<input id="a-contado" type="text" inputmode="numeric" placeholder="${String(d.base_cop || 0)}">` +
+          `<label for="a-nota">Nota <span class="suave">(opcional)</span></label>` +
+          `<input id="a-nota" type="text" maxlength="300" placeholder="Ej: faltaban 5 mil">` +
+          `<button class="btn primario" id="btn-abrir-caja">Abrir la caja</button>` +
+        `</div>` +
+        // No se esconde el cierre: si alguien no abrió y aun así tiene
+        // que cerrar, tiene que poder.
+        `<p class="suave"><a href="#" id="saltar-apertura">Cerrar el día sin abrir</a></p>`;
+      return;
+    }
 
     // Mientras el turno corre, ni un número. Solo el botón. Destaparlos
     // es una decisión del cajero: "ya terminé, cuadremos". Si estuvieran
@@ -2493,8 +2669,14 @@ const CONFIG = {
             fila('Se dejó de base para mañana', pesos(d.cierre.dejado_cop)) +
             fila('Se retiró', pesos(d.cierre.retirado_cop)) +
             (d.cierre.nota ? `<p class="suave">“${esc(d.cierre.nota)}”</p>` : '') +
+            (Number(d.cierre.rehecho_n || 0) > 0
+              ? `<p class="suave">Este cierre se rehizo ${d.cierre.rehecho_n} ` +
+                `${Number(d.cierre.rehecho_n) === 1 ? 'vez' : 'veces'}` +
+                (d.cierre.rehecho_motivo ? `: “${esc(d.cierre.rehecho_motivo)}”` : '') + `.</p>`
+              : '') +
           `</div>` +
-          `<button class="btn" onclick="window.print()">Imprimir o guardar en PDF</button>`
+          `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
+          `<button class="btn" id="btn-rehacer">Corregir el cierre</button>`
         : `<div class="grupo"><div class="et">Cerrar el día</div>` +
             `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
             `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
@@ -2532,6 +2714,61 @@ const CONFIG = {
       return;
     }
 
+    if (ev.target.id === 'btn-abrir-caja') {
+      const contado = ($('#a-contado').value || '').replace(/\D/g, '');
+      if (!contado) {
+        nota('Falta cuánto hay en el cajón', 'mal', 'Cuenta los billetes y escríbelo.');
+        marcar('#a-contado');
+        return;
+      }
+      ev.target.disabled = true;
+      try {
+        const r = await alWorker('abrir', { contado, nota: $('#a-nota').value });
+        await cargarCaja(true);
+        const dif = Number(r.diferencia_cop || 0);
+        dif === 0
+          ? nota('Caja abierta', 'bien', `Cuadró con lo que se dejó anoche: ${pesos(r.contado_cop)}.`)
+          : nota('Caja abierta con diferencia', 'ojo',
+                 `${dif > 0 ? 'Sobran' : 'Faltan'} ${pesos(Math.abs(dif))} ` +
+                 `respecto a los ${pesos(r.esperado_cop)} de anoche. Queda anotado.`);
+      } catch (e) { ev.target.disabled = false; fallo(e, 'No se pudo abrir la caja'); }
+      return;
+    }
+
+    // Quien no abrió por la mañana tiene que poder cerrar igual. Se salta
+    // la apertura, no se inventa una: un conteo que nadie hizo no se
+    // apunta como si se hubiera hecho.
+    if (ev.target.id === 'saltar-apertura') {
+      ev.preventDefault();
+      cajaCierreAbierto = true;
+      pintarCaja();
+      return;
+    }
+
+    if (ev.target.id === 'btn-tirilla') {
+      pintarTirilla();
+      window.print();
+      return;
+    }
+
+    if (ev.target.id === 'btn-rehacer') {
+      const motivo = prompt(
+        'El cierre ya está guardado. ¿Por qué hay que rehacerlo?\n' +
+        'Queda anotado junto al cierre.');
+      if (motivo == null) return;
+      if (motivo.trim().length < 4) {
+        nota('Falta el motivo', 'mal', 'Escribe por qué se rehace el cierre.');
+        return;
+      }
+      cajaRehacer = motivo.trim();
+      cajaCierreAbierto = true;
+      cajaDatos.cerrado = false;        // repinta el formulario
+      pintarCierre();
+      nota('Corrige y vuelve a cerrar', 'ojo',
+           'El cierre anterior queda guardado con el motivo del cambio.');
+      return;
+    }
+
     if (ev.target.id === 'btn-abrir-cierre') {
       cajaCierreAbierto = true;
       pintarCaja();          // repinta también las tarjetas con los totales
@@ -2556,9 +2793,13 @@ const CONFIG = {
       }
       ev.target.disabled = true;
       try {
-        await alWorker('cerrar', { contado, base: cajaDatos.base_cop, dejado, nota: $('#c-nota').value });
+        await alWorker('cerrar', {
+          contado, base: cajaDatos.base_cop, dejado, nota: $('#c-nota').value,
+          rehacer: cajaRehacer !== null, motivo: cajaRehacer,
+        });
+        cajaRehacer = null;
         await cargarCaja(true);
-        nota('Día cerrado', 'bien', 'Ya puedes imprimir o guardar el cierre en PDF.');
+        nota('Día cerrado', 'bien', 'Imprime la tirilla y archívala con el efectivo.');
       } catch (e) { ev.target.disabled = false; fallo(e, 'No se pudo cerrar el día'); }
     }
   });
