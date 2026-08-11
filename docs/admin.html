@@ -1535,7 +1535,12 @@ const CONFIG = {
         const btn = document.createElement('button');
         btn.className = 'btn chico ok';
         btn.textContent = 'Es este';
-        btn.addEventListener('click', () => resolver(el, 'confirmar', r.codigo, p.pago_id));
+        // El orden importa: resolver(tarjeta, reserva, accion, pagoId).
+        // Estaba corrido — pasaba 'confirmar' como reserva y r.codigo como
+        // accion, o sea que pedía POST /tumbao/admin/<codigo>, una ruta que
+        // no existe. El botón devolvía 404 siempre, que es justo el que
+        // sirve para enlazar un pago del banco con su reserva.
+        btn.addEventListener('click', () => resolver(el, r, 'confirmar', p.pago_id));
         fila.appendChild(btn);
         pagos.appendChild(fila);
       }
