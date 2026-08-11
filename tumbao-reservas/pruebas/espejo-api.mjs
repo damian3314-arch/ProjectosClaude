@@ -286,10 +286,16 @@ createServer(async (req, res) => {
             pagador:    (r.recibido || {}).pagador    || null,
             referencia: (r.recibido || {}).referencia || null,
             precio_cop: c.precio_cop || 15000,
-            pagos_sueltos: r.estado === 'pendiente_validacion'
-              ? [{ pago_id: 'pago-1', valor_cop: 15000, fecha: new Date().toISOString(),
-                   remitente: 'CAMILA ROJAS PEREZ', parecido: 0.67, minutos: 3 }]
-              : []
+            // Para los DOS estados, como en produccion: admin_pendientes
+            // calcula pagos_sueltos por valor y hora, sin mirar el estado
+            // de la reserva. Restringirlo a pendiente_validacion escondia
+            // el boton "Es este" en la mitad de los casos — y con el
+            // escondido, su bug vivio meses sin que ninguna prueba lo
+            // tocara.
+            pagos_sueltos: [{ pago_id: 'pago-1', valor_cop: 15000,
+                              fecha: new Date().toISOString(),
+                              remitente: 'CAMILA ROJAS PEREZ',
+                              parecido: 0.67, minutos: 3 }]
           };
         });
       return json(res, 200, { ok: true, reservas: lista });

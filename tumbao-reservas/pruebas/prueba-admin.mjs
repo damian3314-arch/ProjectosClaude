@@ -347,6 +347,43 @@ ok('cada grupo dice hora, dia y cuantos',
    /\d{1,2}:\d{2}\s*(am|pm)/i.test(cab) && /persona/.test(cab),
    cab.replace(/\n/g, ' · '));
 
+// ── el botón "Es este" ──
+// Nunca funcionó, y ninguna prueba lo pulsaba. Los argumentos iban
+// corridos —resolver(el, 'confirmar', r.codigo, pagoId) contra la firma
+// resolver(tarjeta, r, accion, pagoId)— así que pedía
+// POST /tumbao/admin/<codigo-de-reserva> y devolvía 404 siempre: cruzar
+// a mano un pago sin dueño era imposible desde el panel.
+//
+// Se mira la RUTA que sale, no que el clic no reviente. Con los
+// argumentos corridos el clic tampoco revienta: falla en silencio, que
+// es justo por lo que duró tanto sin verse.
+const btnEste = p.locator('.pago button', { hasText: 'Es este' }).first();
+ok('el pago sin dueño trae su botón "Es este"', await btnEste.count() > 0);
+
+if (await btnEste.count() > 0) {
+  // Se corta la llamada en vez de dejarla pasar: si se dejara, esta
+  // comprobación confirmaría una reserva de verdad y dejaría la cola
+  // distinta para los pasos que vienen. Lo que se mide es la ruta, y eso
+  // ya se sabe antes de que la petición salga.
+  const rutas = [];
+  await p.route('**/tumbao/admin/**', async (route) => {
+    rutas.push(new URL(route.request().url()).pathname.split('/').pop());
+    await route.abort();
+  });
+  await btnEste.click();
+  await p.waitForTimeout(900);
+  await p.unroute('**/tumbao/admin/**');
+
+  ok('"Es este" llama a /confirmar, no al código de la reserva',
+     rutas.includes('confirmar'), rutas.join(', ') || '(no pidió nada)');
+
+  // Repintar desde el espejo, que no cambió, para dejar la cola como estaba.
+  await p.locator('#tab-tablero').click();
+  await p.waitForTimeout(400);
+  await p.locator('#tab-pendientes').click();
+  await p.waitForTimeout(1000);
+}
+
 const t1 = p.locator('.pend-card').first();
 ok('muestra el codigo', /^[A-Z0-9]{4,8}$/.test((await t1.locator('.cod').innerText()).trim()),
    (await t1.locator('.cod').innerText()).trim());
@@ -449,7 +486,12 @@ ok('y borra el token guardado',
 
 // ───────── consola ─────────
 console.log('');
-const inesperados = errores.filter(e => !/40[0-9]|Unauthorized|Bad Request/.test(e));
+// Se descartan los 4xx que las propias pruebas provocan (token malo) y el
+// ERR_FAILED de la llamada que se corta a proposito al probar "Es este".
+// Lo que NO se descarta es un error de JavaScript: un ReferenceError o un
+// "Cannot read properties of null" tienen que seguir tumbando la prueba.
+const inesperados = errores.filter(e =>
+  !/40[0-9]|Unauthorized|Bad Request|net::ERR_FAILED/.test(e));
 ok('sin errores de JavaScript inesperados', inesperados.length === 0, inesperados.join(' | ') || 'ninguno');
 
 // capturas

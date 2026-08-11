@@ -71,6 +71,11 @@ const dia = () => ({
   ingreso_transferencia: suma('ingreso', 'transferencia'),
   egreso_transferencia: suma('egreso', 'transferencia'),
   reservas_cop: 15000,
+  // Confirmadas en el mostrador: NO entran en total_ingresos porque su
+  // plata ya está en los movimientos de caja. Contarlas dos veces fue el
+  // error que iba a inflar el cierre del 10 de agosto en $30.000.
+  reservas_a_mano_cop: 30000,
+  reservas_a_mano_n: 2,
   total_ingresos: suma('ingreso', 'efectivo') + suma('ingreso', 'transferencia') + 15000,
   total_egresos: suma('egreso', 'efectivo') + suma('egreso', 'transferencia'),
   contra_admingym: {
@@ -392,6 +397,29 @@ await pagina.waitForTimeout(200);
 
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(800);
+
+// Lo confirmado en el mostrador tiene que verse, y tiene que verse como
+// algo que NO suma: es el punto de control de que esa plata se registró
+// en Caja. Si no se enseñara, el arreglo del doble conteo sería
+// invisible y nadie podría comprobarlo.
+const ctrl = pagina.locator('#caja-cierre .fila.control');
+(await ctrl.count()) === 1 && /Confirmadas en el mostrador/.test(await ctrl.innerText())
+  ? bien('el cierre enseña lo confirmado en el mostrador',
+         (await ctrl.innerText()).replace(/\s+/g, ' ').trim())
+  : falla('lo confirmado en el mostrador', `${await ctrl.count()} filas`);
+
+// Y no puede estar dentro de ningún total. Se calcula el esperado desde
+// el mismo simulacro en vez de fijar una cifra: si se fija, cualquier
+// movimiento que se añada antes rompe la prueba por el motivo
+// equivocado y se acaba relajando la aserción que importa.
+const esperadoBanco = dia().contra_admingym.ingresos_a_banco;
+const totalBanco = await pagina.locator('#caja-cierre .fila.total')
+  .filter({ hasText: 'Total a banco' }).innerText();
+const cifraBanco = Number((totalBanco.match(/\$([\d.]+)/) || [])[1]?.replace(/\./g, ''));
+cifraBanco === esperadoBanco
+  ? bien('y NO se suma al total a banco', `$${esperadoBanco.toLocaleString('es-CO')}`)
+  : falla('los 30.000 de a mano se colaron en el total',
+          `esperaba ${esperadoBanco}, salió ${cifraBanco}`);
 
 const cierreTxt = await pagina.locator('#caja-cierre').innerText();
 /Apuntado sin respaldo del banco/.test(cierreTxt) && /125\.000/.test(cierreTxt)

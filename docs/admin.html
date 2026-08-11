@@ -563,6 +563,15 @@ const CONFIG = {
   .cierre .fila.total > span.dif.mal {color:var(--bad)}
   .cierre .fila.total > span.dif.bien{color:var(--ok)}
   .cierre .fila.total > span.dif.ojo {color:var(--gold)}
+  /* Una fila que NO suma. Va en gris y entre paréntesis para que nadie
+     la lea como parte del total que tiene encima. */
+  .cierre .fila.control{padding-top:.5rem;color:var(--tx-3)}
+  .cierre .fila.control .no-suma{
+    font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx-3);
+  }
+  .cierre .fila.control .no-suma::before{content:'('}
+  .cierre .fila.control .no-suma::after {content:')'}
+
   .cierre .dif{font-weight:800;font-size:1.1rem}
   .cierre .dif.mal{color:var(--bad)} .cierre .dif.bien{color:var(--ok)}
   .cierre .dif.ojo{color:var(--gold)}
@@ -1982,7 +1991,15 @@ const CONFIG = {
         const btn = document.createElement('button');
         btn.className = 'btn chico ok';
         btn.textContent = 'Es este';
-        btn.addEventListener('click', () => resolver(el, 'confirmar', r.codigo, p.pago_id));
+        // Los argumentos iban corridos: resolver(tarjeta, r, accion, pagoId)
+        // recibía ('confirmar', r.codigo, ...), así que pedía
+        // POST /tumbao/admin/<codigo-de-reserva> en vez de /confirmar y
+        // devolvía 404 siempre. Este botón nunca funcionó: cruzar a mano un
+        // pago sin dueño era imposible desde el panel, y se sentía como
+        // "ese pago no se deja enlazar" en vez de como un panel roto.
+        // Los otros dos botones de la tarjeta sí pasaban bien los
+        // argumentos, que es por lo que el fallo parecía del pago.
+        btn.addEventListener('click', () => resolver(el, r, 'confirmar', p.pago_id));
         fila.appendChild(btn);
         pagos.appendChild(fila);
       }
@@ -2376,6 +2393,20 @@ const CONFIG = {
         fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
         fila('Reservas de la página', pesos(d.reservas_cop)) +
         fila('Total a banco', pesos(a.ingresos_a_banco), campoAG('Ingresos a Banco'), 'total') +
+        // NO suma, y por eso va debajo del total. Son las reservas que se
+        // confirmaron en el mostrador: su plata ya entró por Caja y está
+        // arriba, en los movimientos. Sumarla otra vez fue el error que
+        // el 10 de agosto iba a inflar el cierre en $30.000.
+        // Se enseña para poder comprobar que esté: si alguien confirma a
+        // mano y se le olvida registrarla en Caja, esta cifra deja de
+        // cuadrar con los movimientos y se nota el mismo día.
+        (Number(d.reservas_a_mano_n || 0) > 0
+          ? `<div class="fila control"><span>Confirmadas en el mostrador` +
+            `<span class="ag">${d.reservas_a_mano_n} ` +
+            `${Number(d.reservas_a_mano_n) === 1 ? 'reserva' : 'reservas'} · ` +
+            `su plata ya está arriba, en los movimientos</span></span>` +
+            `<span class="no-suma">${pesos(d.reservas_a_mano_cop)}</span></div>`
+          : '') +
       `</div>` +
 
       bloqueBanco() +
