@@ -74,6 +74,29 @@ webhook en reposo no gasta nada, y si a alguien le quedó la página vieja
 abierta en el celular, sus clics siguen funcionando en vez de dar 404.
 Se puede apagar cuando lleve un día sin recibir llamadas.
 
+### 2c. Pegar `aplicar/PEGAR_ESTA_NOCHE.sql` ⬅ pendiente
+
+Son las dos cosas juntas y en orden: abrir/cerrar la caja de verdad
+(0031) y cruzar los pagos en las dos direcciones (0032). Se puede pegar
+con el día empezado y correrlo dos veces no hace daño. Probado contra el
+estado exacto de producción (0001..0030 + el archivo).
+
+**Por qué la 0032.** El 11 de agosto entraron cinco consignaciones y solo
+una se cruzó sola. Las horas lo explican:
+
+    15:48  Yiraudis reserva
+    15:49  transfiere → el correo se procesa 15:50
+    15:5x  termina de escribir la referencia y da "ya pagué"
+
+A las 15:50 la reserva estaba en `pendiente_pago`, que no es candidata.
+Un minuto después pasó a `verificando` — y nadie volvió a mirar. La
+transferencia es instantánea y el correo llega en menos de un minuto; la
+persona en el celular tarda más que eso. O sea que el orden normal es el
+contrario al único que el sistema sabía manejar.
+
+Ahora se pregunta desde los dos lados, y el "ya pagué" del cliente
+responde "confirmado" en el mismo clic cuando el dinero ya estaba.
+
 ### 3. Revocar los tokens de prueba
 
 Se compartieron dos por chat para depurar:
@@ -115,6 +138,7 @@ cd tumbao-reservas/pruebas
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
 psql -d <base> -f humo-banco.sql        # conciliación depósito por depósito
 psql -d <base> -f humo-aforo.sql        # no se vende dos veces el mismo puesto
+psql -d <base> -f humo-cruce.sql        # el cruce en las dos direcciones (30)
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -127,6 +151,13 @@ node ../../tumbao-opina/pruebas/limpiar-transcripcion.test.mjs
 node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
+
+**Dos están rojas y no es del código.** `humo-admin.sql` y
+`humo-tablero.sql` construyen una semana con `admin_guardar_semana` y
+después buscan una clase *futura*. Corriéndolas un martes por la tarde ya
+casi no queda ninguna, y fallan por eso. Fallan igual con y sin los
+cambios de hoy — se comprobó pegando y sin pegar. Hay que anclarles la
+fecha, pero no bloquea nada.
 
 ---
 
@@ -147,6 +178,18 @@ node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 - **Solo lee Bancolombia.** Un pago por Nequi o a otra cuenta no genera
   correo, así que aparece como "sin respaldo". No es un error del
   sistema: es que esa plata entró por un canal que nadie está leyendo.
+  El 11 de agosto ya pasó: Nicole Arévalo quedó en la cola con su
+  referencia `M10758771` y en Bancolombia no hay ni un depósito de
+  $15.000 a esa hora. Por ahí no entró.
+- **Dos personas que paguen el MISMO valor en el MISMO minuto se
+  registran como un solo depósito.** El índice `pagos_unicos` es
+  `(banco, valor, fecha_pago, referencia)`, y `referencia` viene siendo
+  la llave Bre-B de la cuenta de Tumbao — la misma en todos los correos.
+  La fecha llega con precisión de minuto. A las 6 pm, con varios de
+  $15.000 seguidos, es cuestión de tiempo. El arreglo es dedupear por el
+  id del correo de Gmail (`hoja_fila`, que ya se guarda), pero eso obliga
+  a botar el índice actual: no se hizo hoy para no tocar dos cosas de la
+  misma función la misma noche.
 - **El parser reconoce cuatro formatos** de aviso de Bancolombia. Si el
   banco cambia el texto, el pago cae en "estructura_no_reconocida" y no
   entra. Conviene cuadrar contra el extracto los primeros días.

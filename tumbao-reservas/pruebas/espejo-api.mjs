@@ -299,13 +299,28 @@ createServer(async (req, res) => {
             // el boton "Es este" en la mitad de los casos — y con el
             // escondido, su bug vivio meses sin que ninguna prueba lo
             // tocara.
+            // Desde 0032 la lista ya no exige que el valor cuadre: se
+            // ofrece lo que haya cerca en el tiempo, marcado. El segundo
+            // es el caso real de quien paga dos puestos con un solo
+            // giro, que antes no aparecia nunca.
             pagos_sueltos: [{ pago_id: 'pago-1', valor_cop: 15000,
                               fecha: new Date().toISOString(),
                               remitente: 'CAMILA ROJAS PEREZ',
-                              parecido: 0.67, minutos: 3 }]
+                              cuadra: true, parecido: 0.67, minutos: 3 },
+                            { pago_id: 'pago-2', valor_cop: 30000,
+                              fecha: new Date().toISOString(),
+                              remitente: 'MARTA NIETO',
+                              cuadra: false, parecido: 0, minutos: 12 }]
           };
         });
-      return json(res, 200, { ok: true, reservas: lista });
+      // La plata que entro al banco y no caso con nadie. Va aparte de la
+      // cola: se ve aunque no haya ni una reserva por validar, que es
+      // justo el caso que se perdia.
+      return json(res, 200, { ok: true, reservas: lista,
+        pagos_libres: [{ pago_id: 'pago-suelto-1', valor_cop: 60000,
+                         fecha_pago: new Date().toISOString(),
+                         remitente: 'Elayne Leonor Jiménez Becerra',
+                         cuando: '11/08 15:57' }] });
     }
 
     if (que === 'tablero') {

@@ -193,7 +193,20 @@ const CONFIG = {
   .pago .sp{flex:1}
   .pago .par{font-size:.75rem;color:var(--tx-3)}
   .pago .par.alto{color:var(--ok)}
+  /* El que no cuadra de valor se enseña, pero apagado y de último: está
+     para que se vea, no para que sea lo primero que se toca. */
+  .pago.torcido{opacity:.72;border-style:dashed}
+  .pago .ojo{font-size:.75rem;color:var(--gold)}
   .sin-pagos{font-size:.8rem;color:var(--tx-3);font-style:italic}
+
+  /* ---------- plata que llegó y no casó con nadie ---------- */
+  #sin-dueno{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:.85rem 1rem;margin-bottom:1rem;
+  }
+  #sin-dueno h3{font-size:.9rem;margin:0 0 .15rem}
+  #sin-dueno .pista{font-size:.78rem;color:var(--tx-3);margin:0 0 .6rem}
+  #sin-dueno .libres{display:grid;gap:.4rem}
 
   /* ---------- buscador y grupos de la cola ---------- */
   .buscar{flex:1;min-width:11rem;max-width:24rem;position:relative}
@@ -804,6 +817,10 @@ const CONFIG = {
       </div>
       <div class="aviso" id="msg-pend" hidden></div>
       <div class="cargando" id="cargando-pend" hidden>Cargando…</div>
+      <!-- Plata que entró al banco y no casó con ninguna reserva. Antes
+           solo se veía dentro de la pestaña de Caja, en el selector de un
+           cobro: o sea, solo si alguien iba a cobrar algo. -->
+      <div id="sin-dueno" hidden></div>
       <!-- Sin clase: los grupos van uno debajo de otro. La rejilla de
            dos columnas es .pend, y va dentro de cada grupo. -->
       <div id="lista-pend"></div>
@@ -941,6 +958,7 @@ const CONFIG = {
   let semana = null;
   let diaTablero = null;          // se fija al entrar, ya con hoyBogota()
   let pendientes = [];            // la cola cruda; el buscador filtra sobre esto
+  let pagosLibres = [];           // dinero en el banco que no casó con nadie
   // clave "fecha|hora" -> celda que se va a mandar
   const cambios = new Map();
 
@@ -1185,12 +1203,56 @@ const CONFIG = {
 
   /* ---------- pestañas ---------- */
   const PANELES = ['tablero', 'horario', 'pendientes', 'caja'];
+  let panelActual = 'tablero';
   function verPanel(cual) {
+    panelActual = cual;
     for (const p of PANELES) {
       $('#tab-' + p).setAttribute('aria-selected', String(p === cual));
       $('#p-' + p).classList.toggle('on', p === cual);
     }
   }
+
+  /* ---------- la pantalla se refresca sola ----------
+   *
+   * No lo hacía. Nunca. El único setInterval que había era el reloj de
+   * un temporizador. Con la pestaña abierta en el mostrador, un pago
+   * entraba a Supabase en menos de un minuto y la pantalla seguía
+   * enseñando lo de la última vez que alguien tocó "Recargar".
+   *
+   * Eso no se ve como una pantalla vieja: se ve como que el sistema no
+   * está registrando los pagos.
+   *
+   * Cada cuánto lo decide esReciente() con FRESCO_MS, no este tic. El
+   * tic solo pregunta; la ventana de cada pestaña manda. Y no cuesta
+   * nada: son ~2.000 llamadas al día contra las 100.000 del Worker.
+   */
+  const LATIDO_MS = 15000;
+
+  function ocupado() {
+    // Nada de refrescar debajo de las manos de alguien: si hay un modal
+    // abierto o el cierre a medio llenar, se está tecleando y volver a
+    // pintar borraría lo escrito.
+    if (document.hidden) return true;
+    if (document.querySelector('.modal:not([hidden])')) return true;
+    if (panelActual === 'caja' && cajaCierreAbierto) return true;
+    return false;
+  }
+
+  function latido() {
+    if (ocupado()) return;
+    if (panelActual === 'pendientes') cargarPendientes();
+    else if (panelActual === 'caja')  cargarCaja();
+    else if (panelActual === 'tablero') cargarTablero();
+    // El horario no cambia solo: lo escribe una persona y ya.
+  }
+
+  setInterval(latido, LATIDO_MS);
+
+  // Volver al celular después de un rato es justo cuando más desactualizado
+  // está todo. Ahí no se espera al siguiente tic.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) latido();
+  });
   $('#tab-tablero').addEventListener('click', () => { verPanel('tablero'); cargarTablero(); });
   $('#tab-horario').addEventListener('click', () => verPanel('horario'));
   $('#tab-pendientes').addEventListener('click', () => {
@@ -1229,7 +1291,9 @@ const CONFIG = {
   // para tragarse las ráfagas —en los datos del 31/07 hay siete llamadas
   // en catorce segundos, de ir y volver entre pestañas— sin que recepción
   // llegue a notarlo.
-  const FRESCO_MS = { tablero: 45000, pendientes: 10000 };
+  // La caja se mira despacio y se trabaja encima: 30 segundos evita que
+  // la pantalla parpadee mientras se cobra, sin dejarla envejecer.
+  const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -1888,6 +1952,9 @@ const CONFIG = {
     try {
       const r = await api('pendientes', {});
       pendientes = r.reservas || [];
+      // Puede no venir: si el SQL todavía no está pegado, el campo no
+      // existe y el bloque simplemente no se pinta.
+      pagosLibres = r.pagos_libres || [];
       pintarPendientes();
     } catch (e) {
       aviso($('#msg-pend'), esc(e.message), 'mal');
@@ -1940,6 +2007,7 @@ const CONFIG = {
       : lista.length === pendientes.length ? `${lista.length}`
       : `${lista.length} de ${pendientes.length}`;
 
+    pintarSinDueno();
     cont.innerHTML = '';
 
     if (!pendientes.length) {
@@ -1972,6 +2040,38 @@ const CONFIG = {
       bloque.appendChild(caja);
       cont.appendChild(bloque);
     }
+  }
+
+  // Plata que llegó al banco y no casó con nadie.
+  //
+  // Va ARRIBA de la cola y se pinta aunque la cola esté vacía, que es
+  // justo el caso que se perdía: "Nada por validar ✓" con $60.000 de
+  // alguien esperando a que se den cuenta.
+  //
+  // No lleva botones. Enlazar un depósito se hace desde la reserva que
+  // lo reclama (con "Es este") o cobrándolo en la Caja; un botón aquí
+  // sería una tercera forma de mover plata, y las tres tendrían que
+  // ponerse de acuerdo. Esto es una alerta, no un mostrador.
+  function pintarSinDueno() {
+    const caja = $('#sin-dueno');
+    if (!pagosLibres.length) { caja.hidden = true; caja.innerHTML = ''; return; }
+    const total = pagosLibres.reduce((s, p) => s + Number(p.valor_cop || 0), 0);
+    caja.hidden = false;
+    caja.innerHTML =
+      `<h3>Llegó al banco y nadie lo ha reclamado</h3>` +
+      `<p class="pista">${pagosLibres.length === 1 ? 'Un depósito' :
+         pagosLibres.length + ' depósitos'} · ` +
+        `$${total.toLocaleString('es-CO')} en total. ` +
+        `Se cobra desde la reserva que lo reclame, o en la pestaña Caja.</p>` +
+      `<div class="libres">` +
+      pagosLibres.map(p =>
+        `<div class="pago">` +
+          `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
+          `<span class="sp"></span>` +
+          `<span>$${Number(p.valor_cop || 0).toLocaleString('es-CO')} · ` +
+            `${esc(p.cuando || '')}</span>` +
+        `</div>`).join('') +
+      `</div>`;
   }
 
   // Diez tarjetas seguidas y todas iguales no dicen quién viene a las 6
@@ -2044,8 +2144,12 @@ const CONFIG = {
           timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit', hour12: true
         }).format(new Date(p.fecha));
         const par = Math.round((p.parecido || 0) * 100);
+        // `cuadra` llega desde 0032. Si el SQL todavía no está pegado el
+        // campo no viene, y entonces todo lo que llega ya cuadraba: era
+        // requisito para salir en la lista.
+        const cuadra = p.cuadra !== false;
         const fila = document.createElement('div');
-        fila.className = 'pago';
+        fila.className = 'pago' + (cuadra ? '' : ' torcido');
         // Los minutos de diferencia con la hora que declaro resuelven el
         // caso mas rapido que el nombre, sobre todo cuando pago otro.
         const dif = p.minutos == null ? null : Math.abs(p.minutos);
@@ -2055,6 +2159,11 @@ const CONFIG = {
             : `<span class="par${dif <= 15 ? ' alto' : ''}">` +
               (dif === 0 ? 'misma hora' : `${dif} min de diferencia`) + `</span>`) +
           `<span class="par${par >= 50 ? ' alto' : ''}">${par}% parecido</span>` +
+          // Antes solo se enseñaban los que cuadraban exacto con el
+          // precio, así que quien paga 30.000 por dos personas no
+          // aparecía nunca al lado de su reserva. Ahora sale, y lo que
+          // era un requisito invisible es una etiqueta que se lee.
+          (cuadra ? '' : `<span class="ojo">no cuadra</span>`) +
           `<span class="sp"></span>` +
           `<span>$${Number(p.valor_cop).toLocaleString('es-CO')} · ${esc(f)}</span>`;
         const btn = document.createElement('button');
@@ -2068,13 +2177,22 @@ const CONFIG = {
         // "ese pago no se deja enlazar" en vez de como un panel roto.
         // Los otros dos botones de la tarjeta sí pasaban bien los
         // argumentos, que es por lo que el fallo parecía del pago.
-        btn.addEventListener('click', () => resolver(el, r, 'confirmar', p.pago_id));
+        btn.addEventListener('click', () => {
+          // Amarrar un depósito por otro valor puede ser correcto —dos
+          // puestos con un solo pago— pero no puede pasar de un clic
+          // distraído.
+          if (!cuadra && !confirm(
+                `El depósito es de $${Number(p.valor_cop).toLocaleString('es-CO')} ` +
+                `y la clase vale $${Number(r.precio_cop || 0).toLocaleString('es-CO')}. ` +
+                `¿Aun así es el pago de ${r.nombre}?`)) return;
+          resolver(el, r, 'confirmar', p.pago_id);
+        });
         fila.appendChild(btn);
         pagos.appendChild(fila);
       }
     } else {
       pagos.className = 'sin-pagos';
-      pagos.textContent = 'No hay pagos sin dueño por ese valor cerca de esa hora.';
+      pagos.textContent = 'No llegó dinero sin dueño cerca de esa hora.';
     }
     el.appendChild(pagos);
 

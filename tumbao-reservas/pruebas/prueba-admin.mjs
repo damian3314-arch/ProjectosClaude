@@ -308,6 +308,13 @@ await p2.waitForSelector('#s3.on', { timeout: 8000 });
 await p2.fill('#hora-transf', '18:42');
 await p2.locator('#ya-pague').click();
 await p2.waitForSelector('#s4.on', { timeout: 8000 });
+// Se cierra en cuanto la reserva existe. Dejada abierta, la pantalla de
+// espera sigue preguntando por /estado, y el espejo confirma la reserva
+// unos segundos después: la misma persona que la sección "Por validar"
+// necesita ver en la cola desaparecía a media prueba. Antes no se notaba
+// porque nada se quedaba quieto tanto rato; el tic de refresco solo lo
+// sacó a la luz.
+await p2.close();
 
 await p.locator('#sem-hoy').click();
 await p.waitForTimeout(900);
@@ -383,6 +390,53 @@ if (await btnEste.count() > 0) {
   await p.locator('#tab-pendientes').click();
   await p.waitForTimeout(1000);
 }
+
+// ── la plata que no casó con nadie ──
+// El 11 de agosto entraron $60.000 de una señora, no casaron con ninguna
+// reserva, y en "Por validar" no aparecía ni una señal: solo se veían
+// dentro del selector de un cobro en la pestaña Caja, o sea únicamente
+// si a alguien se le ocurría ir a cobrar algo.
+const sinDueno = p.locator('#sin-dueno');
+ok('se ve el bloque de plata sin dueño', await sinDueno.isVisible());
+const txtSinDueno = await sinDueno.innerText();
+ok('dice quién la mandó y cuánto',
+   /Elayne/.test(txtSinDueno) && /60\.000/.test(txtSinDueno),
+   txtSinDueno.replace(/\n/g, ' · '));
+
+// ── el candidato que no cuadra de valor ──
+// Antes admin_pendientes exigía que el depósito valiera EXACTO lo que
+// vale la clase, así que quien paga 30.000 por dos puestos no aparecía
+// nunca al lado de su reserva. Ahora sale, marcado y de último.
+const depos = p.locator('.pend-card').first().locator('.pago');
+ok('la reserva ofrece los dos depósitos', await depos.count() === 2,
+   `${await depos.count()} fila(s)`);
+ok('el que cuadra va primero',
+   !(await depos.nth(0).evaluate(e => e.classList.contains('torcido'))));
+ok('el que no cuadra va de último y marcado',
+   await depos.nth(1).evaluate(e => e.classList.contains('torcido')) &&
+   /no cuadra/.test(await depos.nth(1).innerText()));
+
+// Amarrar un depósito por otro valor puede ser correcto, pero no puede
+// pasar de un clic distraído.
+let preguntó = false;
+p.once('dialog', async (d) => { preguntó = true; await d.dismiss(); });
+await depos.nth(1).locator('button', { hasText: 'Es este' }).click();
+await p.waitForTimeout(500);
+ok('"Es este" sobre uno que no cuadra pregunta antes', preguntó);
+
+// ── la pantalla se refresca sola ──
+// Lo que se veía como "el sistema no registra los pagos". No había un
+// solo setInterval que volviera a pedir datos: con la pestaña abierta en
+// el mostrador, el panel enseñaba lo de la última vez que alguien tocó
+// "Recargar", y un pago que entraba a Supabase en cuarenta segundos no
+// aparecía hasta que a alguien se le ocurría recargar.
+const llamadas = [];
+p.on('request', (r) => {
+  if (r.url().includes('/api/admin/pendientes')) llamadas.push(Date.now());
+});
+await p.waitForTimeout(35000);
+ok('la cola se vuelve a pedir sola, sin tocar nada',
+   llamadas.length >= 2, `${llamadas.length} llamada(s) en 35 s`);
 
 const t1 = p.locator('.pend-card').first();
 ok('muestra el codigo', /^[A-Z0-9]{4,8}$/.test((await t1.locator('.cod').innerText()).trim()),
