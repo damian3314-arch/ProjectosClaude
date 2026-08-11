@@ -189,6 +189,64 @@ ok('y dice cuando no esta', /Nadie con/.test(await p.locator('#lista-puerta').in
 await p.locator('#limpiar-puerta').click();
 await p.waitForTimeout(300);
 
+// ── liberar el cupo de quien no pagó ──
+// El caso real del 11 de agosto: la misma persona reservó dos veces
+// —le falló el primer intento y volvió a empezar— y la que no pagó se
+// quedó ocupando un puesto de una clase casi llena. No había dónde
+// arreglarlo: "Por validar" solo enseña a quien dijo "ya pagué", y quien
+// nunca lo dijo no aparecía por ningún lado. Se soltaba sola al expirar,
+// pero la barrida corre en punto: hasta una hora con el cupo bloqueado.
+await fetch('http://localhost:8899/webhook/tumbao/reservar', {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ clase_id: idClase, nombre: 'Duplicada Sinpagar',
+                         telefono: '3109998877', tipo: 'suelta', habeas: true })
+});
+await p.locator('#puerta-recargar').click();
+await p.waitForTimeout(800);
+
+const dupe = p.locator('.fila-puerta').filter({ hasText: 'Duplicada Sinpagar' }).first();
+ok('la que no pagó sale marcada "sin confirmar"',
+   /sin confirmar/i.test(await dupe.innerText()));
+const btnSoltar = dupe.locator('.btn-soltar');
+ok('y trae el botón de liberar', await btnSoltar.count() === 1);
+
+// En las confirmadas NO: para deshacer un pago está Deshacer en la cola,
+// que además devuelve el depósito al banco.
+const confirmadas = p.locator('.fila-puerta').filter({ hasNotText: 'sin confirmar' });
+ok('las confirmadas y las de plan no lo traen',
+   await confirmadas.locator('.btn-soltar').count() === 0,
+   `${await confirmadas.count()} fila(s) sin botón`);
+
+// Soltar un cupo en una clase llena se lo lleva otro en segundos: esto
+// se pregunta antes.
+let preguntoSoltar = false;
+p.once('dialog', async (d) => { preguntoSoltar = true; await d.dismiss(); });
+await btnSoltar.click();
+await p.waitForTimeout(600);
+ok('pregunta antes de soltar', preguntoSoltar);
+ok('y si dices que no, sigue ahí',
+   await p.locator('.fila-puerta').filter({ hasText: 'Duplicada Sinpagar' }).count() === 1);
+
+const antesDeSoltar = await p.locator('.fila-puerta').count();
+const sinConfirmarAntes = Number(
+  (await p.locator('#puerta-marcador').innerText()).match(/(\d+) sin confirmar/)?.[1] ?? 0);
+p.once('dialog', async (d) => { await d.accept(); });
+await btnSoltar.click();
+await p.waitForTimeout(1400);
+ok('al aceptar, desaparece de la lista',
+   await p.locator('.fila-puerta').filter({ hasText: 'Duplicada Sinpagar' }).count() === 0);
+ok('y la lista queda con una menos',
+   await p.locator('.fila-puerta').count() === antesDeSoltar - 1,
+   `${await p.locator('.fila-puerta').count()} de ${antesDeSoltar}`);
+// Yenny también está sin confirmar, así que el aviso no se apaga: baja.
+// Que baje es lo que hay que comprobar — el número sale del servidor, no
+// de una resta local, y es donde se notaría si el cupo no se soltó.
+const sinConfirmarDespues = Number(
+  (await p.locator('#puerta-marcador').innerText()).match(/(\d+) sin confirmar/)?.[1] ?? 0);
+ok('el aviso de "sin confirmar" baja en uno',
+   sinConfirmarDespues === sinConfirmarAntes - 1,
+   `${sinConfirmarAntes} → ${sinConfirmarDespues}`);
+
 // La marca tiene que seguir puesta al volver a abrir.
 await p.locator('#puerta-volver').click();
 await p.waitForSelector('#vista-dia:not([hidden])', { timeout: 8000 });

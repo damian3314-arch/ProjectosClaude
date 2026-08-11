@@ -387,6 +387,18 @@ const CONFIG = {
   }
   .btn-entro:disabled{opacity:.5}
 
+  /* Soltar el cupo de alguien que no pagó. Va apagado y más pequeño que
+     "Marcar": en la puerta lo que se hace mil veces es marcar entradas,
+     y esto es la excepción. Solo se pone rojo cuando el dedo ya está
+     encima. */
+  .btn-soltar{
+    min-height:2.6rem;padding:0 .8rem;border-radius:12px;font-size:.82rem;
+    background:transparent;border:1px solid var(--line-2);color:var(--tx-3);
+  }
+  .btn-soltar:hover{border-color:var(--bad);color:var(--bad)}
+  .btn-soltar:disabled{opacity:.5}
+  .fila-puerta .acciones-puerta{display:flex;gap:.4rem;align-items:center}
+
   .vacio{text-align:center;color:var(--tx-3);padding:3rem 1rem}
   .vacio .ico{font-size:2.4rem;display:block;margin-bottom:.6rem}
   /* Dentro de una rejilla el mensaje se metía en una sola columna y
@@ -1097,6 +1109,9 @@ const CONFIG = {
     DIA_CERRADO:    ['El día ya está cerrado', 'El ajuste va mañana.'],
     OTRO_DIA:       ['Solo se anulan movimientos de hoy', 'Lo de ayer se ajusta hoy, no se borra.'],
     YA_ANULADO:     ['Ese movimiento ya estaba anulado', 'Recarga la caja.'],
+    YA_CONFIRMADA:  ['Esa reserva ya está confirmada',
+      'Para soltarla hay que deshacer el pago primero, en Por validar.'],
+    NO_EXISTE:      ['Esa reserva ya no está', 'Recarga la lista.'],
     SIN_LLAVE:      ['Falta configurar la caja', 'Avísale a Damián: falta el secreto del Worker.'],
     FALLA:          ['No se pudo guardar', 'Vuelve a intentarlo en un momento.'],
   };
@@ -1681,6 +1696,34 @@ const CONFIG = {
         `</div>` +
       `</div>`;
 
+    const acc = document.createElement('div');
+    acc.className = 'acciones-puerta';
+
+    // Soltar el cupo, desde aquí.
+    //
+    // El caso real: la misma persona reservó dos veces —le falló el
+    // primer intento y volvió a empezar— y la que no pagó se queda
+    // ocupando un puesto de una clase que puede estar llena. Antes no
+    // había dónde arreglarlo: "Por validar" solo enseña a quien dijo
+    // "ya pagué", y quien nunca lo dijo no aparece por ningún lado.
+    //
+    // Se libera solo al expirar, pero eso puede tardar hasta una hora
+    // (la barrida corre en punto), y mientras tanto el cupo no se puede
+    // vender.
+    //
+    // No sale en las de plan (no tienen código, no reservan) ni en las
+    // confirmadas: para deshacer un pago confirmado está Deshacer en la
+    // cola, que además devuelve el depósito.
+    if (p.codigo && p.confirmada === false) {
+      const s = document.createElement('button');
+      s.className = 'btn-soltar';
+      s.textContent = 'Liberar';
+      s.title = 'Suelta el cupo: la reserva queda rechazada';
+      s.setAttribute('aria-label', 'Liberar el cupo de ' + p.nombre);
+      s.addEventListener('click', () => soltarCupo(el, s, p));
+      acc.appendChild(s);
+    }
+
     const b = document.createElement('button');
     b.className = 'btn-entro' + (p.asistio ? ' si' : '');
     b.textContent = p.asistio ? '✓ Entró' : 'Marcar';
@@ -1688,8 +1731,34 @@ const CONFIG = {
     b.setAttribute('aria-label',
       (p.asistio ? 'Quitar la entrada de ' : 'Marcar que entró ') + p.nombre);
     b.addEventListener('click', () => marcarEntrada(el, b, p));
-    el.appendChild(b);
+    acc.appendChild(b);
+
+    el.appendChild(acc);
     return el;
+  }
+
+  async function soltarCupo(fila, boton, p) {
+    // Esto sí se pregunta. Marcar una entrada de más se arregla volviendo
+    // a tocar el botón; soltar un cupo en una clase llena se lo lleva
+    // otro en segundos y ya no hay vuelta.
+    if (!confirm(
+          `¿Liberar el cupo de ${p.nombre} (${p.codigo})?\n\n` +
+          `La reserva queda rechazada y el puesto vuelve a estar a la venta.`)) return;
+    boton.disabled = true;
+    try {
+      await api('rechazar', { codigo: p.codigo });
+      nota(`Cupo liberado`, 'bien', `${p.nombre} · ${p.codigo}`);
+      // Se recarga entera en vez de quitar la fila a mano: cambian el
+      // aforo, los "N de M" de los dos grupos y el aviso de "sin
+      // confirmar" de arriba. Tacharlos uno por uno es donde se cuelan
+      // los números que no cuadran.
+      await abrirPuerta(puerta.clase.clase_id);
+      // El tablero de atrás quedó con los cupos viejos.
+      traido.delete('tablero:' + diaTablero);
+    } catch (e) {
+      boton.disabled = false;
+      fallo(e, 'No se pudo liberar el cupo');
+    }
   }
 
   async function marcarEntrada(fila, boton, p) {

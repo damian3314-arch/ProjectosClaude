@@ -128,9 +128,11 @@ select chk('18 minutos de diferencia: cruza',
   'confirmada');
 
 \echo ''
-\echo '-- 3. Noventa minutos ya es demasiado -------------------------------'
--- No se adivina, pero tampoco se esconde: tiene que salir como candidato
--- en la cola para que alguien decida con los ojos.
+\echo '-- 3. Pagó hora y media ANTES de reservar ----------------------------'
+-- Queda fuera de las dos ventanas de cruce —±30 de la hora declarada, y
+-- desde 15 min antes de reservar—, así que no se adivina. Pero la cola
+-- mira 2 horas hacia atrás a propósito: tiene que salir como candidato
+-- para que alguien decida con los ojos.
 
 do $$
 declare v_a jsonb;
@@ -141,11 +143,12 @@ begin
   delete from cods where k = 't3';
   insert into cods values ('t3', v_a->>'codigo');
   insert into pagos (banco, valor_cop, fecha_pago, referencia, remitente, consumido)
-  values ('bancolombia', 15000, now(), 'LLAVE', 'LEJANA PEREZ', false);
+  values ('bancolombia', 15000, now() - interval '100 minutes', 'LLAVE',
+          'LEJANA PEREZ', false);
 end $$;
 
-select chk('a 90 minutos no se cruza sola',
-  registrar_aviso_pago((select cod from cods where k = 't3'), now() - interval '90 minutes',
+select chk('no se cruza sola',
+  registrar_aviso_pago((select cod from cods where k = 't3'), now(),
                        'REF-3', null, null)->>'estado',
   'verificando');
 select chk('pero sí sale como candidato en la cola',
@@ -341,6 +344,95 @@ select chk('la otra sigue esperando',
   (select count(*)::int from reservas where estado = 'verificando'), 1);
 select chk('y no hay dinero de sobra',
   (select count(*)::int from pagos where not consumido), 0);
+
+
+\echo ''
+\echo '-- 11. La segunda pasada: la hora declarada estaba mal ---------------'
+-- La ventana estrecha (±30 de la hora declarada) es la que acierta casi
+-- siempre, pero pierde a quien escribe mal la hora o se demora en
+-- transferir. Si no encuentra nada, se prueba la ancha: desde 15 minutos
+-- antes de reservar hasta 3 horas después. La regla de decisión no
+-- cambia, solo el rango.
+
+do $$
+declare v_a jsonb;
+begin
+  perform limpiar();
+  select tomar_cupo('cccccccc-0000-4000-8000-000000000001', 'Tarde Perez',
+                    '3001110011', null, 'web', 'suelta') into v_a;
+  delete from cods where k = 't11';
+  insert into cods values ('t11', v_a->>'codigo');
+  -- Reservó hace 2 horas y transfirió hace 10 minutos: 110 minutos de
+  -- diferencia con lo que va a declarar. Fuera de la estrecha, dentro de
+  -- la ancha.
+  update reservas set created_at = now() - interval '2 hours' where true;
+  insert into pagos (banco, valor_cop, fecha_pago, referencia, remitente, consumido)
+  values ('bancolombia', 15000, now() - interval '10 minutes', 'L1', 'TARDE PEREZ', false);
+end $$;
+
+select chk('la ventana ancha lo recoge',
+  registrar_aviso_pago((select cod from cods where k = 't11'), now() - interval '2 hours',
+                       'REF-11', null, null)->>'estado',
+  'confirmada');
+
+-- Pero la ancha no afloja la regla: si trae dos, sigue sin adivinar.
+do $$
+declare v_a jsonb;
+begin
+  perform limpiar();
+  select tomar_cupo('cccccccc-0000-4000-8000-000000000001', 'Ana Torres',
+                    '3001110012', null, 'web', 'suelta') into v_a;
+  delete from cods where k = 't12';
+  insert into cods values ('t12', v_a->>'codigo');
+  update reservas set created_at = now() - interval '2 hours' where true;
+  insert into pagos (banco, valor_cop, fecha_pago, referencia, remitente, consumido)
+  values ('bancolombia', 15000, now() - interval '10 minutes', 'L1', 'PEDRO GOMEZ', false),
+         ('bancolombia', 15000, now() - interval '20 minutes', 'L2', 'LUIS PEÑA',  false);
+end $$;
+
+select chk('con dos en la ventana ancha tampoco adivina',
+  registrar_aviso_pago((select cod from cods where k = 't12'), now() - interval '2 hours',
+                       'REF-12', null, null)->>'estado',
+  'verificando');
+
+
+\echo ''
+\echo '-- 12. La vieja conciliar_reserva(codigo) sigue en pie --------------'
+-- La llama el polling de la barra de progreso en CADA consulta de estado
+-- desde la página pública. No se puede borrar, ni cambiarle la firma, ni
+-- la forma de la respuesta: el workflow de la API lee ok, estado, codigo,
+-- clase y metodo. Lo que cambió es que ya no tiene reglas propias.
+
+do $$
+declare v_a jsonb;
+begin
+  perform limpiar();
+  select tomar_cupo('cccccccc-0000-4000-8000-000000000001', 'Polling Perez',
+                    '3001110013', null, 'web', 'suelta') into v_a;
+  delete from cods where k = 't13';
+  insert into cods values ('t13', v_a->>'codigo');
+  -- Declara sin que haya un peso: queda en verificando.
+  perform registrar_aviso_pago(v_a->>'codigo', now() - interval '5 minutes',
+                               'REF-13', null, null);
+  -- Y ahora entra el dinero, con la página todavía abierta preguntando.
+  insert into pagos (banco, valor_cop, fecha_pago, referencia, remitente, consumido)
+  values ('bancolombia', 15000, now() - interval '4 minutes', 'L1', 'POLLING PEREZ', false);
+end $$;
+
+select chk('el polling la confirma',
+  conciliar_reserva((select cod from cods where k = 't13'))->>'estado', 'confirmada');
+select chk('devuelve el nombre de la clase, que la página pinta',
+  conciliar_reserva((select cod from cods where k = 't13'))->>'clase', 'Salsa de esta noche');
+select chk('un código que no existe no revienta',
+  conciliar_reserva('ZZZZZZ')->>'error', 'no_encontrada');
+
+-- Y la trampa que motivó todo esto: que no queden dos funciones con el
+-- mismo nombre. PostgREST resuelve las sobrecargas por los nombres de
+-- los parámetros, y basta uno de más para caer en la que no era.
+select chk('solo hay UNA función llamada conciliar_reserva',
+  (select count(*)::int from pg_proc where proname = 'conciliar_reserva'), 1);
+select chk('y la nueva se llama distinto',
+  (select count(*)::int from pg_proc where proname = 'cruzar_reserva'), 1);
 
 
 \echo ''

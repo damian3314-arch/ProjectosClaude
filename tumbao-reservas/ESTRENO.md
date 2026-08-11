@@ -74,28 +74,41 @@ webhook en reposo no gasta nada, y si a alguien le quedó la página vieja
 abierta en el celular, sus clics siguen funcionando en vez de dar 404.
 Se puede apagar cuando lleve un día sin recibir llamadas.
 
-### 2c. Pegar `aplicar/PEGAR_ESTA_NOCHE.sql` ⬅ pendiente
+### 2c. ~~Pegar `aplicar/PEGAR_ESTA_NOCHE.sql`~~ ✅ aplicado el 11 de agosto
 
-Son las dos cosas juntas y en orden: abrir/cerrar la caja de verdad
-(0031) y cruzar los pagos en las dos direcciones (0032). Se puede pegar
-con el día empezado y correrlo dos veces no hace daño. Probado contra el
-estado exacto de producción (0001..0030 + el archivo).
+0031 (abrir/cerrar la caja de verdad) y 0032 (cruzar los pagos también
+desde el lado de la reserva). Verificado: `admin_pendientes` ya devuelve
+`pagos_libres`.
 
-**Por qué la 0032.** El 11 de agosto entraron cinco consignaciones y solo
-una se cruzó sola. Las horas lo explican:
+### 2d. Pegar `aplicar/PEGAR_UN_SOLO_CRUCE.sql` ⬅ pendiente
 
-    15:48  Yiraudis reserva
-    15:49  transfiere → el correo se procesa 15:50
-    15:5x  termina de escribir la referencia y da "ya pagué"
+Arregla un error del archivo anterior. **La 0032 creó una función
+llamada `conciliar_reserva` sin ver que ya existía otra con ese nombre**
+desde la 0004 — la que llama la barra de progreso de la página en cada
+consulta de estado. No rompió nada (Postgres las distingue por el tipo
+del argumento), pero PostgREST resuelve las sobrecargas por los nombres
+de los parámetros que recibe, y basta uno de más para caer en la que no
+era. Ya nos costó un 502 una vez. La nueva pasa a llamarse
+`cruzar_reserva` y la sobrecarga se borra.
 
-A las 15:50 la reserva estaba en `pendiente_pago`, que no es candidata.
-Un minuto después pasó a `verificando` — y nadie volvió a mirar. La
-transferencia es instantánea y el correo llega en menos de un minuto; la
-persona en el celular tarda más que eso. O sea que el orden normal es el
-contrario al único que el sistema sabía manejar.
+De paso, las dos comparten la misma búsqueda. **La vieja tenía su propia
+copia con un bug real**: cuando encontraba varios depósitos parecidos al
+nombre se llevaba uno cualquiera (`for update skip locked`, sin orden),
+o sea que podía amarrarle a alguien la plata de otra persona.
 
-Ahora se pregunta desde los dos lados, y el "ya pagué" del cliente
-responde "confirmado" en el mismo clic cuando el dinero ya estaba.
+Y la ventana se intenta dos veces: primero ±30 min alrededor de la hora
+declarada, y si no hay nada, desde 15 min antes de reservar hasta 3 horas
+después. Recoge a quien escribe mal la hora sin aflojar la regla de no
+adivinar ante el empate.
+
+**Nota sobre lo que dije el 11 de agosto:** afirmé que "solo una de cinco
+consignaciones se cruzó sola". Es falso. Mirando `resuelta_por` en las
+nueve reservas del día, **seis se cruzaron solas** y solo dos las resolvió
+una persona — las dos sin depósito que las respaldara (una reserva
+duplicada y un pago que entró por otro canal). El cruce inverso ya
+existía en `conciliar_reserva(codigo)`; lo que pasa es que solo corre
+mientras el cliente tiene la página abierta. La 0032 lo hace también del
+lado del servidor, que es seguro adicional, no el arreglo de una avería.
 
 ### 3. Revocar los tokens de prueba
 
@@ -154,10 +167,11 @@ node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 
 **Dos están rojas y no es del código.** `humo-admin.sql` y
 `humo-tablero.sql` construyen una semana con `admin_guardar_semana` y
-después buscan una clase *futura*. Corriéndolas un martes por la tarde ya
-casi no queda ninguna, y fallan por eso. Fallan igual con y sin los
-cambios de hoy — se comprobó pegando y sin pegar. Hay que anclarles la
-fecha, pero no bloquea nada.
+después dan por hecho que ciertas horas siguen siendo futuras — una de
+ellas crea una clase a las 5 pm. Corriéndolas por la tarde fallan, y
+fallan por sitios distintos según la hora a la que se corran. Fallan
+igual con y sin los cambios de hoy: se comprobó pegando y sin pegar. Hay
+que anclarles la fecha, pero no bloquea nada.
 
 ---
 
@@ -208,6 +222,12 @@ En orden de lo que más se nota en el mostrador:
    RPC y pantalla. Toca plata, así que conviene hacerlo completo.
 2. **Botón "Reprogramar"** junto a "Entró": quien pagó y no pudo venir,
    que se le mueva el cupo sin volver a cobrar.
+   (El botón **"Liberar"** ya está: en la lista de la puerta, junto a
+   quien sale "sin confirmar". Suelta el cupo de una, sin esperar a que
+   expire. Nació del caso del 11 de agosto: Isabel reservó dos veces —le
+   falló el primer intento— y la que no pagó bloqueaba un puesto de una
+   clase con 22 personas. Hasta una hora esperando la barrida, que corre
+   en punto.)
 3. **Miembro con plan en otro horario.** Hoy `tomar_cupo` lo bloquea a
    propósito (`OTRO_HORARIO`, `PLAN_YA_CUBRE`). Antes de tocarlo hay que
    decidir la regla: ¿cuántas veces al mes? ¿solo si hay cupo libre?
