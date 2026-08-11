@@ -251,6 +251,13 @@ const CONFIG = {
   .quedan.poco{border-color:rgba(255,193,77,.5);color:var(--gold)}
   .quedan.lleno{border-color:rgba(255,107,129,.45);color:var(--bad)}
 
+  /* Texto pequeño y corrido. Existe porque .mini es una GRILLA de cuatro
+     columnas (la de aforo/con plan/a la venta/reservadas), y se venía
+     usando también para frases sueltas: cada frase se partía en cuatro
+     columnas y quedaba una palabra por renglón. */
+  .chiquita{font-size:.72rem;color:var(--tx-3);line-height:1.45}
+  small.chiquita,span.chiquita{display:inline}
+
   .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin:.9rem 0 .7rem}
   .mini > div{text-align:center}
   .mini .v{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums}
@@ -554,18 +561,30 @@ const CONFIG = {
         <button class="btn chico" id="caja-recargar">Recargar</button>
       </div>
 
-      <!-- Lo que hay que saber sin pensar: cuánto debería haber en el
-           cajón. Va primero y grande. -->
+      <!-- Durante el turno NO se muestra ningún total acumulado. Solo la
+           base con la que abrió y los botones.
+
+           Ver la plata sumándose mientras se atiende es lo que venía
+           causando confusión: el cajero cuadraba de cabeza contra un
+           número que todavía se estaba moviendo. Los totales aparecen
+           cuando se aprieta Cerrar el día, que es el único momento en
+           que sirven para algo. -->
       <div class="tiles" id="caja-tiles"></div>
 
-      <p class="mini" style="margin:.2rem 0 .5rem">Toca para registrar. Se guarda de una.</p>
+      <p class="chiquita" style="margin:.2rem 0 .6rem">Toca para registrar. Se guarda de una.</p>
       <div class="caja-grid" id="caja-botones"></div>
 
       <div class="aviso" id="msg-caja" hidden></div>
       <div class="cargando" id="cargando-caja" hidden>Cargando…</div>
 
-      <h3 class="caja-h">Movimientos de hoy</h3>
-      <div id="caja-lista"></div>
+      <!-- El listado arranca cerrado. La única razón real para abrirlo en
+           mitad del turno es anular algo que se registró mal, así que se
+           deja a un toque de distancia en vez de quitarlo: sin él no
+           habría forma de deshacer un error. -->
+      <p class="caja-h" style="margin-bottom:.4rem">
+        <button class="btn chico" id="caja-ver-movs" aria-expanded="false" aria-controls="caja-lista">Ver movimientos de hoy</button>
+      </p>
+      <div id="caja-lista" hidden></div>
 
       <div class="cierre" id="caja-cierre"></div>
     </div>
@@ -583,7 +602,7 @@ const CONFIG = {
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
       <button class="medio" data-medio="transferencia">📲 Transferencia</button>
     </div>
-    <label for="modal-nota">Nota <span class="mini">(opcional)</span></label>
+    <label for="modal-nota">Nota <span class="chiquita">(opcional)</span></label>
     <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
     <div class="aviso mal" id="modal-err" hidden></div>
     <div class="modal-pie">
@@ -1677,6 +1696,10 @@ const CONFIG = {
   ];
 
   let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
+  // Se guardan aparte del repintado: la caja se recarga sola tras cada
+  // registro, y si no, el listado se volvería a cerrar en la cara del
+  // cajero justo cuando lo abrió para anular algo.
+  let cajaMovsAbiertos = false, cajaCierreAbierto = false;
   // `pesos` ya existe más arriba, para el tablero. Volver a declararlo
   // con const revienta el bloque entero con "already been declared", y
   // la caja simplemente deja de existir sin decir nada.
@@ -1715,15 +1738,13 @@ const CONFIG = {
     const d = cajaDatos; if (!d) return;
     $('#caja-dia').textContent = 'Caja · ' + conFecha(d.dia, { weekday:'long', day:'numeric', month:'long' });
 
-    // Lo primero y más grande: cuánto debería haber en el cajón.
-    $('#caja-tiles').innerHTML = [
-      ['', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
-      ['ok', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
-      ['ojo', pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
-      ['hot', pesos(d.total_egresos), 'salió', 'egresos del día'],
-    ].map(([cl, n, t, s]) =>
-      `<div class="tile"><b class="${cl}">${esc(n)}</b><span>${esc(t)}</span><small>${esc(s)}</small></div>`
-    ).join('');
+    // Durante el turno, un solo dato y que no se mueve: con cuánto abrió.
+    // Todo lo demás son totales acumulados y esos van en el cierre.
+    $('#caja-tiles').innerHTML =
+      `<div class="tile">` +
+      `<div class="n">${esc(pesos(d.base_cop))}</div>` +
+      `<div class="k">base del cajón</div>` +
+      `<div class="pista">con lo que abrió hoy</div></div>`;
 
     $('#caja-botones').innerHTML = CONCEPTOS.map((x, i) =>
       `<button class="caja-btn ${x.s === 'egreso' ? 'sale' : ''}" data-i="${i}">` +
@@ -1732,6 +1753,14 @@ const CONFIG = {
     ).join('');
 
     const ms = d.movimientos || [];
+    const verMovs = $('#caja-ver-movs');
+    verMovs.textContent = ms.length
+      ? (cajaMovsAbiertos ? `Ocultar movimientos (${ms.length})` : `Ver movimientos de hoy (${ms.length})`)
+      : 'Todavía no hay movimientos hoy';
+    verMovs.disabled = ms.length === 0;
+    verMovs.setAttribute('aria-expanded', String(cajaMovsAbiertos && ms.length > 0));
+    $('#caja-lista').hidden = !cajaMovsAbiertos || ms.length === 0;
+
     $('#caja-lista').innerHTML = ms.length ? ms.map(m =>
       `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
       `<span class="h">${esc(m.hora)}</span>` +
@@ -1750,29 +1779,49 @@ const CONFIG = {
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
+
+    // Mientras el turno corre, el bloque de cierre no enseña ni un número.
+    // Solo el botón. Los totales se destapan cuando el cajero decide que
+    // llegó el momento de cuadrar, y no antes.
+    if (!d.cerrado && !cajaCierreAbierto) {
+      $('#caja-cierre').innerHTML =
+        `<h3>Cierre del día</h3>` +
+        `<p class="chiquita" style="margin:.3rem 0 .9rem">Los totales aparecen cuando cierres. Durante el turno se mantienen ocultos a propósito.</p>` +
+        `<button class="btn primario" id="btn-abrir-cierre">Cerrar el día</button>`;
+      return;
+    }
+
     // Los cuatro números con el nombre que usa AdminGym, para que
     // cuadrar sea leer dos columnas sin traducir nada.
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
       `<div class="fila"><span>Base con la que abrió</span><span>${pesos(d.base_cop)}</span></div>` +
-      `<div class="fila"><span>Efectivo recibido <small class="mini">· AdminGym: Venta Membresías</small></span><span>${pesos(a.venta_membresias)}</span></div>` +
-      `<div class="fila"><span>Salidas en efectivo <small class="mini">· AdminGym: Retirar Dinero</small></span><span>−${pesos(a.retirar_dinero_de_caja)}</span></div>` +
-      `<div class="fila total"><span>Debería haber en el cajón <small class="mini">· AdminGym: DINERO EN CAJA</small></span><span>${pesos(a.dinero_en_caja)}</span></div>` +
-      `<div class="fila" style="margin-top:.7rem"><span>A banco <small class="mini">· AdminGym: Ingresos a Banco</small></span><span>${pesos(a.ingresos_a_banco)}</span></div>` +
+      `<div class="fila"><span>Efectivo recibido <small class="chiquita">· AdminGym: Venta Membresías</small></span><span>${pesos(a.venta_membresias)}</span></div>` +
+      `<div class="fila"><span>Salidas en efectivo <small class="chiquita">· AdminGym: Retirar Dinero</small></span><span>−${pesos(a.retirar_dinero_de_caja)}</span></div>` +
+      `<div class="fila total"><span>Debería haber en el cajón <small class="chiquita">· AdminGym: DINERO EN CAJA</small></span><span>${pesos(a.dinero_en_caja)}</span></div>` +
+      `<div class="fila" style="margin-top:.7rem"><span>A banco <small class="chiquita">· AdminGym: Ingresos a Banco</small></span><span>${pesos(a.ingresos_a_banco)}</span></div>` +
+      // Estas NO están sumadas arriba: su plata ya entró como movimiento
+      // de caja. Se muestran para poder comprobar que ahí estén. Si el
+      // número no cuadra con lo registrado, alguien confirmó a mano y se
+      // le olvidó cobrarlo.
+      (d.reservas_a_mano_n
+        ? `<div class="fila"><span>Confirmadas en el mostrador <small class="chiquita">· ya están arriba, en Caja. Verifica que se hayan cobrado</small></span>` +
+          `<span>${d.reservas_a_mano_n} · ${pesos(d.reservas_a_mano_cop)}</span></div>`
+        : '') +
       (d.cerrado
         ? `<div class="fila total"><span>Contado</span><span>${pesos(d.cierre.contado_cop)}</span></div>` +
           `<div class="fila"><span>Diferencia</span><span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
           `${d.cierre.diferencia_cop > 0 ? '+' : ''}${pesos(d.cierre.diferencia_cop)}</span></div>` +
           `<div class="fila"><span>Se dejó de base</span><span>${pesos(d.cierre.dejado_cop)}</span></div>` +
           `<div class="fila"><span>Se retiró</span><span>${pesos(d.cierre.retirado_cop)}</span></div>` +
-          `<p class="mini">Cerrado. Para guardarlo, imprime esta página y elige “Guardar como PDF”.</p>` +
+          `<p class="chiquita" style="margin:.6rem 0">Cerrado. Para guardarlo, imprime esta página y elige “Guardar como PDF”.</p>` +
           `<button class="btn" onclick="window.print()">Imprimir / guardar PDF</button>`
         : `<div style="margin-top:.9rem">` +
           `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
           `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
           `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
           `<input id="c-dejado" type="text" inputmode="numeric" value="100000">` +
-          `<label for="c-nota">Nota <span class="mini">(opcional)</span></label>` +
+          `<label for="c-nota">Nota <span class="chiquita">(opcional)</span></label>` +
           `<input id="c-nota" type="text" maxlength="300" placeholder="Ej: faltaron 2 mil">` +
           `<button class="btn primario" id="btn-cerrar-caja">Cerrar el día</button></div>`);
   }
@@ -1783,6 +1832,16 @@ const CONFIG = {
   $('#p-caja').addEventListener('click', async ev => {
     const btn = ev.target.closest('.caja-btn');
     if (btn) return abrirModal(CONCEPTOS[+btn.dataset.i]);
+
+    if (ev.target.id === 'caja-ver-movs') {
+      cajaMovsAbiertos = !cajaMovsAbiertos;
+      return pintarCaja();
+    }
+
+    if (ev.target.id === 'btn-abrir-cierre') {
+      cajaCierreAbierto = true;
+      return pintarCierre();
+    }
 
     const an = ev.target.closest('[data-anular]');
     if (an) {
