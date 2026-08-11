@@ -109,19 +109,23 @@ sepa quién registró cada movimiento.
 Las pruebas no son decorativas: cada una existe porque algo se rompió.
 
 ```bash
-# Base de datos: 12 pruebas de humo sobre Postgres
 cd tumbao-reservas/pruebas
+
+# Base de datos: 12 pruebas de humo sobre Postgres
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
 psql -d <base> -f humo-banco.sql        # conciliación depósito por depósito
 psql -d <base> -f humo-aforo.sql        # no se vende dos veces el mismo puesto
 
 # Panel: navegador de verdad, haciendo clic
-node prueba-caja.mjs        # 41 comprobaciones
+node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
+node prueba-admin.mjs       # tablero, puerta, horario, cola, "Es este"
+node prueba-caja.mjs        # 53 comprobaciones
 node prueba-apuntar.mjs     # 14
-node prueba-admin.mjs       # necesita `node espejo-api.mjs` en otra terminal
 
-# Guardián: ningún DELETE/UPDATE sin WHERE en las migraciones
-node sin-delete-sin-where.mjs
+# Sin navegador
+node ../../tumbao-opina/pruebas/limpiar-transcripcion.test.mjs
+node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
+node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
 ---
@@ -147,4 +151,27 @@ node sin-delete-sin-where.mjs
   banco cambia el texto, el pago cae en "estructura_no_reconocida" y no
   entra. Conviene cuadrar contra el extracto los primeros días.
 - **El cierre de AdminGym se sube a mano.** Nadie avisa si un día no se
-  sube.
+  sube. Los cierres de julio dejaron de subirse el día 30; si ahora van a
+  la carpeta del mes, bien, pero de eso no avisa nadie todavía.
+
+---
+
+## Lo que queda por hacer (nada bloquea el estreno)
+
+En orden de lo que más se nota en el mostrador:
+
+1. **Varios cupos con un solo pago.** Alguien llega y reserva para tres;
+   hoy la recepcionista lo hace a mano por WhatsApp. Necesita endpoint,
+   RPC y pantalla. Toca plata, así que conviene hacerlo completo.
+2. **Botón "Reprogramar"** junto a "Entró": quien pagó y no pudo venir,
+   que se le mueva el cupo sin volver a cobrar.
+3. **Miembro con plan en otro horario.** Hoy `tomar_cupo` lo bloquea a
+   propósito (`OTRO_HORARIO`, `PLAN_YA_CUBRE`). Antes de tocarlo hay que
+   decidir la regla: ¿cuántas veces al mes? ¿solo si hay cupo libre?
+4. **`por_soltar` en el Tablero.** El dato ya viaja en la respuesta desde
+   que se arreglaron los cupos fantasma; falta pintarlo cuando sea > 0.
+5. **Default branch a `main`** en Settings del repo. Hoy es
+   `claude/aprende-esto-khjryq`, que solo tiene el CLAUDE.md, y ya tumbó
+   una vez el despliegue de Cloudflare Pages.
+6. **Tablas `cheo_*` en Supabase**, vacías y sin uso. Decidir si se
+   borran.
