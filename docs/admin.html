@@ -1491,6 +1491,13 @@ const CONFIG = {
           `confirmada${Number(c.confirmadas) === 1 ? '' : 's'}</span>` +
         (Number(c.por_validar) ? `<span class="ojo">${Number(c.por_validar)} por validar</span>` : '') +
         (Number(c.esperando)   ? `<span>${Number(c.esperando)} esperando pago</span>` : '') +
+        // Cupos apartados que ya se pasaron de los 30 minutos y se van a
+        // soltar solos. El dato viaja desde que se arreglaron los cupos
+        // fantasma, pero no se pintaba: la clase se veía llena y en un
+        // rato tenía puestos libres sin que nadie supiera por qué.
+        (Number(c.por_soltar)
+          ? `<span class="ojo" title="Apartaron el cupo y no pagaron. Se sueltan solos.">` +
+            `${Number(c.por_soltar)} por soltar</span>` : '') +
         `<span class="sp"></span><span>${esc(pesos(c.ingreso_cop))}</span>` +
       `</div>` +
       // El reparto solo lo ve el panel. Sin esto, "4 libres" el sábado

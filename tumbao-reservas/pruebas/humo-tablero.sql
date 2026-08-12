@@ -43,15 +43,22 @@ begin
       from generate_series(1, 46) g
     ) s));
 
+  -- Un día COMPLETO por delante, no "la próxima clase". Corriendo esto
+  -- por la tarde, la de las 7 pm de hoy sigue siendo futura y v_lun caía
+  -- en hoy — pero la de las 7 am ya pasó, así que sus 19 afiliados no
+  -- sumaban y el resumen daba 27 en vez de 46. Fallaba por la hora a la
+  -- que se corriera, no por el código.
   select (fecha_hora at time zone 'America/Bogota')::date into v_lun
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') between 1 and 5
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
   select (fecha_hora at time zone 'America/Bogota')::date into v_sab
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
 
   select id into v_c18 from clases

@@ -500,6 +500,11 @@ export default {
                   empezada_at, cerrada_at, turnos, completa
              from conversaciones
             where en_hoja = 0
+              -- Las que no pasaron del saludo no son una opinión, son una
+              -- pestaña que alguien abrió y cerró. Se veía en el primer
+              -- reporte de verdad: quince "Sin nombre · (sin resumen)"
+              -- seguidos, y las dos que sí decían algo perdidas en medio.
+              and turnos > 1
             order by empezada_at`
         ).all();
         return json({ ok: true, conversaciones: results || [] });

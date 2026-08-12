@@ -390,6 +390,10 @@ createServer(async (req, res) => {
           cupo_manual: c.cupo_manual ?? null,
           reservadas: tomadas, libres: Math.max(c.cupos_disponibles, 0),
           confirmadas, por_validar: porValidar, esperando,
+          // Cupos apartados sin pagar que ya se pasaron del tiempo y se
+          // van a soltar solos. Dos en la de las 7 am, para que la
+          // etiqueta tenga algo que enseñar.
+          por_soltar: c._hora === 7 ? 2 : 0,
           en_sala: conPlan + tomadas,
           ingreso_cop: confirmadas * (c.precio_cop || 15000)
         };

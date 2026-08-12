@@ -80,7 +80,21 @@ Se puede apagar cuando lleve un día sin recibir llamadas.
 desde el lado de la reserva). Verificado: `admin_pendientes` ya devuelve
 `pagos_libres`.
 
-### 2e. Pegar `aplicar/PEGAR_12_AGOSTO.sql` ⬅ pendiente
+### 2f. ~~Duplicados del banco~~ ✅ aplicado el 12 de agosto
+
+`pagos_unicos` era `(banco, valor, fecha_pago, referencia)` y
+`referencia` es la llave Bre-B de la cuenta de Tumbao: **la misma en los
+150 pagos**. Con la fecha a precisión de minuto, dos personas pagando lo
+mismo en el mismo minuto entraban como un solo depósito y el segundo se
+perdía en silencio. Ahora se dedupea por el id del correo de Gmail.
+Verificado: los 150 pagos siguen ahí, el índice viejo se fue.
+
+### 2e. ~~Pegar `aplicar/PEGAR_12_AGOSTO.sql`~~ ✅ aplicado el 12 de agosto
+
+Verificado contra la base: las cinco columnas nuevas están, los dos
+índices son los parciales por líder, solo queda una `conciliar_reserva`,
+y ya está en uso — un grupo de dos confirmado con su depósito, tres
+marcadas "no vino" y una reprogramada.
 
 Trae las tres cosas del 12 de agosto, en orden: el arreglo del choque de
 nombres (2d, que quedó sin pegar), varios cupos con un solo pago, y
@@ -151,20 +165,20 @@ existía en `conciliar_reserva(codigo)`; lo que pasa es que solo corre
 mientras el cliente tiene la página abierta. La 0032 lo hace también del
 lado del servidor, que es seguro adicional, no el arreglo de una avería.
 
-### 3. Revocar los tokens de prueba
+### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
-Se compartieron dos por chat para depurar:
+Desactivados los dos `prueba caja claude` (los que se compartieron por
+chat) y `tu nombre`, que nunca se usó. Siguen activos `damian` y
+`Tania`, y se creó **`Recepción`** para que en el cierre quede quién
+registró cada movimiento en vez de que todo salga a nombre de Tania.
 
-- `aenqLp4JAoaBPIMcCzysoC0CA2opFHP9_UNEDVBHS1U`
-- `_YYeMg1F0AzlsDYo10_WieZoblpfRSu2Ti_isOhAses`
+El token de Recepción se entregó por chat. Si eso incomoda, se cambia en
+dos líneas:
 
 ```sql
-update admin_tokens set activo = false
- where nombre in ('...');   -- mira primero: select id, nombre, activo from admin_tokens;
+update admin_tokens set activo = false where nombre = 'Recepción';
+select crear_token_admin('Recepción');
 ```
-
-Y crear el de la recepcionista con su nombre, para que en el cierre se
-sepa quién registró cada movimiento.
 
 ---
 
@@ -210,6 +224,7 @@ psql -d <base> -f humo-aforo.sql        # no se vende dos veces el mismo puesto
 psql -d <base> -f humo-cruce.sql        # el cruce en las dos direcciones (37)
 psql -d <base> -f humo-grupo.sql        # varios cupos con un solo pago (39)
 psql -d <base> -f humo-disfrutar.sql    # pagó y no vino, y reprogramar
+psql -d <base> -f humo-duplicados.sql   # dos pagos iguales en el mismo minuto
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -217,6 +232,7 @@ node prueba-admin.mjs       # tablero, puerta, horario, cola, "Es este"
 node prueba-caja.mjs        # 53 comprobaciones
 node prueba-apuntar.mjs     # 14
 node prueba-varios.mjs      # el contador y los N nombres, en la página pública
+node prueba-burbuja.mjs     # la burbuja de opiniones, sin estorbar al formulario
 
 # Sin navegador
 node ../../tumbao-opina/pruebas/limpiar-transcripcion.test.mjs
@@ -224,13 +240,12 @@ node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
-**Dos están rojas y no es del código.** `humo-admin.sql` y
-`humo-tablero.sql` construyen una semana con `admin_guardar_semana` y
-después dan por hecho que ciertas horas siguen siendo futuras — una de
-ellas crea una clase a las 5 pm. Corriéndolas por la tarde fallan, y
-fallan por sitios distintos según la hora a la que se corran. Fallan
-igual con y sin los cambios de hoy: se comprobó pegando y sin pegar. Hay
-que anclarles la fecha, pero no bloquea nada.
+**Las 16 están en verde.** `humo-admin` y `humo-tablero` llevaban días
+rojas y no era del código: las dos escogían "la próxima clase" y a media
+tarde eso caía en HOY — abrir una clase a las 5 pm de hoy falla con "esa
+hora ya paso", y las 19 personas del plan de las 7 am de hoy ya no
+sumaban. Ahora escogen un día completo por delante y fallan solo cuando
+algo esté de verdad roto.
 
 ---
 
@@ -276,21 +291,14 @@ que anclarles la fecha, pero no bloquea nada.
 
 En orden de lo que más se nota en el mostrador:
 
-0. **Los duplicados del banco.** Dos personas que paguen el MISMO valor
-   en el MISMO minuto se registran como un solo depósito — el índice
-   `pagos_unicos` usa la llave Bre-B como referencia, y es la misma en
-   todos los correos. A las 6 pm, con varios de $15.000 seguidos, es
-   cuestión de tiempo. Ya se tropezó con esto escribiendo una prueba. El
-   arreglo es dedupear por el id del correo de Gmail, que ya se guarda,
-   pero obliga a botar el índice actual.
-
 1. **Miembro con plan en otro horario.** Hoy `tomar_cupo` lo bloquea a
    propósito (`OTRO_HORARIO`, `PLAN_YA_CUBRE`). Antes de tocarlo hay que
    decidir la regla: ¿cuántas veces al mes? ¿solo si hay cupo libre?
-2. **`por_soltar` en el Tablero.** El dato ya viaja en la respuesta desde
-   que se arreglaron los cupos fantasma; falta pintarlo cuando sea > 0.
-3. **Default branch a `main`** en Settings del repo. Hoy es
+2. **Default branch a `main`** en Settings del repo. Hoy es
    `claude/aprende-esto-khjryq`, que solo tiene el CLAUDE.md, y ya tumbó
    una vez el despliegue de Cloudflare Pages.
-4. **Tablas `cheo_*` en Supabase**, vacías y sin uso. Decidir si se
-   borran.
+3. **Las tablas `cheo_*` de Supabase nunca existieron.** El bot de
+   opiniones se rehizo en Cloudflare Workers con D1. No hay nada que
+   borrar; queda anotado para que nadie las busque.
+4. **El cierre de AdminGym se sube a mano** y nadie avisa si un día no
+   se sube. Los de julio dejaron de subirse el día 30.

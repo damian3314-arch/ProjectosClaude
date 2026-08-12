@@ -78,6 +78,28 @@ nota, que es lo que ya hacía cuando no se entendía nada.
 D1 es la verdad; Google Sheets es la vista. Si Google falla justo cuando
 alguien termina de contar algo importante, el dato ya está a salvo.
 
+## El reporte del lunes
+
+`Tumbao · Reporte de opiniones` en n8n, lunes 7am. Lee `/api/pendientes`
+—todo lo que tiene `en_hoja = 0`, no "la semana pasada"—, lo consolida
+con el modelo y lo manda a bailatumbao@gmail.com. **Cuatro ejecuciones
+al mes.**
+
+Se pide lo pendiente y no la semana porque si un lunes falla el envío,
+la semana siguiente llega todo junto en vez de perderse. Marcar va
+DESPUÉS de enviar, por lo mismo.
+
+Si no hubo conversaciones manda un correo corto diciéndolo. Parece
+inútil y no lo es: confirma que sigue vivo. Si el reporte deja de
+llegar es que algo se rompió, no que la gente dejó de escribir.
+
+Si el modelo falla, el correo sale igual con la lista cruda y el asunto
+marcado `(sin analisis)`. Un reporte feo se lee; uno que no llega, no.
+
+El workflow viejo hacía además una pasada de clasificación **cada media
+hora**: 1.440 ejecuciones al mes contra un plan de 2.500. Se quitó — el
+Worker ya clasifica al cerrar cada conversación.
+
 ## Modo ensayo
 
 Sin `OPENAI_API_KEY` el bot arranca igual y contesta con un guion fijo.

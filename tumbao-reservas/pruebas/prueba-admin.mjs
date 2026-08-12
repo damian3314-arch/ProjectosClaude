@@ -99,6 +99,16 @@ ok('no ensucia las clases donde no vence nadie',
    await p.locator('.clase-card').count() > await conVence.count(),
    `${await p.locator('.clase-card').count() - await conVence.count()} sin aviso`);
 
+// Cupos apartados sin pagar que se van a soltar solos. El dato viajaba
+// desde que se arreglaron los cupos fantasma pero no se pintaba: la
+// clase se veía llena y en un rato tenía puestos libres sin que nadie
+// supiera por qué.
+const conSoltar = p.locator('.clase-card').filter({ hasText: /por soltar/ });
+ok('avisa de los cupos que se van a soltar solos', await conSoltar.count() >= 1,
+   `${await conSoltar.count()} de ${await p.locator('.clase-card').count()} clases`);
+ok('y no lo pone donde no hay ninguno',
+   await conSoltar.count() < await p.locator('.clase-card').count());
+
 const c1 = p.locator('.clase-card').first();
 const txtC1 = await c1.innerText();
 ok('la tarjeta trae las cuatro cifras del cupo',

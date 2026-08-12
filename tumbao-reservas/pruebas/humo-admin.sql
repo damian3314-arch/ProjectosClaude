@@ -58,9 +58,16 @@ begin
   end if;
   raise notice 'semana: 7 dias';
 
+  -- Un día entre semana que todavía no ha empezado. `fecha_hora > now()`
+  -- no basta: a las 6 de la tarde la clase de las 7 de HOY sigue siendo
+  -- futura, v_lun caía en hoy, y abrir una clase a las 5 pm de hoy
+  -- fallaba con "esa hora ya paso". La prueba se caía por la hora a la
+  -- que se corriera, no por el código.
   select fecha_hora::date into v_lun from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') between 1 and 5
-     and fecha_hora > now() order by fecha_hora limit 1;
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
+   order by fecha_hora limit 1;
 
   -- ── abrir una clase que no existe en el molde ───────────────
   -- 5:00 pm no esta en el horario normal. Tiene que poder abrirse.
