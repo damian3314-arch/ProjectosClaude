@@ -176,18 +176,35 @@ createServer(async (req, res) => {
     // tambien llama al Worker. Se reescriben las dos bases al espejo.
     let html = readFileSync(join(WEB, 'index.html'), 'utf8')
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`)
-      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`);
+      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`)
+      // El chat de opiniones vive en otro Worker. Aqui se apunta al
+      // propio espejo, que sirve una pagina de mentiras: lo que se
+      // prueba es la burbuja, no el chat.
+      .replace(/OPINA:\s*'[^']*'/, `OPINA: 'http://localhost:${PUERTO}/opina-falso'`);
     if (MINUTOS_ESPERA) html = html.replace(/MINUTOS_ESPERA:\s*[\d.]+/, `MINUTOS_ESPERA: ${MINUTOS_ESPERA}`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
   }
+  // Un chat de mentiras para poder probar la burbuja sin salir a
+  // internet. Solo tiene que responder algo dentro de un iframe.
+  if (url.pathname === '/opina-falso' || url.pathname.startsWith('/opina-falso/')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end('<!doctype html><meta charset="utf-8">' +
+      '<body style="background:#0d0b0f;color:#f2eef5;font:15px system-ui;padding:1rem">' +
+      '<p id="saludo">Un gusto. Cuéntame: ¿Qué te hizo volver la segunda vez?</p></body>');
+  }
+
   if (url.pathname === '/admin' || url.pathname === '/admin.html') {
     // Desde el 11 de agosto el panel llama al Worker (/api/admin/...) y
     // no a n8n. El espejo atiende las dos formas, así que aquí se
     // reescriben las dos bases al mismo sitio.
     const html = readFileSync(join(WEB, 'admin.html'), 'utf8')
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`)
-      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`);
+      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`)
+      // El chat de opiniones vive en otro Worker. Aqui se apunta al
+      // propio espejo, que sirve una pagina de mentiras: lo que se
+      // prueba es la burbuja, no el chat.
+      .replace(/OPINA:\s*'[^']*'/, `OPINA: 'http://localhost:${PUERTO}/opina-falso'`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
   }

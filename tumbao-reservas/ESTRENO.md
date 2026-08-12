@@ -170,6 +170,21 @@ sepa quién registró cada movimiento.
 
 ## 🟡 Conviene, pero no bloquea
 
+- **Dos secretos del bot de opiniones**, los dos en Cloudflare →
+  Workers → `tumbao-opina` → Settings → Variables → Add secret:
+
+  | Secreto | Para qué | Sin él |
+  |---|---|---|
+  | `TOKEN_REPORTE` | leer lo que dice la gente en `/leer` | La página no abre y dice dónde ponerlo. **Lo que la gente cuenta se guarda igual**, solo que no hay dónde verlo. La llave la eliges tú; el enlace queda `opina.tumbaobaila.com/leer?token=LOQUEPUSISTE` |
+  | `OPENAI_API_KEY` | que el bot converse de verdad y resuma | Sigue funcionando con las tres preguntas fijas y guarda todo, pero sin resumen, sin clasificar y sin detectar lo urgente. Sale marcado `(ensayo sin llave)` |
+
+  Cuesta ~$0,004 por conversación con `gpt-4o-mini`. Una campaña de 40
+  personas, menos de un dólar.
+
+- **En la base del bot hay 9 conversaciones de prueba** (4 del 3 de
+  agosto y 5 del 12, de comprobar que esto funciona). No estorban —las
+  de un solo turno ni salen— pero si quieres las borro.
+
 - **El token de Cloudflare** `cfat_VLRH…` sigue vivo con permisos de
   Pages y Workers. Si no se va a usar más, revocarlo.
 - **Las dos credenciales de Gmail en n8n** se llaman parecido y una es de

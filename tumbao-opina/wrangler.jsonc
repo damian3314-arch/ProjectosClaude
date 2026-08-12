@@ -8,6 +8,17 @@
   // Worker. Un solo despliegue, sin CORS y sin un Pages aparte.
   "assets": { "directory": "./public", "binding": "ASSETS" },
 
+  // El enlace se manda por WhatsApp. Un workers.dev en un chat parece
+  // spam y la gente no lo abre; opina.tumbaobaila.com sí se ve como la
+  // academia. El de workers.dev sigue vivo, no se rompe nada.
+  "routes": [
+    { "pattern": "opina.tumbaobaila.com", "custom_domain": true }
+  ],
+  // Poner `routes` apaga workers.dev por defecto. Se deja encendido: es
+  // la dirección que aparece en el LEEME y en las notas, y apagarla
+  // rompería cualquier enlace ya compartido sin avisar.
+  "workers_dev": true,
+
   "d1_databases": [
     {
       "binding": "DB",

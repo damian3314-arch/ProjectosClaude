@@ -3,8 +3,36 @@
 Un chat en el navegador donde los clientes cuentan cómo les ha ido. El
 enlace se manda por WhatsApp a mano.
 
-**En línea:** https://tumbao-opina.damian3314.workers.dev
-(pendiente: `opina.tumbaobaila.com`)
+**El enlace que se comparte:** https://opina.tumbaobaila.com
+**Para leer lo que dice la gente:** https://opina.tumbaobaila.com/leer?token=…
+
+El de `workers.dev` sigue vivo y funciona; se deja encendido para no
+romper ningún enlace ya compartido.
+
+## La burbuja de tumbaobaila.com
+
+La página pública trae un botón flotante que abre este mismo chat en un
+iframe con `?burbuja=1`, que esconde el encabezado (la ventanita ya
+tiene el suyo). No hay una segunda copia del chat: el enlace de WhatsApp
+y la burbuja son el mismo sitio, así que arreglar algo aquí lo arregla
+en los dos.
+
+El iframe se crea al abrirlo, no al cargar la página: quien entra a
+reservar no tiene por qué descargarse un chat que no pidió.
+
+## Dónde se lee lo que la gente cuenta
+
+`/leer?token=…`, con la llave `TOKEN_REPORTE`. Ordena lo urgente
+primero y esconde las conversaciones que no pasaron del saludo — una
+pestaña que alguien abrió y cerró no es una opinión.
+
+Es una página aparte y no una pestaña del panel de admin a propósito: el
+panel vive contra Supabase y esto contra D1, y cruzarlos obligaría a que
+un Worker le pidiera datos al otro para enseñar una lista que se mira
+una vez a la semana.
+
+Sin `TOKEN_REPORTE` la página no se abre y dice dónde ponerlo. Aquí hay
+nombres, celulares y quejas de clientes: no puede quedar abierta.
 
 ## Por qué no está en n8n
 

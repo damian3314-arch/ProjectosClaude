@@ -292,6 +292,120 @@ async function asegurarConversacion(env, conv) {
   ).bind(conv, ahora()).run();
 }
 
+/* ─────────────────────────────────────────────────────────────
+   La pantalla de lectura
+   ───────────────────────────────────────────────────────────── */
+
+const esc = (s) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const cuando = (iso) => {
+  if (!iso) return '';
+  return new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota', day: 'numeric', month: 'short',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  }).format(new Date(iso));
+};
+
+function paginaLeer(filas, problema) {
+  const marco = (dentro) => `<!doctype html><html lang="es-CO"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Lo que dice la gente · Tumbao</title>
+<style>
+ :root{--bg:#0d0b0f;--bg2:#17141a;--bg3:#211c26;--line:#2e2833;
+       --tx:#f2eef5;--tx2:#b8adc2;--tx3:#7d7288;
+       --hot:#ff6b35;--gold:#ffc14d;--ok:#4ade80;--bad:#ff6b81}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--tx);
+      font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      padding:1.2rem;max-width:56rem;margin-inline:auto}
+ h1{font-size:1.5rem;margin:0 0 .2rem;
+    background:linear-gradient(100deg,var(--gold),var(--hot) 70%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+ .sub{color:var(--tx3);font-size:.85rem;margin:0 0 1.4rem}
+ .tarjeta{background:var(--bg2);border:1px solid var(--line);border-radius:14px;
+          padding:1rem;margin-bottom:.8rem}
+ .tarjeta.urge{border-color:rgba(255,107,129,.5)}
+ .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.35rem}
+ .nom{font-weight:600}
+ .et{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;
+     border:1px solid var(--line);border-radius:999px;padding:.1rem .5rem;color:var(--tx3)}
+ .et.queja{border-color:rgba(255,107,129,.5);color:var(--bad)}
+ .et.elogio{border-color:rgba(74,222,128,.45);color:var(--ok)}
+ .et.sugerencia{border-color:rgba(255,193,77,.5);color:var(--gold)}
+ .et.urge{border-color:var(--bad);color:var(--bad);font-weight:700}
+ .sp{flex:1}
+ .fecha{font-size:.75rem;color:var(--tx3)}
+ .res{margin:.3rem 0 .5rem}
+ .sin{color:var(--tx3);font-style:italic}
+ a{color:var(--gold)}
+ details{margin-top:.5rem}
+ summary{cursor:pointer;font-size:.8rem;color:var(--tx3)}
+ pre{white-space:pre-wrap;word-break:break-word;background:var(--bg3);
+     border:1px solid var(--line);border-radius:10px;padding:.7rem;
+     font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--tx2);
+     margin:.5rem 0 0}
+ .vacio{text-align:center;color:var(--tx3);padding:3rem 1rem}
+ .aviso{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--hot);
+        border-radius:10px;padding:1rem;color:var(--tx2)}
+ code{background:var(--bg3);padding:.1rem .35rem;border-radius:5px;font-size:.85em}
+</style></head><body>${dentro}</body></html>`;
+
+  if (problema === 'sin-token') {
+    return marco(`<h1>Falta la llave</h1>
+      <div class="aviso">Esta página enseña nombres, celulares y quejas de
+      clientes, así que no se abre sin llave. Falta el secreto
+      <code>TOKEN_REPORTE</code> en el Worker:<br><br>
+      Cloudflare → Workers → <b>tumbao-opina</b> → Settings → Variables →
+      Add secret.</div>`);
+  }
+  if (problema === 'mal-token') {
+    return marco(`<h1>Esa llave no es</h1>
+      <p class="sub">Revisa el enlace. Va con <code>?token=…</code> al final.</p>`);
+  }
+
+  if (!filas.length) {
+    return marco(`<h1>Lo que dice la gente</h1>
+      <p class="sub">Todavía nadie ha contado nada.</p>
+      <div class="vacio">Comparte el enlace
+        <a href="https://opina.tumbaobaila.com">opina.tumbaobaila.com</a>
+        por WhatsApp y aquí van apareciendo.</div>`);
+  }
+
+  const urgentes = filas.filter((f) => f.urgente).length;
+  const tarjetas = filas.map((f) => {
+    const tipo = String(f.tipo || '').toLowerCase();
+    return `<div class="tarjeta${f.urgente ? ' urge' : ''}">
+      <div class="top">
+        <span class="nom">${esc(f.nombre || 'Sin nombre')}</span>
+        ${f.tipo ? `<span class="et ${esc(tipo)}">${esc(f.tipo)}</span>` : ''}
+        ${f.urgente ? '<span class="et urge">mirar hoy</span>' : ''}
+        ${!f.completa ? '<span class="et">se cortó</span>' : ''}
+        <span class="sp"></span>
+        <span class="fecha">${esc(cuando(f.empezada_at))}</span>
+      </div>
+      ${f.telefono
+        ? `<div class="fecha">📱 <a href="https://wa.me/57${esc(String(f.telefono).replace(/\D/g, ''))}"
+             target="_blank" rel="noopener">${esc(f.telefono)}</a></div>` : ''}
+      <p class="res">${f.resumen ? esc(f.resumen)
+        : '<span class="sin">Sin resumen — falta la llave de OpenAI. Lo que dijo está abajo, en crudo.</span>'}</p>
+      ${f.urgente && f.motivo_urgente
+        ? `<p class="res" style="color:var(--bad)">⚠ ${esc(f.motivo_urgente)}</p>` : ''}
+      ${f.transcripcion
+        ? `<details><summary>Ver la conversación entera (${f.turnos} turnos)</summary>
+             <pre>${esc(f.transcripcion)}</pre></details>` : ''}
+    </div>`;
+  }).join('');
+
+  return marco(`<h1>Lo que dice la gente</h1>
+    <p class="sub">${filas.length} conversacion${filas.length === 1 ? '' : 'es'}${
+      urgentes ? ` · <b style="color:var(--bad)">${urgentes} para mirar hoy</b>` : ''
+    } · lo urgente va primero</p>
+    ${tarjetas}`);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -403,6 +517,52 @@ export default {
           `update conversaciones set en_hoja = 1 where id in (${huecos})`
         ).bind(...ids).run();
         return json({ ok: true, marcadas: ids.length });
+      }
+
+      /* ── leer lo que dijo la gente ──
+       *
+       * Sin esto, mandar el enlace es abrir un buzón sin llave: lo que
+       * la gente cuenta se queda en D1 y solo se puede ver por Google
+       * Sheets o por el reporte del lunes, y ninguno de los dos está
+       * configurado todavía.
+       *
+       * Es una página aparte y no una pestaña del panel de admin a
+       * propósito: el panel vive contra Supabase y esto contra D1, y
+       * cruzarlos obligaría a que un Worker le pidiera datos al otro
+       * para enseñar una lista que se mira una vez a la semana.
+       *
+       * La llave es TOKEN_REPORTE, el mismo secreto que ya usa n8n.
+       * Mientras no exista, la página lo dice en vez de quedar abierta:
+       * aquí hay nombres, celulares y quejas de clientes.
+       */
+      if (ruta === '/leer') {
+        if (!env.TOKEN_REPORTE) {
+          return new Response(paginaLeer(null, 'sin-token'), {
+            status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          });
+        }
+        const dado = url.searchParams.get('token') || '';
+        if (dado !== env.TOKEN_REPORTE) {
+          return new Response(paginaLeer(null, 'mal-token'), {
+            status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          });
+        }
+        const { results } = await env.DB.prepare(
+          `select id, nombre, telefono, tipo, resumen, urgente, motivo_urgente,
+                  transcripcion, turnos, completa, empezada_at, cerrada_at
+             from conversaciones
+            -- Las que no pasaron del saludo no son una opinión, son una
+            -- pestaña que alguien abrió y cerró. Ensucian la lista.
+            where turnos > 1
+            -- Lo urgente primero, y dentro de eso lo más reciente. Una
+            -- queja de hace tres horas importa más que un elogio de ayer.
+            order by urgente desc, empezada_at desc
+            limit 200`
+        ).all();
+        return new Response(paginaLeer(results || [], null), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8',
+                     'Cache-Control': 'no-store' },
+        });
       }
 
       // ── la página ──

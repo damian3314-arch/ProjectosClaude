@@ -21,6 +21,8 @@ const CONFIG = {
   // n8n: el camino de una sola reserva es el que usa casi todo el
   // mundo y no había razón para moverlo.
   CAJA_BASE: 'https://tumbao-caja.damian3314.workers.dev',
+  // El chat de opiniones. Es el mismo sitio que se manda por WhatsApp.
+  OPINA: 'https://opina.tumbaobaila.com',
   WHATSAPP:  '573017833550',
   INSTAGRAM: 'tumbao.bca',
   // El aviso del banco tarda de 1 a 2 minutos. Con 3 basta, y esperar 5
@@ -185,6 +187,59 @@ const CONFIG = {
   .check input{margin:.15rem 0 0;width:1.15rem;height:1.15rem;accent-color:var(--hot);flex:none}
   .check label{margin:0;font-size:.8rem;color:var(--tx-2);line-height:1.5}
   .trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+  /* ---------- la burbuja de opiniones ----------
+     Discreta a propósito. Quien está en esta página vino a reservar, y
+     un chat que salta encima del formulario es una razón para irse. Se
+     ve, se puede tocar, y no estorba. */
+  #burbuja{
+    position:fixed;right:1rem;bottom:1rem;z-index:70;
+    width:3.4rem;height:3.4rem;border-radius:50%;border:0;
+    background:linear-gradient(140deg,var(--hot),#ff4f7d);
+    color:#fff;font-size:1.4rem;line-height:1;cursor:pointer;
+    box-shadow:0 8px 22px rgba(0,0,0,.45);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .16s;
+  }
+  #burbuja:hover{transform:scale(1.06)}
+  #burbuja[hidden]{display:none}
+  /* El globito que explica de qué va. Sin esto, un círculo naranja en
+     una esquina no dice nada y nadie lo toca. */
+  #burbuja-pista{
+    position:fixed;right:5rem;bottom:1.75rem;z-index:70;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:12px;
+    padding:.5rem .75rem;font-size:.8rem;color:var(--tx-2);
+    box-shadow:0 6px 18px rgba(0,0,0,.4);max-width:12rem;
+  }
+  #burbuja-pista[hidden]{display:none}
+
+  #opina{
+    position:fixed;inset:auto 1rem 1rem auto;z-index:71;
+    width:min(24rem,calc(100vw - 2rem));
+    height:min(34rem,calc(100dvh - 2rem));
+    background:var(--bg-2);border:1px solid var(--line);border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  #opina[hidden]{display:none}
+  #opina .cab{
+    display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;
+    border-bottom:1px solid var(--line);flex:none;
+  }
+  #opina .cab b{font-size:.92rem}
+  #opina .cab .sp{flex:1}
+  #opina .cab button{
+    background:none;border:0;color:var(--tx-3);font-size:1.3rem;line-height:1;
+    padding:.1rem .4rem;cursor:pointer;
+  }
+  #opina .cab button:hover{color:var(--tx)}
+  #opina iframe{flex:1;width:100%;border:0;background:var(--bg)}
+  /* En un celular ocupa la pantalla: una ventanita de 24rem dentro de
+     una pantalla de 24rem es un marco alrededor de nada. */
+  @media (max-width:29rem){
+    #opina{inset:0;width:100%;height:100dvh;border-radius:0;border:0}
+    #burbuja-pista{display:none}
+  }
 
   .btn{
     width:100%;padding:.92rem 1rem;border:0;border-radius:var(--r);
@@ -567,6 +622,27 @@ const CONFIG = {
   </footer>
 </div>
 
+<!-- ═══════ contarnos cómo nos fue ═══════
+     El chat vive en su propio sitio (opina.tumbaobaila.com) y aquí entra
+     en un iframe. No se copia el chat a esta página a propósito: hay uno
+     solo, y el enlace que se manda por WhatsApp y esta ventanita son la
+     misma cosa. Arreglar algo allá lo arregla en los dos sitios.
+
+     El iframe se crea al abrirlo, no al cargar la página: quien viene a
+     reservar no tiene por qué pagar la descarga de un chat que no pidió.
+-->
+<div id="burbuja-pista" hidden>¿Ya bailas con nosotros? Cuéntanos cómo te ha ido 💬</div>
+<button id="burbuja" type="button" aria-label="Contarnos cómo te ha ido"
+        title="Contarnos cómo te ha ido">💬</button>
+
+<div id="opina" hidden role="dialog" aria-modal="true" aria-label="Cuéntanos cómo te ha ido">
+  <div class="cab">
+    <b>Cuéntanos</b>
+    <span class="sp"></span>
+    <button type="button" id="opina-cerrar" aria-label="Cerrar">×</button>
+  </div>
+</div>
+
 <script>
 (() => {
   'use strict';
@@ -842,6 +918,50 @@ const CONFIG = {
 
   $('#cuantos-menos').addEventListener('click', () => { cuantos--; pintarAcompanantes(); pintarResumen(); });
   $('#cuantos-mas').addEventListener('click',   () => { cuantos++; pintarAcompanantes(); pintarResumen(); });
+
+  /* ---------- la burbuja de opiniones ---------- */
+  {
+    const bot   = $('#burbuja');
+    const caja  = $('#opina');
+    const pista = $('#burbuja-pista');
+    let montado = false;
+
+    const abrir = () => {
+      if (!montado) {
+        // Se crea al abrirlo. Cargarlo con la página sería descargarle
+        // un chat entero a quien solo vino a mirar horarios.
+        const marco = document.createElement('iframe');
+        marco.src = `${CONFIG.OPINA}/?burbuja=1`;
+        marco.title = 'Cuéntanos cómo te ha ido';
+        marco.allow = 'microphone';   // las notas de voz
+        caja.appendChild(marco);
+        montado = true;
+      }
+      caja.hidden = false;
+      bot.hidden = true;
+      pista.hidden = true;
+      try { localStorage.setItem('tumbao_pista_opina', '1'); } catch {}
+    };
+    const cerrar = () => { caja.hidden = true; bot.hidden = false; };
+
+    bot.addEventListener('click', abrir);
+    $('#opina-cerrar').addEventListener('click', cerrar);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !caja.hidden) cerrar();
+    });
+
+    // El globito, una sola vez por persona y sin apuro. Si sale de una,
+    // compite con lo que la persona vino a hacer; y si sale siempre,
+    // molesta.
+    let yaLoVio = true;
+    try { yaLoVio = !!localStorage.getItem('tumbao_pista_opina'); } catch {}
+    if (!yaLoVio) {
+      setTimeout(() => {
+        if (caja.hidden) pista.hidden = false;
+        setTimeout(() => { pista.hidden = true; }, 9000);
+      }, 6000);
+    }
+  }
 
   /* ---------- 2 · reservar ---------- */
   $('#form').addEventListener('submit', async e => {
