@@ -49,9 +49,12 @@ create or replace function cola() returns jsonb language sql stable as
 update ajustes set valor = ((now() at time zone 'America/Bogota')::date - 60)::text
  where clave = 'inicio_produccion';
 
+-- Mañana, no hoy: corriendo esto después de las 6 de la tarde la clase
+-- ya habría pasado y tomar_cupo devolvería CLASE_YA_PASO, así que todo
+-- fallaría por la hora a la que se corre la prueba y no por el código.
 insert into clases (id, nombre, profesor, fecha_hora, cupo_total, precio_cop)
-values ('cccccccc-0000-4000-8000-000000000001', 'Salsa de esta noche', 'Prof',
-        (((now() at time zone 'America/Bogota')::date + time '18:00')
+values ('cccccccc-0000-4000-8000-000000000001', 'Salsa de mañana', 'Prof',
+        (((now() at time zone 'America/Bogota')::date + 1 + time '18:00')
           at time zone 'America/Bogota'), 30, 15000);
 
 -- Los códigos de reserva viajan entre bloques. Una temp table normal:
@@ -422,7 +425,7 @@ end $$;
 select chk('el polling la confirma',
   conciliar_reserva((select cod from cods where k = 't13'))->>'estado', 'confirmada');
 select chk('devuelve el nombre de la clase, que la página pinta',
-  conciliar_reserva((select cod from cods where k = 't13'))->>'clase', 'Salsa de esta noche');
+  conciliar_reserva((select cod from cods where k = 't13'))->>'clase', 'Salsa de mañana');
 select chk('un código que no existe no revienta',
   conciliar_reserva('ZZZZZZ')->>'error', 'no_encontrada');
 

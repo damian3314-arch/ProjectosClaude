@@ -80,7 +80,48 @@ Se puede apagar cuando lleve un día sin recibir llamadas.
 desde el lado de la reserva). Verificado: `admin_pendientes` ya devuelve
 `pagos_libres`.
 
-### 2d. Pegar `aplicar/PEGAR_UN_SOLO_CRUCE.sql` ⬅ pendiente
+### 2e. Pegar `aplicar/PEGAR_12_AGOSTO.sql` ⬅ pendiente
+
+Trae las tres cosas del 12 de agosto, en orden: el arreglo del choque de
+nombres (2d, que quedó sin pegar), varios cupos con un solo pago, y
+"pagó y no vino". Probado contra el estado exacto de producción
+(0001..0032 + el archivo), idempotente, y **sin tocar ni una reserva de
+las que ya existen**: todo lo nuevo son columnas que nacen vacías, y una
+reserva de una sola persona se comporta igual que hasta ahora.
+
+Reemplaza a `PEGAR_UN_SOLO_CRUCE.sql`, que va incluido dentro.
+
+**Varios cupos.** En la página, al elegir clase suelta hay un contador.
+Subirlo pide un nombre por persona —un solo celular y correo— y el total
+a pagar sale del contador. El banco busca ese total. Las seis son seis
+filas distintas (cada una entra por la puerta por separado) pero un solo
+grupo, con un solo pago.
+
+- El contador se frena en los cupos que quedan en esa clase: el error se
+  evita en vez de explicarse.
+- O entran todos o no entra ninguno. Medio grupo sería lo peor: cupos
+  ocupados que nadie va a usar y un cobro que no cuadra con nada.
+- Tope de 8. No es una regla de negocio, es un freno: sin él un cero de
+  más en el contador se lleva la clase entera.
+- En "Por validar" un grupo es UNA tarjeta, con los nombres de los demás
+  y el precio del grupo.
+
+**Reserva de a uno: intacta.** Sigue yendo por el webhook de n8n de
+siempre. Solo el camino de varios pasa por el Worker. Por ahí entra casi
+todo, funciona, y este cambio no tiene por qué poder romperlo.
+
+**Pagó y no vino.** En la lista de la puerta, junto a quien está
+confirmado, un botón "No vino". No suelta el cupo ni mueve la plata —esa
+clase está cobrada y la caja de hoy cuadra con ella— sino que abre un
+crédito de 3 días, contados desde la clase que se perdió. Sale en la
+pestaña nueva "Por disfrutar", ordenada por lo que vence primero, con un
+desplegable para moverla a otra clase sin volver a cobrar. Reprogramar no
+sobrevende: si la clase nueva está llena, rebota.
+
+Al vencer se cae de la lista pero **no se borra nada**: si alguien
+reclama en una semana, se puede mirar qué pasó.
+
+### 2d. ~~Pegar `aplicar/PEGAR_UN_SOLO_CRUCE.sql`~~ ⬅ incluido en 2e
 
 Arregla un error del archivo anterior. **La 0032 creó una función
 llamada `conciliar_reserva` sin ver que ya existía otra con ese nombre**
@@ -151,13 +192,16 @@ cd tumbao-reservas/pruebas
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
 psql -d <base> -f humo-banco.sql        # conciliación depósito por depósito
 psql -d <base> -f humo-aforo.sql        # no se vende dos veces el mismo puesto
-psql -d <base> -f humo-cruce.sql        # el cruce en las dos direcciones (30)
+psql -d <base> -f humo-cruce.sql        # el cruce en las dos direcciones (37)
+psql -d <base> -f humo-grupo.sql        # varios cupos con un solo pago (39)
+psql -d <base> -f humo-disfrutar.sql    # pagó y no vino, y reprogramar
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
 node prueba-admin.mjs       # tablero, puerta, horario, cola, "Es este"
 node prueba-caja.mjs        # 53 comprobaciones
 node prueba-apuntar.mjs     # 14
+node prueba-varios.mjs      # el contador y los N nombres, en la página pública
 
 # Sin navegador
 node ../../tumbao-opina/pruebas/limpiar-transcripcion.test.mjs
@@ -217,24 +261,21 @@ que anclarles la fecha, pero no bloquea nada.
 
 En orden de lo que más se nota en el mostrador:
 
-1. **Varios cupos con un solo pago.** Alguien llega y reserva para tres;
-   hoy la recepcionista lo hace a mano por WhatsApp. Necesita endpoint,
-   RPC y pantalla. Toca plata, así que conviene hacerlo completo.
-2. **Botón "Reprogramar"** junto a "Entró": quien pagó y no pudo venir,
-   que se le mueva el cupo sin volver a cobrar.
-   (El botón **"Liberar"** ya está: en la lista de la puerta, junto a
-   quien sale "sin confirmar". Suelta el cupo de una, sin esperar a que
-   expire. Nació del caso del 11 de agosto: Isabel reservó dos veces —le
-   falló el primer intento— y la que no pagó bloqueaba un puesto de una
-   clase con 22 personas. Hasta una hora esperando la barrida, que corre
-   en punto.)
-3. **Miembro con plan en otro horario.** Hoy `tomar_cupo` lo bloquea a
+0. **Los duplicados del banco.** Dos personas que paguen el MISMO valor
+   en el MISMO minuto se registran como un solo depósito — el índice
+   `pagos_unicos` usa la llave Bre-B como referencia, y es la misma en
+   todos los correos. A las 6 pm, con varios de $15.000 seguidos, es
+   cuestión de tiempo. Ya se tropezó con esto escribiendo una prueba. El
+   arreglo es dedupear por el id del correo de Gmail, que ya se guarda,
+   pero obliga a botar el índice actual.
+
+1. **Miembro con plan en otro horario.** Hoy `tomar_cupo` lo bloquea a
    propósito (`OTRO_HORARIO`, `PLAN_YA_CUBRE`). Antes de tocarlo hay que
    decidir la regla: ¿cuántas veces al mes? ¿solo si hay cupo libre?
-4. **`por_soltar` en el Tablero.** El dato ya viaja en la respuesta desde
+2. **`por_soltar` en el Tablero.** El dato ya viaja en la respuesta desde
    que se arreglaron los cupos fantasma; falta pintarlo cuando sea > 0.
-5. **Default branch a `main`** en Settings del repo. Hoy es
+3. **Default branch a `main`** en Settings del repo. Hoy es
    `claude/aprende-esto-khjryq`, que solo tiene el CLAUDE.md, y ya tumbó
    una vez el despliegue de Cloudflare Pages.
-6. **Tablas `cheo_*` en Supabase**, vacías y sin uso. Decidir si se
+4. **Tablas `cheo_*` en Supabase**, vacías y sin uso. Decidir si se
    borran.

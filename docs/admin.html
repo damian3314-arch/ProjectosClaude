@@ -397,7 +397,17 @@ const CONFIG = {
   }
   .btn-soltar:hover{border-color:var(--bad);color:var(--bad)}
   .btn-soltar:disabled{opacity:.5}
-  .fila-puerta .acciones-puerta{display:flex;gap:.4rem;align-items:center}
+  /* Ya marcado como que no vino: se queda encendido para que se vea de
+     un vistazo cuál fila ya se resolvió. */
+  .btn-soltar.marcado{border-color:var(--gold);color:var(--gold)}
+  .btn-soltar.marcado:hover{border-color:var(--gold);color:var(--gold)}
+  .fila-puerta .acciones-puerta{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+
+  /* Escoger la clase a la que se mueve alguien. */
+  .sel-clase{
+    flex:1;min-width:11rem;padding:.6rem .7rem;border-radius:11px;
+    background:var(--bg-3);border:1px solid var(--line);color:var(--tx);font:inherit;
+  }
 
   .vacio{text-align:center;color:var(--tx-3);padding:3rem 1rem}
   .vacio .ico{font-size:2.4rem;display:block;margin-bottom:.6rem}
@@ -422,8 +432,13 @@ const CONFIG = {
      cajera estaba mirando el cierre —abajo del todo— el mensaje aparecía
      fuera de la pantalla y ella solo veía que no pasaba nada. Esto sale
      encima, siempre visible, sin importar dónde esté mirando. */
+  /* Debajo del encabezado, no encima. El contenedor no atrapa clics
+     (pointer-events:none) pero cada aviso sí —lleva su × para cerrarlo—,
+     así que un aviso abierto sobre el botón de Salir lo dejaba muerto
+     hasta que se desvanecía. Salió en una prueba que no pudo salir de la
+     sesión. */
   #avisos{
-    position:fixed;top:1rem;right:1rem;z-index:80;
+    position:fixed;top:4.3rem;right:1rem;z-index:80;
     display:flex;flex-direction:column;gap:.5rem;
     width:min(23rem,calc(100vw - 2rem));pointer-events:none;
   }
@@ -461,7 +476,7 @@ const CONFIG = {
   /* En pantalla de celular los avisos ocupan casi todo el ancho, así que
      se hacen más bajos: dos apilados tienen que dejar ver la cabecera. */
   @media (max-width:560px){
-    #avisos{top:.5rem;right:.5rem;left:.5rem;width:auto}
+    #avisos{top:4rem;right:.5rem;left:.5rem;width:auto}
     .nota{padding:.6rem .7rem;border-radius:10px}
     .nota .tit{font-size:.85rem}
     .nota .det{font-size:.74rem}
@@ -735,6 +750,9 @@ const CONFIG = {
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
         Por validar<span class="globo" id="globo-pend" hidden></span>
       </button>
+      <button class="tab" role="tab" id="tab-disfrutar" aria-selected="false">
+        Por disfrutar<span class="globo" id="globo-disf" hidden></span>
+      </button>
       <button class="tab" role="tab" id="tab-caja" aria-selected="false">Caja</button>
     </div>
 
@@ -839,6 +857,22 @@ const CONFIG = {
     </div>
 
     <!-- ── caja ── -->
+    <!-- ── por disfrutar ── -->
+    <div class="panel" id="p-disfrutar">
+      <div class="semana-bar">
+        <b>Pagaron y no vinieron</b>
+        <span class="sp"></span>
+        <button class="btn chico" id="disf-recargar">Recargar</button>
+      </div>
+      <p class="suave" style="margin:.2rem 0 1rem">
+        Tienen tres días para usar la clase, contados desde la que se
+        perdieron. Pasados esos días se cae de esta lista.
+      </p>
+      <div class="aviso" id="msg-disf" hidden></div>
+      <div class="cargando" id="cargando-disf" hidden>Cargando…</div>
+      <div id="lista-disf"></div>
+    </div>
+
     <div class="panel" id="p-caja">
       <div class="semana-bar">
         <b id="caja-dia">Caja de hoy</b>
@@ -1217,7 +1251,7 @@ const CONFIG = {
   $('#salir').addEventListener('click', () => cerrarSesion());
 
   /* ---------- pestañas ---------- */
-  const PANELES = ['tablero', 'horario', 'pendientes', 'caja'];
+  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja'];
   let panelActual = 'tablero';
   function verPanel(cual) {
     panelActual = cual;
@@ -1258,6 +1292,7 @@ const CONFIG = {
     if (panelActual === 'pendientes') cargarPendientes();
     else if (panelActual === 'caja')  cargarCaja();
     else if (panelActual === 'tablero') cargarTablero();
+    else if (panelActual === 'disfrutar') cargarDisfrutar();
     // El horario no cambia solo: lo escribe una persona y ya.
   }
 
@@ -1308,7 +1343,7 @@ const CONFIG = {
   // llegue a notarlo.
   // La caja se mira despacio y se trabaja encima: 30 segundos evita que
   // la pantalla parpadee mientras se cobra, sin dejarla envejecer.
-  const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000 };
+  const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000, disfrutar: 45000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -1699,6 +1734,26 @@ const CONFIG = {
     const acc = document.createElement('div');
     acc.className = 'acciones-puerta';
 
+    // Pagó y no vino.
+    //
+    // No es lo mismo que "sin marcar": sin marcar también está quien
+    // todavía no ha llegado. A las nueve de la noche, sin este botón,
+    // nadie sabe quién faltó — y al día siguiente esa persona escribe
+    // diciendo que pagó, con razón, y no hay dónde mirarlo.
+    //
+    // No suelta el cupo ni toca la plata: esa clase ya está cobrada y
+    // la caja de hoy va a cuadrar con ella. Lo que abre es un crédito.
+    if (p.codigo && p.confirmada === true && p.tipo === 'suelta') {
+      const nv = document.createElement('button');
+      nv.className = 'btn-soltar' + (p.no_vino ? ' marcado' : '');
+      nv.textContent = p.no_vino ? '↩ No vino' : 'No vino';
+      nv.title = p.no_vino
+        ? 'Quitar la marca'
+        : 'Pagó y no asistió: le queda la clase para otro día';
+      nv.addEventListener('click', () => marcarNoVino(el, nv, p));
+      acc.appendChild(nv);
+    }
+
     // Soltar el cupo, desde aquí.
     //
     // El caso real: la misma persona reservó dos veces —le falló el
@@ -1735,6 +1790,31 @@ const CONFIG = {
 
     el.appendChild(acc);
     return el;
+  }
+
+  async function marcarNoVino(fila, boton, p) {
+    const quitar = !!p.no_vino;
+    boton.disabled = true;
+    try {
+      const r = await api('no_vino', {
+        clase_id: puerta.clase.clase_id, ref: p.ref, no_vino: !quitar,
+      });
+      p.no_vino = !quitar;
+      if (quitar) {
+        nota('Marca quitada', 'ojo', p.nombre);
+      } else {
+        const v = r.vence ? new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota',
+                    day: 'numeric', month: 'long' }).format(new Date(r.vence + 'T12:00:00-05:00'))
+                  : '';
+        nota('Le queda la clase', 'bien',
+             `${p.nombre} la puede usar hasta el ${v}. Está en «Por disfrutar».`);
+      }
+      await abrirPuerta(puerta.clase.clase_id);
+      traido.delete('disfrutar');
+    } catch (e) {
+      boton.disabled = false;
+      fallo(e, 'No se pudo marcar');
+    }
   }
 
   async function soltarCupo(fila, boton, p) {
@@ -2008,6 +2088,108 @@ const CONFIG = {
   });
 
   /* ---------- pendientes ---------- */
+  /* ---------- por disfrutar ---------- */
+  $('#tab-disfrutar').addEventListener('click', () => {
+    verPanel('disfrutar');
+    cargarDisfrutar();
+  });
+  $('#disf-recargar').addEventListener('click', () => cargarDisfrutar(true));
+
+  let porDisfrutar = [];
+  let clasesDestino = [];
+
+  async function cargarDisfrutar(forzar) {
+    if (!forzar && esReciente('disfrutar')) return;
+    traido.set('disfrutar', Date.now());
+    $('#cargando-disf').hidden = false;
+    aviso($('#msg-disf'), '');
+    try {
+      const r = await api('disfrutar', {});
+      porDisfrutar = r.gente || [];
+      // Las clases a las que se puede mover a alguien vienen en la misma
+      // respuesta. Antes se sacaban del horario, que devuelve el día y la
+      // hora por separado: armar una fecha con eso es donde salía
+      // "Invalid time value" y la pestaña quedaba en blanco.
+      clasesDestino = r.clases || [];
+      pintarDisfrutar();
+    } catch (e) {
+      aviso($('#msg-disf'), esc(e.message), 'mal');
+      traido.delete('disfrutar');
+    } finally { $('#cargando-disf').hidden = true; }
+  }
+
+  function pintarDisfrutar() {
+    const cont  = $('#lista-disf');
+    const globo = $('#globo-disf');
+    globo.textContent = porDisfrutar.length ? String(porDisfrutar.length) : '';
+    globo.hidden = !porDisfrutar.length;
+
+    if (!porDisfrutar.length) {
+      cont.innerHTML =
+        '<div class="vacio"><span class="ico">✓</span>' +
+        'Nadie con clases pendientes por disfrutar.</div>';
+      return;
+    }
+
+    cont.innerHTML = '';
+    for (const g of porDisfrutar) {
+      const dias = Number(g.dias);
+      const el = document.createElement('div');
+      el.className = 'pend-card';
+      const tel = String(g.telefono || '').replace(/\D/g, '');
+      el.innerHTML =
+        `<div class="top">` +
+          `<span class="nom">${esc(g.nombre)}</span>` +
+          `<span class="cod">${esc(g.codigo)}</span>` +
+          // Cero días es hoy, y hoy es cuando hay que llamar. Va en rojo
+          // porque mañana ya no se puede.
+          `<span class="etiqueta${dias <= 0 ? ' espera' : ''}">${
+             dias <= 0 ? 'vence HOY' : dias === 1 ? 'queda 1 día' : `quedan ${dias} días`}</span>` +
+        `</div>` +
+        `<div class="det">` +
+          `Se perdió ${esc(g.clase)} · ${esc(
+             new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota',
+               weekday: 'short', day: 'numeric', month: 'short' })
+               .format(new Date(g.fecha_hora)))} · ` +
+          `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${esc(tel)}" ` +
+            `target="_blank" rel="noopener" style="color:var(--gold)">${esc(g.telefono)}</a>` +
+        `</div>`;
+
+      // Reprogramar: escoger la clase nueva de las que quedan. No se
+      // vuelve a cobrar y no se puede pasar del aforo — eso lo cierra
+      // Postgres, aquí solo se escoge.
+      const acc = document.createElement('div');
+      acc.className = 'acciones';
+      const sel = document.createElement('select');
+      sel.className = 'sel-clase';
+      sel.innerHTML = '<option value="">Mover a otra clase…</option>' +
+        clasesDestino
+          .filter(c => c.clase_id !== g.clase_id)
+          .map(c => `<option value="${esc(c.clase_id)}">${esc(
+             new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota',
+               weekday: 'short', day: 'numeric', month: 'short',
+               hour: 'numeric', minute: '2-digit', hour12: true })
+               .format(new Date(c.fecha_hora)))} · ${c.libres} libres</option>`)
+          .join('');
+      const btn = document.createElement('button');
+      btn.className = 'btn ok';
+      btn.textContent = 'Reprogramar';
+      btn.addEventListener('click', async () => {
+        if (!sel.value) { nota('Falta la clase', 'mal', 'Escoge a qué clase se mueve.'); return; }
+        btn.disabled = true;
+        try {
+          const r = await api('reprogramar', { codigo: g.codigo, clase_id: sel.value });
+          nota('Reprogramada', 'bien', `${g.nombre} · código nuevo ${r.codigo}`);
+          await cargarDisfrutar(true);
+          traido.delete('tablero:' + diaTablero);
+        } catch (e) { btn.disabled = false; fallo(e, 'No se pudo reprogramar'); }
+      });
+      acc.append(sel, btn);
+      el.appendChild(acc);
+      cont.appendChild(el);
+    }
+  }
+
   $('#recargar-pend').addEventListener('click', cargarPendientes);
 
   async function cargarPendientes(forzar) {
@@ -2187,10 +2369,20 @@ const CONFIG = {
         (r.tipo === 'miembro' ? `<span class="etiqueta">miembro</span>` : '') +
       `</div>` +
       `<div class="det">` +
-        `$${Number(r.precio_cop || 0).toLocaleString('es-CO')} · ` +
+        // Con varios cupos el precio es el del GRUPO, que es lo que hay
+        // que buscar en el banco. Poner $15.000 al lado de un depósito
+        // de $60.000 haría que el candidato bueno pareciera el errado.
+        `$${Number(r.precio_cop || 0).toLocaleString('es-CO')}` +
+        (Number(r.cupos || 1) > 1 ? ` · ${r.cupos} cupos` : '') + ` · ` +
         `<a href="https://wa.me/${CONFIG.WHATSAPP_PAIS}${esc(String(r.telefono).replace(/\D/g, ''))}" ` +
           `target="_blank" rel="noopener" style="color:var(--gold)">${esc(r.telefono)}</a>` +
       `</div>` +
+      // Quién más viene con esta reserva. Sin esto, resolver una tarjeta
+      // confirmaría a cinco personas cuyos nombres nadie vio.
+      (Array.isArray(r.acompanantes) && r.acompanantes.length
+        ? `<div class="declarado"><span>👥 Con ${
+             r.acompanantes.map(n => esc(n)).join(', ')}</span></div>`
+        : '') +
       // Lo que declaro quien paga. El "pago otra persona" es lo que
       // explica por que el nombre del banco no coincide con el de la
       // reserva, asi que va bien visible.
@@ -2778,7 +2970,12 @@ const CONFIG = {
     // abrir una caja que el servidor todavía no sabe abrir, y el botón
     // daría error 502. Así, mientras el SQL no esté, esto sencillamente
     // no aparece y la caja funciona igual que hasta ahora.
-    if (d.abierta === false && !d.cerrado) {
+    // `!cajaCierreAbierto` es lo que hace que funcione el enlace de abajo.
+    // Sin eso, "Cerrar el día sin abrir" ponía la bandera y llamaba a
+    // pintarCaja(), que volvía a entrar por aquí y redibujaba la misma
+    // pantalla de apertura: el enlace no hacía nada visible. Estaba así
+    // desde que se escribió.
+    if (d.abierta === false && !d.cerrado && !cajaCierreAbierto) {
       $('#caja-cierre').innerHTML =
         `<h3>Abrir la caja</h3>` +
         `<p class="sub-c">Cuenta lo que hay en el cajón antes de empezar. ` +
@@ -2872,7 +3069,13 @@ const CONFIG = {
             `<label for="c-nota">Nota <span class="suave">(opcional)</span></label>` +
             `<input id="c-nota" type="text" maxlength="300" placeholder="Ej: faltaron 2 mil">` +
             `<button class="btn primario" id="btn-cerrar-caja">Cerrar el día</button>` +
-          `</div>`);
+          `</div>` +
+          // La salida de vuelta. Quien entró aquí por el enlace "cerrar
+          // sin abrir" y se arrepintió no tenía cómo volver más que
+          // recargando la página entera.
+          (d.abierta === false
+            ? `<p class="suave"><a href="#" id="volver-apertura">` +
+              `Mejor cuento el cajón y abro la caja</a></p>` : ''));
   }
 
   // Un solo escuchador para todo el panel: las tarjetas y los botones de
@@ -2928,6 +3131,13 @@ const CONFIG = {
     if (ev.target.id === 'saltar-apertura') {
       ev.preventDefault();
       cajaCierreAbierto = true;
+      pintarCaja();
+      return;
+    }
+
+    if (ev.target.id === 'volver-apertura') {
+      ev.preventDefault();
+      cajaCierreAbierto = false;
       pintarCaja();
       return;
     }

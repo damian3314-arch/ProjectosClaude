@@ -17,6 +17,10 @@
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
   N8N_BASE:  'https://barragan.app.n8n.cloud/webhook',
+  // Solo para reservar varios cupos de una. Todo lo demás sigue por
+  // n8n: el camino de una sola reserva es el que usa casi todo el
+  // mundo y no había razón para moverlo.
+  CAJA_BASE: 'https://tumbao-caja.damian3314.workers.dev',
   WHATSAPP:  '573017833550',
   INSTAGRAM: 'tumbao.bca',
   // El aviso del banco tarda de 1 a 2 minutos. Con 3 basta, y esperar 5
@@ -156,6 +160,25 @@ const CONFIG = {
   input:focus{border-color:var(--hot);background:var(--bg-3)}
   input[aria-invalid="true"]{border-color:var(--bad)}
   .hint{font-size:.75rem;color:var(--tx-3);margin-top:.28rem}
+
+  /* Contador de cupos. Botones grandes: esto se usa con el pulgar, de
+     pie en la puerta del salón. */
+  .contador{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
+  .contador button{
+    width:2.9rem;height:2.9rem;flex:none;border-radius:11px;font-size:1.35rem;line-height:1;
+    background:var(--bg-2);border:1px solid var(--line);color:var(--tx);
+  }
+  .contador button:hover:not(:disabled){border-color:var(--hot);color:var(--hot)}
+  .contador button:disabled{opacity:.35}
+  .contador input{
+    width:3.4rem;flex:none;text-align:center;font-weight:700;font-size:1.1rem;
+    padding:.72rem .3rem;
+  }
+  .contador .hint{margin:0 0 0 .2rem;flex:1;min-width:8rem}
+  /* Cada acompañante, separado del anterior sin línea: la línea haría
+     que pareciera otra sección del formulario. */
+  #acompanantes > div{margin-top:.9rem}
+
   .err-campo{font-size:.76rem;color:var(--bad);margin-top:.28rem;display:none}
   .err-campo.on{display:block}
   .check{display:flex;gap:.7rem;align-items:flex-start;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:.85rem}
@@ -363,11 +386,27 @@ const CONFIG = {
     <div class="resumen" id="resumen"></div>
 
     <form id="form" novalidate>
+      <!-- Para cuántos. Solo en clase suelta: la mensualidad es de una
+           persona y ahí el contador sobraría. -->
+      <div id="caja-cuantos" hidden>
+        <label for="cuantos">¿Para cuántas personas?</label>
+        <div class="contador">
+          <button type="button" class="menos" id="cuantos-menos" aria-label="Uno menos">−</button>
+          <input id="cuantos" type="text" inputmode="numeric" value="1"
+                 aria-label="Cantidad de cupos" readonly>
+          <button type="button" class="mas" id="cuantos-mas" aria-label="Uno más">+</button>
+          <span class="hint" id="cuantos-hint"></span>
+        </div>
+      </div>
       <div>
-        <label for="nombre">Nombre y apellido <span class="req">*</span></label>
+        <label for="nombre" id="lbl-nombre">Nombre y apellido <span class="req">*</span></label>
         <input id="nombre" name="nombre" type="text" autocomplete="name" required maxlength="80" placeholder="Camila Rojas">
         <p class="err-campo" id="e-nombre">Escribe tu nombre.</p>
       </div>
+      <!-- Los nombres de los demás. Se dibujan al mover el contador: un
+           campo vacío por persona es lo que evita que en la puerta haya
+           seis cupos y un solo nombre. -->
+      <div id="acompanantes"></div>
       <div>
         <label for="celular">Celular <span class="req">*</span></label>
         <input id="celular" name="celular" type="tel" inputmode="numeric" autocomplete="tel-national" required maxlength="20" placeholder="300 123 4567">
@@ -407,6 +446,9 @@ const CONFIG = {
     <div class="monto">
       <small>Valor de la clase</small>
       <b id="pago-monto">$15.000</b>
+      <!-- Con varios cupos, el desglose. Ver "$90.000" a secas donde
+           siempre decía $15.000 hace dudar de si uno se equivocó. -->
+      <small id="pago-cuantos" hidden></small>
       <span class="ojo">⚠️ El QR no trae el monto — escríbelo tú</span>
     </div>
 
@@ -720,14 +762,86 @@ const CONFIG = {
     const c = dia.clases.find(x => String(x.clase_id) === String(id));
     if (!c) return;
     elegida = { ...c, etiqueta: dia.etiqueta };
-    $('#resumen').innerHTML =
-      `<strong>${esc(cap(dia.etiqueta))} · ${esc(c.hora)}</strong>
-       <span>${esc([tituloClase(c), metaClase(c)].filter(Boolean).join(' · '))}${
-         tipo === 'suelta' ? ' · ' + pesos(c.precio_cop) : ''}</span>`;
+    cuantos = 1;
+    prepararCuantos();
+    pintarResumen();
     aviso('#err2','');
     irA(2);
     setTimeout(() => $('#nombre').focus(), 320);
   }
+
+  /* ---------- 2a · para cuántas personas ----------
+   *
+   * El tope sale de los cupos que quedan en ESA clase, no de un número
+   * fijo. Dejar pedir seis donde caben tres solo sirve para que el
+   * servidor diga que no después de llenar seis nombres.
+   */
+  let cuantos = 1;
+
+  function prepararCuantos(){
+    const caja = $('#caja-cuantos');
+    // La mensualidad es de una persona: ahí el contador no pinta nada.
+    caja.hidden = tipo !== 'suelta';
+    if (caja.hidden){ cuantos = 1; pintarAcompanantes(); return; }
+    pintarAcompanantes();
+  }
+
+  const topeCupos = () =>
+    Math.max(1, Math.min(8, Number(elegida && elegida.cupos_disponibles) || 1));
+
+  function pintarAcompanantes(){
+    const tope = topeCupos();
+    cuantos = Math.min(Math.max(cuantos, 1), tope);
+    $('#cuantos').value = String(cuantos);
+    $('#cuantos-menos').disabled = cuantos <= 1;
+    $('#cuantos-mas').disabled   = cuantos >= tope;
+    $('#cuantos-hint').textContent = tope <= 1
+      ? 'Queda un solo cupo en esta clase.'
+      : `Quedan ${tope} cupos. Pagas todo junto, en un solo giro.`;
+
+    // Cuando va sola, el campo de arriba es "tu nombre" a secas. Con
+    // acompañantes hay que numerarlos o nadie sabe cuál es cuál.
+    $('#lbl-nombre').innerHTML = (cuantos > 1 ? 'Persona 1 — tu nombre' : 'Nombre y apellido')
+      + ' <span class="req">*</span>';
+
+    const cont = $('#acompanantes');
+    const hay = cont.querySelectorAll('input').length + 1;
+    if (hay === cuantos) return;
+
+    // Se conserva lo ya escrito: bajar de 4 a 3 y volver a 4 no puede
+    // borrar los nombres que la persona ya tecleó.
+    const escritos = [...cont.querySelectorAll('input')].map(i => i.value);
+    cont.innerHTML = '';
+    for (let i = 2; i <= cuantos; i++){
+      const d = document.createElement('div');
+      d.innerHTML =
+        `<label for="nombre-${i}">Persona ${i} <span class="req">*</span></label>` +
+        `<input id="nombre-${i}" type="text" maxlength="80" autocomplete="off" ` +
+               `placeholder="Nombre y apellido">` +
+        `<p class="err-campo" id="e-nombre-${i}">Escribe el nombre.</p>`;
+      cont.appendChild(d);
+      const v = escritos[i - 2];
+      if (v) d.querySelector('input').value = v;
+    }
+    pintarResumen();
+  }
+
+  function pintarResumen(){
+    if (!elegida) return;
+    const dia = dias.find(d => d.fecha === diaActivo) || {};
+    const total = (elegida.precio_cop || 0) * cuantos;
+    $('#resumen').innerHTML =
+      `<strong>${esc(cap(elegida.etiqueta || dia.etiqueta || ''))} · ${esc(elegida.hora)}</strong>
+       <span>${esc([tituloClase(elegida), metaClase(elegida)].filter(Boolean).join(' · '))}${
+         tipo === 'suelta'
+           ? ' · ' + (cuantos > 1
+               ? `${cuantos} cupos · ${pesos(total)}`
+               : pesos(elegida.precio_cop))
+           : ''}</span>`;
+  }
+
+  $('#cuantos-menos').addEventListener('click', () => { cuantos--; pintarAcompanantes(); pintarResumen(); });
+  $('#cuantos-mas').addEventListener('click',   () => { cuantos++; pintarAcompanantes(); pintarResumen(); });
 
   /* ---------- 2 · reservar ---------- */
   $('#form').addEventListener('submit', async e => {
@@ -743,6 +857,15 @@ const CONFIG = {
     malo = marcar('#celular','#e-celular', celular.length === 10) || malo;
     $('#e-habeas').classList.toggle('on', !habeas);
     if (!habeas) malo = true;
+
+    // Los nombres de los demás. Se marcan uno a uno: "falta un nombre"
+    // sin decir cuál, con seis campos, es peor que no avisar.
+    const nombres = [nombre];
+    for (let i = 2; i <= cuantos; i++){
+      const v = ($(`#nombre-${i}`)?.value || '').trim();
+      malo = marcar(`#nombre-${i}`, `#e-nombre-${i}`, v.length >= 2) || malo;
+      nombres.push(v);
+    }
     if (malo) return;
 
     enviando = true;
@@ -751,20 +874,39 @@ const CONFIG = {
     aviso('#err2','');
 
     try{
-      const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/reservar`, {
-        method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({
-          clase_id: elegida.clase_id, nombre, telefono: celular,
-          email: $('#email').value.trim(), habeas: true, tipo,
-          apellido2: $('#apellido2').value
-        })
-      });
+      // Varios cupos van por el Worker; uno solo sigue por el webhook de
+      // siempre. No es capricho: por ahí entra casi todo, funciona, y
+      // este cambio no tiene por qué poder romperlo.
+      const varios = cuantos > 1;
+      const res = varios
+        ? await fetch(`${CONFIG.CAJA_BASE}/api/reservar-varios`, {
+            method:'POST', headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({
+              clase_id: elegida.clase_id, nombres, telefono: celular,
+              email: $('#email').value.trim(), apellido2: $('#apellido2').value
+            })
+          })
+        : await fetch(`${CONFIG.N8N_BASE}/tumbao/reservar`, {
+            method:'POST', headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({
+              clase_id: elegida.clase_id, nombre, telefono: celular,
+              email: $('#email').value.trim(), habeas: true, tipo,
+              apellido2: $('#apellido2').value
+            })
+          });
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.ok){
         reserva = data;
         if (data.requiere_pago){
-          $('#pago-monto').textContent = pesos(data.precio_cop || elegida.precio_cop);
+          // El total del grupo, no el precio de una clase: es la cifra
+          // que la persona tiene que teclear en la app del banco, y de
+          // ella depende que el pago se cruce solo.
+          $('#pago-monto').textContent =
+            pesos(data.total_cop || data.precio_cop || elegida.precio_cop);
+          $('#pago-cuantos').textContent = (data.cupos > 1)
+            ? `${data.cupos} clases · ${pesos(data.precio_cop)} cada una` : '';
+          $('#pago-cuantos').hidden = !(data.cupos > 1);
           irA(3);
         } else {
           mostrarResultado('confirmada', data);

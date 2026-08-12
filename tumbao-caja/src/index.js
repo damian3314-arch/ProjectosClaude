@@ -128,6 +128,19 @@ const ADMIN = {
   // nada que enlazar cuando se descarta.
   rechazar:   { fn: 'admin_rechazar',
                 args: (b) => ({ p_codigo: TXT(b.codigo, 40) }) },
+  // Pagó y no vino. No suelta el cupo ni toca la plata: abre un crédito
+  // de tres días para usar esa clase otro día.
+  no_vino:    { fn: 'admin_marcar_no_vino',
+                args: (b) => (UUID(b.clase_id)
+                  ? { p_clase_id: UUID(b.clase_id), p_ref: TXT(b.ref, 80),
+                      p_no_vino: b.no_vino !== false }
+                  : { _error: 'CLASE_INVALIDA' }) },
+  disfrutar:  { fn: 'admin_por_disfrutar',
+                args: () => ({}) },
+  reprogramar:{ fn: 'admin_reprogramar',
+                args: (b) => (UUID(b.clase_id)
+                  ? { p_codigo: TXT(b.codigo, 40), p_clase_id: UUID(b.clase_id) }
+                  : { _error: 'CLASE_INVALIDA' }) },
 };
 
 export default {
@@ -150,6 +163,68 @@ export default {
 
     let b = {};
     try { b = await request.json(); } catch (_) {}
+
+    /* ─────────────────────────────────────────────────────────────
+     * Reservar varios cupos — la ÚNICA ruta pública de este Worker
+     *
+     * Va antes del token a propósito: la pide tumbaobaila.com desde el
+     * navegador de un cliente, que no tiene ni puede tener uno. Es
+     * exactamente lo mismo que ya hace el webhook de reservar en n8n;
+     * lo que la protege es que tomar_cupos no acepta nada que no sea
+     * una clase existente con cupo, y el aforo lo cierra Postgres.
+     *
+     * Se pone aquí y no en n8n para no tocar el webhook de reservar,
+     * que es por donde entra el 95% de las reservas y funciona. Si esto
+     * se rompiera, reservar de a uno seguiría intacto.
+     * ───────────────────────────────────────────────────────────── */
+    if (ruta === '/api/reservar-varios') {
+      // La trampa para bots: un campo escondido que un humano nunca
+      // llena. Se responde ok para no enseñarle al bot que lo pillaron.
+      if (String(b.apellido2 || '').trim() !== '') {
+        return json({ ok: true, codigo: 'OK' }, 200, origen);
+      }
+      const nombres = Array.isArray(b.nombres)
+        ? b.nombres.map((n) => String(n || '').trim().slice(0, 80)).filter(Boolean)
+        : [];
+      if (!UUID(b.clase_id)) {
+        return json({ ok: false, error: 'CLASE_INVALIDA',
+          mensaje: 'No se reconoce la clase. Vuelve a elegir el horario.' }, 400, origen);
+      }
+      if (nombres.length < 1 || nombres.length > 8) {
+        return json({ ok: false, error: 'CANTIDAD_INVALIDA',
+          mensaje: 'Se pueden reservar entre 1 y 8 cupos a la vez.' }, 400, origen);
+      }
+      if (String(b.telefono || '').replace(/\D/g, '').length !== 10) {
+        return json({ ok: false, error: 'CELULAR_INVALIDO',
+          mensaje: 'El celular tiene que ser de 10 dígitos.' }, 400, origen);
+      }
+      try {
+        const r = await rpc(env, 'tomar_cupos', {
+          p_clase_id: UUID(b.clase_id),
+          p_nombres:  nombres,
+          p_telefono: String(b.telefono),
+          p_email:    b.email ? String(b.email).slice(0, 120) : null,
+          p_origen:   'web',
+        });
+        return json(r, r && r.ok === false ? 400 : 200, origen);
+      } catch (e) {
+        // Mientras la migración 0034 no esté pegada, la función no
+        // existe y PostgREST devuelve 404. No es un fallo pasajero y
+        // reintentar no arregla nada: hay que decirle a la persona que
+        // aparte de a una, no dejarla dándole al botón.
+        const detalle = String((e && e.message) || '');
+        const noExiste = /supabase 404/.test(detalle) || /PGRST202/.test(detalle);
+        return json({
+          ok: false,
+          error: noExiste ? 'SIN_VARIOS' : 'FALLA',
+          mensaje: noExiste
+            ? 'Todavía no podemos apartar varios cupos de una. Aparta el tuyo ' +
+              'y escríbenos por WhatsApp para los demás.'
+            : 'No pudimos apartar los cupos. Inténtalo otra vez.',
+        }, noExiste ? 503 : 502, origen);
+      }
+    }
+
     const token = String(b.token || '');
     if (!token) return json({ ok: false, error: 'NO_AUTORIZADO' }, 401, origen);
 

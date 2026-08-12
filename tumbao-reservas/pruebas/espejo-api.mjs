@@ -139,6 +139,10 @@ const MIEMBROS = {
   '3002222221': 7,  '3002222222': 7,
 };
 const reservas = new Map();
+// Las reservas hechas de una sola vez y pagadas de un solo giro. Una
+// reserva sola es su propio grupo.
+const hermanas = (r) => [...reservas.values()]
+  .filter(x => (x.grupo || x.codigo) === (r.grupo || r.codigo));
 // "claseId|ref" de quien ya entro. Un Set, porque marcar dos veces no
 // puede contar dos personas.
 const asistencias = new Set();
@@ -168,8 +172,11 @@ createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 204, {});
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
+    // Desde que se pueden reservar varios cupos, la pagina publica
+    // tambien llama al Worker. Se reescriben las dos bases al espejo.
     let html = readFileSync(join(WEB, 'index.html'), 'utf8')
-      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`);
+      .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`)
+      .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`);
     if (MINUTOS_ESPERA) html = html.replace(/MINUTOS_ESPERA:\s*[\d.]+/, `MINUTOS_ESPERA: ${MINUTOS_ESPERA}`);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(html);
@@ -277,6 +284,8 @@ createServer(async (req, res) => {
     if (que === 'pendientes') {
       const lista = [...reservas.values()]
         .filter(r => r.estado === 'pendiente_validacion' || r.estado === 'verificando')
+        // Solo el lider del grupo: las hermanas se resuelven con el.
+        .filter(r => !r.grupo || r.grupo === r.codigo)
         .map(r => {
           const c = clases.find(x => x.clase_id === r.clase_id) || {};
           return {
@@ -293,6 +302,11 @@ createServer(async (req, res) => {
             pagador:    (r.recibido || {}).pagador    || null,
             referencia: (r.recibido || {}).referencia || null,
             precio_cop: c.precio_cop || 15000,
+            // Un grupo es UNA tarjeta, con el precio del grupo y los
+            // nombres de los demas. Seis tarjetas iguales con el mismo
+            // comprobante no son seis decisiones, son una.
+            cupos: hermanas(r).length,
+            acompanantes: hermanas(r).filter(h => h.codigo !== r.codigo).map(h => h.nombre),
             // Para los DOS estados, como en produccion: admin_pendientes
             // calcula pagos_sueltos por valor y hora, sin mirar el estado
             // de la reserva. Restringirlo a pendiente_validacion escondia
@@ -379,6 +393,85 @@ createServer(async (req, res) => {
       });
     }
 
+    if (que === 'no_vino') {
+      const cod = String(b.ref || '').split(':')[1] || '';
+      const r = reservas.get(cod.toUpperCase());
+      if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+      if (b.no_vino === false) {
+        r.noVino = false; r.venceCredito = null;
+        return json(res, 200, { ok: true, no_vino: false, codigo: r.codigo, nombre: r.nombre });
+      }
+      if (r.estado !== 'confirmada') {
+        return json(res, 400, { ok: false, error: 'NO_PAGO',
+          mensaje: 'Esa reserva no esta confirmada: no hay clase pagada que guardarle.' });
+      }
+      if (r.tipo !== 'suelta') {
+        return json(res, 400, { ok: false, error: 'ES_MIEMBRO',
+          mensaje: 'Quien viene por mensualidad no pierde una clase pagada.' });
+      }
+      const c0 = clases.find(x => x.clase_id === r.clase_id) || {};
+      const vence = new Date(new Date(c0.fecha_hora || Date.now()).getTime() + 3 * 86400000);
+      r.noVino = true;
+      r.venceCredito = vence.toISOString().slice(0, 10);
+      asistencias.delete(r.clase_id + '|r:' + r.codigo);
+      return json(res, 200, { ok: true, no_vino: true, codigo: r.codigo,
+        nombre: r.nombre, vence: r.venceCredito });
+    }
+
+    if (que === 'disfrutar') {
+      const hoy = new Date().toISOString().slice(0, 10);
+      const gente = [...reservas.values()]
+        .filter(r => r.noVino && !r.reprogramadaA && r.estado === 'confirmada'
+                     && (r.venceCredito || '') >= hoy)
+        .map(r => {
+          const c0 = clases.find(x => x.clase_id === r.clase_id) || {};
+          return { codigo: r.codigo, nombre: r.nombre, telefono: r.telefono,
+                   clase: c0.nombre, clase_id: r.clase_id, fecha_hora: c0.fecha_hora,
+                   precio_cop: c0.precio_cop, vence: r.venceCredito,
+                   dias: Math.round((new Date(r.venceCredito + 'T12:00:00Z') -
+                                     new Date(hoy + 'T12:00:00Z')) / 86400000) };
+        })
+        .sort((a, z) => String(a.vence).localeCompare(String(z.vence)));
+      // Las clases a las que se puede mover a alguien, en la misma
+      // respuesta: quien pinta el desplegable no deberia tener que
+      // saber como se llaman los campos de otra pantalla.
+      const destino = clases
+        .filter(c => c.activa !== false && new Date(c.fecha_hora) > new Date()
+                     && c.cupos_disponibles > 0)
+        .map(c => ({ clase_id: c.clase_id, nombre: c.nombre,
+                     fecha_hora: c.fecha_hora, libres: c.cupos_disponibles }))
+        .sort((a, z) => new Date(a.fecha_hora) - new Date(z.fecha_hora))
+        .slice(0, 40);
+      return json(res, 200, { ok: true, gente, clases: destino, hoy });
+    }
+
+    if (que === 'reprogramar') {
+      const r = reservas.get(String(b.codigo || '').toUpperCase());
+      if (!r) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
+      if (!r.noVino) return json(res, 400, { ok: false, error: 'NO_TIENE_CREDITO' });
+      if (r.reprogramadaA) return json(res, 400, { ok: false, error: 'YA_REPROGRAMADA' });
+      const c1 = clases.find(x => x.clase_id === b.clase_id);
+      if (!c1) return json(res, 400, { ok: false, error: 'CLASE_INVALIDA' });
+      if (c1.clase_id === r.clase_id) return json(res, 400, { ok: false, error: 'MISMA_CLASE' });
+      // Un credito no es un pase por encima del aforo.
+      if (c1.cupos_disponibles <= 0) {
+        return json(res, 400, { ok: false, error: 'SIN_CUPO',
+          mensaje: 'Esa clase se lleno. Elige otro horario.' });
+      }
+      c1.cupos_disponibles--;
+      const cod = codigo();
+      reservas.set(cod, {
+        codigo: cod, tipo: 'suelta', clase: c1.nombre, clase_id: c1.clase_id,
+        nombre: r.nombre, telefono: r.telefono, creadaAt: new Date().toISOString(),
+        estado: 'confirmada', vieneDe: r.codigo,
+        fecha: fmt(c1.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
+        hora: hora12(c1.fecha_hora), pagoEn: null,
+      });
+      r.reprogramadaA = cod;
+      return json(res, 200, { ok: true, codigo: cod, codigo_viejo: r.codigo,
+        nombre: r.nombre, clase: c1.nombre });
+    }
+
     if (que === 'lista') {
       const c = clases.find(x => x.clase_id === b.clase_id);
       if (!c) return json(res, 400, { ok: false, error: 'NO_EXISTE' });
@@ -390,7 +483,9 @@ createServer(async (req, res) => {
           ref: 'r:' + r.codigo, codigo: r.codigo,
           nombre: r.nombre, telefono: r.telefono, tipo: r.tipo,
           estado: r.estado, confirmada: r.estado === 'confirmada',
-          asistio: asistencias.has(c.clase_id + '|r:' + r.codigo)
+          asistio: asistencias.has(c.clase_id + '|r:' + r.codigo),
+          // Pago y no vino: un tercer estado, distinto de "sin marcar".
+          no_vino: !!r.noVino, credito_vence: r.venceCredito || null
         }))
         .sort((a, z) => a.nombre.localeCompare(z.nombre));
 
@@ -600,6 +695,57 @@ createServer(async (req, res) => {
     });
   }
 
+  // ---- POST /api/reservar-varios ----
+  // Varios cupos con un solo pago. Cada persona es una fila, todas del
+  // mismo grupo, y el total es lo que hay que buscar en el banco.
+  if (url.pathname === '/api/reservar-varios' && req.method === 'POST') {
+    const b = await leerCuerpo(req);
+    if ((b.apellido2 || '').trim() !== '') return json(res, 200, { ok: true, codigo: 'OK' });
+
+    const c = clases.find(x => x.clase_id === b.clase_id);
+    if (!c) return json(res, 400, { ok: false, error: 'CLASE_INVALIDA',
+      mensaje: 'No se reconoce la clase. Vuelve a elegir el horario.' });
+
+    const nombres = (Array.isArray(b.nombres) ? b.nombres : [])
+      .map(n => String(n || '').trim()).filter(Boolean);
+    if (nombres.length < 1 || nombres.length > 8) {
+      return json(res, 400, { ok: false, error: 'CANTIDAD_INVALIDA',
+        mensaje: 'Se pueden reservar entre 1 y 8 cupos a la vez.' });
+    }
+    // O caben todos o no entra ninguno: medio grupo es lo peor posible.
+    if (c.cupos_disponibles < nombres.length) {
+      return json(res, 400, { ok: false, error: 'NO_CABEN_TANTOS',
+        libres: Math.max(c.cupos_disponibles, 0), pedidos: nombres.length,
+        mensaje: `En esa clase solo quedan ${Math.max(c.cupos_disponibles, 0)} cupos, y estás pidiendo ${nombres.length}.` });
+    }
+
+    const tel = String(b.telefono || '').replace(/\D/g, '');
+    const cods = [];
+    for (const nombre of nombres) {
+      const cod = codigo();
+      cods.push(cod);
+      reservas.set(cod, {
+        codigo: cod, tipo: 'suelta', clase: c.nombre, clase_id: c.clase_id,
+        nombre, telefono: tel, creadaAt: new Date().toISOString(),
+        estado: 'pendiente_pago', grupo: cods[0],
+        fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
+        hora: hora12(c.fecha_hora), pagoEn: null,
+      });
+      c.cupos_disponibles--;
+    }
+    c.agotada = c.cupos_disponibles <= 0;
+
+    return json(res, 200, {
+      ok: true, cupos: nombres.length, grupo: nombres.length > 1,
+      requiere_pago: true, estado: 'pendiente_pago',
+      codigo: cods[0], codigos: cods, nombres,
+      clase: c.nombre, profesor: c.profesor, lugar: c.lugar,
+      fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
+      hora: hora12(c.fecha_hora),
+      precio_cop: c.precio_cop, total_cop: c.precio_cop * nombres.length,
+    });
+  }
+
   // ---- POST /tumbao/leer-comprobante ----
   // Imita la lectura de la captura. LECTURA_VACIA=1 fuerza el caso de
   // "no le saco nada", que es el que tiene que dejar a la persona
@@ -628,7 +774,10 @@ createServer(async (req, res) => {
     const b = await leerCuerpo(req);
     const r = reservas.get(String(b.codigo || '').toUpperCase());
     if (!r) return json(res, 404, { ok: false, error: 'no_encontrada' });
-    r.estado = 'verificando';
+    // El grupo entero: la persona tiene UN codigo y con el dice que pago
+    // por los seis. Si solo se moviera su fila, las otras cinco seguirian
+    // esperando pago y se soltarian solas.
+    for (const h of hermanas(r)) { h.estado = 'verificando'; h.pagoEn = Date.now(); }
     r.pagoEn = Date.now();
     r.recibido = {
       referencia: b.referencia || null,
@@ -649,7 +798,7 @@ createServer(async (req, res) => {
 
     if (r.estado === 'verificando' && !NUNCA_LLEGA && r.pagoEn
         && Date.now() - r.pagoEn > RETARDO_BANCO * 1000) {
-      r.estado = 'confirmada';
+      for (const h of hermanas(r)) h.estado = 'confirmada';
     }
     if (url.searchParams.get('vencido') === '1' && r.estado === 'verificando') {
       r.estado = 'pendiente_validacion';

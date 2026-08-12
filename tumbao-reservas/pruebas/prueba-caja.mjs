@@ -264,6 +264,26 @@ await pagina.waitForTimeout(400);
   ? bien('sin escribir el conteo, señala el campo')
   : falla('el campo de conteo', 'no quedó marcado');
 
+// ── "Cerrar el día sin abrir" ──
+// No funcionaba. El enlace ponía la bandera y llamaba a pintarCaja(),
+// que volvía a entrar por la pantalla de apertura antes de mirarla y
+// redibujaba lo mismo: al hacer clic no pasaba nada. Quien no abrió por
+// la mañana se quedaba sin poder cerrar.
+await pagina.click('#saltar-apertura');
+await pagina.waitForTimeout(400);
+(await pagina.locator('#c-contado').count()) === 1
+  ? bien('sin abrir, el enlace sí deja llegar al cierre')
+  : falla('el enlace de cerrar sin abrir',
+          (await pagina.locator('#caja-cierre').innerText()).slice(0, 90));
+
+// Y la salida de vuelta, para quien lo tocó sin querer.
+await pagina.click('#volver-apertura');
+await pagina.waitForTimeout(400);
+(await pagina.locator('#a-contado').count()) === 1
+  ? bien('y se puede volver a la apertura sin recargar')
+  : falla('la vuelta a la apertura',
+          (await pagina.locator('#caja-cierre').innerText()).slice(0, 90));
+
 // Se abre con MENOS de lo que decía el papel: es el caso que hace que
 // esto valga la pena.
 await pagina.fill('#a-contado', '95.000');

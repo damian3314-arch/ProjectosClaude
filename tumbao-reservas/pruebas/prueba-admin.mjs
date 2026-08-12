@@ -492,9 +492,15 @@ const llamadas = [];
 p.on('request', (r) => {
   if (r.url().includes('/api/admin/pendientes')) llamadas.push(Date.now());
 });
-await p.waitForTimeout(35000);
+// Se espera A QUE PASE, no un rato fijo. Chromium alinea y frena los
+// temporizadores de las páginas que no están al frente, así que un
+// timeout de 35 segundos deja pasar unas veces dos tics y otras uno, y
+// la prueba fallaba por eso y no porque el refresco estuviera roto.
+const t0 = Date.now();
+while (llamadas.length < 2 && Date.now() - t0 < 90000) await p.waitForTimeout(1000);
 ok('la cola se vuelve a pedir sola, sin tocar nada',
-   llamadas.length >= 2, `${llamadas.length} llamada(s) en 35 s`);
+   llamadas.length >= 2,
+   `${llamadas.length} llamada(s) en ${Math.round((Date.now() - t0) / 1000)} s`);
 
 const t1 = p.locator('.pend-card').first();
 ok('muestra el codigo', /^[A-Z0-9]{4,8}$/.test((await t1.locator('.cod').innerText()).trim()),
@@ -588,6 +594,87 @@ ok('el contador vuelve a subir',
    (await p.locator('#globo-pend').innerText()).trim() === String(tarjetas),
    await p.locator('#globo-pend').innerText());
 
+// ───────── por disfrutar ─────────
+// Pagó y no vino. Antes esto no se podía ni anotar: en la puerta o se
+// marca que entró o se queda sin marcar, y "sin marcar" también es lo
+// que le pasa a quien todavía no ha llegado. A las nueve de la noche
+// nadie sabía quién faltó.
+console.log('\n── Por disfrutar ──');
+// Hace falta alguien CONFIRMADO en la clase: quien no pagó no genera
+// crédito, y a estas alturas de la suite los de arriba están en otros
+// estados. Se siembra y se confirma por la API.
+const rNoVino = await (await fetch('http://localhost:8899/webhook/tumbao/reservar', {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ clase_id: idClase, nombre: 'Pago Yfalto',
+                         telefono: '3105554433', tipo: 'suelta', habeas: true })
+})).json();
+await fetch('http://localhost:8899/api/admin/confirmar', {
+  method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ token: 'token-de-prueba', codigo: rNoVino.codigo })
+});
+
+await p.locator('#tab-tablero').click();
+await p.waitForTimeout(600);
+await p.locator('#dia-despues').click();
+await p.waitForSelector('.clase-card', { timeout: 8000 });
+await p.locator('.clase-card').first().click();
+await p.waitForSelector('.fila-puerta', { timeout: 8000 });
+
+// Camila quedó confirmada más arriba en esta misma suite.
+const conf = p.locator('.fila-puerta').filter({ hasText: 'Pago Yfalto' }).first();
+// waitFor y no count(): la lista se pinta en cuanto llega la respuesta y
+// preguntar justo antes daba cero unas veces sí y otras no.
+await conf.waitFor({ timeout: 8000 }).catch(() => {});
+ok('las confirmadas traen el botón de "No vino"',
+   await conf.locator('.btn-soltar', { hasText: 'No vino' }).count() === 1,
+   (await conf.count()) ? (await conf.innerText()).replace(/\n/g, ' · ') : 'ninguna');
+
+if (await conf.count() > 0) {
+  const quienFalto = (await conf.locator('.nom').innerText()).trim();
+  await conf.locator('.btn-soltar', { hasText: 'No vino' }).click();
+  await p.waitForTimeout(1200);
+
+  // Lo que NO puede pasar: que se suelte el cupo. Esa clase está
+  // pagada y la caja de hoy va a cuadrar con ella.
+  ok('marcar "no vino" NO suelta el cupo',
+     await p.locator('.fila-puerta').filter({ hasText: quienFalto }).count() === 1,
+     quienFalto);
+  ok('y el botón queda encendido',
+     await p.locator('.fila-puerta').filter({ hasText: quienFalto })
+            .locator('.btn-soltar.marcado').count() === 1);
+
+  await p.locator('#tab-disfrutar').click();
+  await p.waitForTimeout(1200);
+  const tarjetas = await p.locator('#lista-disf .pend-card').count();
+  ok('sale en la pestaña de por disfrutar', tarjetas >= 1, `${tarjetas} tarjeta(s)`);
+
+  const t = p.locator('#lista-disf .pend-card').first();
+  const txt = await t.innerText();
+  ok('dice cuántos días le quedan', /d[íi]as?|HOY/i.test(txt),
+     txt.replace(/\n/g, ' · ').slice(0, 80));
+  ok('y qué clase se perdió', /Se perdió/.test(txt));
+  ok('el globo de la pestaña cuenta',
+     (await p.locator('#globo-disf').innerText()).trim() === String(tarjetas),
+     await p.locator('#globo-disf').innerText());
+
+  // Reprogramar. El desplegable tiene que traer clases aunque nunca se
+  // haya abierto la pestaña Horario en esta sesión.
+  const opciones = await t.locator('.sel-clase option').count();
+  ok('ofrece clases a las que moverla', opciones > 1, `${opciones - 1} clase(s)`);
+
+  await t.locator('.btn.ok').click();
+  await p.waitForTimeout(600);
+  ok('sin escoger clase, no reprograma',
+     await p.locator('#lista-disf .pend-card').count() === tarjetas);
+
+  await t.locator('.sel-clase').selectOption({ index: 1 });
+  await t.locator('.btn.ok').click();
+  await p.waitForTimeout(1500);
+  ok('al escoger, la reprograma y se cae de la lista',
+     await p.locator('#lista-disf .pend-card').count() === tarjetas - 1,
+     `${await p.locator('#lista-disf .pend-card').count()} de ${tarjetas}`);
+}
+
 // ───────── salir ─────────
 console.log('\n── Sesión ──');
 await p.locator('#salir').click();
@@ -595,6 +682,7 @@ await p.waitForTimeout(300);
 ok('salir esconde el panel', await p.locator('#app').isHidden());
 ok('y borra el token guardado',
    await p.evaluate(() => !localStorage.getItem('tumbao_admin_token')));
+
 
 // ───────── consola ─────────
 console.log('');
