@@ -27,7 +27,18 @@ select pg_get_functiondef(oid)
 Y comparar con lo que se va a pegar. Si hay algo que no reconoces, alguien
 más lo puso ahí por un motivo.
 
+## Cómo se hace cuando sí toca cambiar una función viva
+
+La `0037` es el ejemplo. En vez de copiar `tomar_cupo` entera —6 KB de
+aforo, sábado partido y membresías— lee el texto que de verdad está en
+la base con `pg_get_functiondef`, cambia **una** subcadena y la vuelve a
+crear. Si esa subcadena no aparece exactamente una vez, revienta en vez
+de aplicar algo a medias, y si ya está aplicada no hace nada.
+
+Así el arreglo que otra sesión metió en producción sobrevive, porque
+nunca se sobrescribe lo que no se vino a cambiar.
+
 ## Dónde está la verdad
 
-`supabase/migrations/` en orden. `0030` es la última y refleja lo que hay
+`supabase/migrations/` en orden. `0037` es la última y refleja lo que hay
 en producción hoy, incluido el arreglo del doble conteo.

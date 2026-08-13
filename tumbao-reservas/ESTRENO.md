@@ -165,7 +165,24 @@ existía en `conciliar_reserva(codigo)`; lo que pasa es que solo corre
 mientras el cliente tiene la página abierta. La 0032 lo hace también del
 lado del servidor, que es seguro adicional, no el arreglo de una avería.
 
-### 2g. Pegar `aplicar/PEGAR_GRACIA_15_MIN.sql` ⬅ pendiente, va esta noche
+### 2g. ~~Quince minutos de gracia~~ ✅ aplicado el 12 de agosto, 10 pm
+
+Verificado contra la base: `minutos_de_gracia()` devuelve 15, las tres
+funciones traen el intervalo, y `clases_para('suelta')` responde con las
+7 clases de siempre. El endpoint público —el que de verdad usa la
+página— contestó 200 con el listado completo después del cambio.
+
+**Y no se movió una sola reserva.** Antes y después: 97 reservas (10 a
+futuro), 51 clases, 66 cupos tomados, 156 pagos. Los mismos números.
+
+La comprobación que de verdad importa: el `md5` de `tomar_cupo`,
+`tomar_cupos`, `clases_para` y `minutos_de_gracia` en producción es
+**idéntico** al de una base local levantada desde 0001..0037, que es
+donde corren las 18 pruebas de humo. No es que "debería ser el mismo
+código": es byte por byte el mismo código que pasó las pruebas. Las tres
+funciones crecieron exactamente 45 caracteres cada una —lo que mide
+` - make_interval(mins => minutos_de_gracia())`— así que no se coló nada
+más.
 
 **El problema.** Alguien mira la página a las 7:00 en punto para la clase
 de las 7:00 y la clase no está. La página no dice "ya empezó": la clase
@@ -289,7 +306,7 @@ node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
 **Las 18 de base de datos y las 8 de node/navegador están en verde**
-(corridas el 13 de agosto, con la 0037 puesta). `humo-admin` y `humo-tablero` llevaban días
+(corridas el 12 de agosto por la noche, con la 0037 puesta). `humo-admin` y `humo-tablero` llevaban días
 rojas y no era del código: las dos escogían "la próxima clase" y a media
 tarde eso caía en HOY — abrir una clase a las 5 pm de hoy falla con "esa
 hora ya paso", y las 19 personas del plan de las 7 am de hoy ya no
