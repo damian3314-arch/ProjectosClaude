@@ -165,6 +165,51 @@ existía en `conciliar_reserva(codigo)`; lo que pasa es que solo corre
 mientras el cliente tiene la página abierta. La 0032 lo hace también del
 lado del servidor, que es seguro adicional, no el arreglo de una avería.
 
+### 2g. Pegar `aplicar/PEGAR_GRACIA_15_MIN.sql` ⬅ pendiente, va esta noche
+
+**El problema.** Alguien mira la página a las 7:00 en punto para la clase
+de las 7:00 y la clase no está. La página no dice "ya empezó": la clase
+sencillamente no aparece, y lo que la persona entiende es que no hay
+cupo. Se va. Esa misma persona, en la vida real, llega a las 7:10 y
+entra sin que nadie le diga nada. La página estaba siendo más estricta
+que la puerta.
+
+**Lo que cambia.** Una clase se sigue pudiendo reservar hasta 15 minutos
+después de su hora. Nada más se mueve: ni el aforo, ni el cobro, ni las
+membresías. Solo cuándo deja de ofrecerse.
+
+**Son tres sitios, no dos.** `tomar_cupo` y `tomar_cupos` deciden si el
+cupo se puede tomar; `clases_para` decide si la clase se **ofrece**. Ese
+tercero es el que la persona ve — sin él la clase desaparece del listado
+a las 7:00:01 aunque el sistema la aceptara, y no hay nada donde hacer
+clic. (Ojo: `04-api-reservas.sdk.js` todavía muestra un GET a PostgREST
+con `fecha_hora=gt.$now`; el workflow vivo hace rato llama
+`clases_para(p_tipo)`. El archivo está viejo, la base manda.)
+
+**El número vive en `ajustes`,** no en el código. El día que quieran 20,
+o 10, o cero para el sábado:
+
+```sql
+update ajustes set valor = '20' where clave = 'minutos_de_gracia';
+```
+
+Si esa fila se borra o alguien escribe "quince", se cae a **cero** —el
+comportamiento de siempre—, no a un valor grande. Ser estricto de más se
+arregla por WhatsApp; ser permisivo de más mete gente a una clase que ya
+va por la mitad.
+
+**Por qué se parchea el texto en vez de reescribir las funciones.**
+`tomar_cupo` son 6 KB y es lo más delicado que hay: aforo, sábado
+partido, membresías, códigos. Copiarla entera para cambiar una línea es
+la mejor forma de meter una errata en algo que hoy funciona. La
+migración lee el texto que de verdad está en la base
+(`pg_get_functiondef`), cambia solo esa condición y la vuelve a crear.
+Si la condición no aparece **exactamente una vez**, revienta en vez de
+aplicar algo a medias.
+
+Probada contra el estado exacto de producción (0001..0036) e idempotente:
+pegarla dos veces avisa "ya tenía la gracia puesta" y no toca nada.
+
 ### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
 Desactivados los dos `prueba caja claude` (los que se compartieron por
@@ -217,7 +262,9 @@ Las pruebas no son decorativas: cada una existe porque algo se rompió.
 ```bash
 cd tumbao-reservas/pruebas
 
-# Base de datos: 12 pruebas de humo sobre Postgres
+# Base de datos: 18 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
+# Abajo van las que más cosas han cazado; se corren todas de una con
+#   for f in humo-*.sql; do psql -d <base> -f $f; done
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
 psql -d <base> -f humo-banco.sql        # conciliación depósito por depósito
 psql -d <base> -f humo-aforo.sql        # no se vende dos veces el mismo puesto
@@ -225,6 +272,7 @@ psql -d <base> -f humo-cruce.sql        # el cruce en las dos direcciones (37)
 psql -d <base> -f humo-grupo.sql        # varios cupos con un solo pago (39)
 psql -d <base> -f humo-disfrutar.sql    # pagó y no vino, y reprogramar
 psql -d <base> -f humo-duplicados.sql   # dos pagos iguales en el mismo minuto
+psql -d <base> -f humo-gracia.sql       # se reserva hasta 15 min después de empezar
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -240,7 +288,8 @@ node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
-**Las 16 están en verde.** `humo-admin` y `humo-tablero` llevaban días
+**Las 18 de base de datos y las 8 de node/navegador están en verde**
+(corridas el 13 de agosto, con la 0037 puesta). `humo-admin` y `humo-tablero` llevaban días
 rojas y no era del código: las dos escogían "la próxima clase" y a media
 tarde eso caía en HOY — abrir una clase a las 5 pm de hoy falla con "esa
 hora ya paso", y las 19 personas del plan de las 7 am de hoy ya no
