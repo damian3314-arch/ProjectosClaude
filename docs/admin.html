@@ -2682,6 +2682,12 @@ const CONFIG = {
     // Las reservas y las transferencias no son plata del cajón —nunca
     // pasaron por ahí— así que verlas no adelanta ninguna respuesta, y
     // esconderlas era lo que dejaba la pantalla en blanco al entrar.
+    // `reservas_n` solo existe desde la migración 0038. Si no viene, el
+    // servidor todavía cuenta las reservas por la fecha de la CLASE, y
+    // entonces "reservas de hoy" sería mentira: enseñaría plata que
+    // entró otro día. Mientras no venga, el turno se comporta como
+    // antes. Así da igual qué se despliegue primero.
+    const alDia = d.reservas_n != null;
     const cuantas = Number(d.reservas_n || 0);
     $('#caja-tiles').innerHTML = (cajaCierreAbierto || d.cerrado
       ? [
@@ -2692,12 +2698,14 @@ const CONFIG = {
         ]
       : [
           ['cajon', pesos(d.base_cop), 'abrió con', 'lo que quedó de ayer'],
-          ['bueno', pesos(d.reservas_cop), 'reservas de hoy',
-           cuantas
-             ? `${cuantas} ${cuantas === 1 ? 'pagada' : 'pagadas'} hoy · no está en el cajón`
-             : 'nadie ha pagado por la página'],
-          ['ojo',   pesos(d.ingreso_transferencia), 'transferencias',
-           'registradas a mano · tampoco está en el cajón'],
+          ...(alDia ? [
+            ['bueno', pesos(d.reservas_cop), 'reservas de hoy',
+             cuantas
+               ? `${cuantas} ${cuantas === 1 ? 'pagada' : 'pagadas'} hoy · no está en el cajón`
+               : 'nadie ha pagado por la página'],
+            ['ojo',   pesos(d.ingreso_transferencia), 'transferencias',
+             'registradas a mano · tampoco está en el cajón'],
+          ] : []),
         ]
     ).map(([cl, n, k, pista]) =>
       `<div class="tile ${cl}">` +

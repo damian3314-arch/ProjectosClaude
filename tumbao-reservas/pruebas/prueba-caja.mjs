@@ -75,7 +75,7 @@ const dia = () => ({
   // clase. Antes de la 0038 esto se contaba por el día de la clase y
   // el cierre no se podía cuadrar contra el banco.
   reservas_cop: 15000,
-  reservas_n: 1,
+  reservas_n: sinCajaAlDia ? undefined : 1,
   // Lo que valen las clases dictadas hoy. Otro reloj, otra pregunta:
   // va aparte y no suma.
   reservas_dictadas_cop: 45000,
@@ -110,6 +110,10 @@ let cierre = null;
 // Con esto en true, el simulacro finge ser el servidor de ANTES de la
 // migración 0031: no manda `abierta` ni `apertura`.
 let sinAbrirSoportado = false;
+// Con esto en true, el simulacro finge ser el servidor de ANTES de la
+// 0038: cuenta las reservas por la fecha de la CLASE y no manda
+// `reservas_n`.
+let sinCajaAlDia = false;
 
 // Lo que necesita la tirilla: agrupado por concepto, no movimiento a
 // movimiento. Veinte líneas de "Clase suelta $15.000" no dicen más que
@@ -354,6 +358,22 @@ const rotulos = await etiquetas();
 !rotulos.some((t) => t === 'salió' || t === 'entró hoy')
   ? bien('ni lo que entró y salió en efectivo')
   : falla('se filtraron los totales del cajón', rotulos.join(' / '));
+
+// Y con el servidor de ANTES de la 0038, el recuadro de reservas NO
+// puede salir. Ahí `reservas_cop` se cuenta por la fecha de la CLASE:
+// enseñarlo bajo el título "reservas de hoy" sería plata que entró otro
+// día. Mientras el SQL no esté pegado, el turno se comporta como antes.
+// Esto es lo que hace que dé igual qué se despliegue primero.
+sinCajaAlDia = true;
+await pagina.click('#caja-recargar');
+await pagina.waitForTimeout(700);
+const viejos = await etiquetas();
+!viejos.includes('reservas de hoy')
+  ? bien('sin la migración 0038, no promete reservas del día')
+  : falla('enseña reservas de hoy con el servidor viejo', viejos.join(' / '));
+sinCajaAlDia = false;
+await pagina.click('#caja-recargar');
+await pagina.waitForTimeout(700);
 
 /abrió con/i.test(await pagina.locator('#caja-tiles .tile .k').first().innerText())
   ? bien('dice "abrió con", no "en el cajón"')
