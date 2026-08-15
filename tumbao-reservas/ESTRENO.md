@@ -333,6 +333,46 @@ Verificado corriéndolo: escogió `Afiliados activos 2026-08-15.xlsx`,
 importó **56 afiliados, 0 descartados** — 20 a las 7 am, 18 a las 6 pm y
 18 a las 7 pm.
 
+### 2l. Pegar `aplicar/PEGAR_ABRIR_LA_SEMANA.sql` ⬅ pendiente, y corre hoy
+
+**Lo que pasaba.** La semana del 17 al 23 de agosto estaba **vacía** un
+sábado por la mañana. El lunes nadie habría podido reservar. `generar_horario()`
+existía desde el primer día pero **no la llamaba nadie** — el mismo hueco
+que tuvo `liberar_cupos_expirados()` en su momento.
+
+Y aunque alguien la llamara, aplica siempre el mismo molde. Lo dice el
+comentario de la 0011: *"si una semana hay festivo, no hay por dónde"*.
+El **lunes 17 de agosto es la Asunción**: abrirlo habría dejado a gente
+pagando por una clase que no se dicta.
+
+**Lo que trae:**
+
+- una tabla `festivos` que `generar_horario` respeta;
+- los festivos de Colombia **calculados**, no escritos a mano: Pascua por
+  el algoritmo de Gauss y la Ley Emiliani corriendo al lunes los que
+  toca. Una lista a mano sirve un año y después miente en silencio, y la
+  forma de enterarse es que la academia abrió un festivo;
+- `abrir_semana()`, que hace toda la cuenta del lunes entrante dentro de
+  Postgres. Si esa aritmética viviera en n8n, correrla a mano un martes
+  abriría la semana equivocada.
+
+**Los domingos ya quedaban afuera solos** — el molde solo tiene lunes a
+viernes y sábado. No hizo falta tocar nada.
+
+**La tabla también sirve para lo que ninguna ley sabe:** "ese jueves
+cerramos por el evento" se mete con `origen = 'manual'` y `sembrar_festivos`
+nunca lo pisa.
+
+**Comprobado** en `humo-semana`: la Pascua de cuatro años distintos, los
+18 festivos de 2026, que Reyes se corre al lunes 12 y el 1 de mayo no se
+mueve, que la semana del 17 abre 14 clases y no 17, y que no queda una
+sola clase en domingo ni en festivo.
+
+**El workflow `Tumbao · Abrir la semana`** ya está creado en n8n: sábados
+a las 7 am, hora de Bogotá, con reintentos y avisando por el workflow de
+fallos si la semana no queda abierta. Falta **activarlo** y correrlo una
+vez a mano para la semana del 17, que ya va tarde.
+
 ### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
 Desactivados los dos `prueba caja claude` (los que se compartieron por
@@ -385,7 +425,7 @@ Las pruebas no son decorativas: cada una existe porque algo se rompió.
 ```bash
 cd tumbao-reservas/pruebas
 
-# Base de datos: 20 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
+# Base de datos: 21 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
 # Abajo van las que más cosas han cazado; se corren todas de una con
 #   for f in humo-*.sql; do psql -d <base> -f $f; done
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
@@ -398,6 +438,7 @@ psql -d <base> -f humo-duplicados.sql   # dos pagos iguales en el mismo minuto
 psql -d <base> -f humo-gracia.sql       # se reserva hasta 15 min después de empezar
 psql -d <base> -f humo-caja-del-dia.sql  # la caja del día es la plata del día
 psql -d <base> -f humo-reparto.sql       # un depósito paga varias cosas
+psql -d <base> -f humo-semana.sql        # la semana se abre sola, sin festivos ni domingos
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -413,9 +454,9 @@ node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
-**Las 20 de base de datos y las 9 de node/navegador están en verde**
-(corridas el 15 de agosto por la mañana, con la 0037 y la 0038 aplicadas
-y la 0039 puesta encima).
+**Las 21 de base de datos y las 9 de node/navegador están en verde**
+(corridas el 15 de agosto, con la 0037, 0038 y 0039 aplicadas en
+producción y la 0040 puesta encima).
 
 Cinco pruebas fallaban **según el día en que se corrieran**, y ninguna
 por el código:
