@@ -100,22 +100,71 @@ El workflow viejo hacía además una pasada de clasificación **cada media
 hora**: 1.440 ejecuciones al mes contra un plan de 2.500. Se quitó — el
 Worker ya clasifica al cerrar cada conversación.
 
-## Modo ensayo
+## Quién contesta
 
-Sin `OPENAI_API_KEY` el bot arranca igual y contesta con un guion fijo.
-Sirve para probar la página entera sin gastar ni un peso. Se nota porque
-la ficha sale con `tipo: mixto` y sin nombre.
+Tres motores, en este orden:
+
+| | Cuándo | Qué tan bueno |
+|---|---|---|
+| **OpenAI** | si está `OPENAI_API_KEY` | para lo que se escribió el guion |
+| **Workers AI** | siempre que no esté la llave | conversa de verdad, sin llave de nadie |
+| Guion fijo | si no hay ni lo uno ni lo otro | tres preguntas que ignoran lo que le escriben |
+
+El del medio es el que está corriendo hoy. Es un binding de Cloudflare
+(`ai` en `wrangler.jsonc`), o sea que **no hace falta cuenta de OpenAI
+para que el bot funcione**: conversa, transcribe las notas de voz y saca
+la ficha por su cuenta. Poner `OPENAI_API_KEY` después no rompe nada,
+sube solo al primero.
+
+El tercero es el que estuvo en línea semanas por no tener la llave. No
+era "modo de prueba": un bot que recita tres preguntas ignorando lo que
+la persona escribe está roto, y el cliente lo nota al segundo mensaje.
+
+El saludo no pasa por ningún modelo — siempre es el mismo, y un modelo
+pequeño lo resumía a "Hola, ¿cómo te llamas?", que a alguien que abrió
+un enlace de WhatsApp no le dice quién le habla ni para qué.
+
+## Dos cosas que se rompieron y por qué
+
+**La comilla que se llevaba la ficha.** Al pedirle que conservara la
+frase textual del cliente "entre comillas", el modelo metía comillas
+dobles dentro del JSON y lo partía. Ahora se le piden comillas
+angulares «así», y aun si se le escapa una, `taparComillas` la salva.
+
+**El caso bueno era el que fallaba.** Cuando el modelo contesta bien
+—JSON limpio, sin vallas de código— Workers AI lo entrega **ya
+parseado, como objeto**. El código lo trataba como texto, `String()` lo
+volvía `"[object Object]"` y la ficha salía vacía. Costó verlo porque
+todas las pruebas con texto pasaban.
+
+Las dos están cubiertas en `pruebas/ficha.test.mjs`.
+
+## Nunca una fila en blanco
+
+Si la extracción falla igual, la ficha no sale vacía: el resumen cae a
+las palabras de la persona y el nombre a su primer mensaje. Es la
+diferencia entre leer el lunes lo que dijo un cliente y leer
+"Sin nombre · (sin resumen)", que hace pensar que no se guardó nada.
 
 ## Secretos (van en el dashboard, nunca en el repo)
 
-    OPENAI_API_KEY   Workers > tumbao-opina > Settings > Variables
+    TOKEN_REPORTE    para abrir /leer y para que n8n lea /api/pendientes
+    OPENAI_API_KEY   OPCIONAL — sin ella el bot funciona con Workers AI
     GOOGLE_SA_JSON   cuenta de servicio, para escribir en la hoja
-    TOKEN_REPORTE    lo usa n8n para leer /api/pendientes
 
 ## Costo real
 
-Con `gpt-4o-mini` y Whisper: ~$0,004 por conversación y $0,006 por
-minuto de audio. Una campaña de 40 personas sale por menos de un dólar.
+Hoy, con Workers AI: el plan gratis trae 10.000 neuronas al día y una
+conversación de estas gasta del orden de decenas. Una campaña de
+WhatsApp entera cabe sin pagar nada.
+
+Con `OPENAI_API_KEY` puesta: ~$0,004 por conversación y $0,006 por
+minuto de audio. Una campaña de 40 personas, menos de un dólar.
+
+## Comprobar que sigue en pie
+
+    node pruebas/ficha.test.mjs                  # 38, la ficha del lunes
+    node pruebas/limpiar-transcripcion.test.mjs  # 14, alucinaciones de Whisper
 
 ## Desplegar
 

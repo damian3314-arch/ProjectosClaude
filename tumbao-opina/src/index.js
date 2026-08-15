@@ -37,6 +37,16 @@ const LAS_TRES = [
   '¿Qué le dirías a alguien que está pensando en venir por primera vez?',
 ];
 
+// El primer mensaje siempre es el mismo, así que no se le pide a ningún
+// modelo. Tres razones: la persona abre un enlace de WhatsApp sin saber
+// qué es —si el saludo no dice quién habla y para qué, cierra—, un
+// modelo pequeño lo resume a "Hola, ¿cómo te llamas?" y se pierde toda
+// la razón de estar ahí, y además es una llamada menos que pagar.
+const SALUDO =
+  '¡Hola! Soy de Tumbao. Estamos preguntándole a la gente que ya viene ' +
+  'cómo nos está yendo, para mejorar de verdad.\n\nSon tres preguntas, ' +
+  'nada más. ¿Cómo te llamas?';
+
 const INSTRUCCIONES = `
 Eres el asistente de Tumbao, una academia de baile en Bucaramanga,
 Colombia. Estás recogiendo opiniones de gente que ya viene a clases.
@@ -46,50 +56,110 @@ Llevar una conversación corta y cálida en la que la persona te cuente
 de verdad. No eres un formulario con emojis: eres alguien de la
 academia que sí quiere saber.
 
+Ya saludaste y ya preguntaste el nombre. El primer mensaje que te llega
+es su nombre.
+
 LAS TRES PREGUNTAS, EN ESTE ORDEN
 1. ${LAS_TRES[0]}
 2. ${LAS_TRES[1]}
 3. ${LAS_TRES[2]}
 
+Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
+mira la conversación y pregúntate cuál de las tres falta.
+
 CÓMO CONVERSAR
-- Empieza saludando y preguntando su nombre. Nada más. Una línea.
 - Usa su nombre después, pero no en cada mensaje: cansa.
-- Una pregunta por mensaje. Nunca dos.
+- UNA sola pregunta por mensaje. Si ya escribiste un "?", ya terminaste:
+  lo que sigue va en el mensaje siguiente, cuando la persona conteste.
+- Escribes un mensaje de chat, no un guion. Nunca escribas acotaciones
+  sobre lo que vas a hacer, ni entre paréntesis ni fuera: nada de "(si
+  contesta corto sigo con la otra)" ni "ahora le pregunto lo último".
+  La persona ve todo lo que escribes.
 - Mensajes cortos: dos o tres líneas. Esto se lee en un celular.
 - Tutea. Habla como se habla en Bucaramanga, sin ser caricatura. Nada
   de "¡Qué chévere parcero!" forzado.
+- Escribe en español de Colombia. Nada de "feedback", "tips", "staff"
+  ni "apreciar tu input": se dice "lo que nos contaste", "consejos",
+  "el equipo". Tampoco "agradezco tu honestidad", que suena a carta.
+- No abras el mensaje resumiendo lo que la persona acabó de decir para
+  demostrar que entendiste: "Entiendo, la puntualidad es clave para
+  ti", "Eso es genial, el ambiente es muy importante". Suena a manual
+  de call center. Una frase corta y humana, o nada, y sigue.
 - Si la respuesta es de tres palabras o vaga ("bien", "todo bueno",
   "nada"), repregunta UNA vez pidiendo algo concreto: "¿te acuerdas de
   algún momento en particular?". Solo una vez. Si insiste en ser breve,
   sigue adelante sin insistir más.
-- Si te cuentan algo incómodo —que alguien la hizo sentir mal, un
-  problema con un profesor, algo de plata— NO lo minimices ni lo
-  arregles con optimismo. Agradece que lo diga, pregunta lo mínimo para
-  entenderlo, y sigue. No prometas soluciones: tú no decides eso.
 - Nunca inventes datos de Tumbao: horarios, precios, nombres de
   profesores. Si te preguntan algo así, di que eso lo confirman por
   WhatsApp.
 
-EL CIERRE
-Cuando ya tengas las tres respuestas:
-1. Ofrece que mande una nota de voz si quiere agregar algo. Opcional,
-   sin insistir.
-2. Pide el celular, dejando claro que es opcional y para qué: por si
-   quieren responderle. Si dice que no, perfecto.
-3. Agradece de verdad, corto, y termina el mensaje con la marca [FIN]
-   en una línea aparte.
+CUANDO TE CUENTAN ALGO DELICADO
+Que alguien la hizo sentir mal, un problema con un profesor, algo de
+plata, ganas de retirarse. Ahí:
+- NO lo minimices ni lo arregles con optimismo.
+- NO cierres la conversación en ese mensaje. Eso es colgarle a alguien
+  que acaba de abrirse. Pase lo que pase, ese mensaje NO lleva [FIN].
+- Agradece corto que lo diga y haz UNA sola pregunta para entenderlo
+  mejor: cuándo fue, o qué pasó exactamente.
+- No prometas soluciones ni castigos: tú no decides eso. Sí puedes
+  decir que eso lo va a leer la dueña.
 
-La marca [FIN] va SOLO en el último mensaje. Nunca antes.
+EL CIERRE
+Solo cuando ya tengas respuesta a las TRES preguntas. Si falta alguna,
+no estás cerrando: estás preguntando.
+
+Y va en dos mensajes distintos, no en uno:
+- Primero: ofrece que mande una nota de voz si quiere agregar algo, y
+  pide el celular. Al pedirlo tienen que ir SIEMPRE las dos cosas, con
+  esas palabras o parecidas: que es **opcional** y para qué es (por si
+  quieren responderle). Pedir un número sin decir eso es lo que hace
+  que la gente se salga. Ese mensaje NO lleva [FIN].
+- Después de que conteste eso —dé el número o diga que no—: agradece
+  de verdad, corto, y ahí sí termina con [FIN] en una línea aparte.
+
+REGLAS DE [FIN], QUE NO SE ROMPEN
+- [FIN] va en UN solo mensaje de toda la conversación: el último.
+- Un mensaje con [FIN] no puede llevar ninguna pregunta.
+- Nunca [FIN] antes de tener las tres respuestas.
+- Nunca [FIN] en el mismo mensaje donde te contaron algo delicado.
 `.trim();
 
 /* ─────────────────────────────────────────────────────────────
-   OpenAI
+   Quién contesta
+
+   Tres motores, en este orden:
+
+   1. OpenAI, si está OPENAI_API_KEY. Es para lo que se escribió el
+      guion y da la mejor conversación.
+   2. Workers AI, que corre en este mismo Worker. NO necesita llave ni
+      cuenta de OpenAI: es un binding de Cloudflare. Conversa de
+      verdad, entiende lo que le escriben y contesta a eso.
+   3. El guion fijo, si no hay ni lo uno ni lo otro.
+
+   El 2 existe porque el bot llevaba semanas parado esperando un
+   secreto. Un bot que contesta preguntas fijas ignorando lo que la
+   persona escribe no está "en modo de prueba": está roto, y el cliente
+   que abrió el enlace se da cuenta a los dos mensajes.
+
+   Poner la llave de OpenAI después no rompe nada: se sube sola al 1.
    ───────────────────────────────────────────────────────────── */
 
+const MODELO_CF        = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const MODELO_CF_VOZ    = '@cf/openai/whisper-large-v3-turbo';
+const MODELO_CF_VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
+
+const hayCF = (env) => Boolean(env.AI && typeof env.AI.run === 'function');
+
 async function conversar(env, historia) {
-  // Sin llave, modo de ensayo: la página entera se puede probar sin
-  // gastar un peso ni depender de que el secreto ya esté puesto.
-  if (!env.OPENAI_API_KEY) return ensayo(historia);
+  if (!env.OPENAI_API_KEY) {
+    if (!hayCF(env)) return ensayo(historia);
+    const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
+      messages: [{ role: 'system', content: INSTRUCCIONES }, ...historia],
+      max_tokens: 220,
+      temperature: 0.7,
+    });
+    return (d.response || '').trim() || '…';
+  }
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -129,7 +199,16 @@ function ensayo(historia) {
 }
 
 async function transcribir(env, archivo) {
-  if (!env.OPENAI_API_KEY) return '(nota de voz de prueba: sin llave no se transcribe)';
+  if (!env.OPENAI_API_KEY) {
+    if (!hayCF(env)) return '(nota de voz de prueba: sin llave no se transcribe)';
+    // Whisper por el binding recibe los bytes crudos, no un FormData.
+    const d = await env.AI.run(env.MODELO_CF_VOZ || MODELO_CF_VOZ, {
+      audio: [...new Uint8Array(await archivo.arrayBuffer())],
+    });
+    // La misma limpieza que la otra rama: Whisper alucina subtítulos de
+    // YouTube cuando el audio es silencio, y eso no lo dijo nadie.
+    return limpiarTranscripcion(d.text?.trim() || '');
+  }
 
   const fd = new FormData();
   fd.append('file', archivo, 'audio.webm');
@@ -170,8 +249,22 @@ function limpiarTranscripcion(texto) {
   return t;
 }
 
+const PIDE_IMAGEN =
+  'Describe en una o dos frases qué muestra esta imagen. Es algo que un ' +
+  'cliente de una academia de baile mandó junto a su opinión.';
+
 async function describirImagen(env, dataUrl) {
-  if (!env.OPENAI_API_KEY) return '(imagen de prueba: sin llave no se describe)';
+  if (!env.OPENAI_API_KEY) {
+    if (!hayCF(env)) return '(imagen de prueba: sin llave no se describe)';
+    const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+    const crudo = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const d = await env.AI.run(env.MODELO_CF_VISION || MODELO_CF_VISION, {
+      image: [...crudo],
+      prompt: PIDE_IMAGEN,
+      max_tokens: 150,
+    });
+    return (d.description || d.response || '').trim();
+  }
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -185,7 +278,7 @@ async function describirImagen(env, dataUrl) {
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: 'Describe en una o dos frases qué muestra esta imagen. Es algo que un cliente de una academia de baile mandó junto a su opinión.' },
+          { type: 'text', text: PIDE_IMAGEN },
           { type: 'image_url', image_url: { url: dataUrl } },
         ],
       }],
@@ -206,17 +299,30 @@ Devuelve SOLO un objeto JSON con estas claves:
 nombre    - como se presentó, o null
 telefono  - solo dígitos, o null si no lo dio
 tipo      - "queja" | "sugerencia" | "elogio" | "mixto"
-resumen   - qué dijo, en 2 o 3 frases. Conserva entre comillas la frase
-            textual más reveladora. Nada de "el cliente expresa que":
-            escribe como le contarías a un compañero.
+resumen   - qué dijo, en 2 o 3 frases. Conserva la frase textual más
+            reveladora entre comillas angulares «así». Nada de "el
+            cliente expresa que": escribe como le contarías a un
+            compañero.
 urgente   - true SOLO si hay algo que no puede esperar al lunes: acoso,
             trato irrespetuoso, riesgo físico, un cobro mal hecho, o
             alguien que dice que se va a retirar ya. Molestias normales
             NO son urgentes.
 motivo    - si urgente es true, una frase de por qué. Si no, null.
 
-Ante la duda en "urgente", pon false. Una alerta falsa cada semana hace
+Qué cuenta como trato irrespetuoso, que es lo que más se falla: que un
+profesor o alguien del equipo la haya humillado, ridiculizado, gritado
+o dejado en evidencia delante de la clase. "Me hizo sentir mal delante
+de todos" ES urgente. Que la clase estuviera llena o que el profesor
+llegara tarde NO lo es.
+
+Fuera de eso, ante la duda pon false. Una alerta falsa cada semana hace
 que dejen de leerse las de verdad.
+
+EL FORMATO IMPORTA
+Devuelve JSON válido y nada más: sin vallas de código, sin
+explicaciones antes ni después. Dentro de los textos no uses comillas
+dobles nunca —para citar usa «comillas angulares»—, porque una comilla
+doble suelta parte el JSON y la ficha se pierde.
 `.trim();
 
 async function extraerFicha(env, historia) {
@@ -224,10 +330,26 @@ async function extraerFicha(env, historia) {
     .map((m) => (m.role === 'user' ? 'CLIENTE: ' : 'TUMBAO: ') + m.content)
     .join('\n');
 
-  if (!env.OPENAI_API_KEY) {
+  if (!env.OPENAI_API_KEY && !hayCF(env)) {
     return { nombre: null, telefono: null, tipo: 'mixto',
              resumen: '(ensayo sin llave) ' + texto.slice(0, 300),
              urgente: false, motivo: null };
+  }
+
+  // La ficha es lo que se lee el lunes: sin ella la conversación queda
+  // como un ladrillo de texto que nadie abre. Por eso también se saca
+  // sin llave de OpenAI.
+  if (!env.OPENAI_API_KEY) {
+    const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
+      messages: [{ role: 'system', content: EXTRAER },
+                 { role: 'user', content: texto }],
+      // De sobra para la ficha. Con el tope corto el JSON se parte a
+      // media frase, no parsea, y la conversación aparece el lunes como
+      // "Sin nombre · (sin resumen)" aunque se haya guardado entera.
+      max_tokens: 700,
+      temperature: 0,
+    });
+    return limpiarFicha(sacarJSON(d.response), texto);
   }
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -248,27 +370,138 @@ async function extraerFicha(env, historia) {
   });
   if (!r.ok) throw new Error(`Extraer ${r.status}`);
 
-  // Si el modelo devuelve algo que no es JSON, la ficha sale vacía pero
-  // la conversación NO se pierde: la transcripción completa se guarda
-  // igual más abajo, y de ahí se puede rehacer a mano.
-  let d = {};
-  try {
-    const cuerpo = await r.json();
-    d = JSON.parse(cuerpo.choices?.[0]?.message?.content || '{}');
-  } catch (_) {
-    d = {};
-  }
+  const cuerpo = await r.json();
+  return limpiarFicha(sacarJSON(cuerpo.choices?.[0]?.message?.content || ''), texto);
+}
 
+// OpenAI devuelve JSON pelado porque se le pide `response_format`. Los
+// modelos de Workers AI no siempre: a veces lo envuelven en ```json, o
+// le anteponen "Aquí está el objeto:". Se busca del primer { al último
+// }, que es lo único que hace falta.
+//
+// Si aun así no sale JSON, la ficha queda vacía pero la conversación NO
+// se pierde: la transcripción completa se guarda igual, y de ahí se
+// rehace a mano.
+export function sacarJSON(crudo) {
+  // Workers AI a veces devuelve la ficha YA parseada, como objeto, y no
+  // como texto: pasa justo cuando el modelo contesta bien, sin vallas de
+  // código. Sin esta línea, ese caso —el bueno— se convertía en
+  // "[object Object]", no parseaba, y la ficha salía vacía. Que el
+  // camino correcto sea el que se rompe es lo que lo hizo difícil de
+  // ver: en las pruebas con texto todo pasaba.
+  if (crudo && typeof crudo === 'object') return crudo;
+
+  const s = String(crudo || '');
+  const a = s.indexOf('{');
+  const b = s.lastIndexOf('}');
+  if (a < 0 || b <= a) return {};
+  const trozo = s.slice(a, b + 1);
+  try {
+    return JSON.parse(trozo);
+  } catch (_) {
+    try {
+      return JSON.parse(taparComillas(trozo));
+    } catch (_) {
+      return {};
+    }
+  }
+}
+
+// La forma en que esto se rompe de verdad: al pedirle que conserve la
+// frase textual del cliente, el modelo la mete entre comillas dobles
+// DENTRO de una cadena JSON:
+//
+//   "resumen": "le gustó porque "nadie lo mira raro", pero ..."
+//
+// y ahí se acabó el JSON. Ya se pidió en el guion que cite con «», pero
+// eso es pedir, no garantizar, y perder la ficha por una comilla es
+// caro: es la fila que Tania lee el lunes.
+//
+// Se recorre la cadena y se escapa toda comilla que esté dentro de un
+// texto. La parte difícil es decidir cuándo una comilla cierra de
+// verdad, porque el caso que rompió la ficha en producción fue este:
+//
+//   "resumen": "le gustó porque "nadie lo mira raro", pero ..."
+//
+// La comilla de después de «raro» viene seguida de una coma, igual que
+// una que cierra. Mirar solo el carácter siguiente no alcanza.
+//
+// Lo que sí distingue: tras una coma que cierra un campo viene OTRO
+// campo, o sea "algo":. Si después de la coma no hay una clave, la
+// comilla era del cliente y va escapada.
+//
+// Esto asume el objeto plano de la ficha —seis campos, sin listas ni
+// anidados—, que es lo que pide EXTRAER. Sobre un JSON ya válido no
+// cambia nada.
+const OTRA_CLAVE = /^\s*"[^"\\]*"\s*:/;
+
+export function taparComillas(s) {
+  let salida = '';
+  let dentro = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\') { salida += c + (s[i + 1] || ''); i++; continue; }
+    if (c !== '"') { salida += c; continue; }
+    if (!dentro) { dentro = true; salida += c; continue; }
+
+    let j = i + 1;
+    while (j < s.length && /\s/.test(s[j])) j++;
+    const sig = s[j];
+
+    let cierra;
+    if (j >= s.length || sig === '}' || sig === ']' || sig === ':') {
+      cierra = true;                              // fin, o era una clave
+    } else if (sig === ',') {
+      cierra = OTRA_CLAVE.test(s.slice(j + 1));   // ¿empieza otro campo?
+    } else {
+      cierra = false;                             // texto que sigue: era del cliente
+    }
+
+    if (cierra) { dentro = false; salida += c; } else salida += '\\"';
+  }
+  return salida;
+}
+
+// Lo que la persona dijo, sin las preguntas del bot. Es el paracaídas
+// del resumen: vale mucho más leer sus propias frases que un
+// "(sin resumen)" que hace pensar que la conversación se perdió.
+export function loQueDijo(texto) {
+  const suyo = String(texto || '')
+    .split('\n')
+    .filter((l) => l.startsWith('CLIENTE: '))
+    .map((l) => l.slice(9).trim())
+    .filter(Boolean)
+    .join(' · ');
+  return suyo ? suyo.slice(0, 1200) : '';
+}
+
+// El saludo pregunta el nombre, así que lo primero que escribe la
+// persona casi siempre lo es. Solo se usa si de verdad parece un
+// nombre: dos o tres palabras de letras. Así "bien" o "quiero poner una
+// queja" no terminan de nombre en el reporte.
+export function primerNombre(texto) {
+  const primera = String(texto || '')
+    .split('\n').find((l) => l.startsWith('CLIENTE: '));
+  if (!primera) return null;
+  const s = primera.slice(9).trim().replace(/[.,;!]+$/, '');
+  return /^[\p{L}][\p{L}\s'’-]{1,39}$/u.test(s) && s.split(/\s+/).length <= 3
+    ? s : null;
+}
+
+export function limpiarFicha(d, texto) {
   const txt = (v, max) => {
     if (v == null) return null;
     const s = String(v).trim();
     return s && s.length <= max ? s : (s ? s.slice(0, max) : null);
   };
+  const crudo = loQueDijo(texto);
   return {
-    nombre:   txt(d.nombre, 80),
+    nombre:   txt(d.nombre, 80) || primerNombre(texto),
     telefono: d.telefono ? String(d.telefono).replace(/\D/g, '').slice(0, 15) || null : null,
     tipo:     ['queja', 'sugerencia', 'elogio', 'mixto'].includes(d.tipo) ? d.tipo : 'mixto',
-    resumen:  txt(d.resumen, 1200) || '(sin resumen)',
+    // Si el modelo no devolvió resumen —JSON partido, respuesta rara—
+    // van sus propias palabras. Nunca "(sin resumen)" habiendo texto.
+    resumen:  txt(d.resumen, 1200) || crudo || '(sin resumen)',
     urgente:  d.urgente === true,
     motivo:   txt(d.motivo, 300),
   };
@@ -429,8 +662,21 @@ export default {
           await guardarMensaje(env, conv, 'persona', suyo, b.medio);
         }
 
-        const cruda = await conversar(env, historia);
-        const listo = cruda.includes('[FIN]');
+        // El saludo es siempre el mismo y no se le pide a ningún modelo:
+        // así la persona que abre el enlace sabe de una quién le habla y
+        // para qué, en vez de recibir un "Hola, ¿cómo te llamas?" pelado.
+        const cruda = historia.length === 0 && !suyo
+          ? SALUDO
+          : await conversar(env, historia);
+
+        // Red de seguridad contra el cierre prematuro. Un modelo puede
+        // querer despedirse justo cuando la persona acaba de contar algo
+        // incómodo —que es cuando menos hay que colgarle— o después de
+        // dos respuestas. El guion lo prohíbe; esto lo hace imposible.
+        // Hacen falta cuatro cosas suyas: el nombre y las tres
+        // respuestas. Si aún no están, [FIN] se ignora y el bot sigue.
+        const suyas = historia.filter((m) => m.role === 'user').length;
+        const listo = cruda.includes('[FIN]') && suyas >= 4;
         const respuesta = cruda.replace('[FIN]', '').trim();
 
         await guardarMensaje(env, conv, 'bot', respuesta, 'texto');

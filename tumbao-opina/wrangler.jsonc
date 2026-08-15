@@ -19,6 +19,15 @@
   // rompería cualquier enlace ya compartido sin avisar.
   "workers_dev": true,
 
+  // El motor del bot cuando no hay llave de OpenAI. Corre en Cloudflare,
+  // no necesita cuenta de nadie más, y es lo que hace que el bot
+  // converse de verdad en vez de recitar tres preguntas fijas.
+  //
+  // El plan gratis trae 10.000 neuronas al día. Una conversación de las
+  // de aquí gasta del orden de decenas, así que una campaña entera de
+  // WhatsApp cabe de sobra sin pagar nada.
+  "ai": { "binding": "AI" },
+
   "d1_databases": [
     {
       "binding": "DB",
@@ -40,11 +49,14 @@
   }
 
   // SECRETOS — se ponen en el dashboard, nunca en este archivo:
-  //   OPENAI_API_KEY   Workers > tumbao-opina > Settings > Variables
+  //   TOKEN_REPORTE    para abrir /leer
+  //   OPENAI_API_KEY   opcional, ver abajo
   //   GOOGLE_SA_JSON   la cuenta de servicio, para escribir en la hoja
   //
-  // Sin OPENAI_API_KEY el bot arranca igual, en modo de ensayo: contesta
-  // con respuestas fijas para poder probar la página entera sin gastar
-  // ni un peso. Sin GOOGLE_SA_JSON todo se guarda en D1 y la hoja se
+  // OPENAI_API_KEY ya NO hace falta para que el bot funcione. Con el
+  // binding `ai` de arriba conversa, transcribe las notas de voz y saca
+  // la ficha por su cuenta. Si algún día se pone la llave, el bot se
+  // pasa solo a OpenAI —da una conversación algo mejor— sin tocar nada
+  // más. Sin GOOGLE_SA_JSON todo se guarda en D1 y la hoja se
   // sincroniza después.
 }
