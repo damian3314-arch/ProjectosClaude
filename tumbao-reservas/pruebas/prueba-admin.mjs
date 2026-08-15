@@ -63,7 +63,23 @@ ok('un dia sin clases lo dice, no se cae',
    /No hay clases/.test(await p.locator('#clases-tab').innerText()),
    (await p.locator('#clases-tab').innerText()).slice(0, 40));
 
-await p.locator('#dia-despues').click();
+// Se avanza hasta un dia ENTRE SEMANA, no simplemente al siguiente.
+//
+// El sabado el horario es otro —8 y 9 am— y ahi nadie tiene plan de esa
+// hora: es asi de verdad, no es un hueco del simulacro. La prueba de la
+// puerta necesita los DOS grupos, reservas y plan, asi que si cae en
+// sabado no hay nada que comprobar y fallaba sin que hubiera nada roto.
+// Como saltaba al dia siguiente a ciegas, esto se caia todos los
+// viernes.
+//
+// Un dia entre semana se reconoce por tener tres clases; el sabado dos.
+let saltos = 0;
+do {
+  await p.locator('#dia-despues').click();
+  await p.waitForTimeout(600);
+  saltos++;
+} while (await p.locator('.clase-card').count() < 3 && saltos < 7);
+
 await p.waitForSelector('.clase-card', { timeout: 8000 });
 const tarj = await p.locator('.clase-card').count();
 ok('pinta una tarjeta por clase', tarj > 0, `${tarj} clases`);
@@ -623,11 +639,21 @@ await fetch('http://localhost:8899/api/admin/confirmar', {
   body: JSON.stringify({ token: 'token-de-prueba', codigo: rNoVino.codigo })
 });
 
+// Se vuelve a la MISMA clase donde se sembró, buscándola por su id, no
+// contando clics. Antes esto avanzaba un día a ciegas y funcionaba solo
+// porque la cuenta cuadraba de casualidad: al cambiar la navegación de
+// más arriba, aterrizaba en otro día y la persona sembrada no estaba en
+// la lista.
 await p.locator('#tab-tablero').click();
 await p.waitForTimeout(600);
-await p.locator('#dia-despues').click();
-await p.waitForSelector('.clase-card', { timeout: 8000 });
-await p.locator('.clase-card').first().click();
+const tarjNoVino = p.locator(`.clase-card[data-clase="${idClase}"]`);
+let vueltas = 0;
+while (await tarjNoVino.count() === 0 && vueltas < 8) {
+  await p.locator('#dia-despues').click();
+  await p.waitForTimeout(600);
+  vueltas++;
+}
+await tarjNoVino.first().click();
 await p.waitForSelector('.fila-puerta', { timeout: 8000 });
 
 // Camila quedó confirmada más arriba en esta misma suite.

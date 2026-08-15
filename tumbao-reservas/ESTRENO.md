@@ -227,6 +227,57 @@ aplicar algo a medias.
 Probada contra el estado exacto de producción (0001..0036) e idempotente:
 pegarla dos veces avisa "ya tenía la gracia puesta" y no toca nada.
 
+### 2h. Pegar `aplicar/PEGAR_CAJA_DEL_DIA.sql` ⬅ pendiente de tu visto bueno
+
+**El problema, medido.** El 11 de agosto la tirilla dijo "Reservas de la
+página: **$45.000**". Ese día entraron **$135.000**: nueve personas
+pagaron reservas. La caja contó tres.
+
+Las otras seis pagaron el 11 una clase del 12 y del 15, y su plata se
+fue a contar esos días. La caja sumaba las reservas por la fecha de la
+**clase**, no por cuándo entró la plata.
+
+Con el banco midiendo un día y la caja otro, el cierre no se puede
+cuadrar contra nada. Por eso al entrar al panel no se entendía.
+
+**Lo que cambia.** Una reserva entra en la caja del día en que entró su
+plata: la fecha del depósito si el banco lo confirmó, o cuándo se
+confirmó si fue a mano. Es la misma fecha con la que ya se cuenta
+`banco.recibido_cop`, así que las dos mitades del panel hablan por fin
+del mismo día.
+
+**Lo que NO cambia.** Ni un movimiento de caja. La plata que se recibe
+en la entrada sigue entrando por `caja_movimientos` y contándose el día
+en que se registra. La migración no escribe en `caja_cierres`: los
+cierres ya firmados se quedan como se firmaron.
+
+**No había doble conteo, aunque lo parecía.** Los movimientos
+`clase_suelta` por transferencia cuadraban sospechosamente bien con las
+reservas del día. Se revisó pago por pago del 10 al 14 de agosto:
+**ningún pago está pegado a la vez a una reserva y a un movimiento de
+caja**. Son clases sueltas que se registran a mano —plata distinta— y se
+siguen sumando igual.
+
+**Se añade** `reservas_dictadas_cop`: lo que valen las clases dictadas
+ese día, que era el número viejo. Sigue estando, en su propia línea y
+diciendo que no suma, porque responde a otra pregunta.
+
+Comprobado contra el estado exacto de producción: los cuatro trozos que
+parchea aparecen **exactamente una vez** en `caja_del_dia`.
+
+### 2i. La pantalla de Caja, al entrar ⬅ va con la anterior
+
+Al abrir Caja durante el turno se veía **una sola cifra**: "abrió con".
+Eso es a propósito para el efectivo —enseñar "en el cajón" todo el día
+le da al cajero la respuesta antes de contar, y un arqueo contra una
+cifra ya sabida no comprueba nada— pero se estaba aplicando a todo.
+
+Las reservas y las transferencias **nunca pasaron por el cajón**, así
+que verlas no adelanta ninguna respuesta. Ahora salen desde el
+principio; lo del cajón (el esperado, lo que entró en efectivo, lo que
+salió) sigue escondido hasta el arqueo. `prueba-caja` lo vigila: si
+alguna vez se cuela "en el cajón" durante el turno, falla.
+
 ### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
 Desactivados los dos `prueba caja claude` (los que se compartieron por
@@ -279,7 +330,7 @@ Las pruebas no son decorativas: cada una existe porque algo se rompió.
 ```bash
 cd tumbao-reservas/pruebas
 
-# Base de datos: 18 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
+# Base de datos: 19 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
 # Abajo van las que más cosas han cazado; se corren todas de una con
 #   for f in humo-*.sql; do psql -d <base> -f $f; done
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
@@ -290,6 +341,7 @@ psql -d <base> -f humo-grupo.sql        # varios cupos con un solo pago (39)
 psql -d <base> -f humo-disfrutar.sql    # pagó y no vino, y reprogramar
 psql -d <base> -f humo-duplicados.sql   # dos pagos iguales en el mismo minuto
 psql -d <base> -f humo-gracia.sql       # se reserva hasta 15 min después de empezar
+psql -d <base> -f humo-caja-del-dia.sql  # la caja del día es la plata del día
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -305,8 +357,14 @@ node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
-**Las 18 de base de datos y las 8 de node/navegador están en verde**
-(corridas el 12 de agosto por la noche, con la 0037 puesta). `humo-admin` y `humo-tablero` llevaban días
+**Las 19 de base de datos y las 9 de node/navegador están en verde**
+(corridas el 14 de agosto por la noche, con la 0037 aplicada y la 0038
+puesta encima).
+
+`prueba-admin` fallaba **todos los viernes** y no era del código: saltaba
+al día siguiente a ciegas, eso caía en sábado, y el sábado el horario es
+otro —8 y 9 am— sin nadie con plan de esa hora. Ahora busca un día entre
+semana y vuelve a la clase por su id, no contando clics. `humo-admin` y `humo-tablero` llevaban días
 rojas y no era del código: las dos escogían "la próxima clase" y a media
 tarde eso caía en HOY — abrir una clase a las 5 pm de hoy falla con "esa
 hora ya paso", y las 19 personas del plan de las 7 am de hoy ya no

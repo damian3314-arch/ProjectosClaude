@@ -71,7 +71,15 @@ const dia = () => ({
     + suma('ingreso', 'efectivo') - suma('egreso', 'efectivo'),
   ingreso_transferencia: suma('ingreso', 'transferencia'),
   egreso_transferencia: suma('egreso', 'transferencia'),
+  // Cobradas HOY: por la fecha en que entró la plata, no la de la
+  // clase. Antes de la 0038 esto se contaba por el día de la clase y
+  // el cierre no se podía cuadrar contra el banco.
   reservas_cop: 15000,
+  reservas_n: 1,
+  // Lo que valen las clases dictadas hoy. Otro reloj, otra pregunta:
+  // va aparte y no suma.
+  reservas_dictadas_cop: 45000,
+  reservas_dictadas_n: 3,
   // Confirmadas en el mostrador: NO entran en total_ingresos porque su
   // plata ya está en los movimientos de caja. Contarlas dos veces fue el
   // error que iba a inflar el cierre del 10 de agosto en $30.000.
@@ -304,18 +312,48 @@ trasAbrir.trim() === '$95.000'
   ? bien('el día corre sobre lo CONTADO, no sobre lo heredado', trasAbrir.trim())
   : falla('la base tras abrir', trasAbrir);
 
-// Durante el turno hay UNA sola tarjeta y dice con cuánto abrió. Ver
-// "en el cajón" sumándose todo el día le da al cajero la respuesta antes
-// de contar, y un arqueo contra una cifra ya sabida no comprueba nada:
-// deja de ser contar y pasa a ser confirmar.
+// Lo que se esconde durante el turno es SOLO lo del cajón: el esperado,
+// lo que entró en efectivo y lo que salió. Con esos tres el cajero saca
+// la cuenta de memoria y el arqueo deja de comprobar nada: deja de ser
+// contar y pasa a ser confirmar.
+//
+// Las reservas y las transferencias sí se enseñan. Nunca pasaron por el
+// cajón, así que no adelantan ninguna respuesta — y esconderlas dejaba
+// la pantalla casi en blanco al entrar, que era la queja de verdad:
+// "al ingresar no es completamente claro".
 const enCajon = async () => (await pagina.locator('#caja-tiles .tile .n').first().innerText()).trim();
 (await enCajon()) === '$95.000'
   ? bien('la tarjeta enseña la base contada') : falla('la base', await enCajon());
 
-(await pagina.locator('#caja-tiles .tile').count()) === 1
-  ? bien('y es la única tarjeta durante el turno')
-  : falla('tarjetas durante el turno',
-          `hay ${await pagina.locator('#caja-tiles .tile').count()}`);
+const textoTiles = async () =>
+  (await pagina.locator('#caja-tiles').innerText()).replace(/\s+/g, ' ');
+
+const durante = await textoTiles();
+
+/reservas de hoy/i.test(durante)
+  ? bien('durante el turno ya se ven las reservas de hoy')
+  : falla('las reservas durante el turno', durante.slice(0, 160));
+
+/transferencias/i.test(durante)
+  ? bien('y las transferencias del mostrador')
+  : falla('las transferencias durante el turno', durante.slice(0, 160));
+
+// Estas dos protegen el arqueo. Se miran las ETIQUETAS de los
+// recuadros, no el texto entero: las pistas dicen "no está en el
+// cajón", que es lo contrario de filtrar el dato.
+const etiquetas = async () =>
+  (await pagina.locator('#caja-tiles .tile .k').allInnerTexts())
+    .map((t) => t.trim().toLowerCase());
+
+const rotulos = await etiquetas();
+
+!rotulos.includes('en el cajón')
+  ? bien('pero NO lo que debería haber en el cajón')
+  : falla('se filtró el esperado del cajón', rotulos.join(' / '));
+
+!rotulos.some((t) => t === 'salió' || t === 'entró hoy')
+  ? bien('ni lo que entró y salió en efectivo')
+  : falla('se filtraron los totales del cajón', rotulos.join(' / '));
 
 /abrió con/i.test(await pagina.locator('#caja-tiles .tile .k').first().innerText())
   ? bien('dice "abrió con", no "en el cajón"')

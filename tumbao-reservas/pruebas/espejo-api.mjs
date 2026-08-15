@@ -56,7 +56,16 @@ function sembrarClases() {
                 : dow === 0 ? []
                 : [[7, 'Clase 7:00 am'], [18, 'Clase 6:00 pm'], [19, 'Clase 7:00 pm']];
     for (const [h, nombre] of horas) {
-      const libres = dow === 6 ? 30 : (h === 18 ? 4 : h === 7 ? 11 : 14);
+      // Los avisos del tablero se cuelgan de la PRIMERA y la ÚLTIMA
+      // clase del día, no de una hora fija. Antes iban en la de las 7 am
+      // y la de las 6 pm, que el sábado no existen: la prueba salta al
+      // día siguiente, y todos los viernes eso caía en sábado y fallaba
+      // sin que hubiera nada roto.
+      const esPrimera = h === horas[0][0];
+      const esUltima  = h === horas[horas.length - 1][0];
+      // El sábado también tiene que quedar con gente de plan, o el aviso
+      // de "vencen" no puede salir: nunca puede pasarse de con_plan.
+      const libres = dow === 6 ? 25 : (h === 18 ? 4 : h === 7 ? 11 : 14);
       clases.push({
         clase_id: 'clase-' + (seq++),
         nombre, profesor: 'Kevin', lugar: 'Sede Tumbao',
@@ -65,9 +74,10 @@ function sembrarClases() {
         cupo_total: libres, cupos_disponibles: libres, agotada: libres <= 0,
         // Lo que ve el panel: los cupos salen de aforo − gente con plan.
         activa: true, aforo: 30, activos_plan: 30 - libres, cupo_manual: null,
-        // A dos de las 6pm se les acaba el plan ese dia. Sirve para que
-        // el aviso punteado del tablero tenga algo que mostrar.
-        _vencen: h === 18 ? 2 : 0,
+        // A dos de la última clase del día se les acaba el plan. Sirve
+        // para que el aviso punteado del tablero tenga algo que mostrar.
+        _vencen: esUltima ? 2 : 0,
+        _primera: esPrimera,
         // El sabado va partido: 15 para afiliados y 15 para sueltas.
         // Entre semana en null, que es "sin reparto".
         cupo_miembros: dow === 6 ? 15 : null,
@@ -393,7 +403,7 @@ createServer(async (req, res) => {
           // Cupos apartados sin pagar que ya se pasaron del tiempo y se
           // van a soltar solos. Dos en la de las 7 am, para que la
           // etiqueta tenga algo que enseñar.
-          por_soltar: c._hora === 7 ? 2 : 0,
+          por_soltar: c._primera ? 2 : 0,
           en_sala: conPlan + tomadas,
           ingreso_cop: confirmadas * (c.precio_cop || 15000)
         };

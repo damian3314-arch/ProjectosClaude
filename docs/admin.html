@@ -2674,15 +2674,30 @@ const CONFIG = {
     //
     // Si el día ya está cerrado no hay nada que anclar, así que se
     // enseña todo: a esa hora el número ya es historia.
+    // Lo que se oculta durante el turno es SOLO lo del cajón: el
+    // esperado, lo que entró en efectivo y lo que salió. Con esos tres
+    // el cajero saca la cuenta de memoria y el arqueo deja de
+    // comprobar nada.
+    //
+    // Las reservas y las transferencias no son plata del cajón —nunca
+    // pasaron por ahí— así que verlas no adelanta ninguna respuesta, y
+    // esconderlas era lo que dejaba la pantalla en blanco al entrar.
+    const cuantas = Number(d.reservas_n || 0);
     $('#caja-tiles').innerHTML = (cajaCierreAbierto || d.cerrado
       ? [
           ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
-          ['bueno', pesos(d.total_ingresos), 'entró hoy', 'todo, con reservas'],
+          ['bueno', pesos(d.total_ingresos), 'entró hoy', 'la plata que entró hoy'],
           ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
           ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
         ]
       : [
           ['cajon', pesos(d.base_cop), 'abrió con', 'lo que quedó de ayer'],
+          ['bueno', pesos(d.reservas_cop), 'reservas de hoy',
+           cuantas
+             ? `${cuantas} ${cuantas === 1 ? 'pagada' : 'pagadas'} hoy · no está en el cajón`
+             : 'nadie ha pagado por la página'],
+          ['ojo',   pesos(d.ingreso_transferencia), 'transferencias',
+           'registradas a mano · tampoco está en el cajón'],
         ]
     ).map(([cl, n, k, pista]) =>
       `<div class="tile ${cl}">` +
@@ -2929,11 +2944,21 @@ const CONFIG = {
 
       `<hr>` + titulo('NO PASÓ POR EL CAJÓN') +
       linea('Transferencias', pesos(d.ingreso_transferencia)) +
-      linea('Reservas de la página', pesos(d.reservas_cop)) +
+      linea('Reservas cobradas hoy', pesos(d.reservas_cop)) +
       linea('Total a banco', pesos(a.ingresos_a_banco), 'g') +
       (Number(d.reservas_a_mano_n || 0) > 0
         ? `<div class="peq">Confirmadas en mostrador: ${d.reservas_a_mano_n} ` +
           `(${pesos(d.reservas_a_mano_cop)}) — ya contadas arriba</div>`
+        : '') +
+      // Dos relojes distintos, y confundirlos era justo el problema:
+      // una reserva se COBRA el día que entra la plata y se DICTA el
+      // día de la clase. Arriba va la plata, que es lo que cuadra el
+      // cierre. Esto de aquí es cuánto valió la operación del día, y
+      // por eso se dice explícito que no suma.
+      (d.reservas_dictadas_cop != null
+        ? `<div class="peq">Clases dictadas hoy: ${d.reservas_dictadas_n} ` +
+          `(${pesos(d.reservas_dictadas_cop)}) — no suma aquí, se cobraron ` +
+          `el día que cada quien pagó</div>`
         : '') +
 
       `<hr>` + titulo('CONTRA ADMINGYM') +
@@ -3032,7 +3057,11 @@ const CONFIG = {
 
       `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
         fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
-        fila('Reservas de la página', pesos(d.reservas_cop)) +
+        fila('Reservas cobradas hoy', pesos(d.reservas_cop),
+             Number(d.reservas_n || 0) > 0
+               ? `${d.reservas_n} ${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · ` +
+                 `por la fecha del pago, no la de la clase`
+               : '') +
         fila('Total a banco', pesos(a.ingresos_a_banco), campoAG('Ingresos a Banco'), 'total') +
         // NO suma, y por eso va debajo del total. Son las reservas que se
         // confirmaron en el mostrador: su plata ya entró por Caja y está
