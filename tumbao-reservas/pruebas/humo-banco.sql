@@ -105,10 +105,20 @@ values ('bbbbbbbb-0000-4000-8000-000000000002', 'bancolombia', 125000,
 select chk('no se adjudica un depósito ya usado',
   caja_registrar(tk(), 'ingreso', 'clase_suelta', 15000, 'transferencia', null,
                  'bbbbbbbb-0000-4000-8000-000000000001')->>'error', 'PAGO_YA_USADO');
--- Si el valor no coincide es que se escogió el depósito equivocado.
--- Dejarlo pasar metería una diferencia que después nadie sabe explicar.
-select chk('no se adjudica con un valor distinto al del banco',
-  caja_registrar(tk(), 'ingreso', 'mensualidad', 120000, 'transferencia', null,
+-- Antes, cualquier valor distinto al del depósito se rechazaba: si no
+-- calzaba, era que se había escogido el depósito equivocado.
+--
+-- Desde la 0039 eso ya no es cierto por arriba NI por abajo. Un depósito
+-- de $30.000 puede pagar dos clases de $15.000, asi que un valor MENOR
+-- es legítimo. Lo que sigue siendo imposible es sacar más de lo que hay:
+-- ese es el limite que cuida la plata, y ahora es sobre el saldo, no
+-- sobre el valor original.
+--
+-- El cuidado de "¿escogiste el depósito correcto?" se mudó a la
+-- pantalla, que dice cuánto vale el depósito y cuánto va a quedar. Ver
+-- prueba-caja.
+select chk('no se puede sacar más de lo que tiene el depósito',
+  caja_registrar(tk(), 'ingreso', 'mensualidad', 130000, 'transferencia', null,
                  'bbbbbbbb-0000-4000-8000-000000000002')->>'error', 'VALOR_NO_COINCIDE');
 select chk('un egreso no puede enlazarse a un depósito',
   caja_registrar(tk(), 'egreso', 'profesores', 125000, 'transferencia', null,

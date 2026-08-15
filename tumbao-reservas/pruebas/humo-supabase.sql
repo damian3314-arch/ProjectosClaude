@@ -61,12 +61,14 @@ begin
   select (fecha_hora at time zone 'America/Bogota')::date into v_lun
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') between 1 and 5
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
   select (fecha_hora at time zone 'America/Bogota')::date into v_sab
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
 
   select importar_membresias((

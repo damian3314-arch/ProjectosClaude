@@ -37,7 +37,8 @@ begin
   select (fecha_hora at time zone 'America/Bogota')::date into v_sab
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
   select id into v_c from clases
    where (fecha_hora at time zone 'America/Bogota')::date = v_sab
@@ -52,7 +53,8 @@ begin
   select (fecha_hora at time zone 'America/Bogota')::date into v_lun
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') between 1 and 5
-     and fecha_hora > now() order by fecha_hora limit 1;
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date order by fecha_hora limit 1;
   select id into v_c18 from clases
    where (fecha_hora at time zone 'America/Bogota')::date = v_lun
      and extract(hour from fecha_hora at time zone 'America/Bogota') = 18;
@@ -215,7 +217,8 @@ begin
   select id, cupo_miembros, cupo_sueltas into v_c, v_m, v_s
     from clases
    where extract(dow from fecha_hora at time zone 'America/Bogota') = 6
-     and fecha_hora > now()
+     and (fecha_hora at time zone 'America/Bogota')::date
+         > (now() at time zone 'America/Bogota')::date
    order by fecha_hora limit 1;
   if v_m is null or v_s is null then
     raise exception 'el sabado se quedo sin reparto';

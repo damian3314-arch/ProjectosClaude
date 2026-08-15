@@ -278,6 +278,61 @@ principio; lo del cajón (el esperado, lo que entró en efectivo, lo que
 salió) sigue escondido hasta el arqueo. `prueba-caja` lo vigila: si
 alguna vez se cuela "en el cajón" durante el turno, falla.
 
+### 2j. Pegar `aplicar/PEGAR_REPARTO_DEPOSITOS.sql` ⬅ pendiente
+
+**El caso, del 15 de agosto.** Entró una consignación de **$30.000** que
+pagaba dos clases de $15.000. No había forma de registrarla:
+
+- el buscador de depósitos filtra por el valor tecleado, así que
+  escribiendo `15000` el de $30.000 ni siquiera aparecía;
+- y aunque apareciera, `caja_registrar` exigía que el movimiento valiera
+  **exactamente** lo mismo que el depósito.
+
+Se quedó en "sin identificar" y ahí iba a quedarse. La única salida era
+registrar una línea de $30.000 que en la tirilla no dice de qué fue.
+
+**Lo que cambia.** Un depósito se gasta de a pedazos (`usado_cop`) y
+sigue en la lista hasta que se acaba. En el buscador, además del que
+cuadra exacto salen hasta tres que **alcanzan** aunque valgan más — y al
+escogerlo, la pantalla dice cuánto se va a usar y cuánto queda.
+
+**El cruce automático no se toca.** Apenas la caja le muerde un pedazo a
+un depósito, queda marcado como no disponible para el cruce de reservas.
+Si no, una reserva de $30.000 se lo llevaría entero y la misma plata
+quedaría contada dos veces. El reparto es siempre a mano, decidido por
+alguien que está mirando: adivinar repartos de plata automáticamente es
+la clase de ayuda que nadie pidió.
+
+**Se borra el índice `caja_mov_pago_unico`,** que decía literal "un
+depósito no puede pagar dos cosas". Lo que lo reemplaza es más fuerte:
+el índice limitaba la *cantidad* de líneas y no miraba la plata —nada
+impedía enlazar un depósito de $15.000 a un movimiento de $500.000—;
+ahora el límite es sobre el **dinero** y se aplica con el depósito
+bloqueado, así que dos cajeros a la vez tampoco pueden pasarse.
+
+**El panel aguanta las dos situaciones**, así que da igual el orden: si
+el servidor todavía no reparte, la pantalla se comporta como antes.
+
+### 2k. ~~La importación de afiliados se rendía con el primer archivo~~ ✅ el 15 de agosto
+
+El 14 de agosto se subieron dos exportaciones de **un solo horario** —
+`Afiliados activos 2026-08-14 (6pm).xls` y `(7pm).xls`. Traen 18 filas y
+otras columnas (`Afiliado Titular` en vez de `Afiliado`). Le ganaron por
+fecha al reporte completo, la lectura falló, y como el flujo se rendía
+con el primer candidato, **la importación quedó dos corridas seguidas
+sin correr**: los cupos se calcularon todo el fin de semana con datos de
+la mañana del 14.
+
+Falló en seguro —no tocó la tabla de membresías— pero nadie se enteró.
+
+Ahora los candidatos se ordenan (el completo antes que el de un solo
+horario) y se prueban **hasta tres**. Solo si todos fallan se detiene, y
+el error dice cuáles se intentaron.
+
+Verificado corriéndolo: escogió `Afiliados activos 2026-08-15.xlsx`,
+importó **56 afiliados, 0 descartados** — 20 a las 7 am, 18 a las 6 pm y
+18 a las 7 pm.
+
 ### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
 Desactivados los dos `prueba caja claude` (los que se compartieron por
@@ -330,7 +385,7 @@ Las pruebas no son decorativas: cada una existe porque algo se rompió.
 ```bash
 cd tumbao-reservas/pruebas
 
-# Base de datos: 19 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
+# Base de datos: 20 pruebas de humo sobre Postgres (`humo-*.sql`, todas).
 # Abajo van las que más cosas han cazado; se corren todas de una con
 #   for f in humo-*.sql; do psql -d <base> -f $f; done
 psql -d <base> -f humo-corte.sql        # el corte no esconde cupos vivos
@@ -342,6 +397,7 @@ psql -d <base> -f humo-disfrutar.sql    # pagó y no vino, y reprogramar
 psql -d <base> -f humo-duplicados.sql   # dos pagos iguales en el mismo minuto
 psql -d <base> -f humo-gracia.sql       # se reserva hasta 15 min después de empezar
 psql -d <base> -f humo-caja-del-dia.sql  # la caja del día es la plata del día
+psql -d <base> -f humo-reparto.sql       # un depósito paga varias cosas
 
 # Panel: navegador de verdad, haciendo clic
 node espejo-api.mjs &       # el panel necesita el espejo en otra terminal
@@ -357,14 +413,23 @@ node elegir-reporte.test.mjs      # qué archivo de afiliados se importa
 node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
-**Las 19 de base de datos y las 9 de node/navegador están en verde**
-(corridas el 14 de agosto por la noche, con la 0037 aplicada y la 0038
-puesta encima).
+**Las 20 de base de datos y las 9 de node/navegador están en verde**
+(corridas el 15 de agosto por la mañana, con la 0037 y la 0038 aplicadas
+y la 0039 puesta encima).
 
-`prueba-admin` fallaba **todos los viernes** y no era del código: saltaba
-al día siguiente a ciegas, eso caía en sábado, y el sábado el horario es
-otro —8 y 9 am— sin nadie con plan de esa hora. Ahora busca un día entre
-semana y vuelve a la clase por su id, no contando clics. `humo-admin` y `humo-tablero` llevaban días
+Cinco pruebas fallaban **según el día en que se corrieran**, y ninguna
+por el código:
+
+- `prueba-admin` se caía los viernes (saltaba al día siguiente a ciegas y
+  eso daba sábado, que tiene otro horario y nadie con plan de esa hora) y
+  los sábados (la navegación por días no se sale de la semana en curso, y
+  un sábado ya solo queda el domingo).
+- `humo-aforo`, `humo-puerta`, `humo-sabado-partido` y `humo-supabase`
+  escogían "el próximo sábado" por fecha, así que un sábado agarraban la
+  clase de las 8 am que ya había pasado.
+
+Todas escogen ahora un día completo por delante, y fallan solo cuando algo
+esté de verdad roto. `humo-admin` y `humo-tablero` llevaban días
 rojas y no era del código: las dos escogían "la próxima clase" y a media
 tarde eso caía en HOY — abrir una clase a las 5 pm de hoy falla con "esa
 hora ya paso", y las 19 personas del plan de las 7 am de hoy ya no

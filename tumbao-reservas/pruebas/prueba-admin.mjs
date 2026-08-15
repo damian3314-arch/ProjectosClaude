@@ -73,12 +73,19 @@ ok('un dia sin clases lo dice, no se cae',
 // viernes.
 //
 // Un dia entre semana se reconoce por tener tres clases; el sabado dos.
+// La navegacion por dias no se sale de la semana que se esta viendo, y
+// un sabado "esta semana" ya solo tiene el domingo por delante, que no
+// tiene clases. Por eso, si se acaban los dias, se pasa de semana.
 let saltos = 0;
-do {
+while (await p.locator('.clase-card').count() < 3 && saltos < 12) {
   await p.locator('#dia-despues').click();
-  await p.waitForTimeout(600);
+  await p.waitForTimeout(500);
   saltos++;
-} while (await p.locator('.clase-card').count() < 3 && saltos < 7);
+  if (saltos % 4 === 0) {
+    await p.locator('#sem-despues').click();
+    await p.waitForTimeout(700);
+  }
+}
 
 await p.waitForSelector('.clase-card', { timeout: 8000 });
 const tarj = await p.locator('.clase-card').count();
@@ -402,6 +409,19 @@ await p2.close();
 
 await p.locator('#sem-hoy').click();
 await p.waitForTimeout(900);
+
+// Si la semana en curso no tiene ninguna clase con gente, se pasa a la
+// siguiente. Pasa los sabados y domingos: el espejo siembra clases desde
+// MANANA, asi que en esta semana ya no queda ningun dia con clases por
+// delante y la reserva que sembro la prueba cayo en la semana entrante.
+// Nada roto, solo el dia en que se corre.
+const hayGente = async () => await p.locator('.fila-clase:not(.paso)')
+  .filter({ hasText: /[1-9]\d* reservad/ }).count() > 0;
+
+if (!(await hayGente())) {
+  await p.locator('#sem-despues').click();
+  await p.waitForTimeout(900);
+}
 // Tiene que ser una clase con gente DE VERDAD y que no haya pasado:
 // toda fila dice "reservadas", incluso con cero, y las que ya pasaron
 // traen el interruptor deshabilitado. Filtrar solo por la palabra
@@ -737,8 +757,15 @@ await p.screenshot({ path: `${dir}/a0-entrar.png` });
 await p.fill('#token', TOKEN);
 await p.locator('#btn-entrar').click();
 await p.waitForSelector('#p-tablero.on', { timeout: 8000 });
-await p.locator('#dia-despues').click();
-await p.waitForSelector('.clase-card', { timeout: 8000 });
+// Las capturas son para mirarlas, no para comprobar nada: si el dia
+// siguiente no tiene clases —un sabado, mañana es domingo— se avanza
+// hasta encontrar uno, y si no aparece se sigue igual. Una captura
+// menos no puede tumbar una suite que ya pasó entera.
+for (let i = 0; i < 10 && await p.locator('.clase-card').count() === 0; i++) {
+  await p.locator('#dia-despues').click();
+  await p.waitForTimeout(450);
+  if (i === 5) { await p.locator('#sem-despues').click(); await p.waitForTimeout(700); }
+}
 await p.waitForTimeout(400);
 await p.screenshot({ path: `${dir}/a1-tablero.png`, fullPage: true });
 await p.locator('#tab-horario').click();

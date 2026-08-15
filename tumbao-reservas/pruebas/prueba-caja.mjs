@@ -547,11 +547,28 @@ await pagina.waitForTimeout(250);
   ? bien('buscar por nombre deja un solo candidato de 75')
   : falla('buscar por nombre', `quedaron ${await pagina.locator('.dep').count()}`);
 
+// Buscando por valor salen el que cuadra exacto Y unos pocos que
+// alcanzan aunque valgan más: desde la 0039 un depósito de $30.000
+// puede pagar una clase de $15.000.
+//
+// Los dos extremos importan. Antes solo salía el exacto, así que un
+// depósito de $30.000 no aparecía nunca y parecía que la plata no había
+// llegado — fue lo que dejó $30.000 atascados el 15 de agosto. Pero
+// mostrarlos todos son 75 y la cajera escoge el primero que le cuadre,
+// que es peor que no encontrarlo.
 await pagina.fill('#modal-dep-buscar', '15000');
 await pagina.waitForTimeout(250);
-(await pagina.locator('.dep').count()) === 1
-  ? bien('buscar por valor también')
-  : falla('buscar por valor', `quedaron ${await pagina.locator('.dep').count()}`);
+const cuantosDep = await pagina.locator('.dep').count();
+cuantosDep > 1 && cuantosDep <= 4
+  ? bien('buscar por valor deja el exacto y unos pocos que alcanzan',
+         `${cuantosDep} de 75`)
+  : falla('buscar por valor', `quedaron ${cuantosDep}`);
+
+// El que cuadra exacto va de primero: es el que casi siempre es.
+(await pagina.locator('.dep .v').first().innerText()).trim() === '$15.000'
+  ? bien('y el que cuadra exacto va de primero')
+  : falla('el orden del filtro',
+          await pagina.locator('.dep .v').first().innerText());
 
 await pagina.fill('#modal-dep-buscar', 'zzzz');
 await pagina.waitForTimeout(250);

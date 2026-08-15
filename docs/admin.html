@@ -3307,21 +3307,46 @@ const CONFIG = {
     // deja uno o dos candidatos.
     const q = plano($('#modal-dep-buscar').value);
     const soloDigitos = q.replace(/\D/g, '');
+    const saldoDe = p => Number(p.saldo_cop != null ? p.saldo_cop : p.valor_cop);
     const pasa = p =>
       !q ? true
       : soloDigitos ? String(p.valor_cop).includes(soloDigitos)
       : plano(p.remitente).includes(q);
 
-    const ver = libres.filter(pasa);
+    const exactos = libres.filter(pasa);
+
+    // Y los que ALCANZAN aunque valgan más: uno de $30.000 paga una
+    // clase de $15.000. Van DESPUÉS de los que cuadran exacto y son
+    // pocos a propósito. Sin esto, al teclear 15000 el depósito de
+    // 30.000 no aparecía y parecía que la plata no había llegado; con
+    // todos, la lista es un muro de 75 y la cajera escoge el primero
+    // que le cuadre, que es peor.
+    const pedido = soloDigitos ? Number(soloDigitos) : 0;
+    const alcanzan = !pedido ? [] : libres
+      .filter(p => !exactos.includes(p) && saldoDe(p) > pedido)
+      .sort((a, z) => saldoDe(a) - saldoDe(z))
+      .slice(0, 3);
+
+    const ver = exactos.concat(alcanzan);
+
     $('#modal-depositos').innerHTML = ver.length
-      ? ver.map(p =>
-          `<button class="dep" type="button" data-pago="${esc(p.id)}" data-valor="${esc(p.valor_cop)}">` +
-            `<span class="v">${esc(pesos(p.valor_cop))}</span>` +
+      ? ver.map(p => {
+          const saldo = saldoDe(p);
+          const mordido = saldo !== Number(p.valor_cop);
+          return `<button class="dep" type="button" data-pago="${esc(p.id)}" data-valor="${esc(saldo)}">` +
+            `<span class="v">${esc(pesos(saldo))}</span>` +
             `<span class="q">${esc(p.remitente || 'sin nombre')}` +
               `<small>${esc(p.cuando)}${Number(p.dias) > 0
-                ? ' · hace ' + p.dias + (Number(p.dias) === 1 ? ' día' : ' días') : ' · hoy'}</small>` +
+                ? ' · hace ' + p.dias + (Number(p.dias) === 1 ? ' día' : ' días') : ' · hoy'}` +
+                // Si ya se le cobró una parte, decirlo: si no, parece un
+                // depósito de $15.000 cuando en el banco dice $30.000 y
+                // el cajero cree que se equivocó de fila.
+                (mordido ? ` · de ${esc(pesos(p.valor_cop))}, ya se usaron ` +
+                           `${esc(pesos(Number(p.valor_cop) - saldo))}` : '') +
+              `</small>` +
             `</span>` +
-          `</button>`).join('')
+          `</button>`;
+        }).join('')
       : `<p class="dep-vacio">Ningún depósito de la cuenta coincide con ` +
         `«${esc($('#modal-dep-buscar').value)}». Borra el filtro para verlos ` +
         `todos, o registra sin enlazar si no está.</p>`;
@@ -3333,9 +3358,26 @@ const CONFIG = {
         cajaPago = ya ? null : b.dataset.pago;
         $('#modal-depositos').querySelectorAll('[data-pago]')
           .forEach(o => o.classList.toggle('on', !ya && o === b));
-        // El valor lo manda el banco. Postgres rechaza el enlace si no
-        // coinciden, así que mejor que aquí ya cuadre.
-        if (!ya) $('#modal-valor').value = b.dataset.valor;
+        // El saldo del depósito es el TECHO, ya no el valor exacto: uno
+        // de $30.000 puede pagar una clase de $15.000. Así que solo se
+        // pisa lo tecleado cuando no cabe o cuando no hay nada escrito.
+        const saldo = Number(b.dataset.valor);
+        const puesto = Number(String($('#modal-valor').value).replace(/\D/g, ''));
+        if (!ya && (!puesto || puesto > saldo)) $('#modal-valor').value = saldo;
+
+        // Y si va a quedar plata, decirlo. Un reparto tiene que ser una
+        // decisión que alguien tomó mirando, no algo que pasó solo.
+        const usa = Number(String($('#modal-valor').value).replace(/\D/g, ''));
+        const queda = saldo - usa;
+        if (!ya && queda > 0) {
+          $('#modal-dep-aviso').textContent =
+            `De ese depósito vas a usar ${pesos(usa)} y quedan ${pesos(queda)} ` +
+            `para cobrar aparte. Sigue en la lista hasta que se acabe.`;
+          $('#modal-dep-aviso').className = 'dep-aviso';
+          $('#modal-dep-aviso').hidden = false;
+        } else {
+          $('#modal-dep-aviso').hidden = true;
+        }
       });
     });
   }
