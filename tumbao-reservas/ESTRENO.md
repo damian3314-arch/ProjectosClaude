@@ -368,10 +368,36 @@ nunca lo pisa.
 mueve, que la semana del 17 abre 14 clases y no 17, y que no queda una
 sola clase en domingo ni en festivo.
 
-**El workflow `Tumbao · Abrir la semana`** ya está creado en n8n: sábados
-a las 7 am, hora de Bogotá, con reintentos y avisando por el workflow de
-fallos si la semana no queda abierta. Falta **activarlo** y correrlo una
-vez a mano para la semana del 17, que ya va tarde.
+**El workflow `Tumbao · Abrir la semana`** corre los sábados a las 7 am,
+hora de Bogotá, con reintentos y avisando por el workflow de fallos.
+
+✅ **Corrido el 15 de agosto**: la semana del 17 al 23 quedó con **14
+clases**, el lunes 17 cerrado por la Asunción y el domingo cerrado como
+siempre. Verificado en el panel y en la página pública.
+
+### 2m. Pegar `aplicar/PEGAR_CUPOS_AL_ABRIR.sql` ⬅ pendiente
+
+**Se rompió a los dos minutos de estrenar lo anterior.** La semana abrió
+ofreciendo **30 cupos** en las clases de entre semana. El aforo es 30,
+pero 20 ya eran de afiliados con plan de las 7 am: los libres eran 12.
+
+Durante un rato la página estuvo **vendiendo cupos que no existen**, que
+es justo lo que todo este sistema existe para no hacer.
+
+`generar_horario()` crea la clase con `cupo_total = aforo` y nada más;
+los cupos de verdad salen de `recalcular_cupos()`, que solo llamaba la
+importación de afiliados de las 9:30 pm. Antes no se notaba porque las
+clases las creaba una persona y la corrección llegaba esa noche, con la
+semana lejos. Al automatizar la apertura el hueco quedó a la vista.
+
+Ya se corrigió a mano corriendo la importación — los cupos quedaron en
+12, 14 y 13. Esto es para que no vuelva a pasar: `abrir_semana()`
+recalcula sola, y devuelve `cupos_que_no_cuadran` para que el workflow
+reviente si alguna clase queda ofreciendo puestos que ya tienen dueño.
+
+El detector compara la **resta** (`aforo − afiliados`), no el resultado:
+mirar "activos_plan = 0" habría dado falsos positivos, porque una clase
+puede tener cero afiliados de verdad.
 
 ### 3. ~~Revocar los tokens de prueba~~ ✅ hecho el 12 de agosto
 
@@ -455,8 +481,8 @@ node sin-delete-sin-where.mjs     # ningún DELETE/UPDATE sin WHERE
 ```
 
 **Las 21 de base de datos y las 9 de node/navegador están en verde**
-(corridas el 15 de agosto, con la 0037, 0038 y 0039 aplicadas en
-producción y la 0040 puesta encima).
+(corridas el 15 de agosto, con la 0037 a la 0040 aplicadas en producción
+y la 0041 puesta encima).
 
 Cinco pruebas fallaban **según el día en que se corrieran**, y ninguna
 por el código:

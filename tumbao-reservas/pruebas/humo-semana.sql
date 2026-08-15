@@ -137,6 +137,46 @@ select chk('pero la semana sigue igual de abierta',
 
 
 \echo ''
+\echo '-- 5b. Y los cupos quedan bien desde el primer minuto --------------'
+-- Lo que pasó de verdad al estrenar la 0040: la semana abrió ofreciendo
+-- 30 cupos —el aforo entero— cuando 20 ya eran de afiliados con plan.
+-- La página estuvo vendiendo cupos que no existen hasta que la
+-- importación de la noche corrigió. Eso es justo lo que el sistema
+-- entero existe para no hacer.
+
+delete from clases where true;
+delete from membresias where true;
+
+-- Veinte personas con plan de 7 am, como en la vida real.
+select importar_membresias((
+  select jsonb_agg(f) from (
+    select jsonb_build_object(
+      'afiliado', 'Socia ' || g, 'membresia', 'PLAN MENSUALIDAD 7:00AM',
+      'hora', '07:00:00', 'tipo', 'plan',
+      'documento', (800000 + g)::text, 'celular', '301' || lpad(g::text, 7, '0'),
+      'correo', null,
+      'inicio', ((now() at time zone 'America/Bogota')::date - 3)::text,
+      'fin',    ((now() at time zone 'America/Bogota')::date + 25)::text) as f
+    from generate_series(1, 20) g
+  ) s));
+
+create temp table r3 as select abrir_semana() as j;
+
+select chk('ningún cupo quedó descuadrado',
+  (select (j->>'cupos_que_no_cuadran')::int from r3), 0);
+select chk('las de 7 am descuentan a los veinte del plan',
+  (select distinct c.cupo_total from clases c
+    where extract(hour from c.fecha_hora at time zone 'America/Bogota') = 7
+      and (c.fecha_hora at time zone 'America/Bogota')::date
+          between ((select (j->>'desde')::date from r3))
+              and ((select (j->>'hasta')::date from r3))), 10);
+select chk('y no ofrecen el aforo entero',
+  (select count(*)::int from clases c
+    where extract(hour from c.fecha_hora at time zone 'America/Bogota') = 7
+      and c.cupo_total = c.aforo), 0);
+
+
+\echo ''
 \echo '-- 6. Ningún domingo, nunca ---------------------------------------'
 
 select chk('no hay una sola clase en domingo',
