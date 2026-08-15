@@ -310,85 +310,45 @@ const avisoAp = (await pagina.locator('#avisos .nota').first().innerText()).repl
 
 // Y LO IMPORTANTE: el día corre sobre lo contado, no sobre el papel. Si
 // arrastrara los 100.000, el faltante de anoche se mezclaría con el
-// arqueo de esta noche y ya no se sabría de qué turno fue.
-const trasAbrir = await pagina.locator('#caja-tiles .tile .n').first().innerText();
-trasAbrir.trim() === '$95.000'
-  ? bien('el día corre sobre lo CONTADO, no sobre lo heredado', trasAbrir.trim())
-  : falla('la base tras abrir', trasAbrir);
+// arqueo de esta noche y ya no se sabría de qué turno fue. Como durante
+// el turno no se enseña ninguna cifra, se comprueba donde sí sale: en la
+// ventana del cierre.
 
-// Lo que se esconde durante el turno es SOLO lo del cajón: el esperado,
-// lo que entró en efectivo y lo que salió. Con esos tres el cajero saca
-// la cuenta de memoria y el arqueo deja de comprobar nada: deja de ser
-// contar y pasa a ser confirmar.
+// DURANTE EL TURNO NO SE ENSEÑA NINGUNA CIFRA.
 //
-// Las reservas y las transferencias sí se enseñan. Nunca pasaron por el
-// cajón, así que no adelantan ninguna respuesta — y esconderlas dejaba
-// la pantalla casi en blanco al entrar, que era la queja de verdad:
-// "al ingresar no es completamente claro".
-const enCajon = async () => (await pagina.locator('#caja-tiles .tile .n').first().innerText()).trim();
-(await enCajon()) === '$95.000'
-  ? bien('la tarjeta enseña la base contada') : falla('la base', await enCajon());
+// Dos razones. La del arqueo: ver el total del cajón sumándose todo el
+// día le da al cajero la respuesta antes de contar, y contar contra una
+// cifra ya sabida no comprueba nada.
+//
+// Y la que pesa más, dicha por quien lo usa: cuatro recuadros arriba
+// estorban. Lo primero que se ve al entrar tiene que ser dónde registrar
+// la plata, no números que hay que interpretar en mitad de una venta. Se
+// probó enseñar las reservas y las transferencias —que no son plata del
+// cajón y no anclan nada— y aun así confundían.
+//
+// Los totales viven abajo y solo salen al pedir el cierre.
+const tiles = async () => await pagina.locator('#caja-tiles .tile').count();
 
-const textoTiles = async () =>
-  (await pagina.locator('#caja-tiles').innerText()).replace(/\s+/g, ' ');
+(await tiles()) === 0
+  ? bien('durante el turno no se enseña ninguna cifra')
+  : falla('quedaron recuadros durante el turno',
+          (await pagina.locator('#caja-tiles').innerText()).replace(/\s+/g, ' ').slice(0, 160));
 
-const durante = await textoTiles();
+await pagina.locator('#caja-tiles').isHidden()
+  ? bien('y el hueco tampoco queda ahí')
+  : falla('el contenedor de cifras sigue ocupando sitio');
 
-/reservas de hoy/i.test(durante)
-  ? bien('durante el turno ya se ven las reservas de hoy')
-  : falla('las reservas durante el turno', durante.slice(0, 160));
+// El sitio importa: los totales van DESPUÉS de los botones de registrar,
+// no antes. Arriba era lo primero que se veía y era justo lo que sobraba.
+await pagina.evaluate(() => {
+  const t = document.querySelector('#caja-tiles');
+  const e = document.querySelector('#sec-entra');
+  return !!(t.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_PRECEDING);
+})
+  ? bien('los totales van debajo de donde se registra la plata')
+  : falla('los totales siguen arriba');
 
-/transferencias/i.test(durante)
-  ? bien('y las transferencias del mostrador')
-  : falla('las transferencias durante el turno', durante.slice(0, 160));
 
-// Estas dos protegen el arqueo. Se miran las ETIQUETAS de los
-// recuadros, no el texto entero: las pistas dicen "no está en el
-// cajón", que es lo contrario de filtrar el dato.
-const etiquetas = async () =>
-  (await pagina.locator('#caja-tiles .tile .k').allInnerTexts())
-    .map((t) => t.trim().toLowerCase());
-
-const rotulos = await etiquetas();
-
-!rotulos.includes('en el cajón')
-  ? bien('pero NO lo que debería haber en el cajón')
-  : falla('se filtró el esperado del cajón', rotulos.join(' / '));
-
-!rotulos.some((t) => t === 'salió' || t === 'entró hoy')
-  ? bien('ni lo que entró y salió en efectivo')
-  : falla('se filtraron los totales del cajón', rotulos.join(' / '));
-
-// Y con el servidor de ANTES de la 0038, el recuadro de reservas NO
-// puede salir. Ahí `reservas_cop` se cuenta por la fecha de la CLASE:
-// enseñarlo bajo el título "reservas de hoy" sería plata que entró otro
-// día. Mientras el SQL no esté pegado, el turno se comporta como antes.
-// Esto es lo que hace que dé igual qué se despliegue primero.
-sinCajaAlDia = true;
-await pagina.click('#caja-recargar');
-await pagina.waitForTimeout(700);
-const viejos = await etiquetas();
-!viejos.includes('reservas de hoy')
-  ? bien('sin la migración 0038, no promete reservas del día')
-  : falla('enseña reservas de hoy con el servidor viejo', viejos.join(' / '));
-sinCajaAlDia = false;
-await pagina.click('#caja-recargar');
-await pagina.waitForTimeout(700);
-
-/abrió con/i.test(await pagina.locator('#caja-tiles .tile .k').first().innerText())
-  ? bien('dice "abrió con", no "en el cajón"')
-  : falla('la etiqueta', await pagina.locator('#caja-tiles .tile .k').first().innerText());
-
-// Los recuadros se pintaban con <b><span><small>, etiquetas que el CSS
-// del panel no conoce: salía "$100.000en el cajónbase + efectivo".
-// Pasaba todas las pruebas porque el número sí estaba. Esto mira que
-// cifra, título y pista sean tres bloques, no una frase pegada.
-const primerTile = pagina.locator('#caja-tiles .tile').first();
-const partes = await primerTile.evaluate((e) =>
-  ['.n', '.k', '.pista'].map((s) => e.querySelector(s)?.textContent.trim() || null));
-partes.every(Boolean)
-  ? bien('el recuadro va en tres renglones', partes.join(' / '))
-  : falla('el recuadro va en tres renglones', 'texto pegado: ' + (await primerTile.innerText()).trim());
 
 // Registrar una clase suelta
 await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
@@ -400,11 +360,14 @@ valorPrecargado === '15000'
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(700);
 
-// LO QUE IMPORTA: el número NO se mueve. Si subiera a $115.000 estaría
-// otra vez cantándole el resultado al cajero mientras atiende.
-(await enCajon()) === '$95.000'
-  ? bien('al guardar, la base NO se mueve', 'sigue en $95.000')
-  : falla('el total se movió durante el turno', await enCajon());
+// LO QUE IMPORTA: registrar una venta no hace aparecer ningún total. Si
+// saliera "$115.000 en el cajón" estaría cantándole el resultado al
+// cajero mientras atiende, y el arqueo de la noche ya no comprobaría
+// nada.
+(await tiles()) === 0
+  ? bien('al guardar una venta no aparece ningún total')
+  : falla('apareció un total al registrar',
+          (await pagina.locator('#caja-tiles').innerText()).replace(/\s+/g, ' ').slice(0, 120));
 
 // El listado arranca cerrado: hay que abrirlo. No se quitó del todo
 // porque es la única forma de anular algo mal registrado.
@@ -456,8 +419,10 @@ await pagina.waitForTimeout(700);
 (await pagina.locator('.mov').count()) === 2
   ? bien('el egreso entra en la lista y entiende "80.000"')
   : falla('el egreso', `hay ${await pagina.locator('.mov').count()} movimientos`);
-(await enCajon()) === '$95.000'
-  ? bien('y la base sigue sin moverse') : falla('la base se movió', await enCajon());
+(await tiles()) === 0
+  ? bien('y sigue sin cantarse ningún total')
+  : falla('apareció un total tras el egreso',
+          (await pagina.locator('#caja-tiles').innerText()).replace(/\s+/g, ' ').slice(0, 120));
 
 // Anular
 await pagina.locator('[data-anular]').first().click();
@@ -482,6 +447,18 @@ await pagina.waitForTimeout(500);
   ? bien('al pedir el cierre aparecen los totales')
   : falla('los totales al cerrar',
           `${await pagina.locator('#caja-tiles .tile').count()} tarjetas`);
+
+// Los recuadros se pintaban con <b><span><small>, etiquetas que el CSS
+// del panel no conoce: salía "$100.000en el cajónbase + efectivo".
+// Pasaba todas las pruebas porque el número sí estaba. Esto mira que
+// cifra, título y pista sean tres bloques, no una frase pegada. Se
+// comprueba aquí porque es el único momento en que hay recuadros.
+const primerTile = pagina.locator('#caja-tiles .tile').first();
+const partes = await primerTile.evaluate((e) =>
+  ['.n', '.k', '.pista'].map((s) => e.querySelector(s)?.textContent.trim() || null));
+partes.every(Boolean)
+  ? bien('el recuadro va en tres renglones', partes.join(' / '))
+  : falla('el recuadro va en tres renglones', 'texto pegado: ' + (await primerTile.innerText()).trim());
 
 const hayCierre = await pagina.locator('#caja-cierre').innerText();
 hayCierre.includes('AdminGym')

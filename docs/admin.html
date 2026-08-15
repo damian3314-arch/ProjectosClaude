@@ -880,17 +880,6 @@ const CONFIG = {
         <button class="btn chico" id="caja-recargar">Recargar</button>
       </div>
 
-      <!-- Lo que hay que saber sin pensar: cuánto debería haber en el
-           cajón. Va primero y grande. -->
-      <!-- Durante el turno NO se enseña ningún total acumulado. El cajero
-           veía la plata sumándose mientras atendía y al cerrar contaba el
-           cajón contra un número que ya se sabía de memoria: eso no es
-           contar, es confirmar. Un arqueo solo vale si la cifra contada
-           sale de los billetes y no de la pantalla.
-           Lo único que se deja es con cuánto abrió, que es el dato que
-           ella no puede deducir de nada. -->
-      <div class="tiles" id="caja-tiles"></div>
-
       <div class="caja-seccion" id="sec-entra">
         <h4><span class="pin"></span>Entra plata</h4>
         <div class="caja-grid" id="caja-entra"></div>
@@ -909,6 +898,17 @@ const CONFIG = {
       <button class="btn chico" id="caja-ver-movs" type="button"
               aria-expanded="false" aria-controls="caja-lista">Ver movimientos de hoy</button>
       <div id="caja-lista" hidden></div>
+
+      <!-- Los totales van ABAJO y solo durante el cierre.
+           Arriba estorbaban: lo primero que se ve al entrar tiene que ser
+           dónde registrar la plata, no cuatro cifras que hay que
+           interpretar en mitad de una venta.
+           Y durante el turno no se enseñan en ninguna parte. El cajero
+           veía la plata sumándose mientras atendía y al cerrar contaba el
+           cajón contra un número que ya se sabía de memoria: eso no es
+           contar, es confirmar. Un arqueo solo vale si la cifra contada
+           sale de los billetes y no de la pantalla. -->
+      <div class="tiles" id="caja-tiles"></div>
 
       <div class="cierre" id="caja-cierre"></div>
     </div>
@@ -2667,53 +2667,42 @@ const CONFIG = {
     const d = cajaDatos; if (!d) return;
     $('#caja-dia').textContent = 'Caja · ' + conFecha(d.dia, { weekday:'long', day:'numeric', month:'long' });
 
-    // Durante el turno: un solo dato, y uno que no se mueve. Enseñar
-    // "en el cajón" todo el día le daba al cajero la respuesta antes de
-    // contar, y un arqueo contra una cifra ya sabida no comprueba nada.
-    // Los totales aparecen al pedir el cierre, que es cuando sirven.
+    // DURANTE EL TURNO NO SE ENSEÑA NINGUNA CIFRA.
     //
-    // Si el día ya está cerrado no hay nada que anclar, así que se
-    // enseña todo: a esa hora el número ya es historia.
-    // Lo que se oculta durante el turno es SOLO lo del cajón: el
-    // esperado, lo que entró en efectivo y lo que salió. Con esos tres
-    // el cajero saca la cuenta de memoria y el arqueo deja de
-    // comprobar nada.
+    // Dos razones, y la segunda pesa más que la primera.
     //
-    // Las reservas y las transferencias no son plata del cajón —nunca
-    // pasaron por ahí— así que verlas no adelanta ninguna respuesta, y
-    // esconderlas era lo que dejaba la pantalla en blanco al entrar.
-    // `reservas_n` solo existe desde la migración 0038. Si no viene, el
-    // servidor todavía cuenta las reservas por la fecha de la CLASE, y
-    // entonces "reservas de hoy" sería mentira: enseñaría plata que
-    // entró otro día. Mientras no venga, el turno se comporta como
-    // antes. Así da igual qué se despliegue primero.
-    const alDia = d.reservas_n != null;
-    const cuantas = Number(d.reservas_n || 0);
-    $('#caja-tiles').innerHTML = (cajaCierreAbierto || d.cerrado
-      ? [
-          ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
-          ['bueno', pesos(d.total_ingresos), 'entró hoy', 'la plata que entró hoy'],
-          ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
-          ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
-        ]
-      : [
-          ['cajon', pesos(d.base_cop), 'abrió con', 'lo que quedó de ayer'],
-          ...(alDia ? [
-            ['bueno', pesos(d.reservas_cop), 'reservas de hoy',
-             cuantas
-               ? `${cuantas} ${cuantas === 1 ? 'pagada' : 'pagadas'} hoy · no está en el cajón`
-               : 'nadie ha pagado por la página'],
-            ['ojo',   pesos(d.ingreso_transferencia), 'transferencias',
-             'registradas a mano · tampoco está en el cajón'],
-          ] : []),
-        ]
-    ).map(([cl, n, k, pista]) =>
+    // La del arqueo: ver "en el cajón" sumándose todo el día le da al
+    // cajero la respuesta antes de contar, y un arqueo contra una cifra
+    // ya sabida no comprueba nada — deja de ser contar y pasa a ser
+    // confirmar.
+    //
+    // Y la de verdad, que la dijo quien lo usa: cuatro cifras arriba
+    // estorban. Lo primero que se ve al entrar tiene que ser dónde
+    // registrar la plata, no números que hay que interpretar en mitad de
+    // una venta. Se intentó enseñar las reservas y las transferencias
+    // —que no son plata del cajón y no anclan nada— y aun así confundían.
+    //
+    // Así que los totales viven abajo y solo salen al pedir el cierre,
+    // que es cuando sirven. Si el día ya está cerrado también se enseñan:
+    // a esa hora el número ya es historia y no hay nada que anclar.
+    const enCierre = cajaCierreAbierto || d.cerrado;
+
+    $('#caja-tiles').innerHTML = !enCierre ? '' : [
+      ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
+      ['bueno', pesos(d.total_ingresos), 'entró hoy', 'la plata que entró hoy'],
+      ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
+      ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
+    ].map(([cl, n, k, pista]) =>
       `<div class="tile ${cl}">` +
         `<div class="n">${esc(n)}</div>` +
         `<div class="k">${esc(k)}</div>` +
         `<div class="pista">${esc(pista)}</div>` +
       `</div>`
     ).join('') + tarjetaBanco();
+
+    // Sin cifras el contenedor sigue reservando el hueco del grid y deja
+    // una franja vacía entre los movimientos y el cierre.
+    $('#caja-tiles').hidden = !enCierre;
 
     // Cada sección pinta solo lo suyo. El índice sigue siendo el de
     // CONCEPTOS, para que el clic no dependa de en qué grupo cayó.

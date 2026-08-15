@@ -265,18 +265,33 @@ diciendo que no suma, porque responde a otra pregunta.
 Comprobado contra el estado exacto de producción: los cuatro trozos que
 parchea aparecen **exactamente una vez** en `caja_del_dia`.
 
-### 2i. La pantalla de Caja, al entrar ⬅ va con la anterior
+### 2i. La pantalla de Caja, al entrar ✅ resuelto el 15 de agosto
 
-Al abrir Caja durante el turno se veía **una sola cifra**: "abrió con".
-Eso es a propósito para el efectivo —enseñar "en el cajón" todo el día
-le da al cajero la respuesta antes de contar, y un arqueo contra una
-cifra ya sabida no comprueba nada— pero se estaba aplicando a todo.
+Fue de ida y vuelta, y la vuelta la mandó quien lo usa.
 
-Las reservas y las transferencias **nunca pasaron por el cajón**, así
-que verlas no adelanta ninguna respuesta. Ahora salen desde el
-principio; lo del cajón (el esperado, lo que entró en efectivo, lo que
-salió) sigue escondido hasta el arqueo. `prueba-caja` lo vigila: si
-alguna vez se cuela "en el cajón" durante el turno, falla.
+**Primer intento:** al entrar solo se veía "abrió con", y eso dejaba la
+pantalla casi en blanco. Se añadieron las reservas del día y las
+transferencias, que no son plata del cajón y por tanto no le adelantan
+al cajero la respuesta del arqueo.
+
+**Lo que dijo Damián al verlo:** *"esta vista de tarjetas en la parte
+superior con los valores no me gusta y siento que confunden"*. Cuatro
+cifras arriba estorban. Lo primero que se ve al entrar tiene que ser
+**dónde registrar la plata**, no números que hay que interpretar en
+mitad de una venta.
+
+**Como quedó:** durante el turno **no se enseña ninguna cifra**. Los
+totales viven **abajo**, después de los botones, y solo aparecen al
+pedir el cierre — que es cuando sirven.
+
+De paso refuerza lo del arqueo, que antes se defendía a medias: ahora no
+hay ningún número que memorizar mientras se atiende, así que contar el
+cajón vuelve a ser contar.
+
+`prueba-caja` lo vigila por los dos lados: que durante el turno no haya
+ni un recuadro, que el contenedor ni siquiera ocupe sitio, que los
+totales estén **debajo** de donde se registra, y que al pedir el cierre
+aparezcan las cuatro cifras.
 
 ### 2j. Pegar `aplicar/PEGAR_REPARTO_DEPOSITOS.sql` ⬅ pendiente
 
