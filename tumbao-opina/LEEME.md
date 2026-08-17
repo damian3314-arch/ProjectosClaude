@@ -96,6 +96,35 @@ llegar es que algo se rompió, no que la gente dejó de escribir.
 Si el modelo falla, el correo sale igual con la lista cruda y el asunto
 marcado `(sin analisis)`. Un reporte feo se lee; uno que no llega, no.
 
+### El lunes 17 no llegó, y hay que saber por qué
+
+El Worker se quedó **sin el secreto `TOKEN_REPORTE`**. `/api/pendientes`
+contestaba 401, el flujo moría en el primer nodo y el correo no salía.
+`wrangler secret list` sobre `tumbao-opina` devolvía `[]`: no había
+ningún secreto puesto.
+
+Cuándo se perdió se puede acotar: el 12 de agosto una corrida a mano
+funcionó de punta a punta —mandó el correo y marcó 17 conversaciones—,
+y el 17 a las 7 am ya daba 401. Entre esas dos fechas se redesplegó el
+Worker varias veces por lo de Workers AI. **La causa no se encontró.**
+Un `wrangler deploy` normal no borra secretos, así que queda como algo
+a vigilar, no como algo entendido.
+
+Lo peor no fue el fallo sino que fuera **mudo**: un reporte que no llega
+se parece exactamente a una semana sin opiniones. Por eso el workflow
+quedó enganchado a `Tumbao · Avisos de fallo`, que manda correo con el
+nodo y el error. Y por eso el aviso de semana vacía —que parece inútil—
+es justo lo que distingue "nadie escribió" de "esto se rompió".
+
+Si el reporte vuelve a faltar, lo primero es:
+
+```
+npx wrangler secret list          # ¿está TOKEN_REPORTE?
+curl -X POST https://opina.tumbaobaila.com/api/pendientes \
+     -H 'Content-Type: application/json' -d '{"token":"..."}'
+```
+
+
 El workflow viejo hacía además una pasada de clasificación **cada media
 hora**: 1.440 ejecuciones al mes contra un plan de 2.500. Se quitó — el
 Worker ya clasifica al cerrar cada conversación.
