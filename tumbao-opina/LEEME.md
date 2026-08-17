@@ -153,6 +153,52 @@ y eso ya cuenta como turno 1. Por eso `turnos > 1` es el filtro de "esta
 persona sí escribió", y una conversación de un turno significa que la
 abrió y se fue sin teclear.
 
+## Dónde se ven los resultados
+
+`opina.tumbaobaila.com/leer?token=…` — la misma llave `TOKEN_REPORTE`.
+
+Arriba, **las tres cosas de la semana**: un titular, hasta tres tarjetas
+con lo que se repite, lo crítico si lo hay, y una frase textual. Debajo,
+las conversaciones una por una, como siempre.
+
+Hasta ahora ese análisis solo existía **dentro del correo del lunes**.
+Si el correo no llegaba —y no llegó cinco días— no había ningún sitio
+donde mirarlo, y entre semana no había forma de ver qué está diciendo la
+gente sin leerse las conversaciones a mano.
+
+CÓMO SE CALCULA
+Lo hace el propio Worker con Workers AI, que no necesita llave de nadie.
+Si hay `OPENAI_API_KEY` la usa; si no, Workers AI. El resultado se guarda
+en la caché de Cloudflare con una huella —cuántas conversaciones y cuál
+es la última—, así que abrir la página diez veces no cuesta diez
+análisis. Cuando entra material nuevo la huella cambia y se recalcula
+solo. El enlace *volver a calcular* fuerza el recálculo.
+
+Se usa la caché y no una tabla a propósito: esto es un resultado, no un
+dato. Si se pierde se vuelve a calcular y no pasa nada.
+
+QUÉ VENTANA MIRA
+Los últimos 7 días. Si esa semana no dio para nada, **no enseña tarjetas
+vacías ni disfraza material viejo de reciente**: cae hacia atrás a lo
+último que sí hubo y lo dice con todas las letras («Esta semana no hubo
+nada nuevo. Esto es lo último que hubo: …»).
+
+Con menos de dos conversaciones con contenido no analiza nada y lo dice.
+Con una sola, cualquier «patrón» es esa persona, y una tarjeta inventada
+quema la confianza en toda la pantalla. Por lo mismo el guion permite
+devolver UNA sola cosa clave: rellenar hasta tres es peor que quedarse
+corto.
+
+QUE NO SE CAIGA
+El análisis va en su propio `try`. Si el modelo no contesta o devuelve
+algo que no parsea, la página sale igual con las conversaciones y un
+aviso de una línea. Perder el resumen es un fastidio; perder el acceso a
+lo que la gente contó, no.
+
+Y el texto de las tarjetas lo escribe un modelo, no nosotros: entra al
+HTML escapado. `pruebas/semana.test.mjs` lo comprueba metiéndole
+`<script>` por cada campo.
+
 ## Dónde se invita a contarnos
 
 Dos sitios, y el segundo es el que importa:

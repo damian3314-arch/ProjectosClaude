@@ -546,12 +546,178 @@ async function asegurarConversacion(env, conv) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Las tres cosas de la semana
+
+   Hasta ahora el análisis solo existía dentro del correo del lunes: si
+   el correo no llegaba —y no llegó cinco días— no había ningún sitio
+   donde mirarlo. Y aunque llegue, entre semana no hay forma de ver qué
+   está diciendo la gente sin leerse las conversaciones una por una.
+
+   Esto lo calcula el propio Worker con Workers AI, que no necesita
+   llave de nadie, y lo guarda en la caché de Cloudflare: mientras no
+   entre una conversación nueva, abrir la página no vuelve a llamar al
+   modelo.
+   ───────────────────────────────────────────────────────────── */
+
+// Cuántas conversaciones con contenido hacen falta para que sacar
+// conclusiones no sea inventar. Con una sola, cualquier "patrón" es esa
+// persona; con dos ya se puede decir si coinciden o no.
+const MINIMO_PARA_ANALIZAR = 2;
+
+const ANALIZAR = `
+Eres el analista de Tumbao, una academia de baile en Bucaramanga,
+Colombia. Te llega lo que los clientes contaron por el chat de
+opiniones y sacas las TRES cosas que la dueña tiene que saber.
+
+Devuelves SOLO un objeto JSON con estas claves: titular, claves,
+critico, cita.
+
+titular: UNA frase con lo más importante. Concreta.
+  Mal:  la gente dio opiniones variadas.
+  Bien: tres personas distintas dijeron que el salón de las 7 pm queda apretado.
+
+claves: array de 1 a 3 objetos con titulo, detalle y cuantos.
+  Cada uno es un patrón que se repite o la causa detrás de varias
+  quejas. NO es el resumen de una conversación suelta.
+  titulo: tres o cuatro palabras.
+  detalle: una o dos frases.
+  cuantos: texto corto, por ejemplo «3 de 7 personas». Nunca un número
+  suelto, y nunca más de las personas que de verdad lo dijeron.
+  Si solo da para una cosa clave, devuelve una. Rellenar hasta tres
+  inventando es peor que devolver una sola.
+
+critico: un objeto con que y por_que, o null. Solo lo que hace perder
+  plata o clientes, o alguien a quien trataron mal. Si no hay nada
+  crítico DE VERDAD, va null. Una alerta falsa hace que dejen de
+  leerse las de verdad.
+
+cita: UNA frase textual de un cliente, tal cual la dijo. Si ninguna
+  vale la pena, cadena vacía.
+
+REGLAS QUE MANDAN SOBRE TODO
+- No inventes nada que no esté en los datos. Prefiere corto y cierto.
+- Si hubo poquitas conversaciones, dilo en el titular en vez de estirar
+  conclusiones.
+- Escribe para alguien que tiene tres minutos y tiene que decidir.
+- Español de Colombia, directo, sin lenguaje corporativo. Nada de
+  "feedback", "insights" ni "engagement".
+
+EL FORMATO IMPORTA
+JSON válido y nada más: sin vallas de código, sin explicaciones antes
+ni después. Dentro de los textos no uses comillas dobles nunca —para
+citar usa «comillas angulares»—, porque una comilla doble suelta parte
+el JSON y el análisis se pierde.
+`.trim();
+
+async function analizarLote(env, filas) {
+  const datos = JSON.stringify({
+    cuantas: filas.length,
+    conversaciones: filas.map((f) => ({
+      quien: f.nombre || null,
+      tipo: f.tipo || null,
+      urgente: !!f.urgente,
+      motivo_urgente: f.motivo_urgente || null,
+      dijo: f.resumen || '',
+      cuando: f.empezada_at,
+    })),
+  });
+
+  if (env.OPENAI_API_KEY) {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+                 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: env.MODELO_CHAT || 'gpt-4o-mini',
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: ANALIZAR },
+                   { role: 'user', content: datos }],
+      }),
+    });
+    if (!r.ok) throw new Error(`Analizar ${r.status}`);
+    const cuerpo = await r.json();
+    return sacarJSON(cuerpo.choices?.[0]?.message?.content || '');
+  }
+
+  if (!hayCF(env)) return null;
+  const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
+    messages: [{ role: 'system', content: ANALIZAR },
+               { role: 'user', content: datos }],
+    max_tokens: 900,
+    temperature: 0,
+  });
+  return sacarJSON(d.response);
+}
+
+/* Se recalcula solo cuando entra material nuevo.
+ *
+ * La huella son las conversaciones que se están analizando: cuántas y
+ * cuál es la última. Si nadie escribió desde la última vez, la huella
+ * es la misma y la página se pinta con lo guardado sin llamar al
+ * modelo. Abrir la página diez veces al día no puede costar diez
+ * análisis.
+ *
+ * Se usa la caché de Cloudflare y no una tabla porque esto es un
+ * resultado, no un dato: si se pierde se vuelve a calcular y no pasa
+ * nada. Guardarlo en D1 sería inventar estado que hay que mantener. */
+async function analisisDeLaSemana(env, filas, forzar) {
+  const huella = `${filas.length}:${filas[0] ? filas[0].empezada_at : '-'}`;
+  const llave = new Request(`https://opina.tumbao/__analisis/${encodeURIComponent(huella)}`);
+  const cache = caches.default;
+
+  if (!forzar) {
+    const guardado = await cache.match(llave);
+    if (guardado) return await guardado.json();
+  }
+
+  const d = await analizarLote(env, filas);
+  if (!d || !d.titular) return null;
+
+  await cache.put(llave, new Response(JSON.stringify(d), {
+    headers: { 'Content-Type': 'application/json',
+               'Cache-Control': 'max-age=604800' },
+  }));
+  return d;
+}
+
+/* Qué conversaciones entran en las tarjetas.
+ *
+ * "La semana" son los últimos 7 días. Pero si esa semana no dio para
+ * nada, enseñar tarjetas vacías no ayuda: se cae hacia atrás a lo
+ * último que sí hubo y se dice con todas las letras de cuándo es. Un
+ * análisis del mes pasado sirve; uno que finge ser de esta semana, no. */
+export function loQueSeAnaliza(filas) {
+  const conAlgo = filas
+    .filter((f) => f.resumen && f.turnos > 1)
+    .sort((a, b) => String(b.empezada_at).localeCompare(String(a.empezada_at)));
+
+  const corte = new Date(Date.now() - 7 * 86400000).toISOString();
+  const semana = conAlgo.filter((f) => String(f.empezada_at) >= corte);
+
+  if (semana.length >= MINIMO_PARA_ANALIZAR) {
+    return { filas: semana, ventana: 'los últimos 7 días', fresco: true };
+  }
+  if (conAlgo.length >= MINIMO_PARA_ANALIZAR) {
+    const ultimas = conAlgo.slice(0, 12);
+    const desde = cuando(ultimas[ultimas.length - 1].empezada_at);
+    const hasta = cuando(ultimas[0].empezada_at);
+    return { filas: ultimas, ventana: `${desde} — ${hasta}`, fresco: false };
+  }
+  return { filas: [], ventana: null, fresco: false };
+}
+
+/* ─────────────────────────────────────────────────────────────
    La pantalla de lectura
    ───────────────────────────────────────────────────────────── */
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// El modelo a veces devuelve el titular en minúscula. Es un titular:
+// que empiece como una frase.
+const mayus = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
 
 const cuando = (iso) => {
   if (!iso) return '';
@@ -561,7 +727,7 @@ const cuando = (iso) => {
   }).format(new Date(iso));
 };
 
-function paginaLeer(filas, problema) {
+function paginaLeer(filas, problema, analisis) {
   const marco = (dentro) => `<!doctype html><html lang="es-CO"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
@@ -604,6 +770,30 @@ function paginaLeer(filas, problema) {
  .aviso{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--hot);
         border-radius:10px;padding:1rem;color:var(--tx2)}
  code{background:var(--bg3);padding:.1rem .35rem;border-radius:5px;font-size:.85em}
+
+ /* ── las tres cosas de la semana ── */
+ .titular{font-size:1.18rem;line-height:1.4;font-weight:600;margin:0 0 .3rem}
+ .ventana{color:var(--tx3);font-size:.78rem;margin:0 0 1rem}
+ .ventana a{color:var(--tx3);text-decoration:underline}
+ .claves{display:grid;gap:.7rem;margin:0 0 1.2rem;
+         grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+ .clave{background:var(--bg2);border:1px solid var(--line);border-radius:14px;
+        padding:.9rem 1rem;border-top:2px solid var(--hot)}
+ .clave b{display:block;font-size:.95rem;margin-bottom:.25rem}
+ .clave .cuantos{display:inline-block;font-size:.7rem;color:var(--tx3);
+        border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem;
+        margin-bottom:.4rem}
+ .clave p{margin:0;color:var(--tx2);font-size:.88rem;line-height:1.5}
+ .critico{background:rgba(255,107,129,.08);border:1px solid rgba(255,107,129,.45);
+          border-radius:14px;padding:.9rem 1rem;margin:0 0 1.2rem}
+ .critico b{color:var(--bad)}
+ .critico p{margin:.25rem 0 0;color:var(--tx2);font-size:.88rem}
+ .cita{margin:0 0 1.6rem;padding:.85rem 1.1rem;background:var(--bg2);
+       border-left:3px solid var(--gold);border-radius:0 10px 10px 0;
+       font-style:italic;color:var(--tx2)}
+ hr.sep{border:0;border-top:1px solid var(--line);margin:1.8rem 0 1.1rem}
+ h2.seccion{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--tx3);margin:0 0 .8rem;font-weight:600}
 </style></head><body>${dentro}</body></html>`;
 
   if (problema === 'sin-token') {
@@ -643,7 +833,7 @@ function paginaLeer(filas, problema) {
         ? `<div class="fecha">📱 <a href="https://wa.me/57${esc(String(f.telefono).replace(/\D/g, ''))}"
              target="_blank" rel="noopener">${esc(f.telefono)}</a></div>` : ''}
       <p class="res">${f.resumen ? esc(f.resumen)
-        : '<span class="sin">Sin resumen — falta la llave de OpenAI. Lo que dijo está abajo, en crudo.</span>'}</p>
+        : '<span class="sin">Sin resumen: no se pudo sacar la ficha. Lo que dijo está abajo, en crudo.</span>'}</p>
       ${f.urgente && f.motivo_urgente
         ? `<p class="res" style="color:var(--bad)">⚠ ${esc(f.motivo_urgente)}</p>` : ''}
       ${f.transcripcion
@@ -656,7 +846,55 @@ function paginaLeer(filas, problema) {
     <p class="sub">${filas.length} conversacion${filas.length === 1 ? '' : 'es'}${
       urgentes ? ` · <b style="color:var(--bad)">${urgentes} para mirar hoy</b>` : ''
     } · lo urgente va primero</p>
+    ${arriba(analisis)}
+    <hr class="sep">
+    <h2 class="seccion">Una por una</h2>
     ${tarjetas}`);
+}
+
+/* Las tarjetas de arriba: lo que hay que saber sin leerse nada.
+ *
+ * Nunca puede tumbar la página. Si el análisis falla —el modelo no
+ * contesta, devuelve algo que no parsea, no hay material suficiente—
+ * se dice qué pasó en una línea y debajo siguen las conversaciones,
+ * que es lo que de verdad no se puede perder. */
+export function arriba(a) {
+  if (!a) return '';
+
+  if (a.error) {
+    return `<div class="aviso">No se pudo sacar el resumen de la semana
+      (${esc(a.error)}). Las conversaciones están completas aquí abajo.</div>`;
+  }
+
+  if (!a.datos) {
+    const n = a.conCuantas || 0;
+    return `<div class="aviso">Todavía no hay material para sacar conclusiones:
+      ${n === 0 ? 'nadie ha contado nada' : `solo ${n} conversación${n === 1 ? '' : 'es'} con contenido`}.
+      Con ${MINIMO_PARA_ANALIZAR} ya se puede empezar a ver si coinciden.</div>`;
+  }
+
+  const d = a.datos;
+  const claves = (Array.isArray(d.claves) ? d.claves : []).slice(0, 3);
+
+  return `
+    <p class="titular">${esc(mayus(d.titular || ''))}</p>
+    <p class="ventana">${a.fresco
+      ? `De ${esc(a.ventana)}`
+      : `Esta semana no hubo nada nuevo. Esto es lo último que hubo: ${esc(a.ventana)}`}
+      · <a href="?token=${esc(a.token)}&amp;refrescar=1">volver a calcular</a></p>
+
+    ${d.critico && d.critico.que ? `<div class="critico">
+      <b>⚠ ${esc(d.critico.que)}</b>
+      <p>${esc(d.critico.por_que || '')}</p></div>` : ''}
+
+    ${claves.length ? `<div class="claves">${claves.map((c) => `
+      <div class="clave">
+        <b>${esc(c.titulo || '')}</b>
+        ${c.cuantos ? `<span class="cuantos">${esc(c.cuantos)}</span>` : ''}
+        <p>${esc(c.detalle || '')}</p>
+      </div>`).join('')}</div>` : ''}
+
+    ${d.cita ? `<p class="cita">«${esc(d.cita)}»</p>` : ''}`;
 }
 
 export default {
@@ -831,7 +1069,27 @@ export default {
             order by urgente desc, empezada_at desc
             limit 200`
         ).all();
-        return new Response(paginaLeer(results || [], null), {
+        const filas = results || [];
+
+        // Las tres cosas de la semana. Va en su propio try: si el
+        // modelo se cae, la página tiene que salir igual con las
+        // conversaciones. Perder el resumen es un fastidio; perder el
+        // acceso a lo que la gente contó, no.
+        const { filas: aAnalizar, ventana, fresco } = loQueSeAnaliza(filas);
+        let analisis = { datos: null, ventana, fresco, token: dado,
+                         conCuantas: aAnalizar.length };
+        if (aAnalizar.length >= MINIMO_PARA_ANALIZAR) {
+          try {
+            analisis.datos = await analisisDeLaSemana(
+              env, aAnalizar, url.searchParams.get('refrescar') === '1');
+            if (!analisis.datos) analisis.error = 'no hay modelo configurado';
+          } catch (e) {
+            analisis = { error: String((e && e.message) || e).slice(0, 120),
+                         token: dado };
+          }
+        }
+
+        return new Response(paginaLeer(filas, null, analisis), {
           headers: { 'Content-Type': 'text/html; charset=utf-8',
                      'Cache-Control': 'no-store' },
         });
