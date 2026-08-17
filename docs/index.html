@@ -862,18 +862,31 @@ const CONFIG = {
     pintarAcompanantes();
   }
 
-  const topeCupos = () =>
-    Math.max(1, Math.min(8, Number(elegida && elegida.cupos_disponibles) || 1));
+  // Dos números distintos, y confundirlos era el problema: la lista de
+  // clases decía "12 cupos" y el contador contestaba "Quedan 8". No
+  // había ningún cupo desapareciendo — el 8 es un tope de cuántos se
+  // pueden llevar de una vez, no los que quedan.
+  const MAX_DE_UNA_VEZ = 8;
+  const cuposLibres = () =>
+    Math.max(1, Number(elegida && elegida.cupos_disponibles) || 1);
+  const topeCupos = () => Math.min(MAX_DE_UNA_VEZ, cuposLibres());
 
   function pintarAcompanantes(){
+    const libres = cuposLibres();
     const tope = topeCupos();
     cuantos = Math.min(Math.max(cuantos, 1), tope);
     $('#cuantos').value = String(cuantos);
     $('#cuantos-menos').disabled = cuantos <= 1;
     $('#cuantos-mas').disabled   = cuantos >= tope;
-    $('#cuantos-hint').textContent = tope <= 1
-      ? 'Queda un solo cupo en esta clase.'
-      : `Quedan ${tope} cupos. Pagas todo junto, en un solo giro.`;
+    // El tope solo se menciona cuando de verdad está frenando algo. Si
+    // quedan 12 y el freno es 8, decir "quedan 8" es mentira; decir
+    // "quedan 12" y luego no dejar pasar de 8 es peor.
+    $('#cuantos-hint').textContent =
+      libres <= 1 ? 'Queda un solo cupo en esta clase.'
+      : libres <= MAX_DE_UNA_VEZ
+        ? `Quedan ${libres} cupos. Pagas todo junto, en un solo giro.`
+        : `Quedan ${libres} cupos. Puedes reservar hasta ${MAX_DE_UNA_VEZ} ` +
+          `de una vez, y pagas todo junto en un solo giro.`;
 
     // Cuando va sola, el campo de arriba es "tu nombre" a secas. Con
     // acompañantes hay que numerarlos o nadie sabe cuál es cuál.

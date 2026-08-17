@@ -33,7 +33,12 @@ await p.goto(BASE, { waitUntil: 'networkidle' });
 // ───────── llegar al formulario ─────────
 await p.locator('.opcion[data-tipo="suelta"]').click();
 await p.waitForSelector('.clase:not(:disabled)', { timeout: 8000 });
-await p.locator('.clase:not(:disabled)').first().click();
+// Se apunta lo que dice la tarjeta ANTES de entrar: después del clic la
+// pantalla cambia de paso y ya no hay con qué comparar.
+const tarjetaClase = p.locator('.clase:not(:disabled)').first();
+const libresEnLista = Number(
+  ((await tarjetaClase.locator('.cupos').innerText()).match(/\d+/) || [0])[0]);
+await tarjetaClase.click();
 await p.waitForSelector('#s2.on', { timeout: 8000 });
 
 console.log('\n── El contador ──');
@@ -44,6 +49,30 @@ ok('no se puede bajar de uno', await p.locator('#cuantos-menos').isDisabled());
 ok('dice cuántos cupos quedan',
    /cupos?/.test(await p.locator('#cuantos-hint').innerText()),
    (await p.locator('#cuantos-hint').innerText()).trim());
+
+// EL NÚMERO TIENE QUE SER EL MISMO QUE EN LA LISTA.
+//
+// La lista decía "11 cupos" y el contador contestaba "Quedan 8". No
+// había ningún cupo desapareciendo: el 8 es el tope de cuántos se pueden
+// llevar de una vez, no los que quedan. Pero la persona ve dos números
+// distintos para la misma clase y deja de confiar en los dos.
+const pista = (await p.locator('#cuantos-hint').innerText()).trim();
+
+ok('la tarjeta traía un número que comparar', libresEnLista > 0,
+   `${libresEnLista} cupos`);
+
+new RegExp(`\\b${libresEnLista}\\b`).test(pista)
+  ? ok('y el contador dice el MISMO número', true, `${libresEnLista} · ${pista}`)
+  : ok('y el contador dice el MISMO número', false,
+       `la lista decía ${libresEnLista} y el contador dice: ${pista}`);
+
+// Cuando el tope sí frena, se explica aparte en vez de disfrazarlo de
+// "quedan 8".
+libresEnLista > 8
+  ? ok('con más de ocho libres, el tope se explica aparte',
+       /hasta 8 de una vez/.test(pista), pista)
+  : ok('con ocho o menos, no se menciona ningún tope',
+       !/hasta 8/.test(pista), pista);
 
 // Con uno solo, el formulario es el de siempre: ni un campo de más.
 ok('con uno solo no aparece ningún campo extra',
