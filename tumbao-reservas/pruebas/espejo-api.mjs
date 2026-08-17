@@ -183,8 +183,14 @@ createServer(async (req, res) => {
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
     // Desde que se pueden reservar varios cupos, la pagina publica
-    // tambien llama al Worker. Se reescriben las dos bases al espejo.
+    // tambien llama al Worker. Se reescriben las tres bases al espejo.
+    //
+    // API_BASE son las cuatro llamadas de la reserva, que desde el 17
+    // de agosto las atiende el Worker y ya no n8n. El espejo las sigue
+    // sirviendo en /webhook/tumbao/... porque el contrato es el mismo:
+    // lo que cambio fue quien contesta, no que contesta.
     let html = readFileSync(join(WEB, 'index.html'), 'utf8')
+      .replace(/API_BASE:\s*'[^']*'/, `API_BASE: 'http://localhost:${PUERTO}/webhook/tumbao'`)
       .replace(/N8N_BASE:\s*'[^']*'/, `N8N_BASE: 'http://localhost:${PUERTO}/webhook'`)
       .replace(/CAJA_BASE:\s*'[^']*'/, `CAJA_BASE: 'http://localhost:${PUERTO}'`)
       // El chat de opiniones vive en otro Worker. Aqui se apunta al

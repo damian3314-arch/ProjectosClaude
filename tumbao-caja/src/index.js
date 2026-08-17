@@ -40,12 +40,35 @@ const PERMITIDOS = new Set([
 function cors(origen) {
   const h = {
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     Vary: 'Origin',
   };
   if (origen && PERMITIDOS.has(origen)) h['Access-Control-Allow-Origin'] = origen;
   return h;
 }
+
+/* ---------------------------------------------------------------------
+ * Fechas y horas en Bogotá
+ *
+ * Las escribe el servidor y no el navegador a propósito: si las armara
+ * la página, alguien con el celular en otra zona horaria vería la clase
+ * a una hora que no es. Es el mismo formato que devolvía n8n, letra por
+ * letra, para que la página no note el cambio.
+ * ------------------------------------------------------------------- */
+const TZ = 'America/Bogota';
+const fFecha = new Intl.DateTimeFormat('es-CO',
+  { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' });
+const fHora = new Intl.DateTimeFormat('es-CO',
+  { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true });
+const fClave = new Intl.DateTimeFormat('en-CA',
+  { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+// "7:00 a. m." -> "7:00 am". El espacio que mete Intl es un NBSP, no un
+// espacio normal, así que hay que nombrarlo por su código o no se ve.
+const compacta = (s) => String(s)
+  .replace(/[  ]/g, ' ')
+  .replace(/\s*a\.\s*m\./i, ' am')
+  .replace(/\s*p\.\s*m\./i, ' pm');
 
 const json = (o, status, origen) =>
   new Response(JSON.stringify(o), {
@@ -143,6 +166,181 @@ const ADMIN = {
                   : { _error: 'CLASE_INVALIDA' }) },
 };
 
+/* ---------------------------------------------------------------------
+ * Las cuatro rutas de la página pública
+ *
+ *   GET  /tumbao/clases?tipo=            horarios con cupo
+ *   POST /tumbao/reservar                aparta el cupo, devuelve el código
+ *   POST /tumbao/comprobante             "ya pagué" -> verificando
+ *   GET  /tumbao/estado?codigo=          la barra de espera
+ *   GET  /tumbao/estado?codigo=&vencido=1   se acabó el tiempo
+ *
+ * La decisión de confirmar NO vive aquí: vive en las funciones de
+ * Postgres, que bloquean fila. Aquí solo se enruta y se da formato.
+ * ------------------------------------------------------------------- */
+async function pagina(request, env, ruta, origen) {
+  const url = new URL(request.url);
+  const q = url.searchParams;
+  const metodo = request.method;
+
+  let b = {};
+  if (metodo === 'POST') { try { b = await request.json(); } catch (_) {} }
+
+  const txt = (v, max) => (v == null ? '' : String(v).trim().slice(0, max));
+
+  try {
+    // ── los horarios ──────────────────────────────────────────────
+    if (ruta === '/tumbao/clases' && metodo === 'GET') {
+      const filas = await rpc(env, 'clases_para', {
+        p_tipo: q.get('tipo') === 'miembro' ? 'miembro' : 'suelta',
+      });
+      const lista = Array.isArray(filas) ? filas.filter((c) => c && c.id) : [];
+
+      // Agrupadas por día, en el orden en que vienen: clases_para ya las
+      // devuelve ordenadas por fecha.
+      const dias = new Map();
+      for (const c of lista) {
+        const d = new Date(c.fecha_hora);
+        const clave = fClave.format(d);
+        if (!dias.has(clave)) {
+          dias.set(clave, { fecha: clave, etiqueta: fFecha.format(d), clases: [] });
+        }
+        const libres = Math.max((c.cupo_total || 0) - (c.cupo_tomado || 0), 0);
+        dias.get(clave).clases.push({
+          clase_id: c.id, nombre: c.nombre, profesor: c.profesor, lugar: c.lugar,
+          hora: compacta(fHora.format(d)), fecha_hora: c.fecha_hora,
+          duracion_min: c.duracion_min, precio_cop: c.precio_cop,
+          cupo_total: c.cupo_total, cupos_disponibles: libres, agotada: libres <= 0,
+        });
+      }
+      return json({ ok: true, timezone: TZ, dias: [...dias.values()] }, 200, origen);
+    }
+
+    // ── apartar el cupo ───────────────────────────────────────────
+    if (ruta === '/tumbao/reservar' && metodo === 'POST') {
+      // La trampa para bots: un campo escondido que un humano nunca
+      // llena. Se responde ok para no enseñarle al bot que lo pillaron.
+      if (txt(b.apellido2, 40) !== '') {
+        return json({ ok: true, codigo: 'OK' }, 200, origen);
+      }
+
+      let tel = txt(b.telefono, 25).replace(/\D/g, '');
+      // Los que teclean el indicativo del país: 57 + 10 dígitos.
+      if (tel.length === 12 && tel.startsWith('57')) tel = tel.slice(2);
+
+      const nombre = txt(b.nombre, 80);
+      const claseId = txt(b.clase_id, 40);
+      const habeas = b.habeas === true || b.habeas === 'true';
+
+      if (!(nombre.length >= 2 && tel.length === 10 && habeas && claseId.length > 10)) {
+        return json({ ok: false, error: 'datos_incompletos',
+          mensaje: 'Revisa nombre, celular y la autorizacion de datos.' }, 400, origen);
+      }
+
+      // SIN REINTENTO, a propósito. tomar_cupo no es idempotente:
+      // repetirlo tras un timeout crearía una segunda reserva y se
+      // comería dos cupos. Es preferible fallar y que la persona
+      // vuelva a intentar.
+      const r = await rpc(env, 'tomar_cupo', {
+        p_clase_id: claseId,
+        p_nombre:   nombre,
+        p_telefono: tel,
+        p_email:    txt(b.email, 120) || null,
+        p_origen:   'formulario',
+        p_tipo:     txt(b.tipo, 10) === 'miembro' ? 'miembro' : 'suelta',
+      });
+
+      if (!r || !r.ok) {
+        const mapa = {
+          SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410,
+          CLASE_YA_PASO: 410, MEMBRESIA_NO_ENCONTRADA: 404,
+          PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409,
+        };
+        return json({
+          ok: false,
+          error: (r && r.error) || 'desconocido',
+          hora_plan: (r && r.hora_plan) || null,
+          mensaje: (r && r.mensaje) ||
+            'No pudimos apartar el cupo. Escribenos por WhatsApp.',
+        }, mapa[r && r.error] || 400, origen);
+      }
+
+      const d = new Date(r.fecha_hora);
+      return json({
+        ok: true,
+        tipo: r.tipo, requiere_pago: r.requiere_pago === true, estado: r.estado,
+        codigo: r.codigo, reserva_id: r.reserva_id, clase: r.clase,
+        profesor: r.profesor, lugar: r.lugar,
+        fecha: fFecha.format(d), hora: compacta(fHora.format(d)),
+        precio_cop: r.precio_cop, expira_en: r.expira_en,
+      }, 200, origen);
+    }
+
+    // ── "ya pagué" ────────────────────────────────────────────────
+    if (ruta === '/tumbao/comprobante' && metodo === 'POST') {
+      const opc = (v, n) => (txt(v, n) || null);
+      const r = await rpc(env, 'registrar_aviso_pago', {
+        p_codigo:     txt(b.codigo, 40).toUpperCase(),
+        p_pagado_en:  b.pagado_en || null,
+        p_referencia: opc(b.referencia, 40),
+        p_pagador:    opc(b.pagador, 80),
+        p_qr:         opc(b.qr, 500),
+      });
+      if (r && r.ok) {
+        return json({ ok: true, estado: r.estado, codigo: r.codigo,
+          mensaje: r.mensaje || null }, 200, origen);
+      }
+      return json({
+        ok: false,
+        error: (r && r.error) || 'no_encontrada',
+        mensaje: (r && r.mensaje) ||
+          'No encontramos esa reserva, o ya habia registrado el pago.',
+      }, r && r.error === 'referencia_repetida' ? 409 : 404, origen);
+    }
+
+    // ── la barra de espera ────────────────────────────────────────
+    if (ruta === '/tumbao/estado' && metodo === 'GET') {
+      const codigo = txt(q.get('codigo'), 40);
+      // Con `vencido=1` se acabaron los minutos y la reserva pasa a la
+      // cola humana. Sin él, se intenta cruzar con lo que haya llegado
+      // del banco. Son dos funciones distintas, no dos ramas de la
+      // misma: cruzar no debe poder mandar nada a validación por su
+      // cuenta.
+      const r = q.get('vencido') === '1'
+        ? await rpc(env, 'marcar_pendiente_validacion', { p_codigo: codigo })
+        : await rpc(env, 'conciliar_reserva', { p_codigo: codigo });
+
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'no_encontrada' },
+          404, origen);
+      }
+
+      // La página pinta su propio texto en los dos casos normales; esto
+      // es el respaldo y lo que se ve si alguien consulta por fuera.
+      const mensajes = {
+        confirmada: 'Pago confirmado. Tu cupo esta asegurado.',
+        verificando: 'Estamos esperando la confirmacion del banco.',
+        pendiente_validacion: 'No pudimos confirmar tu pago automaticamente. ' +
+          'Tu cupo sigue apartado: comparte el soporte por WhatsApp y lo ' +
+          'validamos a mano.',
+        pendiente_pago: 'Falta registrar el pago.',
+        rechazada: 'No pudimos validar el pago. Escribenos por WhatsApp.',
+        expirada: 'Se solto el cupo por falta de pago.',
+      };
+      return json({ ok: true, estado: r.estado, codigo: r.codigo,
+        clase: r.clase, metodo: r.metodo || null,
+        mensaje: mensajes[r.estado] || '' }, 200, origen);
+    }
+
+    return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);
+
+  } catch (e) {
+    console.log('pagina:', ruta, e && e.message);
+    return json({ ok: false, error: 'FALLA',
+      mensaje: 'No pudimos conectarnos. Inténtalo otra vez.' }, 502, origen);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const origen = request.headers.get('Origin');
@@ -151,7 +349,7 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors(origen) });
     }
-    if (request.method !== 'POST') {
+    if (request.method !== 'POST' && request.method !== 'GET') {
       return json({ ok: false, error: 'METODO' }, 405, origen);
     }
     if (!env.SUPABASE_SERVICE_KEY) {
@@ -159,6 +357,35 @@ export default {
         ok: false, error: 'SIN_LLAVE',
         mensaje: 'Falta el secreto SUPABASE_SERVICE_KEY en el Worker.',
       }, 503, origen);
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+     * La página pública — lo que antes eran cuatro webhooks de n8n
+     *
+     * Van ANTES del token, como reservar-varios: las pide el navegador
+     * de un cliente, que no tiene ni puede tener uno. Lo que las
+     * protege es que las funciones de Postgres no aceptan nada que no
+     * sea una clase existente con cupo, y el aforo lo cierra la base
+     * con bloqueo de fila.
+     *
+     * POR QUÉ SE MUDARON
+     * n8n cobra por ejecución y estas cuatro se llevaban ~1.220 al mes
+     * de un plan de 2.500. La más cara es `estado`: la barra de espera
+     * pregunta cada pocos segundos, así que UNA reserva gastaba varias
+     * ejecuciones. Aquí caben 100.000 peticiones al día y no cuestan.
+     *
+     * Los webhooks de n8n se dejan vivos mientras se comprueba. Volver
+     * atrás es cambiar una línea en la página, sin tocar la base.
+     *
+     * La respuesta es la MISMA, campo por campo, para que la página no
+     * tenga que enterarse de nada.
+     * ───────────────────────────────────────────────────────────── */
+    if (ruta.startsWith('/tumbao/')) {
+      return await pagina(request, env, ruta, origen);
+    }
+
+    if (request.method !== 'POST') {
+      return json({ ok: false, error: 'METODO' }, 405, origen);
     }
 
     let b = {};
