@@ -573,3 +573,50 @@ En orden de lo que más se nota en el mostrador:
    borrar; queda anotado para que nadie las busque.
 4. **El cierre de AdminGym se sube a mano** y nadie avisa si un día no
    se sube. Los de julio dejaron de subirse el día 30.
+
+---
+
+## 17 de agosto — la reserva sale de n8n
+
+La página pública ya no llama a n8n para reservar. Las cuatro llamadas
+—ver horarios, apartar el cupo, avisar del pago y la barra de espera—
+las atiende el Worker `tumbao-caja` contra Supabase.
+
+Eran el grueso del consumo: `/clases` se pide en cada visita y en cada
+cambio de tipo, y `/estado` se sondea cada pocos segundos mientras la
+persona espera el aviso del banco. En los siete días anteriores fueron
+353 ejecuciones, más 411 del panel de admin que ya había salido el 11.
+De ~1.100 ejecuciones semanales, unas 760 dejan de ocurrir.
+
+Antes de mover la página se compararon las dos partes con datos de
+verdad: los horarios salen byte a byte iguales, y una reserva completa
+en cada lado (apartar, comprobante, estado, estado vencido, datos
+inválidos y el campo trampa) devuelve los mismos campos con los mismos
+valores y el mismo código HTTP. El CORS se comprobó desde el origen
+real, `https://tumbaobaila.com`.
+
+**Volver atrás es una línea**: en `docs/index.html`, `API_BASE` apunta
+al Worker; cambiándolo por `https://barragan.app.n8n.cloud/webhook/tumbao`
+todo vuelve a n8n. Los webhooks siguen encendidos a propósito.
+
+Lo único que sigue en n8n del lado público es leer la foto del
+comprobante, que se llama una vez por reserva.
+
+### La semana se abre sola, y ya cuadra los cupos
+
+`Tumbao · Abrir la semana` quedó **activo**: cada sábado a las 7 am abre
+la semana entrante, sin domingos y sin festivos.
+
+Se le añadió un paso: justo después de generar el horario llama a
+`recalcular_cupos()`. Sin eso la clase nace con `cupo_total = aforo` y
+la página ofrece los puestos que ya son de los afiliados —lo que pasó
+el 15 de agosto, 30 libres donde 20 tenían dueño. La corrección solo
+llegaba a las 9:30 pm con la importación.
+
+Se corrió una vez a mano para estrenarlo: abrió la semana del 24 al 30
+con 17 clases y **corrigió el cupo de 15 de ellas**. O sea que sin ese
+paso, 15 clases habrían estado sobrevendidas todo el sábado.
+
+La migración 0041 hace lo mismo dentro de `abrir_semana()`. Sigue sin
+aplicarse, y ya no es urgente: el flujo lo cubre. Cuando se pegue, las
+dos cosas conviven sin problema (recalcular dos veces no hace nada).
