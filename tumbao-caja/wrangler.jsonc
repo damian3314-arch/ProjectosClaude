@@ -4,6 +4,22 @@
   "main": "src/index.js",
   "compatibility_date": "2026-07-01",
   "observability": { "enabled": true },
+
+  // Suelta los cupos de quien apartó y nunca pagó. Cada hora, de 6 am a
+  // 10 pm hora de Bogotá — el mismo horario que tenía en n8n.
+  //
+  // Cloudflare lee los cron en UTC, y Bogotá es UTC−5 todo el año (no
+  // hay horario de verano), así que 6am–10pm se parte en dos rangos:
+  //
+  //   0 11-23 * * *   ->  6:00 am a 6:00 pm
+  //   0 0-3   * * *   ->  7:00 pm a 10:00 pm
+  //
+  // Son 17 disparos al día, los mismos de antes. Aquí no cuestan nada;
+  // en n8n eran ~400 ejecuciones al mes de un plan de 2.500.
+  "triggers": {
+    "crons": ["0 11-23 * * *", "0 0-3 * * *"]
+  },
+
   "vars": {
     "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
   }

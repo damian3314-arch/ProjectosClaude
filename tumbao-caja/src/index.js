@@ -366,4 +366,44 @@ export default {
         mensaje: 'No se pudo guardar. Vuelve a intentarlo.' }, 502, origen);
     }
   },
+
+  /* -------------------------------------------------------------------
+   * Lo que antes hacía un workflow de n8n cada hora
+   *
+   * Cuando alguien aparta un cupo, la reserva nace en `pendiente_pago`
+   * con media hora de vida. Si completa el pago sigue su curso; si
+   * abandona, se queda ahí PARA SIEMPRE si nadie la limpia — y ese cupo
+   * no aparece en ninguna cola del panel, así que tampoco hay forma de
+   * soltarlo a mano. `liberar_cupos_expirados()` existía desde el primer
+   * día con un comentario que decía "la llama el cron". Ese cron nunca
+   * se creó.
+   *
+   * POR QUÉ SE MUDÓ AQUÍ
+   * Era una llamada a Postgres por hora y le costaba a n8n ~400
+   * ejecuciones al mes, de un plan de 2.500 que ya estaba en la raya. Al
+   * agotarse no se cae solo esto: se caen los webhooks de reservas y la
+   * ingesta de pagos, o sea que nadie puede reservar y a quien pagó no
+   * se le confirma. Aquí no cuesta nada.
+   *
+   * Es idempotente: si no hay ninguna vencida devuelve 0 y no toca nada.
+   * Por eso puede convivir con el workflow viejo mientras se comprueba,
+   * sin que se pisen.
+   * ----------------------------------------------------------------- */
+  async scheduled(evento, env, ctx) {
+    ctx.waitUntil((async () => {
+      try {
+        const r = await rpc(env, 'liberar_cupos_expirados', {});
+        // PostgREST devuelve el entero pelado o envuelto según el caso.
+        const n = typeof r === 'number' ? r
+                : (typeof r?.liberar_cupos_expirados === 'number'
+                    ? r.liberar_cupos_expirados : 0);
+        console.log(`liberar_cupos_expirados: ${n} cupo(s) · ${evento.cron}`);
+      } catch (e) {
+        // Se deja el error en el log y se relanza: así el fallo queda
+        // marcado como tal en Cloudflare y no pasa por una corrida sana.
+        console.log('liberar_cupos_expirados FALLÓ:', e && e.message);
+        throw e;
+      }
+    })());
+  },
 };
