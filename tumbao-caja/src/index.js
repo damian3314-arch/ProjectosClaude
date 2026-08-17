@@ -388,6 +388,16 @@ export default {
    * Es idempotente: si no hay ninguna vencida devuelve 0 y no toca nada.
    * Por eso puede convivir con el workflow viejo mientras se comprueba,
    * sin que se pisen.
+   *
+   * PERO HOY ESTO NO CORRE. Los cron de Cloudflare quedan registrados en
+   * esta cuenta y no se ejecutan nunca — comprobado a las 15:00 y 16:00
+   * UTC, y con un cron de prueba cada minuto durante siete minutos: cero
+   * invocaciones, ni log ni error, confirmado también por la API de
+   * analítica. Ver el comentario largo en `wrangler.jsonc`.
+   *
+   * El que de verdad libera los cupos sigue siendo el workflow de n8n.
+   * Esto se queda escrito y probado para el día que los cron funcionen,
+   * o como referencia si se mueve a pg_cron dentro de Supabase.
    * ----------------------------------------------------------------- */
   async scheduled(evento, env, ctx) {
     ctx.waitUntil((async () => {

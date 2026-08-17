@@ -5,17 +5,30 @@
   "compatibility_date": "2026-07-01",
   "observability": { "enabled": true },
 
-  // Suelta los cupos de quien apartó y nunca pagó. Cada hora, de 6 am a
-  // 10 pm hora de Bogotá — el mismo horario que tenía en n8n.
+  // OJO: LOS CRON NO DISPARAN EN ESTA CUENTA.
   //
-  // Cloudflare lee los cron en UTC, y Bogotá es UTC−5 todo el año (no
-  // hay horario de verano), así que 6am–10pm se parte en dos rangos:
+  // Se dejaron registrados a propósito, pero NO son el mecanismo que
+  // corre hoy. El que de verdad libera los cupos vencidos sigue siendo
+  // el workflow de n8n "Tumbao · Liberar cupos vencidos", que por eso no
+  // se apagó.
   //
-  //   0 11-23 * * *   ->  6:00 am a 6:00 pm
-  //   0 0-3   * * *   ->  7:00 pm a 10:00 pm
+  // Lo que se comprobó el 17 de agosto:
+  //   · los dos horarios quedan registrados (la API /schedules los
+  //     devuelve, y `wrangler deploy` los lista)
+  //   · a las 15:00 y a las 16:00 UTC no hubo ni una invocación —ni log
+  //     ni error— mientras n8n sí disparó en el mismo segundo
+  //   · con un cron de prueba CADA MINUTO, siete minutos seguidos sin
+  //     una sola invocación
+  //   · confirmado por la API de analítica, que cuenta invocaciones
+  //     aunque no haya log: cero
   //
-  // Son 17 disparos al día, los mismos de antes. Aquí no cuestan nada;
-  // en n8n eran ~400 ejecuciones al mes de un plan de 2.500.
+  // O sea que no es la expresión ni el `scheduled` de abajo: es que en
+  // esta cuenta no se están ejecutando. La causa quedó sin encontrar.
+  //
+  // Se dejan puestos porque el día que empiecen a funcionar, esto ya
+  // está listo y solo habría que apagar el de n8n. Y si arrancaran solos
+  // no rompen nada: liberar_cupos_expirados() es idempotente, así que
+  // convivir con n8n es inofensivo.
   "triggers": {
     "crons": ["0 11-23 * * *", "0 0-3 * * *"]
   },
