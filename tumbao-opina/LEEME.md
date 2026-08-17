@@ -129,6 +129,48 @@ El workflow viejo hacía además una pasada de clasificación **cada media
 hora**: 1.440 ejecuciones al mes contra un plan de 2.500. Se quitó — el
 Worker ya clasifica al cerrar cada conversación.
 
+## Por qué el saludo arranca con la pregunta
+
+Hasta el 17 de agosto lo primero que pedía el bot era el nombre. En dos
+días seis personas abrieron el chat y **ninguna escribió una palabra**.
+
+Tiene sentido: pedir el nombre cuesta algo y no devuelve nada, y en una
+página web —a diferencia de un enlace que te llega por WhatsApp— se lo
+estás dando a un desconocido. Encima el saludo anunciaba "son tres
+preguntas", que es avisar de trabajo antes de dar una razón.
+
+Ahora lo primero que ve la persona es la pregunta de verdad, que se
+contesta en tres palabras. El nombre se pide **al final**, junto con el
+celular, cuando ya contó algo y darlo tiene sentido. Se prefiere una
+opinión anónima de verdad antes que un nombre sin opinión.
+
+El saludo referencia `LAS_TRES[0]`, así que la pregunta del saludo y la
+primera del guion no pueden separarse.
+
+Ojo con una cosa al leer los números: **la fila se crea cuando alguien
+abre el chat**, no cuando escribe. Al cargar, la página pide el saludo
+y eso ya cuenta como turno 1. Por eso `turnos > 1` es el filtro de "esta
+persona sí escribió", y una conversación de un turno significa que la
+abrió y se fue sin teclear.
+
+## Dónde se invita a contarnos
+
+Dos sitios, y el segundo es el que importa:
+
+- **El globito de la burbuja**, en `tumbaobaila.com`. Sale una sola vez
+  por persona, a los 6 segundos, y **solo en la pantalla de inicio**.
+  Antes salía pasara lo que pasara y le caía encima a quien estaba
+  escribiendo su nombre o mirando el QR para pagar.
+- **La pantalla de confirmación**, cuando la reserva quedó lista. Es el
+  único momento en que se sabe que la persona viene a Tumbao de verdad
+  y que ya terminó lo que vino a hacer. Lleva la pregunta escrita, no
+  un "cuéntanos cómo te ha ido": una pregunta se contesta, una fórmula
+  vaga obliga a inventar qué decir.
+
+Solo se ofrece si el pago quedó confirmado —a quien tiene el pago en el
+aire hay que dejarlo resolver eso— y desaparece para siempre en cuanto
+la persona abre el chat una vez.
+
 ## Quién contesta
 
 Tres motores, en este orden:

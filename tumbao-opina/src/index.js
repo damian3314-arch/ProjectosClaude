@@ -42,10 +42,22 @@ const LAS_TRES = [
 // qué es —si el saludo no dice quién habla y para qué, cierra—, un
 // modelo pequeño lo resume a "Hola, ¿cómo te llamas?" y se pierde toda
 // la razón de estar ahí, y además es una llamada menos que pagar.
+//
+// ARRANCA CON LA PREGUNTA, NO CON EL NOMBRE
+// Hasta el 17 de agosto lo primero que se pedía era el nombre. En dos
+// días seis personas abrieron el chat y ninguna escribió una palabra.
+// Se entiende: pedir el nombre cuesta algo y no devuelve nada, y en una
+// página web —a diferencia de un enlace que te llega por WhatsApp— se lo
+// estás dando a un desconocido. Encima el saludo anunciaba "son tres
+// preguntas", que es avisar de trabajo antes de dar una razón.
+//
+// Ahora lo primero es la pregunta de verdad, que se contesta en tres
+// palabras. El nombre se pide al final, junto con el celular, cuando la
+// persona ya contó algo y darlo tiene sentido. Se prefiere una opinión
+// anónima de verdad antes que un nombre sin opinión.
 const SALUDO =
-  '¡Hola! Soy de Tumbao. Estamos preguntándole a la gente que ya viene ' +
-  'cómo nos está yendo, para mejorar de verdad.\n\nSon tres preguntas, ' +
-  'nada más. ¿Cómo te llamas?';
+  '¡Hola! Soy de Tumbao. Nos ayuda muchísimo saber cómo lo estás ' +
+  'viviendo, y con una frase basta.\n\n' + LAS_TRES[0];
 
 const INSTRUCCIONES = `
 Eres el asistente de Tumbao, una academia de baile en Bucaramanga,
@@ -56,19 +68,24 @@ Llevar una conversación corta y cálida en la que la persona te cuente
 de verdad. No eres un formulario con emojis: eres alguien de la
 academia que sí quiere saber.
 
-Ya saludaste y ya preguntaste el nombre. El primer mensaje que te llega
-es su nombre.
+Ya saludaste y ya hiciste la PRIMERA de las tres preguntas. El primer
+mensaje que te llega es su respuesta a esa, no su nombre.
+
+Todavía no sabes cómo se llama, y está bien: el nombre se pide al final.
+No lo preguntes antes ni lo inventes.
 
 LAS TRES PREGUNTAS, EN ESTE ORDEN
-1. ${LAS_TRES[0]}
+1. ${LAS_TRES[0]}   ← ya la hiciste tú en el saludo
 2. ${LAS_TRES[1]}
 3. ${LAS_TRES[2]}
 
 Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
-mira la conversación y pregúntate cuál de las tres falta.
+mira la conversación y pregúntate cuál de las tres falta. Si la persona
+solo ha escrito una vez, lo que falta es la 2.
 
 CÓMO CONVERSAR
-- Usa su nombre después, pero no en cada mensaje: cansa.
+- Cuando sepas su nombre úsalo, pero no en cada mensaje: cansa. Mientras
+  no lo sepas, no lo reemplaces por apodos: nada de "amigo" ni "crack".
 - UNA sola pregunta por mensaje. Si ya escribiste un "?", ya terminaste:
   lo que sigue va en el mensaje siguiente, cuando la persona conteste.
 - Escribes un mensaje de chat, no un guion. Nunca escribas acotaciones
@@ -110,10 +127,13 @@ no estás cerrando: estás preguntando.
 
 Y va en dos mensajes distintos, no en uno:
 - Primero: ofrece que mande una nota de voz si quiere agregar algo, y
-  pide el celular. Al pedirlo tienen que ir SIEMPRE las dos cosas, con
-  esas palabras o parecidas: que es **opcional** y para qué es (por si
-  quieren responderle). Pedir un número sin decir eso es lo que hace
-  que la gente se salga. Ese mensaje NO lleva [FIN].
+  pide el nombre y el celular. Al pedirlos tienen que ir SIEMPRE las dos
+  cosas, con esas palabras o parecidas: que es **opcional** y para qué es
+  (por si quieren responderle). Pedir un número sin decir eso es lo que
+  hace que la gente se salga. Aquí sí va el nombre: a estas alturas la
+  persona ya contó algo y darlo tiene sentido, mientras que pedirlo de
+  entrada es lo que hacía que cerraran el chat sin escribir. Ese mensaje
+  NO lleva [FIN].
 - Después de que conteste eso —dé el número o diga que no—: agradece
   de verdad, corto, y ahí sí termina con [FIN] en una línea aparte.
 
@@ -673,8 +693,9 @@ export default {
         // querer despedirse justo cuando la persona acaba de contar algo
         // incómodo —que es cuando menos hay que colgarle— o después de
         // dos respuestas. El guion lo prohíbe; esto lo hace imposible.
-        // Hacen falta cuatro cosas suyas: el nombre y las tres
-        // respuestas. Si aún no están, [FIN] se ignora y el bot sigue.
+        // Hacen falta cuatro cosas suyas: las tres respuestas y lo que
+        // conteste al cierre —el nombre y el celular, o que no—. Si aún
+        // no están, [FIN] se ignora y el bot sigue.
         const suyas = historia.filter((m) => m.role === 'user').length;
         const listo = cruda.includes('[FIN]') && suyas >= 4;
         const respuesta = cruda.replace('[FIN]', '').trim();

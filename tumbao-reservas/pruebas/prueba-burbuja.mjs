@@ -114,6 +114,75 @@ await p.locator('#enviar').click();
 await p.waitForSelector('#s3.on', { timeout: 8000 });
 ok('se puede reservar con la burbuja puesta', true);
 
+/* ─────────────────────────────────────────────────────────────
+   La invitación de la pantalla final
+
+   POR QUÉ EXISTE
+   En dos días seis personas abrieron el chat y ninguna escribió. La
+   burbuja llegaba en mal momento: un globito a los 6 segundos le cae
+   encima a quien está tecleando su nombre. La invitación de verdad va
+   donde la persona ya terminó y está contenta.
+
+   Va en un contexto nuevo a propósito: el de arriba ya abrió el chat y
+   tiene la marca puesta en localStorage.
+   ───────────────────────────────────────────────────────────── */
+console.log('\n── Contarnos, al final de la reserva ──');
+await fetch('http://localhost:8899/_prueba/reiniciar').catch(() => {});
+const ctx2 = await nav.newContext({ viewport: { width: 414, height: 820 }, locale: 'es-CO' });
+const q = await ctx2.newPage();
+q.on('console', m => { if (m.type() === 'error') errores.push('ctx2: ' + m.text()); });
+q.on('pageerror', e => errores.push('ctx2 pageerror: ' + e.message));
+
+const reservar = async (pag) => {
+  await pag.goto(BASE, { waitUntil: 'networkidle' });
+  await pag.locator('.opcion[data-tipo="suelta"]').click();
+  await pag.waitForSelector('.clase:not(:disabled)', { timeout: 8000 });
+  await pag.locator('.clase:not(:disabled)').first().click();
+  await pag.waitForSelector('#s2.on', { timeout: 8000 });
+  await pag.fill('#nombre', 'Lucia Mena');
+  await pag.fill('#celular', '3009998877');
+  await pag.check('#habeas');
+  await pag.locator('#enviar').click();
+  await pag.waitForSelector('#s3.on', { timeout: 8000 });
+  await pag.fill('#hora-transf', '18:42');
+  await pag.locator('#ya-pague').click();
+  await pag.waitForSelector('#s4.on', { timeout: 8000 });
+  // El espejo confirma unos segundos después, como el banco.
+  await pag.waitForSelector('#s5.on', { timeout: 30000 });
+};
+
+await reservar(q);
+ok('la reserva quedó confirmada',
+   /confirmad/i.test(await q.locator('#s5').innerText()));
+ok('la invitación aparece al confirmar', await q.locator('#ok-opina').isVisible());
+// La pregunta concreta es lo que hace que se conteste: "cuéntanos cómo
+// te ha ido" obliga a inventar qué decir; una pregunta se responde en
+// tres palabras.
+const invita = (await q.locator('#ok-opina').innerText()).replace(/\n/g, ' · ');
+ok('y lleva la pregunta, no una fórmula vaga',
+   /volver la segunda vez/i.test(invita), invita);
+
+// El globito no puede haber salido: la persona pasó por el formulario y
+// por la pantalla de pago, y ahí estorba.
+ok('el globito no apareció durante la reserva',
+   await q.locator('#burbuja-pista').isHidden());
+
+await q.locator('#ok-opina-ir').click();
+await q.waitForTimeout(800);
+ok('al pulsarla se abre el chat', await q.locator('#opina').isVisible());
+ok('y es el mismo chat de la burbuja',
+   /burbuja=1/.test(await q.locator('#opina iframe').getAttribute('src')));
+
+// A quien ya dijo que sí no se le vuelve a pedir. Es la diferencia entre
+// una invitación y una cantaleta.
+console.log('\n── Y no se pide dos veces ──');
+const q2 = await ctx2.newPage();
+q2.on('pageerror', e => errores.push('ctx2b pageerror: ' + e.message));
+await reservar(q2);
+ok('a quien ya abrió el chat no se le vuelve a pedir',
+   await q2.locator('#ok-opina').isHidden());
+await ctx2.close();
+
 console.log('');
 const inesperados = errores.filter(e => !/40[0-9]|Failed to load resource/.test(e));
 ok('sin errores de JavaScript', inesperados.length === 0, inesperados.join(' | ') || 'ninguno');

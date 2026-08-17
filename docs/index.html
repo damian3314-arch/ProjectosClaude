@@ -221,6 +221,18 @@ const CONFIG = {
   }
   #burbuja-pista[hidden]{display:none}
 
+  /* La invitación de la pantalla de confirmación. Va separada del resto
+     por una línea para que no se lea como un paso más de la reserva:
+     la reserva ya terminó, esto es otra cosa y es opcional. */
+  #ok-opina{
+    margin:1.4rem 0 1rem;padding-top:1.1rem;border-top:1px solid var(--line);
+  }
+  #ok-opina[hidden]{display:none}
+  #ok-opina p{
+    margin:0 0 .7rem;font-size:.92rem;color:var(--tx-2);line-height:1.5;
+  }
+  #ok-opina p b{color:var(--tx);font-weight:600}
+
   #opina{
     position:fixed;inset:auto 1rem 1rem auto;z-index:71;
     width:min(24rem,calc(100vw - 2rem));
@@ -619,6 +631,17 @@ const CONFIG = {
 
       <p class="sub" id="ok-mensaje"></p>
 
+      <!-- La invitación a contarnos va AQUÍ, no flotando mientras la
+           persona reserva. Es el único momento en que sabemos dos cosas:
+           que viene a Tumbao de verdad, y que ya terminó lo que vino a
+           hacer. Un globito en la esquina durante el paso 2 compite con
+           el formulario; esto no compite con nada.
+           Se esconde solo si ya abrió el chat alguna vez. -->
+      <div id="ok-opina" hidden>
+        <p id="ok-opina-q"></p>
+        <button class="btn-ghost" type="button" id="ok-opina-ir">Contarnos en una frase</button>
+      </div>
+
       <a class="btn-ghost" id="ok-wa" href="#" style="margin-bottom:.6rem">Escribirnos por WhatsApp</a>
       <button class="btn-ghost" type="button" id="otra">Reservar otra clase</button>
     </div>
@@ -639,7 +662,7 @@ const CONFIG = {
      El iframe se crea al abrirlo, no al cargar la página: quien viene a
      reservar no tiene por qué pagar la descarga de un chat que no pidió.
 -->
-<div id="burbuja-pista" hidden>¿Ya bailas con nosotros? Cuéntanos cómo te ha ido 💬</div>
+<div id="burbuja-pista" hidden>¿Ya vienes a Tumbao? Cuéntanos en una frase cómo te ha ido 💬</div>
 <button id="burbuja" type="button" aria-label="Contarnos cómo te ha ido"
         title="Contarnos cómo te ha ido">💬</button>
 
@@ -661,6 +684,28 @@ const CONFIG = {
   const cfgOk = /^https?:\/\/.+/.test(CONFIG.API_BASE);
 
   let tipo = null, dias = [], diaActivo = null, elegida = null;
+  // La abre el bloque de la burbuja, más abajo. La pantalla de
+  // confirmación necesita poder llamarla, y ese bloque se define después.
+  let abrirOpina = () => {};
+
+  /* Ofrecer contarnos, en la pantalla de confirmación.
+   *
+   * La pregunta se escribe aquí y en el saludo del bot: si se cambia una
+   * hay que cambiar la otra. Se repite a propósito en vez de pedírsela al
+   * Worker — una llamada más, y en red lenta, para enseñar una frase que
+   * cambia una vez al año. */
+  const PREGUNTA_OPINA = '¿Qué te hizo volver la segunda vez?';
+
+  function ofrecerOpinar(mostrar){
+    const caja = $('#ok-opina');
+    let yaLoVio = true;
+    try { yaLoVio = !!localStorage.getItem('tumbao_pista_opina'); } catch {}
+    if (!mostrar || yaLoVio) { caja.hidden = true; return; }
+    $('#ok-opina-q').innerHTML =
+      `Una cosita más, si tienes 30 segundos: <b>${esc(PREGUNTA_OPINA)}</b><br>` +
+      'Lo lee la dueña, y con una frase nos sirve.';
+    caja.hidden = false;
+  }
   let reserva = null, enviando = false, temporizador = null, sondeo = null;
 
   const waUrl = t => `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(t)}`;
@@ -947,7 +992,7 @@ const CONFIG = {
     const pista = $('#burbuja-pista');
     let montado = false;
 
-    const abrir = () => {
+    abrirOpina = () => {
       if (!montado) {
         // Se crea al abrirlo. Cargarlo con la página sería descargarle
         // un chat entero a quien solo vino a mirar horarios.
@@ -961,12 +1006,17 @@ const CONFIG = {
       caja.hidden = false;
       bot.hidden = true;
       pista.hidden = true;
+      // Se apunta que ya lo abrió: ni el globito ni la invitación de la
+      // pantalla final vuelven a aparecer. Pedir dos veces lo mismo a
+      // quien ya dijo que sí es la forma más rápida de que deje de leer.
       try { localStorage.setItem('tumbao_pista_opina', '1'); } catch {}
+      $('#ok-opina').hidden = true;
     };
     const cerrar = () => { caja.hidden = true; bot.hidden = false; };
 
-    bot.addEventListener('click', abrir);
+    bot.addEventListener('click', abrirOpina);
     $('#opina-cerrar').addEventListener('click', cerrar);
+    $('#ok-opina-ir').addEventListener('click', abrirOpina);
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !caja.hidden) cerrar();
     });
@@ -974,12 +1024,19 @@ const CONFIG = {
     // El globito, una sola vez por persona y sin apuro. Si sale de una,
     // compite con lo que la persona vino a hacer; y si sale siempre,
     // molesta.
+    //
+    // Y solo en la pantalla de inicio. Salía a los 6 segundos pasara lo
+    // que pasara, así que le caía encima a quien estaba escribiendo su
+    // nombre o mirando el QR para pagar. Ahí no es una invitación, es un
+    // estorbo: la invitación de verdad va al final, cuando ya reservó.
     let yaLoVio = true;
     try { yaLoVio = !!localStorage.getItem('tumbao_pista_opina'); } catch {}
     if (!yaLoVio) {
       setTimeout(() => {
-        if (caja.hidden) pista.hidden = false;
-        setTimeout(() => { pista.hidden = true; }, 9000);
+        if (caja.hidden && $('#s1').classList.contains('on')) {
+          pista.hidden = false;
+          setTimeout(() => { pista.hidden = true; }, 9000);
+        }
       }, 6000);
     }
   }
@@ -1390,6 +1447,10 @@ const CONFIG = {
       ? `Hola, soy ${$('#nombre').value.trim()}. Les comparto el soporte de mi pago. ` +
         `Mi código es ${d.codigo || ''} (${clase}${hora ? ' · ' + hora : ''}).`
       : `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
+
+    // Solo cuando salió bien. A quien tiene el pago sin confirmar hay
+    // que dejarlo resolver eso; pedirle la opinión encima es sordo.
+    ofrecerOpinar(confirmada);
     irA(5);
   }
 
