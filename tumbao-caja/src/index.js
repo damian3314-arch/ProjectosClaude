@@ -167,6 +167,232 @@ const ADMIN = {
 };
 
 /* ---------------------------------------------------------------------
+ * Soltar los cupos vencidos, aprovechando que alguien está mirando
+ *
+ * EL PROBLEMA
+ * Quien aparta un cupo y no paga lo tiene bloqueado hasta que alguien
+ * llame a liberar_cupos_expirados(). Eso lo hacía un workflow de n8n
+ * cada hora, de 6am a 10pm: 17 ejecuciones al día, ~510 al mes, que es
+ * una quinta parte del plan entero gastada en una llamada de una línea.
+ *
+ * Lo natural sería un cron de Cloudflare, pero en esta cuenta los cron
+ * NO disparan (está documentado en wrangler.jsonc, con las pruebas).
+ *
+ * LO QUE SE HACE
+ * Se llama justo antes de leer los horarios y antes de pintar el
+ * tablero de recepción, como mucho una vez cada cinco minutos.
+ *
+ * Y sale mejor que el cron, no peor:
+ *   · Con el cron, un cupo abandonado a las 3:05 seguía bloqueado hasta
+ *     las 4:00 — casi una hora en que nadie podía tomarlo.
+ *   · Así, los números que se ven SIEMPRE están recién calculados,
+ *     porque la limpieza corre antes de leerlos.
+ *   · Si no entra nadie no se limpia, y da igual: si nadie está mirando,
+ *     no hay nadie a quien el cupo bloqueado le esté estorbando. Y el
+ *     primero que llegue limpia antes de ver la lista.
+ *
+ * El freno de los cinco minutos vive en la caché de Cloudflare, con el
+ * cubo de tiempo como llave. La marca se pone ANTES de llamar, para que
+ * dos visitas simultáneas no disparen dos limpiezas. Si falla, se pierde
+ * ese turno y lo hace el siguiente: liberar_cupos_expirados() es
+ * idempotente y no pasa nada por saltarse una vuelta.
+ * ------------------------------------------------------------------- */
+const MINUTOS_ENTRE_LIMPIEZAS = 5;
+
+async function soltarVencidos(env) {
+  try {
+    const cubo = Math.floor(Date.now() / (MINUTOS_ENTRE_LIMPIEZAS * 60000));
+    const llave = new Request(`https://tumbao.caja/__limpieza/${cubo}`);
+    const cache = caches.default;
+    if (await cache.match(llave)) return;
+
+    await cache.put(llave, new Response('1', {
+      headers: { 'Cache-Control': `max-age=${MINUTOS_ENTRE_LIMPIEZAS * 60}` },
+    }));
+
+    const r = await rpc(env, 'liberar_cupos_expirados', {});
+    const n = typeof r === 'number' ? r
+            : (typeof r?.liberar_cupos_expirados === 'number'
+                ? r.liberar_cupos_expirados : 0);
+    // Se deja constancia aunque no haya soltado nada. Un "0 cupos" cada
+    // cinco minutos es la prueba de que la limpieza sigue corriendo; si
+    // solo hablara cuando suelta algo, no habría forma de distinguir
+    // "no había nada que soltar" de "esto lleva días sin ejecutarse".
+    console.log(`liberar_cupos_expirados: ${n} cupo(s) · cubo ${cubo}`);
+  } catch (e) {
+    // Nunca puede tumbar la página. Que un cupo vencido siga tomado
+    // cinco minutos más es un fastidio; que no se vean los horarios,
+    // es que no se puede reservar.
+    console.log('soltarVencidos falló (se sigue igual):', e && e.message);
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * Leer la captura del comprobante
+ *
+ * Se copia el contrato del workflow de n8n "Tumbao · Leer comprobante",
+ * campo por campo, para que la página no note el cambio: devuelve
+ * { ok, hora, referencia, pagador, valor, leidos }.
+ *
+ * LA IMAGEN NO SE GUARDA. Entra en la petición, se lee y se suelta. No
+ * va a Supabase, ni a Drive, ni a un log. Es lo que la página le promete
+ * al cliente en letra pequeña, y aquí es literal: no hay ni una línea
+ * que la escriba en ningún lado.
+ *
+ * ANTE LA DUDA, NULL
+ * Esto alimenta los campos con los que después se cruza el pago. Una
+ * hora inventada hace que el dinero se case con la reserva equivocada;
+ * un null solo hace que la persona la escriba a mano, que es lo que
+ * hacía antes de que existiera esto. Por eso todo lo que devuelve el
+ * modelo se vuelve a validar aquí abajo.
+ * ------------------------------------------------------------------- */
+const MODELO_VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
+
+const LEER_COMPROBANTE =
+  'Eres un lector de comprobantes de transferencia de bancos colombianos ' +
+  '(Bancolombia, Nequi, Daviplata, Davivienda, Bre-B y otros). Devuelves ' +
+  'SOLO un objeto JSON con estas cuatro claves: hora, referencia, pagador, valor.\n\n' +
+  'hora: la hora de la transaccion en formato 24h HH:MM. Si el comprobante la ' +
+  'muestra en 12h con a.m./p.m., conviertela. Si no la ves con claridad, null.\n' +
+  'referencia: el numero de comprobante, referencia o CUS, tal cual, sin ' +
+  'etiquetas. Si no hay, null.\n' +
+  'pagador: el nombre de quien ENVIA el dinero, no de quien lo recibe. Si el ' +
+  'comprobante solo muestra al destinatario, null.\n' +
+  'valor: el monto en pesos, solo digitos, sin puntos ni simbolos. Si no lo ves, null.\n\n' +
+  'Regla que manda sobre todas: ante la duda, null. Un dato inventado hace que ' +
+  'el pago se cruce con el equivocado; un null solo hace que la persona lo ' +
+  'escriba a mano.';
+
+// El modelo puede devolver "6:31 p.m.", "18:31:07" o cualquier cosa.
+// Aquí solo pasa lo que tenga forma de hora de verdad.
+function hora24(v) {
+  if (v == null) return null;
+  const s = String(v).trim().toLowerCase().replace(/\./g, '');
+  const m = /^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/.exec(s);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  if (min > 59) return null;
+  if (m[3] === 'pm' && h < 12) h += 12;
+  if (m[3] === 'am' && h === 12) h = 0;
+  if (h > 23) return null;
+  return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+}
+
+function textoLimpio(v, max) {
+  if (v == null) return null;
+  const s = String(v).trim().replace(/\s+/g, ' ');
+  if (!s || s.length > max) return null;
+  if (/^(null|n\/a|no aparece|desconocido)$/i.test(s)) return null;
+  return s;
+}
+
+function enteroPositivo(v) {
+  if (v == null) return null;
+  const s = String(v).replace(/[^\d]/g, '');
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Los modelos abiertos envuelven el JSON en ```json o le anteponen
+// "Aquí está el objeto:". Se busca del primer { al último }.
+function soloJSON(crudo) {
+  if (crudo && typeof crudo === 'object') return crudo;
+  const s = String(crudo || '');
+  const a = s.indexOf('{');
+  const b = s.lastIndexOf('}');
+  if (a < 0 || b <= a) return {};
+  try { return JSON.parse(s.slice(a, b + 1)); } catch (_) { return {}; }
+}
+
+async function leerComprobante(env, imagen) {
+  // Se filtra ANTES de llamar al modelo: una entrada basura no mejora
+  // por mandarla, y cada llamada cuesta.
+  if (!/^data:image\/(jpe?g|png|webp);base64,/.test(imagen)) {
+    return { ok: false, error: 'no_es_imagen' };
+  }
+  // El data URL abulta ~4/3 de los bytes reales. 6 MB de texto son unos
+  // 4,5 MB de imagen: de sobra para una captura de celular.
+  if (imagen.length > 6 * 1024 * 1024) {
+    return { ok: false, error: 'muy_grande' };
+  }
+
+  let crudo = '';
+  let fiarseDelPagador = true;
+  if (env.OPENAI_API_KEY) {
+    // Con llave se usa el mismo modelo que usaba n8n, así que la calidad
+    // de lectura es exactamente la de antes.
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+                 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: env.MODELO_OCR || 'gpt-4o-mini',
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: LEER_COMPROBANTE },
+          { role: 'user', content: [
+            { type: 'text', text: 'Lee este comprobante y devuelve el JSON.' },
+            { type: 'image_url', image_url: { url: imagen, detail: 'high' } },
+          ] },
+        ],
+      }),
+    });
+    if (!r.ok) throw new Error(`OCR ${r.status}`);
+    crudo = (await r.json()).choices?.[0]?.message?.content || '';
+  } else {
+    // SIN LLAVE DE OPENAI NO SE DEVUELVE EL PAGADOR.
+    //
+    // Probado con un comprobante de Bancolombia que decía Origen
+    // MARIANA QUINTERO y Destino LUZ SANTIAGO: el modelo abierto
+    // contestó "LUZ SANTIAGO" las tres veces. O sea que confunde a quien
+    // manda con quien recibe, justo lo que el guion le pide no hacer.
+    //
+    // Y ese campo no es decorativo: la página, si viene, marca la
+    // casilla de "paga otra persona" y escribe ese nombre. Rellenarlo
+    // con el de la dueña de la cuenta es peor que dejarlo en blanco —
+    // en blanco la persona lo escribe; relleno, lo da por bueno.
+    //
+    // Y no es solo el pagador. Medido sobre el mismo comprobante, seis
+    // veces seguidas: la hora salió bien 2 de 6, y las otras 4 devolvió
+    // todo vacío. Con gpt-4o-mini, 3 de 3 correctas.
+    //
+    // POR ESO LA PÁGINA TODAVÍA NO USA ESTA RUTA. Está lista y probada,
+    // pero apuntarla aquí sin llave cambiaría "te autocompleto los
+    // datos" por "te los autocompleto una de cada tres veces".
+    //
+    // Poniendo OPENAI_API_KEY como secreto del Worker se usa el mismo
+    // modelo que usaba n8n, con el mismo guion: la calidad vuelve a ser
+    // la de antes, y ahí sí la página puede apuntar aquí y n8n deja de
+    // gastar una ejecución por cada comprobante.
+    fiarseDelPagador = false;
+    if (!env.AI) return { ok: false, error: 'sin_modelo' };
+    const base64 = imagen.slice(imagen.indexOf(',') + 1);
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const d = await env.AI.run(MODELO_VISION, {
+      image: [...bytes],
+      prompt: LEER_COMPROBANTE + '\n\nLee este comprobante y devuelve el JSON.',
+      max_tokens: 300,
+    });
+    crudo = d.description || d.response || '';
+  }
+
+  const d = soloJSON(crudo);
+  const hora = hora24(d.hora);
+  const referencia = textoLimpio(d.referencia, 40);
+  const pagador = fiarseDelPagador ? textoLimpio(d.pagador, 80) : null;
+  const valor = enteroPositivo(d.valor);
+
+  // ok:true aunque no se haya sacado nada: para la página eso no es un
+  // error, es que hay que escribirlo a mano.
+  return { ok: true, hora, referencia, pagador, valor,
+           leidos: [hora, referencia, pagador].filter(Boolean).length };
+}
+
+/* ---------------------------------------------------------------------
  * Las cuatro rutas de la página pública
  *
  *   GET  /tumbao/clases?tipo=            horarios con cupo
@@ -191,6 +417,9 @@ async function pagina(request, env, ruta, origen) {
   try {
     // ── los horarios ──────────────────────────────────────────────
     if (ruta === '/tumbao/clases' && metodo === 'GET') {
+      // Antes de leer, no después: así los cupos que se enseñan ya
+      // tienen descontados los que acaban de vencer.
+      await soltarVencidos(env);
       const filas = await rpc(env, 'clases_para', {
         p_tipo: q.get('tipo') === 'miembro' ? 'miembro' : 'suelta',
       });
@@ -277,6 +506,33 @@ async function pagina(request, env, ruta, origen) {
     }
 
     // ── "ya pagué" ────────────────────────────────────────────────
+    // ── leer la captura del pago (la imagen NO se guarda) ─────────
+    if (ruta === '/tumbao/leer-comprobante' && metodo === 'POST') {
+      try {
+        const d = await leerComprobante(env, typeof b.imagen === 'string' ? b.imagen : '');
+        // Siempre 200: para la página, "no se pudo leer" no es un fallo
+        // de red sino una invitación a escribirlo a mano. Un 500 la haría
+        // enseñar "se cayó la conexión", que es mentira y asusta.
+        return json({ hora: null, referencia: null, pagador: null,
+                      valor: null, leidos: 0, ...d }, 200, origen);
+      } catch (e) {
+        // Sin esta línea el fallo es mudo: la página enseña "escríbelo a
+        // mano" —que es lo correcto para el cliente— y desde fuera no hay
+        // forma de distinguir "la imagen no se dejó leer" de "el modelo
+        // lleva dos días caído".
+        console.log('leer-comprobante FALLÓ:', e && e.message);
+        // `detalle` va en la respuesta a propósito. La página no lo
+        // enseña —para el cliente el mensaje sigue siendo "escríbelo a
+        // mano"— pero desde fuera es la única forma de saber POR QUÉ sin
+        // pelearse con los logs. No lleva nada sensible: es el mensaje
+        // de error, no la imagen ni la llave.
+        return json({ ok: false, error: 'falla',
+                      detalle: String((e && e.message) || e).slice(0, 200),
+                      hora: null, referencia: null,
+                      pagador: null, valor: null, leidos: 0 }, 200, origen);
+      }
+    }
+
     if (ruta === '/tumbao/comprobante' && metodo === 'POST') {
       const opc = (v, n) => (txt(v, n) || null);
       const r = await rpc(env, 'registrar_aviso_pago', {
@@ -467,6 +723,13 @@ export default {
         if (args._error) {
           return json({ ok: false, error: args._error,
             mensaje: 'Faltan datos o no se reconocen. Recarga la página.' }, 400, origen);
+        }
+        // El tablero es lo que mira recepción durante el turno: si ahí
+        // los cupos están viejos, se le dice a alguien que no hay puesto
+        // cuando sí lo hay. Comparte el freno de cinco minutos con la
+        // página pública, así que entre las dos no se duplica.
+        if (cual.fn === 'admin_tablero' || cual.fn === 'admin_lista_clase') {
+          await soltarVencidos(env);
         }
         r = await rpc(env, cual.fn, { p_token: token, ...args });
 

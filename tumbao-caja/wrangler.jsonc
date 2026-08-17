@@ -8,9 +8,15 @@
   // OJO: LOS CRON NO DISPARAN EN ESTA CUENTA.
   //
   // Se dejaron registrados a propósito, pero NO son el mecanismo que
-  // corre hoy. El que de verdad libera los cupos vencidos sigue siendo
-  // el workflow de n8n "Tumbao · Liberar cupos vencidos", que por eso no
-  // se apagó.
+  // corre hoy.
+  //
+  // Desde el 17 de agosto los cupos vencidos los suelta el propio
+  // Worker, en soltarVencidos(): se llama antes de leer los horarios y
+  // antes del tablero de recepción, como mucho una vez cada cinco
+  // minutos. No hace falta reloj y sale mejor que el que había —con el
+  // cron de n8n un cupo abandonado a las 3:05 seguía bloqueado hasta las
+  // 4:00—, así que el workflow "Tumbao · Liberar cupos vencidos" se
+  // apagó: eran 17 ejecuciones al día, ~510 al mes de un plan de 2.500.
   //
   // Lo que se comprobó el 17 de agosto:
   //   · los dos horarios quedan registrados (la API /schedules los
@@ -32,6 +38,10 @@
   "triggers": {
     "crons": ["0 11-23 * * *", "0 0-3 * * *"]
   },
+
+  // Para leer la captura del comprobante sin salir de Cloudflare.
+  // No hace falta llave de nadie: es un binding.
+  "ai": { "binding": "AI" },
 
   "vars": {
     "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
