@@ -96,6 +96,124 @@ async function rpc(env, funcion, cuerpo) {
   try { return JSON.parse(texto); } catch (_) { return {}; }
 }
 
+/** Lee filas de una tabla por PostgREST. Solo lectura. */
+async function leer(env, tabla, consulta) {
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${tabla}?${consulta}`, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    },
+  });
+  const texto = await r.text();
+  if (!r.ok) throw new Error(`supabase ${r.status}: ${texto.slice(0, 200)}`);
+  try { return JSON.parse(texto); } catch (_) { return []; }
+}
+
+/* ---------------------------------------------------------------------
+ * /salud — ¿está bien la página?
+ *
+ * PARA QUÉ
+ * Todo lo que se ha roto en este proyecto se rompió en silencio, y nos
+ * enteramos tarde y por casualidad: la semana que no abrió, los cupos
+ * ofrecidos que ya tenían dueño, el reporte del lunes que llevaba cinco
+ * días sin salir. Esto es la lista de esas cosas, preguntadas todos los
+ * días a las 6 de la mañana.
+ *
+ * SIN LLAVE A PROPÓSITO
+ * La revisión no devuelve ni un nombre, ni un teléfono, ni una cifra de
+ * caja: solo cuentas. Así el chequeo diario no necesita cargar con un
+ * secreto —que habría que guardar en algún sitio y rotar— y además se
+ * puede abrir desde el celular cuando algo huela raro.
+ *
+ * SIEMPRE 200
+ * Aunque algo esté mal. Un 500 lo devuelve también un Worker caído o un
+ * Cloudflare con hipo, y entonces no se distingue "la página tiene un
+ * problema" de "no pude preguntar". El veredicto va en el cuerpo.
+ * ------------------------------------------------------------------- */
+async function salud(env, origen) {
+  const revisiones = [];
+  const apunta = (que, ok, detalle) => revisiones.push({ que, ok, detalle });
+  const arranque = Date.now();
+
+  const hoyBogota = () => {
+    const f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    return f;
+  };
+
+  try {
+    // ── 1. ¿Se puede reservar algo? ──
+    // Es la pregunta que de verdad importa: si esto falla, quien entra a
+    // tumbaobaila.com ve una página vacía y se va.
+    const clases = await rpc(env, 'clases_para', { p_tipo: 'suelta' });
+    const lista = Array.isArray(clases) ? clases.filter((c) => c && c.id) : [];
+    const dias = new Set(lista.map((c) => String(c.fecha_hora).slice(0, 10)));
+    apunta('hay clases que reservar', lista.length > 0,
+           `${lista.length} clase(s) en ${dias.size} día(s)`);
+
+    // ── 2. ¿Está abierta la semana entrante? ──
+    // La abre sola el sábado a las 7 am. Preguntarlo todos los días da
+    // aviso con antelación en vez de descubrirlo el lunes, que es
+    // cuando ya no se puede reservar.
+    const hoy = hoyBogota();
+    const d = new Date(hoy + 'T12:00:00Z');
+    const isodow = ((d.getUTCDay() + 6) % 7) + 1;
+    const lunes = new Date(d.getTime() + ((8 - isodow) % 7 || 7) * 86400000);
+    const desde = lunes.toISOString().slice(0, 10);
+    const hasta = new Date(lunes.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+    const proximas = await leer(env, 'clases',
+      `select=id&fecha_hora=gte.${desde}T00:00:00-05:00&fecha_hora=lte.${hasta}T23:59:59-05:00`);
+    // Antes del sábado que la abre, que esté vacía es lo normal y no es
+    // un fallo: solo se avisa. Del sábado en adelante sí es un problema.
+    const yaTocaba = isodow >= 6;
+    apunta('la semana entrante está abierta',
+           proximas.length > 0 || !yaTocaba,
+           proximas.length > 0
+             ? `del ${desde} al ${hasta}: ${proximas.length} clases`
+             : (yaTocaba ? `NADA del ${desde} al ${hasta} — el lunes no se podrá reservar`
+                         : `todavía vacía, la abre el sábado (del ${desde} al ${hasta})`));
+
+    // ── 3. ¿Los cupos cuadran con los afiliados? ──
+    // El 15 de agosto la página ofreció 30 puestos donde 20 ya eran de
+    // gente con plan. Se comprueba la resta, no el resultado: una clase
+    // con cero afiliados puede ofrecer el aforo entero y estar bien.
+    const futuras = await leer(env, 'clases',
+      'select=id,aforo,activos_plan,cupo_total,cupo_manual,cupo_miembros' +
+      '&fecha_hora=gte.now()&limit=500');
+    const torcidas = futuras.filter((c) =>
+      c.cupo_manual == null && c.cupo_miembros == null &&
+      c.cupo_total !== Math.max((c.aforo || 0) - (c.activos_plan || 0), 0));
+    apunta('los cupos cuadran con los afiliados', torcidas.length === 0,
+           torcidas.length === 0
+             ? `${futuras.length} clases revisadas, todas cuadran`
+             : `${torcidas.length} de ${futuras.length} ofrecen puestos que ya tienen dueño`);
+
+    // ── 4. ¿Se están soltando los cupos vencidos? ──
+    // Los suelta el propio Worker cuando alguien mira los horarios, como
+    // mucho cada cinco minutos. Si aparece una reserva vencida hace rato
+    // y todavía tomada, ese mecanismo dejó de funcionar.
+    const colgadas = await leer(env, 'reservas',
+      'select=id&estado=eq.pendiente_pago&expira_en=lt.' +
+      new Date(Date.now() - 20 * 60000).toISOString() + '&limit=50');
+    apunta('los cupos vencidos se sueltan', colgadas.length === 0,
+           colgadas.length === 0 ? 'ninguna reserva vencida sin soltar'
+             : `${colgadas.length} reserva(s) vencidas hace más de 20 min siguen ocupando cupo`);
+
+    apunta('Supabase responde', true, `${Date.now() - arranque} ms`);
+  } catch (e) {
+    apunta('Supabase responde', false, String((e && e.message) || e).slice(0, 160));
+  }
+
+  const ok = revisiones.every((r) => r.ok);
+  return json({
+    ok,
+    revisado: new Date().toISOString(),
+    mal: revisiones.filter((r) => !r.ok).map((r) => r.que),
+    revisiones,
+  }, 200, origen);
+}
+
 // Solo estos conceptos, y con el sentido que les corresponde. Si un día
 // hay que agregar uno, se agrega aquí a propósito: es lo que impide que
 // un error de tecleo invente una categoría nueva y ensucie el cierre.
@@ -638,6 +756,11 @@ export default {
      * ───────────────────────────────────────────────────────────── */
     if (ruta.startsWith('/tumbao/')) {
       return await pagina(request, env, ruta, origen);
+    }
+
+    // La revisión diaria. Sin token: no devuelve más que cuentas.
+    if (ruta === '/salud') {
+      return await salud(env, origen);
     }
 
     if (request.method !== 'POST') {

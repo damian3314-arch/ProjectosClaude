@@ -620,3 +620,68 @@ paso, 15 clases habrían estado sobrevendidas todo el sábado.
 La migración 0041 hace lo mismo dentro de `abrir_semana()`. Sigue sin
 aplicarse, y ya no es urgente: el flujo lo cubre. Cuando se pegue, las
 dos cosas conviven sin problema (recalcular dos veces no hace nada).
+
+
+---
+
+## 19 de agosto — la revisión de las 6 de la mañana
+
+Todo lo que se ha roto en este proyecto se rompió **en silencio**, y nos
+enteramos tarde y de casualidad: la semana que no abrió, los cupos
+ofrecidos que ya tenían dueño, el reporte del lunes que llevaba cinco
+días sin salir. La revisión diaria pregunta por esas cosas antes de que
+la gente empiece a reservar.
+
+    node pruebas/revision-diaria.mjs
+
+Sale con código 0 si todo está bien y 1 si algo falla. Cuando no pasa
+nada escribe **una sola línea**: una revisión que suelta tres párrafos
+todos los días se deja de leer, y entonces no sirve el día que sí pasa
+algo.
+
+Nueve comprobaciones:
+
+| | qué mira | por qué |
+|---|---|---|
+| 1 | la página carga | lo obvio |
+| 2 | `API_BASE` apunta al Worker | si alguien lo revierte, las reservas vuelven a gastar plan de n8n sin que nada se rompa a la vista |
+| 3 | hay clases que reservar | si falla, quien entra ve una página vacía y se va |
+| 4 | la semana entrante está abierta | avisa **antes** del lunes, no cuando ya no se puede reservar |
+| 5 | los cupos cuadran con los afiliados | el fallo del 15 de agosto: 30 puestos donde 20 tenían dueño |
+| 6 | los cupos vencidos se sueltan | vigila el mecanismo nuevo del Worker |
+| 7 | Supabase responde | y cuánto tarda |
+| 8 | el horario se puede pedir con CORS | el fallo más difícil de ver: la página carga perfecta y sale vacía |
+| 9 | el bot de opiniones responde | |
+
+De la 3 a la 7 las calcula el Worker en **`/salud`**, sin token: no
+devuelve ni un nombre, ni un teléfono, ni una cifra de caja, solo
+cuentas. Así el chequeo no carga con un secreto que habría que guardar y
+rotar, y se puede abrir desde el celular cuando algo huela raro.
+
+    https://tumbao-caja.damian3314.workers.dev/salud
+
+`/salud` contesta **200 siempre**, incluso cuando algo está mal. Un 500
+lo devuelve también un Worker caído, y entonces no se distingue "la
+página tiene un problema" de "no pude preguntar". El veredicto va en el
+cuerpo.
+
+### Dos cosas que costaron
+
+**Se pide con `curl`, no con `fetch`.** En entornos con proxy de salida
+—el contenedor donde se probó es uno— el `fetch` de Node lo ignora y
+devuelve 403 en todo. La primera corrida dio las cinco comprobaciones en
+rojo con la página perfectamente sana: justo la falsa alarma que hace
+que una revisión diaria se deje de mirar.
+
+**Se comprobó que sabe ponerse en rojo.** Apuntando `TUMBAO_WORKER` a un
+Worker que no existe, cayeron las tres que dependen de él y sobrevivieron
+las que no. Una revisión que solo ha dado verde no ha demostrado nada.
+
+### Lo que falta: el despertador
+
+La revisión está lista; falta quién la dispare a las 6 am. Crear la
+tarea recurrente desde aquí necesita una aprobación que la sesión no
+puede pedir, así que queda pendiente de hacerlo desde la interfaz.
+
+No conviene ponerlo en n8n: serían 30 ejecuciones al mes de un plan que
+justo estamos peleando por no llenar.
