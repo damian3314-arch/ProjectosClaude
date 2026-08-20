@@ -56,6 +56,7 @@ pagina.on('pageerror', (e) => errores.push('JS: ' + e.message));
 const CLASE = '11111111-2222-4333-8444-555555555555';
 
 // La gente que ya está apuntada a esa clase. Crear a mano la hace crecer.
+let efectivoFalla = false;
 let gente = [{ codigo: 'TB-0001', nombre: 'Ana Ruiz', telefono: '3001112233',
                estado: 'confirmada', tipo: 'suelta', asistio: false }];
 let loQuePidio = null;       // lo último que el panel mandó a /api/reserva
@@ -106,9 +107,20 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
   }
   gente = gente.concat([{ codigo: 'TB-0042', nombre: b.nombre, telefono: b.telefono,
                           estado: 'confirmada', tipo: b.tipo, asistio: false }]);
+  // Se imita lo que devuelve admin_crear_reserva desde la 0042: si el
+  // pago fue en efectivo, la propia llamada registra el movimiento de
+  // caja y lo dice. `efectivoFalla` permite probar el caso feo —el día
+  // ya cerrado— sin tener que cerrar una caja de verdad.
+  const enEfectivo = b.medio === 'efectivo';
   await route.fulfill({ status: 200, contentType: 'application/json',
     body: JSON.stringify({ ok: true, codigo: 'TB-0042', nombre: b.nombre,
-                           telefono: b.telefono, tipo: b.tipo }) });
+                           telefono: b.telefono, tipo: b.tipo,
+                           precio_cop: 15000, medio: b.medio ?? null,
+                           efectivo_registrado: enEfectivo ? !efectivoFalla : null,
+                           aviso_efectivo: (enEfectivo && efectivoFalla)
+                             ? 'El día ya está cerrado. Este movimiento va mañana. '
+                               + 'La reserva SÍ quedó: apunta esos 15.000 en la caja a mano.'
+                             : null }) });
 });
 
 console.log('\n── Apuntar a mano, en un navegador de verdad ──\n');
@@ -184,6 +196,96 @@ const okMsg = (await pagina.locator('#msg-puerta').innerText()).trim();
 /TB-0042/.test(okMsg)
   ? bien('le dice el código a la recepcionista', okMsg)
   : falla('le dice el código a la recepcionista', okMsg || '(vacío)');
+
+/* ─────────────────────────────────────────────────────────────
+   Cómo pagó — lo que decide si el arqueo cuadra
+
+   El 19 de agosto se apuntaron dos personas en efectivo en la puerta y
+   solo una de las dos apareció en el cierre: la ventana no preguntaba
+   el medio, así que esa plata solo llegaba a la caja si alguien se
+   acordaba de registrarla aparte, en otra pestaña.
+   ───────────────────────────────────────────────────────────── */
+console.log('\n── Cómo pagó ──\n');
+
+// Por defecto va en efectivo: es lo que más pasa en la puerta, y quien
+// ya transfirió normalmente reservó solo desde la página.
+loQuePidio && loQuePidio.medio === 'efectivo'
+  ? bien('manda el medio, y por defecto es efectivo', loQuePidio.medio)
+  : falla('manda el medio, y por defecto es efectivo',
+          (loQuePidio && String(loQuePidio.medio)) || '(no mandó nada)');
+
+// Que el efectivo entró tiene que decirse: es la confirmación de que
+// esos 15.000 van a estar en el arqueo de esta noche.
+/efectivo/i.test(okMsg) && /15\.000/.test(okMsg)
+  ? bien('avisa que el efectivo entró a la caja', okMsg)
+  : falla('avisa que el efectivo entró a la caja', okMsg);
+
+// ── por transferencia ──
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.fill('#ap-nombre', 'Elena Pardo');
+await pagina.fill('#ap-tel', '3007778899');
+await pagina.locator('#modal-apuntar [data-apmedio="transferencia"]').click();
+await pagina.waitForTimeout(150);
+
+// La pista tiene que decir la CONSECUENCIA, no el nombre del medio: lo
+// que hay que saber es si esa plata va a aparecer en el cajón.
+const pistaTr = (await pagina.locator('#ap-medio-pista').innerText()).trim();
+/banco/i.test(pistaTr) && /no entra al caj/i.test(pistaTr)
+  ? bien('con transferencia avisa que no entra al cajón', pistaTr)
+  : falla('con transferencia avisa que no entra al cajón', pistaTr);
+
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+loQuePidio && loQuePidio.medio === 'transferencia'
+  ? bien('manda transferencia cuando se elige', loQuePidio.medio)
+  : falla('manda transferencia cuando se elige', loQuePidio && loQuePidio.medio);
+
+const msgTr = (await pagina.locator('#msg-puerta').innerText()).trim();
+!/efectivo/i.test(msgTr)
+  ? bien('y no habla de efectivo que no existe', msgTr)
+  : falla('y no habla de efectivo que no existe', msgTr);
+
+// ── con plan no se pregunta nada ──
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.locator('#modal-apuntar [data-tipo="miembro"]').click();
+await pagina.waitForTimeout(150);
+(await pagina.locator('#ap-caja-medio').isHidden())
+  ? bien('con plan no se pregunta cómo pagó')
+  : falla('con plan no se pregunta cómo pagó', 'la pregunta sigue ahí');
+
+await pagina.fill('#ap-nombre', 'Fabio Miembro');
+await pagina.fill('#ap-tel', '3008889900');
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+loQuePidio && loQuePidio.medio === null
+  ? bien('y no manda ningún medio', 'null')
+  : falla('y no manda ningún medio', loQuePidio && String(loQuePidio.medio));
+
+// ── el caso feo: la reserva queda pero el efectivo NO entra ──
+// Pasa con el día ya cerrado. Es plata que está en el cajón y que el
+// sistema no sabe que existe: callarlo aquí sería el mismo fallo de
+// antes, pero con otra cara.
+efectivoFalla = true;
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.fill('#ap-nombre', 'Gaby Cerrada');
+await pagina.fill('#ap-tel', '3009990011');
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+efectivoFalla = false;
+
+const msgMal = (await pagina.locator('#msg-puerta').innerText()).trim();
+/NO entró a la caja/i.test(msgMal)
+  ? bien('si el efectivo no entra, lo grita', msgMal.slice(0, 90))
+  : falla('si el efectivo no entra, lo grita', msgMal);
+/apunta esos 15\.000/i.test(msgMal)
+  ? bien('y dice qué hacer con esa plata')
+  : falla('y dice qué hacer con esa plata', msgMal);
+(await pagina.locator('#msg-puerta.mal').count()) === 1
+  ? bien('y sale en rojo, no como un aviso más')
+  : falla('y sale en rojo, no como un aviso más', 'no tiene la clase .mal');
 
 // ---- lo que se rechaza sin molestar al servidor ----
 await pagina.click('#puerta-apuntar');

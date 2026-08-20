@@ -982,6 +982,22 @@ const CONFIG = {
     </div>
     <p class="ap-pista" id="ap-pista">Queda confirmada: se apunta cuando ya llegó el comprobante.</p>
 
+    <!-- Cómo pagó. No es un detalle: de esto depende que el arqueo
+         cuadre. Si pagó en efectivo, esa plata está en el cajón y el
+         cierre tiene que contarla; si transfirió, está en el banco y el
+         cajón no la ha visto. Antes no se preguntaba, y el efectivo de
+         la puerta solo llegaba a la caja si alguien se acordaba de
+         registrarlo aparte, en otra pestaña. El 19 de agosto entraron
+         dos personas así y solo una de las dos apareció en el cierre. -->
+    <div id="ap-caja-medio">
+      <label>¿Cómo pagó?</label>
+      <div class="medios">
+        <button class="medio on" data-apmedio="efectivo">💵 Efectivo</button>
+        <button class="medio" data-apmedio="transferencia">🏦 Transferencia</button>
+      </div>
+      <p class="ap-pista" id="ap-medio-pista">Entra al cajón y suma en el cierre de hoy.</p>
+    </div>
+
     <label for="ap-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="ap-nota" type="text" maxlength="80" placeholder="Ej: pagó por Nequi la mamá"
            autocomplete="off">
@@ -1546,6 +1562,27 @@ const CONFIG = {
   // persona, pasar por la pantalla de pago y después aprobarla en la
   // cola. Desde aquí es un botón, y el aforo lo sigue cuidando Postgres.
   let apTipo = 'suelta';
+  // Arranca en efectivo porque es lo que más pasa en la puerta: quien
+  // ya transfirió normalmente reserva desde la página y no hay que
+  // apuntarlo. Aun así se ve y se puede cambiar de un toque.
+  let apMedio = 'efectivo';
+
+  // La pista cambia con lo elegido para que se lea la CONSECUENCIA, no
+  // el nombre del medio: lo que importa saber es si esa plata va a
+  // aparecer en el arqueo de esta noche.
+  const pintarMedio = () => {
+    // El atributo se llama data-apmedio y no data-medio a propósito: en
+    // el panel de caja ya hay unos botones con data-medio, y un selector
+    // global pasaría a encontrar cuatro donde antes había dos.
+    $('#modal-apuntar').querySelectorAll('[data-apmedio]')
+      .forEach(x => x.classList.toggle('on', x.dataset.apmedio === apMedio));
+    $('#ap-medio-pista').textContent = apMedio === 'efectivo'
+      ? 'Entra al cajón y suma en el cierre de hoy.'
+      : 'Ya está en el banco. No entra al cajón.';
+    // Con plan no se cobra nada, así que preguntar cómo pagó sobra y
+    // confunde.
+    $('#ap-caja-medio').hidden = apTipo === 'miembro';
+  };
 
   $('#puerta-apuntar').addEventListener('click', abrirApuntar);
   $('#ap-cancelar').addEventListener('click', cerrarApuntar);
@@ -1562,7 +1599,11 @@ const CONFIG = {
       $('#ap-pista').textContent = apTipo === 'miembro'
         ? 'Con plan no se cobra. Si su plan no es de esta hora, Postgres lo rechaza.'
         : 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
+      pintarMedio();
     }));
+
+  $('#modal-apuntar').querySelectorAll('[data-apmedio]').forEach(b =>
+    b.addEventListener('click', () => { apMedio = b.dataset.apmedio; pintarMedio(); }));
 
   function abrirApuntar() {
     if (!puerta || !puerta.clase) return;
@@ -1571,6 +1612,8 @@ const CONFIG = {
     $('#modal-apuntar').querySelectorAll('[data-tipo]')
       .forEach(x => x.classList.toggle('on', x.dataset.tipo === 'suelta'));
     $('#ap-pista').textContent = 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
+    apMedio = 'efectivo';
+    pintarMedio();
     $('#ap-clase').textContent = `${hora12(c.hora)} · ${fmtLargo(c.fecha)}`;
     $('#ap-nombre').value = '';
     $('#ap-tel').value = '';
@@ -1616,13 +1659,38 @@ const CONFIG = {
         clase_id: puerta.clase.clase_id,
         nombre, telefono: tel, tipo: apTipo,
         nota: $('#ap-nota').value.trim() || null,
+        // Solo va cuando hay algo que cobrar. Con plan no se paga en la
+        // puerta, y mandar un medio ahí sería pedirle a Postgres que
+        // registre un ingreso que nadie entregó.
+        medio: apTipo === 'miembro' ? null : apMedio,
       });
       cerrarApuntar();
       // Se recarga la lista para que quien acaba de entrar aparezca
       // donde la recepcionista va a buscarlo dentro de dos minutos.
       await abrirPuerta(puerta.clase.clase_id);
-      aviso($('#msg-puerta'),
-        `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.`, 'bien');
+
+      // Si se cobró en efectivo, el cierre de esta noche tiene que
+      // contarlo. Se recarga la caja para que el número de arriba ya
+      // esté al día si recepción se pasa a esa pestaña.
+      if (r.efectivo_registrado === true) await cargarCaja().catch(() => {});
+
+      // El caso feo: la reserva quedó pero el efectivo NO entró —el día
+      // ya estaba cerrado, casi siempre—. Se dice en rojo y con el
+      // valor, porque es plata que está en el cajón y que el sistema no
+      // sabe que existe. Callarlo aquí es exactamente el fallo que se
+      // vino a arreglar.
+      if (r.efectivo_registrado === false) {
+        aviso($('#msg-puerta'),
+          `${esc(r.nombre)} quedó apuntada (código ${esc(r.codigo)}), pero ` +
+          `<b>el efectivo NO entró a la caja</b>. ${esc(r.aviso_efectivo || '')}`,
+          'mal');
+      } else {
+        aviso($('#msg-puerta'),
+          `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.` +
+          (r.efectivo_registrado === true
+            ? ` Entraron ${pesos(r.precio_cop)} en efectivo a la caja.` : ''),
+          'bien');
+      }
     } catch (e) {
       // SIN_CUPO llega hasta aquí a propósito: es el único mensaje que
       // no se puede tragar, porque significa que no se puede vender.
@@ -2943,9 +3011,20 @@ const CONFIG = {
       linea('Transferencias', pesos(d.ingreso_transferencia)) +
       linea('Reservas cobradas hoy', pesos(d.reservas_cop)) +
       linea('Total a banco', pesos(a.ingresos_a_banco), 'g') +
+      // Decía "ya contadas arriba", y era mentira: desde la 0030 las de
+      // mostrador NO se suman en reservas_cop, justamente para no
+      // contarlas dos veces. Esa frase decía que no había nada que
+      // hacer, así que nadie iba a comprobarlo — y el 19 de agosto se
+      // quedaron 15.000 en el cajón que el sistema no sabía que existían.
+      //
+      // Ahora dice dónde está esa plata, que es lo único que hay que
+      // saber para cuadrar: la de efectivo ya subió arriba como
+      // movimiento del cajón, y la de transferencia está en el banco.
       (Number(d.reservas_a_mano_n || 0) > 0
-        ? `<div class="peq">Confirmadas en mostrador: ${d.reservas_a_mano_n} ` +
-          `(${pesos(d.reservas_a_mano_cop)}) — ya contadas arriba</div>`
+        ? `<div class="peq">Apuntadas en mostrador: ${d.reservas_a_mano_n} ` +
+          `(${pesos(d.reservas_a_mano_cop)}). No suman aquí: las de efectivo ` +
+          `ya entraron arriba como movimiento del cajón, y las de ` +
+          `transferencia están en el banco.</div>`
         : '') +
       // Dos relojes distintos, y confundirlos era justo el problema:
       // una reserva se COBRA el día que entra la plata y se DICTA el

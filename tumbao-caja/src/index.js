@@ -926,6 +926,17 @@ export default {
           p_telefono: String(b.telefono || '').slice(0, 20),
           p_tipo: b.tipo === 'miembro' ? 'miembro' : 'suelta',
           p_nota: b.nota ? String(b.nota).slice(0, 80) : null,
+          // Cómo pagó. De esto depende que el arqueo cuadre: si fue en
+          // efectivo, admin_crear_reserva registra el movimiento de caja
+          // en la misma llamada, y esa plata deja de depender de que
+          // alguien se acuerde de apuntarla en otra pestaña.
+          //
+          // Se filtra a los dos valores válidos en vez de reenviar lo
+          // que llegue: Postgres también lo valida, pero un 'Efectivo'
+          // con mayúscula rebotaría allá y aquí se arregla solo.
+          p_medio: ['efectivo', 'transferencia']
+            .includes(String(b.medio || '').toLowerCase())
+            ? String(b.medio).toLowerCase() : null,
         });
 
       } else if (ruta === '/api/anular') {
