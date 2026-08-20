@@ -116,6 +116,7 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
     body: JSON.stringify({ ok: true, codigo: 'TB-0042', nombre: b.nombre,
                            telefono: b.telefono, tipo: b.tipo,
                            precio_cop: 15000, medio: b.medio ?? null,
+                           cobra_en_puerta: b.medio === 'en_puerta',
                            efectivo_registrado: enEfectivo ? !efectivoFalla : null,
                            aviso_efectivo: (enEfectivo && efectivoFalla)
                              ? 'El día ya está cerrado. Este movimiento va mañana. '
@@ -245,6 +246,37 @@ const msgTr = (await pagina.locator('#msg-puerta').innerText()).trim();
 !/efectivo/i.test(msgTr)
   ? bien('y no habla de efectivo que no existe', msgTr)
   : falla('y no habla de efectivo que no existe', msgTr);
+
+// ── paga al llegar: lo que motivó todo ──
+// Si esa plata entrara al apuntar, el cajón esperaría un dinero que
+// todavía no está — y si la persona no aparece, no está nunca.
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.fill('#ap-nombre', 'Hugo Llega');
+await pagina.fill('#ap-tel', '3006665544');
+await pagina.locator('#modal-apuntar [data-apmedio="en_puerta"]').click();
+await pagina.waitForTimeout(150);
+
+const pistaP = (await pagina.locator('#ap-medio-pista').innerText()).trim();
+/no entra todav/i.test(pistaP) && /si no viene/i.test(pistaP)
+  ? bien('avisa que no entra hasta que llegue', pistaP)
+  : falla('avisa que no entra hasta que llegue', pistaP);
+
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+loQuePidio && loQuePidio.medio === 'en_puerta'
+  ? bien('manda en_puerta cuando se elige', loQuePidio.medio)
+  : falla('manda en_puerta cuando se elige', loQuePidio && loQuePidio.medio);
+
+// Recepción tiene que saber que le queda algo por cobrar, o se cobra en
+// la puerta y nadie lo apunta.
+const msgP = (await pagina.locator('#msg-puerta').innerText()).trim();
+/cóbrale \$15\.000 al llegar/i.test(msgP)
+  ? bien('le recuerda que tiene que cobrarle al llegar', msgP.slice(0, 80))
+  : falla('le recuerda que tiene que cobrarle al llegar', msgP);
+!/entraron/i.test(msgP)
+  ? bien('y no dice que entró plata que no entró')
+  : falla('y no dice que entró plata que no entró', msgP);
 
 // ── con plan no se pregunta nada ──
 await pagina.click('#puerta-apuntar');

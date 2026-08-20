@@ -992,8 +992,9 @@ const CONFIG = {
     <div id="ap-caja-medio">
       <label>¿Cómo pagó?</label>
       <div class="medios">
-        <button class="medio on" data-apmedio="efectivo">💵 Efectivo</button>
-        <button class="medio" data-apmedio="transferencia">🏦 Transferencia</button>
+        <button class="medio on" data-apmedio="efectivo">💵 Ya pagó</button>
+        <button class="medio" data-apmedio="en_puerta">⏳ Paga al llegar</button>
+        <button class="medio" data-apmedio="transferencia">🏦 Transfirió</button>
       </div>
       <p class="ap-pista" id="ap-medio-pista">Entra al cajón y suma en el cierre de hoy.</p>
     </div>
@@ -1576,9 +1577,10 @@ const CONFIG = {
     // global pasaría a encontrar cuatro donde antes había dos.
     $('#modal-apuntar').querySelectorAll('[data-apmedio]')
       .forEach(x => x.classList.toggle('on', x.dataset.apmedio === apMedio));
-    $('#ap-medio-pista').textContent = apMedio === 'efectivo'
-      ? 'Entra al cajón y suma en el cierre de hoy.'
-      : 'Ya está en el banco. No entra al cajón.';
+    $('#ap-medio-pista').textContent =
+      apMedio === 'efectivo'  ? 'La plata ya está en el cajón. Suma en el cierre de hoy.'
+    : apMedio === 'en_puerta' ? 'No entra todavía: entra cuando le marques la entrada. Si no viene, no se cobra.'
+    :                           'Ya está en el banco. No entra al cajón.';
     // Con plan no se cobra nada, así que preguntar cómo pagó sobra y
     // confunde.
     $('#ap-caja-medio').hidden = apTipo === 'miembro';
@@ -1694,7 +1696,13 @@ const CONFIG = {
         aviso($('#msg-puerta'),
           `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.` +
           (r.efectivo_registrado === true
-            ? ` Entraron ${pesos(r.precio_cop)} en efectivo a la caja.` : ''),
+            ? ` Entraron ${pesos(r.precio_cop)} en efectivo a la caja.` : '') +
+          // Que quede dicho: esa plata todavía no está, y la forma de
+          // que entre es marcarle la entrada cuando llegue. Si no se
+          // dice aquí, se cobra en la puerta y nadie lo apunta.
+          (r.cobra_en_puerta === true
+            ? ` <b>Cóbrale ${pesos(r.precio_cop)} al llegar</b> — entran a la ` +
+              `caja cuando le marques la entrada.` : ''),
           'bien');
       }
     } catch (e) {
@@ -1937,7 +1945,25 @@ const CONFIG = {
       // está marcando desde otro teléfono, este es el bueno.
       if (puerta.resumen) puerta.resumen.entraron = r.entraron;
       refrescarMarcador();
-      aviso($('#msg-puerta'), '');
+
+      // Quien pagaba al llegar se cobra AQUÍ, al marcarle la entrada.
+      // Hay que decirlo: recepción acaba de recibir plata y tiene que
+      // ver que el sistema ya la contó, o la va a apuntar otra vez.
+      if (r.aviso_cobro) {
+        aviso($('#msg-puerta'), esc(r.aviso_cobro), 'mal');
+      } else if (Number(r.cobrado_cop) > 0) {
+        aviso($('#msg-puerta'),
+          `Cobrados ${pesos(r.cobrado_cop)} a ${esc(p.nombre)} y anotados en la caja.`,
+          'bien');
+        await cargarCaja().catch(() => {});
+      } else if (Number(r.cobrado_cop) < 0) {
+        aviso($('#msg-puerta'),
+          `Se quitó la entrada de ${esc(p.nombre)}: ${pesos(-r.cobrado_cop)} salieron ` +
+          `otra vez de la caja.`, 'bien');
+        await cargarCaja().catch(() => {});
+      } else {
+        aviso($('#msg-puerta'), '');
+      }
     } catch (e) {
       pintarBoton(fila, boton, p, p.asistio);
       aviso($('#msg-puerta'), esc(e.message), 'mal');

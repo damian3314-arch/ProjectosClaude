@@ -934,7 +934,10 @@ export default {
           // Se filtra a los dos valores válidos en vez de reenviar lo
           // que llegue: Postgres también lo valida, pero un 'Efectivo'
           // con mayúscula rebotaría allá y aquí se arregla solo.
-          p_medio: ['efectivo', 'transferencia']
+          // 'en_puerta' = paga en efectivo cuando llegue. Esa no entra a
+          // la caja al apuntar: entra al marcarle la entrada. Si no
+          // viene, no se cobró nada y no hay nada que deshacer.
+          p_medio: ['efectivo', 'transferencia', 'en_puerta']
             .includes(String(b.medio || '').toLowerCase())
             ? String(b.medio).toLowerCase() : null,
         });
