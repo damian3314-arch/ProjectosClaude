@@ -1680,9 +1680,15 @@ const CONFIG = {
       // sabe que existe. Callarlo aquí es exactamente el fallo que se
       // vino a arreglar.
       if (r.efectivo_registrado === false) {
+        // De Postgres se toma solo el MOTIVO; la parte accionable la
+        // escribe el panel. Así el valor sale con el formato de aquí
+        // ($15.000) y no con el separador de miles de la base (15,000),
+        // que en Colombia se lee como decimales.
+        const motivo = String(r.aviso_efectivo || '').split(' La reserva SÍ quedó')[0];
         aviso($('#msg-puerta'),
           `${esc(r.nombre)} quedó apuntada (código ${esc(r.codigo)}), pero ` +
-          `<b>el efectivo NO entró a la caja</b>. ${esc(r.aviso_efectivo || '')}`,
+          `<b>el efectivo NO entró a la caja</b>. ${esc(motivo)} ` +
+          `La reserva sí quedó: apunta esos <b>${pesos(r.precio_cop)}</b> en la caja a mano.`,
           'mal');
       } else {
         aviso($('#msg-puerta'),

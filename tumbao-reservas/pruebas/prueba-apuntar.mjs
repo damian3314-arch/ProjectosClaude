@@ -280,9 +280,11 @@ const msgMal = (await pagina.locator('#msg-puerta').innerText()).trim();
 /NO entró a la caja/i.test(msgMal)
   ? bien('si el efectivo no entra, lo grita', msgMal.slice(0, 90))
   : falla('si el efectivo no entra, lo grita', msgMal);
-/apunta esos 15\.000/i.test(msgMal)
-  ? bien('y dice qué hacer con esa plata')
-  : falla('y dice qué hacer con esa plata', msgMal);
+// El valor va con el formato de aquí, no con el separador de miles de
+// Postgres: "15,000" en Colombia se lee como decimales.
+/apunta esos \$15\.000/i.test(msgMal)
+  ? bien('y dice qué hacer con esa plata, en pesos de aquí')
+  : falla('y dice qué hacer con esa plata, en pesos de aquí', msgMal);
 (await pagina.locator('#msg-puerta.mal').count()) === 1
   ? bien('y sale en rojo, no como un aviso más')
   : falla('y sale en rojo, no como un aviso más', 'no tiene la clase .mal');
