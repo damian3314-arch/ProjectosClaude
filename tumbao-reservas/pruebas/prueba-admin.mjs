@@ -243,12 +243,60 @@ ok('la que no pagó sale marcada "sin confirmar"',
 const btnSoltar = dupe.locator('.btn-soltar');
 ok('y trae el botón de liberar', await btnSoltar.count() === 1);
 
-// En las confirmadas NO: para deshacer un pago está Deshacer en la cola,
-// que además devuelve el depósito al banco.
+// En las confirmadas que entraron POR LA PÁGINA no: esas tienen un
+// depósito de verdad detrás, y soltarlas con un clic dejaría el dinero
+// huérfano. Para esas está Deshacer en la cola, que lo devuelve.
 const confirmadas = p.locator('.fila-puerta').filter({ hasNotText: 'sin confirmar' });
-ok('las confirmadas y las de plan no lo traen',
+ok('las confirmadas de la página y las de plan no lo traen',
    await confirmadas.locator('.btn-soltar').count() === 0,
    `${await confirmadas.count()} fila(s) sin botón`);
+
+/* ─────────────────────────────────────────────────────────────
+   Pero una apuntada a mano SÍ se puede liberar
+
+   Nacen confirmadas, así que antes no había forma de corregir un error
+   de mostrador: Deshacer las rechazaba por no haber pasado por la cola,
+   y Liberar no salía. El cupo quedaba tomado para siempre — y desde que
+   una reserva de mostrador puede mover efectivo, con la plata dentro.
+   ───────────────────────────────────────────────────────────── */
+{
+  const claseAbierta = await p.evaluate(() =>
+    document.querySelector('#lista-puerta')?.dataset?.clase || null);
+  const sembrada = await (await fetch(
+    'http://localhost:8899/_prueba/apuntar-a-mano?nombre=Mostrador%20Efectivo' +
+    (claseAbierta ? `&clase=${claseAbierta}` : ''))).json();
+
+  await p.locator('#puerta-recargar').click();
+  await p.waitForTimeout(800);
+
+  const aMano = p.locator('.fila-puerta').filter({ hasText: 'Mostrador Efectivo' }).first();
+  ok('la apuntada a mano aparece en la puerta', await aMano.count() === 1,
+     sembrada.codigo || '(no se sembró)');
+  ok('y está confirmada', !/sin confirmar/i.test(await aMano.innerText().catch(() => '')));
+  ok('y AUN ASÍ trae el botón de liberar',
+     await aMano.locator('.btn-soltar', { hasText: 'Liberar' }).count() === 1);
+
+  // La plata se nombra ANTES de preguntar: "¿seguro?" a secas no dice
+  // que además vas a sacar 15.000 de la caja.
+  let textoPregunta = '';
+  p.once('dialog', async (d) => { textoPregunta = d.message(); await d.accept(); });
+  await aMano.locator('.btn-soltar', { hasText: 'Liberar' }).click();
+  await p.waitForTimeout(1200);
+  /15\.000/.test(textoPregunta) && /caja/i.test(textoPregunta)
+    ? ok('avisa de la plata antes de preguntar', true,
+         textoPregunta.replace(/\n+/g, ' · ').slice(0, 90))
+    : ok('avisa de la plata antes de preguntar', false, textoPregunta || '(no preguntó)');
+
+  ok('al liberarla desaparece de la puerta',
+     await p.locator('.fila-puerta').filter({ hasText: 'Mostrador Efectivo' }).count() === 0);
+
+  // El resultado sale como aviso flotante (.nota), no en #msg-puerta:
+  // ahí van los errores del panel de la puerta.
+  const msg = await p.locator('.nota').last().innerText().catch(() => '');
+  /15\.000/.test(msg) && /caja/i.test(msg)
+    ? ok('y dice cuánta plata salió de la caja', true, msg.replace(/\n/g, ' · ').slice(0, 80))
+    : ok('y dice cuánta plata salió de la caja', false, msg || '(vacío)');
+}
 
 // Soltar un cupo en una clase llena se lo lleva otro en segundos: esto
 // se pregunta antes.

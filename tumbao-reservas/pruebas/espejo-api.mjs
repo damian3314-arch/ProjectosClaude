@@ -522,7 +522,12 @@ createServer(async (req, res) => {
           estado: r.estado, confirmada: r.estado === 'confirmada',
           asistio: asistencias.has(c.clase_id + '|r:' + r.codigo),
           // Pago y no vino: un tercer estado, distinto de "sin marcar".
-          no_vino: !!r.noVino, credito_vence: r.venceCredito || null
+          no_vino: !!r.noVino, credito_vence: r.venceCredito || null,
+          // Apuntada desde el panel. Solo estas se pueden liberar
+          // estando ya confirmadas; las de la pagina traen deposito.
+          a_mano: r.origen === 'recepcion',
+          // Lo que sale de la caja al liberarla, si se cobro en efectivo.
+          cobrado_cop: r.cobradoCop || null
         }))
         .sort((a, z) => a.nombre.localeCompare(z.nombre));
 
@@ -588,12 +593,21 @@ createServer(async (req, res) => {
           se_puede_deshacer: true,
           mensaje: 'Confirmada a mano.' });
       }
+      // Una confirmada solo se libera si se apunto a mano. La que cruzo
+      // la pagina tiene un deposito detras y se deshace desde la cola.
+      if (r.estado === 'confirmada' && r.origen !== 'recepcion') {
+        return json(res, 400, { ok: false, error: 'YA_CONFIRMADA',
+          mensaje: 'Esa reserva ya esta confirmada y entro por la pagina.' });
+      }
       r.estado = 'rechazada';
+      asistencias.delete(r.clase_id + '|r:' + r.codigo);
       const c = clases.find(x => x.clase_id === r.clase_id);
       if (c) { c.cupos_disponibles++; c.agotada = false; }
+      const devuelto = r.cobradoCop || null;
+      r.cobradoCop = null;
       return json(res, 200, { ok: true, estado: 'rechazada', codigo: r.codigo,
         nombre: r.nombre, telefono: r.telefono || '3001112233',
-        se_puede_deshacer: true,
+        se_puede_deshacer: true, devuelto_cop: devuelto, aviso_caja: null,
         mensaje: 'Rechazada, el cupo quedo libre.' });
     }
 
@@ -856,6 +870,30 @@ createServer(async (req, res) => {
   // Vuelve al estado del arranque. Sin esto, correr la misma suite dos
   // veces seguidas falla por los restos de la primera, y el fallo no se
   // parece en nada a su causa.
+  // Siembra una reserva apuntada a mano y ya cobrada en efectivo. Es la
+  // unica forma de tener una en el espejo: el panel apunta contra
+  // /api/reserva, que vive en el Worker y aqui no se imita.
+  //
+  // Existe para poder probar en un navegador algo que solo se ve alli:
+  // que el boton "Liberar" SI salga en las de mostrador aunque esten
+  // confirmadas, y NO en las que entraron por la pagina.
+  if (url.pathname === '/_prueba/apuntar-a-mano') {
+    const c = clases.find(x => x.clase_id === url.searchParams.get('clase'))
+           || clases[0];
+    const cod = codigo();
+    reservas.set(cod, {
+      codigo: cod, tipo: 'suelta', clase: c.nombre, clase_id: c.clase_id,
+      nombre: url.searchParams.get('nombre') || 'Mostrador Efectivo',
+      telefono: '3007770000', creadaAt: new Date().toISOString(),
+      estado: 'confirmada', origen: 'recepcion',
+      cobradoCop: Number(url.searchParams.get('cobrado') ?? 15000) || null,
+      fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
+      hora: hora12(c.fecha_hora), pagoEn: null,
+    });
+    c.cupos_disponibles--;
+    return json(res, 200, { ok: true, codigo: cod, clase_id: c.clase_id });
+  }
+
   if (url.pathname === '/_prueba/reiniciar') {
     sembrarClases();
     reservas.clear();

@@ -1722,6 +1722,10 @@ const CONFIG = {
     aviso($('#msg-puerta'), '');
     try {
       puerta = await api('lista', { clase_id: claseId });
+      // Qué clase se está mirando, visible desde fuera del JS. Sirve para
+      // depurar en el móvil de recepción —"¿de qué clase es esta lista?"—
+      // y para que las pruebas de navegador no tengan que adivinarlo.
+      $('#lista-puerta').dataset.clase = claseId || '';
       pintarPuerta();
     } catch (e) {
       aviso($('#msg-puerta'), esc(e.message), 'mal');
@@ -1855,14 +1859,25 @@ const CONFIG = {
     // (la barrida corre en punto), y mientras tanto el cupo no se puede
     // vender.
     //
-    // No sale en las de plan (no tienen código, no reservan) ni en las
-    // confirmadas: para deshacer un pago confirmado está Deshacer en la
-    // cola, que además devuelve el depósito.
-    if (p.codigo && p.confirmada === false) {
+    // No sale en las de plan (no tienen código, no reservan).
+    //
+    // Sí sale en las apuntadas a mano AUNQUE estén confirmadas: nacen
+    // confirmadas, así que sin esto un error de mostrador no se podía
+    // corregir por ninguna vía —Deshacer las rechaza porque no pasaron
+    // por la cola— y el cupo quedaba tomado para siempre. Desde que una
+    // reserva de mostrador puede mover efectivo, eso dejó de ser un cupo
+    // perdido y pasó a ser una caja que no cuadra.
+    //
+    // Las confirmadas que entraron por la página siguen sin el botón:
+    // esas tienen un depósito de verdad detrás y se deshacen desde la
+    // cola, que devuelve el dinero a su sitio.
+    if (p.codigo && (p.confirmada === false || p.a_mano === true)) {
       const s = document.createElement('button');
       s.className = 'btn-soltar';
       s.textContent = 'Liberar';
-      s.title = 'Suelta el cupo: la reserva queda rechazada';
+      s.title = p.cobrado_cop
+        ? `Suelta el cupo y devuelve ${pesos(p.cobrado_cop)} de la caja`
+        : 'Suelta el cupo: la reserva queda rechazada';
       s.setAttribute('aria-label', 'Liberar el cupo de ' + p.nombre);
       s.addEventListener('click', () => soltarCupo(el, s, p));
       acc.appendChild(s);
@@ -1910,13 +1925,30 @@ const CONFIG = {
     // Esto sí se pregunta. Marcar una entrada de más se arregla volviendo
     // a tocar el botón; soltar un cupo en una clase llena se lo lleva
     // otro en segundos y ya no hay vuelta.
+    // La plata se nombra ANTES de preguntar. "¿Seguro?" a secas no dice
+    // que además vas a sacar 15.000 de la caja, y esa es justo la parte
+    // que hay que pensar dos veces.
     if (!confirm(
           `¿Liberar el cupo de ${p.nombre} (${p.codigo})?\n\n` +
-          `La reserva queda rechazada y el puesto vuelve a estar a la venta.`)) return;
+          `La reserva queda rechazada y el puesto vuelve a estar a la venta.` +
+          (p.cobrado_cop
+            ? `\n\nOJO: se le cobraron ${pesos(p.cobrado_cop)} en efectivo. ` +
+              `Van a salir de la caja de hoy.`
+            : ''))) return;
     boton.disabled = true;
     try {
-      await api('rechazar', { codigo: p.codigo });
-      nota(`Cupo liberado`, 'bien', `${p.nombre} · ${p.codigo}`);
+      const r = await api('rechazar', { codigo: p.codigo });
+      if (r.aviso_caja) {
+        // El cupo se soltó igual, pero el ingreso sigue en la caja: casi
+        // siempre porque el día ya se cerró o el cobro fue de otro día.
+        nota('Cupo liberado, pero revisa la caja', 'ojo', r.aviso_caja);
+      } else if (Number(r.devuelto_cop) > 0) {
+        nota('Cupo liberado', 'bien',
+             `${p.nombre} · ${p.codigo} — salieron ${pesos(r.devuelto_cop)} de la caja.`);
+        await cargarCaja().catch(() => {});
+      } else {
+        nota(`Cupo liberado`, 'bien', `${p.nombre} · ${p.codigo}`);
+      }
       // Se recarga entera en vez de quitar la fila a mano: cambian el
       // aforo, los "N de M" de los dos grupos y el aviso de "sin
       // confirmar" de arriba. Tacharlos uno por uno es donde se cuelan
