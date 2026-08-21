@@ -622,6 +622,15 @@ const CONFIG = {
   }
   .cierre .fila.control .no-suma::before{content:'('}
   .cierre .fila.control .no-suma::after {content:')'}
+  /* Lo que hay que mirar de verdad. No es un error todavía —puede que
+     el aviso del banco venga en camino— pero es lo único de ese bloque
+     que pide una decisión, así que no puede parecerse a lo demás. */
+  .cierre .fila.ojo{
+    background:rgba(255,193,77,.08);border:1px solid rgba(255,193,77,.4);
+    border-radius:8px;padding:.5rem .6rem;margin:.4rem 0;
+  }
+  .cierre .fila.ojo > span:last-child{color:var(--gold);font-weight:700}
+  .cierre .fila.ojo .ag{color:var(--gold);opacity:.85}
 
   .cierre .dif{font-weight:800;font-size:1.1rem}
   .cierre .dif.mal{color:var(--bad)} .cierre .dif.bien{color:var(--ok)}
@@ -651,8 +660,14 @@ const CONFIG = {
   .cierre .btn{margin-top:.9rem;width:100%}
 
   /* ---- ventana de registro ---- */
+  /* Por encima de los avisos flotantes (z-index 80), no por debajo.
+     Un aviso de hace cinco segundos se quedaba encima de la ventana y
+     se tragaba los clics de los botones que había debajo: en la puerta,
+     con cola, eso es la recepcionista tocando algo que no responde.
+     Lo que hay que decir MIENTRAS la ventana está abierta va dentro de
+     ella —como el "falta cómo pagó"—, así que no se pierde nada. */
   .modal{
-    position:fixed;inset:0;background:rgba(6,4,8,.78);z-index:50;
+    position:fixed;inset:0;background:rgba(6,4,8,.78);z-index:90;
     display:grid;place-items:center;padding:1rem;backdrop-filter:blur(3px);
   }
   .caja-modal{
@@ -933,6 +948,14 @@ const CONFIG = {
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
       <button class="medio" data-medio="transferencia">📲 Transferencia</button>
     </div>
+    <!-- El banco ya manda sus depósitos solo. Registrar a mano una
+         transferencia que además va a llegar por el correo del banco es
+         cómo la misma plata termina contada dos veces: el 20 de agosto
+         el cierre decía 490.000 cuando al banco entraron 475.000. -->
+    <p class="ap-pista" id="modal-pista-medio" hidden>
+      El banco reporta las transferencias solo. Escoge abajo el depósito;
+      si no aparece todavía, se registra igual y queda marcado hasta que llegue.
+    </p>
 
     <!-- Aquí es donde de verdad se comprueba que la plata llegó. La foto
          del comprobante no comprueba nada: puede ser vieja o editada. El
@@ -1563,10 +1586,15 @@ const CONFIG = {
   // persona, pasar por la pantalla de pago y después aprobarla en la
   // cola. Desde aquí es un botón, y el aforo lo sigue cuidando Postgres.
   let apTipo = 'suelta';
-  // Arranca en efectivo porque es lo que más pasa en la puerta: quien
-  // ya transfirió normalmente reserva desde la página y no hay que
-  // apuntarlo. Aun así se ve y se puede cambiar de un toque.
-  let apMedio = 'efectivo';
+  // SIN valor por defecto, a propósito.
+  //
+  // Arrancaba en efectivo. El 20 de agosto apuntaron así a alguien que
+  // en realidad había transferido —su depósito estaba en el banco a las
+  // 18:53—, el sistema cobró un efectivo que nadie entregó, y la cajera
+  // tuvo que anularlo. Uno de cada cuatro apuntes de ese día.
+  //
+  // Un toque más a cambio de que nunca se registre plata que no existe.
+  let apMedio = null;
 
   // La pista cambia con lo elegido para que se lea la CONSECUENCIA, no
   // el nombre del medio: lo que importa saber es si esa plata va a
@@ -1577,10 +1605,12 @@ const CONFIG = {
     // global pasaría a encontrar cuatro donde antes había dos.
     $('#modal-apuntar').querySelectorAll('[data-apmedio]')
       .forEach(x => x.classList.toggle('on', x.dataset.apmedio === apMedio));
+    $('#ap-medio-pista').classList.remove('malo-campo');
     $('#ap-medio-pista').textContent =
-      apMedio === 'efectivo'  ? 'La plata ya está en el cajón. Suma en el cierre de hoy.'
-    : apMedio === 'en_puerta' ? 'No entra todavía: entra cuando le marques la entrada. Si no viene, no se cobra.'
-    :                           'Ya está en el banco. No entra al cajón.';
+      apMedio === 'efectivo'      ? 'La plata ya está en el cajón. Suma en el cierre de hoy.'
+    : apMedio === 'en_puerta'     ? 'No entra todavía: entra cuando le marques la entrada. Si no viene, no se cobra.'
+    : apMedio === 'transferencia' ? 'Ya está en el banco. No entra al cajón.'
+    :                               'Escoge una: de esto depende que el arqueo cuadre.';
     // Con plan no se cobra nada, así que preguntar cómo pagó sobra y
     // confunde.
     $('#ap-caja-medio').hidden = apTipo === 'miembro';
@@ -1614,7 +1644,7 @@ const CONFIG = {
     $('#modal-apuntar').querySelectorAll('[data-tipo]')
       .forEach(x => x.classList.toggle('on', x.dataset.tipo === 'suelta'));
     $('#ap-pista').textContent = 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
-    apMedio = 'efectivo';
+    apMedio = null;
     pintarMedio();
     $('#ap-clase').textContent = `${hora12(c.hora)} · ${fmtLargo(c.fecha)}`;
     $('#ap-nombre').value = '';
@@ -1639,6 +1669,7 @@ const CONFIG = {
 
     const nombre = $('#ap-nombre').value.trim();
     const tel = $('#ap-tel').value.replace(/\D/g, '');
+
     // Se avisa aquí de lo obvio para no gastar un viaje al servidor,
     // pero quien manda sigue siendo admin_crear_reserva: si algo se
     // cuela, allá se rechaza igual.
@@ -1650,6 +1681,19 @@ const CONFIG = {
     if (tel.replace(/^57/, '').length !== 10) {
       nota('El celular no sirve', 'mal', 'Tienen que ser 10 dígitos.');
       marcar('#ap-tel');
+      return;
+    }
+
+    // De esto depende que el arqueo cuadre, así que no se adivina.
+    //
+    // El aviso va DENTRO de la ventana, pegado a los botones, y no en el
+    // aviso flotante: ese sale por encima del modal y tapaba justo los
+    // botones que estaba pidiendo pulsar.
+    if (apTipo !== 'miembro' && !apMedio) {
+      const pista = $('#ap-medio-pista');
+      pista.textContent = 'Falta esto: ¿ya pagó, paga al llegar, o transfirió?';
+      pista.classList.add('malo-campo');
+      $('#ap-caja-medio').scrollIntoView({ block: 'nearest' });
       return;
     }
 
@@ -3195,14 +3239,55 @@ const CONFIG = {
         fila('Debería haber', pesos(a.dinero_en_caja), campoAG('DINERO EN CAJA'), 'total arqueo') +
       `</div>` +
 
-      `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
-        fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
-        fila('Reservas cobradas hoy', pesos(d.reservas_cop),
-             Number(d.reservas_n || 0) > 0
-               ? `${d.reservas_n} ${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · ` +
-                 `por la fecha del pago, no la de la clase`
-               : '') +
-        fila('Total a banco', pesos(a.ingresos_a_banco), campoAG('Ingresos a Banco'), 'total') +
+      // MANDA EL BANCO, NO LA SUMA A MANO.
+      //
+      // Este total se armaba sumando las transferencias del mostrador
+      // más las reservas cobradas. El 20 de agosto eso dio 490.000
+      // cuando al banco entraron 475.000: los 15.000 de más eran un
+      // movimiento apuntado a mano sin depósito detrás, o sea la misma
+      // plata dos veces. Y ese número se copia en AdminGym, así que el
+      // error viajaba.
+      //
+      // Ahora arriba va lo que dice el banco, que no hay que sumar ni
+      // puede equivocarse, y lo registrado a mano baja a ser lo que
+      // siempre debió ser: una comprobación.
+      // `banco` puede no venir: el servidor de antes de ese bloque no lo
+      // mandaba, y el simulacro lo finge para comprobarlo. Sin esta
+      // guarda la pantalla de cierre entera reventaba, que es peor que
+      // enseñar el total viejo.
+      ((bk) =>
+        `<div class="grupo"><div class="et">No pasó por el cajón</div>` +
+        (bk.recibido_cop == null
+          ? fila('Total a banco', pesos(a.ingresos_a_banco),
+                 campoAG('Ingresos a Banco'), 'total') +
+            fila('Transferencias en mostrador', pesos(d.ingreso_transferencia)) +
+            fila('Reservas cobradas hoy', pesos(d.reservas_cop))
+          : fila('Entró por transferencia', pesos(bk.recibido_cop),
+                 campoAG('Ingresos a Banco'), 'total') +
+            `<div class="fila control"><span>Lo dice el banco` +
+              `<span class="ag">no hay que sumarlo a mano</span></span>` +
+              `<span class="no-suma">${bk.corte ? 'hasta las ' + esc(bk.corte) : ''}</span></div>` +
+
+            // El desglose va DEBAJO del total y marcado como que no
+            // suma: son las dos puertas por las que llegó esa MISMA
+            // plata, no dos cosas que se sumen.
+            `<div class="fila control"><span>De eso, cruzado en el mostrador` +
+              `<span class="ag">transferencias que registró recepción</span></span>` +
+              `<span class="no-suma">${pesos(d.ingreso_transferencia - (bk.sin_respaldo_cop || 0))}</span></div>` +
+            `<div class="fila control"><span>De eso, reservas que entraron solas` +
+              `<span class="ag">${d.reservas_n || 0} ` +
+              `${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · por la fecha ` +
+              `del pago, no la de la clase</span></span>` +
+              `<span class="no-suma">${pesos(d.reservas_cop)}</span></div>` +
+
+            // Lo único que en este bloque pide una decisión.
+            (Number(bk.sin_respaldo_cop || 0) > 0
+              ? `<div class="fila ojo"><span>Registrado a mano que el banco NO ha reportado` +
+                `<span class="ag">${bk.sin_respaldo_n} ` +
+                `${Number(bk.sin_respaldo_n) === 1 ? 'movimiento' : 'movimientos'} · ` +
+                `o el aviso viene en camino, o está apuntado de más</span></span>` +
+                `<span>${pesos(bk.sin_respaldo_cop)}</span></div>`
+              : '')))(d.banco || {}) +
         // NO suma, y por eso va debajo del total. Son las reservas que se
         // confirmaron en el mostrador: su plata ya entró por Caja y está
         // arriba, en los movimientos. Sumarla otra vez fue el error que
@@ -3238,6 +3323,26 @@ const CONFIG = {
           `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
           `<button class="btn" id="btn-rehacer">Corregir el cierre</button>`
         : `<div class="grupo"><div class="et">Cerrar el día</div>` +
+            // LOS GASTOS SE PREGUNTAN, NO SE ESPERAN.
+            //
+            // El 20 de agosto se le pagaron 25.000 al celador y no
+            // quedaron en ninguna parte: cero egresos registrados. Nadie
+            // se acuerda de ir a otra pestaña a apuntar un gasto cuando
+            // está cerrando. Así que si no hay ninguno, hay que decir
+            // que de verdad no hubo — un toque, pero explícito.
+            (Number(d.total_egresos || 0) === 0
+              ? `<div class="fila ojo" style="margin-bottom:.8rem">` +
+                  `<label for="c-sin-gastos" style="display:flex;gap:.55rem;` +
+                  `align-items:flex-start;cursor:pointer;margin:0">` +
+                    `<input type="checkbox" id="c-sin-gastos" style="margin-top:.2rem">` +
+                    `<span>Hoy no hubo ningún gasto` +
+                      `<span class="ag">Ni celador, ni aseo, ni cafetería. ` +
+                      `Si hubo alguno, apúntalo en Movimientos antes de cerrar.</span>` +
+                    `</span>` +
+                  `</label></div>`
+              : `<div class="fila control"><span>Gastos de hoy` +
+                  `<span class="ag">ya registrados</span></span>` +
+                  `<span class="no-suma">${pesos(d.total_egresos)}</span></div>`) +
             `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
             `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
             `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
@@ -3357,6 +3462,16 @@ const CONFIG = {
         marcar('#c-contado');
         return;
       }
+      // Sin gastos registrados hay que decir que de verdad no hubo. Un
+      // día se pagaron 25.000 al celador y no quedaron en ninguna parte:
+      // el cierre salió "cuadrado" con un gasto real fuera de la cuenta.
+      const sinGastos = $('#c-sin-gastos');
+      if (sinGastos && !sinGastos.checked) {
+        nota('¿Hubo gastos hoy?', 'mal',
+             'No hay ninguno registrado. Apúntalos en Movimientos, o confirma que no hubo.');
+        marcar('#c-sin-gastos');
+        return;
+      }
       // Se comprueba aquí para poder señalar el campo; Postgres lo
       // rechaza igual, pero desde allá no se sabe cuál de los dos es.
       if (dejado && +dejado > +contado) {
@@ -3383,6 +3498,7 @@ const CONFIG = {
   function abrirModal(x) {
     cajaElegido = x;
     cajaMedio = 'efectivo';
+    $('#modal-pista-medio').hidden = true;
     cajaPago = null;
     $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
@@ -3402,10 +3518,17 @@ const CONFIG = {
   $('#modal-cancelar').addEventListener('click', cerrarModal);
   $('#modal-caja').addEventListener('click', e => { if (e.target.id === 'modal-caja') cerrarModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-caja').hidden) cerrarModal(); });
-  for (const b of document.querySelectorAll('.medio')) {
+  // Acotado a #modal-caja. Sin esto engancha también los botones de
+  // "¿cómo pagó?" del modal de apuntar, que llevan la misma clase: al
+  // tocarlos ponía cajaMedio en undefined y repintaba la lista de
+  // depósitos de una ventana que ni estaba abierta.
+  for (const b of document.querySelectorAll('#modal-caja .medio')) {
     b.addEventListener('click', () => {
       cajaMedio = b.dataset.medio;
-      for (const o of document.querySelectorAll('.medio')) o.classList.toggle('on', o === b);
+      for (const o of document.querySelectorAll('#modal-caja .medio')) o.classList.toggle('on', o === b);
+      // El banco ya manda sus depósitos: se dice justo cuando se elige
+      // transferencia, que es cuando importa.
+      $('#modal-pista-medio').hidden = cajaMedio !== 'transferencia';
       // Al cambiar de efectivo a transferencia aparece la lista; al
       // volver a efectivo se olvida el depósito, que si no quedaría
       // enlazado a un cobro en billetes.

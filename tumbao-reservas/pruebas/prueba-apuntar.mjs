@@ -151,8 +151,27 @@ const cabecera = (await pagina.locator('#ap-clase').innerText()).trim();
 
 // ---- lo que no se puede tragar: SIN_CUPO ----
 respuesta = { ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó.' };
+// Ya no hay medio por defecto: sin elegirlo, no deja mandar. Arrancaba
+// en efectivo y eso cobró una vez plata que no existía.
 await pagina.fill('#ap-nombre', 'Carla Prieto');
 await pagina.fill('#ap-tel', '300 445 6677');
+
+// Sin escoger cómo pagó no sale del navegador: de eso depende que el
+// arqueo cuadre, así que no se adivina.
+loQuePidio = null;
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(400);
+// El aviso va dentro de la ventana, pegado a los botones: el aviso
+// flotante sale por encima del modal y tapaba justo lo que pedía pulsar.
+const faltaMedio = (await pagina.locator('#ap-medio-pista').innerText()).replace(/\s+/g, ' ');
+(loQuePidio === null && /ya pagó/i.test(faltaMedio))
+  ? bien('sin decir cómo pagó, no deja apuntar', faltaMedio.trim())
+  : falla('sin decir cómo pagó, no deja apuntar', faltaMedio || '(no avisó)');
+(await pagina.locator('#ap-medio-pista.malo-campo').count()) === 1
+  ? bien('y el aviso queda junto a los botones, sin taparlos')
+  : falla('y el aviso queda junto a los botones, sin taparlos', 'no se marcó');
+
+await pagina.locator('#modal-apuntar [data-apmedio="efectivo"]').click();
 await pagina.click('#ap-guardar');
 await pagina.waitForTimeout(600);
 
@@ -211,8 +230,8 @@ console.log('\n── Cómo pagó ──\n');
 // Por defecto va en efectivo: es lo que más pasa en la puerta, y quien
 // ya transfirió normalmente reservó solo desde la página.
 loQuePidio && loQuePidio.medio === 'efectivo'
-  ? bien('manda el medio, y por defecto es efectivo', loQuePidio.medio)
-  : falla('manda el medio, y por defecto es efectivo',
+  ? bien('manda el medio que se eligió', loQuePidio.medio)
+  : falla('manda el medio que se eligió',
           (loQuePidio && String(loQuePidio.medio)) || '(no mandó nada)');
 
 // Que el efectivo entró tiene que decirse: es la confirmación de que
@@ -304,6 +323,7 @@ await pagina.click('#puerta-apuntar');
 await pagina.waitForTimeout(300);
 await pagina.fill('#ap-nombre', 'Gaby Cerrada');
 await pagina.fill('#ap-tel', '3009990011');
+await pagina.locator('#modal-apuntar [data-apmedio="efectivo"]').click();
 await pagina.click('#ap-guardar');
 await pagina.waitForTimeout(600);
 efectivoFalla = false;

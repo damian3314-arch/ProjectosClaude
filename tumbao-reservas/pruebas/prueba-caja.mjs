@@ -632,24 +632,42 @@ await pagina.waitForTimeout(800);
 // algo que NO suma: es el punto de control de que esa plata se registró
 // en Caja. Si no se enseñara, el arreglo del doble conteo sería
 // invisible y nadie podría comprobarlo.
-const ctrl = pagina.locator('#caja-cierre .fila.control');
-(await ctrl.count()) === 1 && /Confirmadas en el mostrador/.test(await ctrl.innerText())
+// Se busca SU fila, no se cuentan las que haya: contar ataba la prueba
+// a cuántas filas de control tiene el cierre, y al añadir el desglose
+// del banco se cayó sin que nada estuviera roto.
+const ctrl = pagina.locator('#caja-cierre .fila.control')
+  .filter({ hasText: 'Confirmadas en el mostrador' });
+(await ctrl.count()) === 1
   ? bien('el cierre enseña lo confirmado en el mostrador',
          (await ctrl.innerText()).replace(/\s+/g, ' ').trim())
   : falla('lo confirmado en el mostrador', `${await ctrl.count()} filas`);
 
-// Y no puede estar dentro de ningún total. Se calcula el esperado desde
-// el mismo simulacro en vez de fijar una cifra: si se fija, cualquier
-// movimiento que se añada antes rompe la prueba por el motivo
-// equivocado y se acaba relajando la aserción que importa.
-const esperadoBanco = dia().contra_admingym.ingresos_a_banco;
+/* EL TOTAL LO PONE EL BANCO, NO LA SUMA A MANO.
+ *
+ * Se armaba sumando las transferencias del mostrador más las reservas
+ * cobradas. El 20 de agosto eso dio 490.000 cuando al banco entraron
+ * 475.000: los 15.000 de más eran un movimiento apuntado a mano sin
+ * depósito detrás, o sea la misma plata dos veces. Y ese número se
+ * copia en AdminGym, así que el error viajaba.
+ *
+ * Se comprueba contra `banco.recibido_cop` —lo que el banco dice— y NO
+ * contra la suma, que es justo lo que se dejó de hacer. */
+const esperadoBanco = dia().banco.recibido_cop;
 const totalBanco = await pagina.locator('#caja-cierre .fila.total')
-  .filter({ hasText: 'Total a banco' }).innerText();
+  .filter({ hasText: 'Entró por transferencia' }).innerText();
 const cifraBanco = Number((totalBanco.match(/\$([\d.]+)/) || [])[1]?.replace(/\./g, ''));
 cifraBanco === esperadoBanco
-  ? bien('y NO se suma al total a banco', `$${esperadoBanco.toLocaleString('es-CO')}`)
-  : falla('los 30.000 de a mano se colaron en el total',
-          `esperaba ${esperadoBanco}, salió ${cifraBanco}`);
+  ? bien('el total de transferencias lo pone el banco',
+         `$${esperadoBanco.toLocaleString('es-CO')}`)
+  : falla('el total de transferencias no es el del banco',
+          `el banco dice ${esperadoBanco}, la pantalla dice ${cifraBanco}`);
+
+// Y en concreto: NO puede ser la suma a mano, que es la que se
+// equivocaba.
+const sumaAMano = dia().contra_admingym.ingresos_a_banco;
+cifraBanco !== sumaAMano || sumaAMano === esperadoBanco
+  ? bien('y no la suma de los movimientos')
+  : falla('sigue enseñando la suma a mano', `${cifraBanco}`);
 
 const cierreTxt = await pagina.locator('#caja-cierre').innerText();
 /Apuntado sin respaldo del banco/.test(cierreTxt) && /125\.000/.test(cierreTxt)
@@ -721,6 +739,26 @@ await pagina.waitForTimeout(150);
 !(await pagina.locator('#c-contado').evaluate(e => e.classList.contains('malo-campo')))
   ? bien('al corregirlo se le quita el rojo')
   : falla('el rojo se queda pegado');
+
+/* 1b. LOS GASTOS SE PREGUNTAN.
+ *
+ * El 20 de agosto se le pagaron 25.000 al celador y no quedaron en
+ * ninguna parte: cero egresos registrados, y el cierre salió "cuadrado"
+ * con un gasto real fuera de la cuenta. Nadie se acuerda de ir a otra
+ * pestaña justo cuando está cerrando, así que si no hay ninguno hay que
+ * decir que de verdad no hubo. */
+await pagina.fill('#c-contado', '150000');
+await pagina.click('#btn-cerrar-caja');
+await pagina.waitForTimeout(300);
+const porGastos = (await pagina.locator('#avisos .nota').first().innerText()).replace(/\s+/g, ' ');
+/gastos hoy/i.test(porGastos)
+  ? bien('sin gastos registrados, no deja cerrar sin confirmarlo', porGastos.trim())
+  : falla('el freno de los gastos', porGastos);
+
+await pagina.check('#c-sin-gastos');
+(await pagina.locator('#c-sin-gastos').isChecked())
+  ? bien('y se confirma de un toque')
+  : falla('la casilla de sin gastos', 'no se pudo marcar');
 
 // 2. Dejar más de lo contado: se atrapa antes de salir al servidor y
 //    señala el otro campo, no el mismo.
