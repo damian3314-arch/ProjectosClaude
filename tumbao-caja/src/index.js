@@ -110,6 +110,35 @@ async function leer(env, tabla, consulta) {
 }
 
 /* ---------------------------------------------------------------------
+ * Supabase Auth — login, invitación y contraseña
+ *
+ * La llave de servicio ya vive en este Worker (rpc() y leer() la usan
+ * hace rato) y GoTrue la acepta igual que la anon: sirve para invitar,
+ * pedir un correo de recuperación y validar un login. Así no hace
+ * falta un segundo secreto solo para esto.
+ *
+ * El "access_token" de un login o de un enlace de invitación/
+ * recuperación SÍ es del usuario, no del Worker — eso se manda como
+ * Bearer solo cuando la propia persona lo trae (definirClave), nunca
+ * como credencial nuestra.
+ * ------------------------------------------------------------------- */
+async function auth(env, ruta, cuerpo, tokenUsuario, metodo) {
+  const r = await fetch(`${env.SUPABASE_URL}/auth/v1/${ruta}`, {
+    method: metodo || 'POST',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${tokenUsuario || env.SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(cuerpo),
+  });
+  const texto = await r.text();
+  let datos = {};
+  try { datos = JSON.parse(texto); } catch (_) {}
+  return { ok: r.status >= 200 && r.status < 300, status: r.status, datos };
+}
+
+/* ---------------------------------------------------------------------
  * /salud — ¿está bien la página?
  *
  * PARA QUÉ
@@ -238,6 +267,8 @@ const UUID  = (v) => (/^[0-9a-f-]{36}$/i.test(String(v || '')) ? String(v) : nul
 const FECHA = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null);
 const TXT   = (v, max) => (v == null ? null : String(v).slice(0, max));
 
+const ROLES = new Set(['propietario', 'administrador', 'cajero']);
+
 const ADMIN = {
   tablero:    { fn: 'admin_tablero',
                 args: (b) => ({ p_dia: FECHA(b.dia) }) },
@@ -282,6 +313,19 @@ const ADMIN = {
                 args: (b) => (UUID(b.clase_id)
                   ? { p_codigo: TXT(b.codigo, 40), p_clase_id: UUID(b.clase_id) }
                   : { _error: 'CLASE_INVALIDA' }) },
+  // Gestión de usuarios — Postgres es quien de verdad exige que el
+  // token sea de un propietario; aquí solo se le da forma a lo que
+  // llega. "usuarios_crear" no está en esta tabla porque además manda
+  // la invitación por Supabase Auth: tiene su propia ruta más abajo.
+  'usuarios-listar': { fn: 'admin_listar_usuarios', args: () => ({}) },
+  'usuarios-estado': { fn: 'admin_cambiar_estado_usuario',
+                args: (b) => (UUID(b.id)
+                  ? { p_id: UUID(b.id), p_activo: b.activo === true }
+                  : { _error: 'ID_INVALIDO' }) },
+  'usuarios-rol':    { fn: 'admin_cambiar_rol_usuario',
+                args: (b) => (UUID(b.id) && ROLES.has(b.rol)
+                  ? { p_id: UUID(b.id), p_rol: b.rol }
+                  : { _error: 'DATO_INVALIDO' }) },
 };
 
 /* ---------------------------------------------------------------------
@@ -831,11 +875,124 @@ export default {
       }
     }
 
+    /* ─────────────────────────────────────────────────────────────
+     * Login del panel — correo y contraseña, sin token todavía
+     *
+     * La contraseña la valida Supabase Auth, no esta base: el Worker
+     * se la pasa una sola vez para el intercambio y no la guarda en
+     * ningún lado. Lo que devuelve es el mismo tipo de token opaco de
+     * siempre —admin_token_para_usuario lo emite igual que
+     * crear_token_admin— solo que ahora viene con el rol pegado.
+     * ───────────────────────────────────────────────────────────── */
+    const REDIRECT_ADMIN = 'https://tumbaobaila.com/admin';
+
+    if (ruta === '/api/admin/login') {
+      const email = String(b.email || '').trim();
+      const clave = String(b.password || '');
+      if (!email || !clave) {
+        return json({ ok: false, error: 'FALTA_DATO',
+          mensaje: 'Escribe el correo y la contraseña.' }, 400, origen);
+      }
+      const ses = await auth(env, 'token?grant_type=password', { email, password: clave });
+      if (!ses.ok || !ses.datos.access_token) {
+        return json({ ok: false, error: 'CREDENCIALES',
+          mensaje: 'Correo o contraseña incorrectos.' }, 401, origen);
+      }
+      const r = await rpc(env, 'admin_token_para_usuario', {
+        p_user_id: ses.datos.user.id, p_email: ses.datos.user.email,
+      });
+      return json(r, r && r.ok === false ? 403 : 200, origen);
+    }
+
+    // El primer propietario, cuando todavía no hay ningún usuario dado
+    // de alta. La propia función de Postgres se cierra sola en cuanto
+    // exista una fila, así que no queda una puerta abierta.
+    if (ruta === '/api/admin/bootstrap-invite') {
+      const email  = String(b.email || '').trim();
+      const nombre = String(b.nombre || '').trim();
+      if (!email || !nombre) {
+        return json({ ok: false, error: 'FALTA_DATO' }, 400, origen);
+      }
+      const r = await rpc(env, 'admin_bootstrap_propietario', { p_email: email, p_nombre: nombre });
+      if (!r.ok) return json(r, 400, origen);
+      const inv = await auth(env, `invite?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`, { email });
+      return json({
+        ok: true,
+        mensaje: inv.ok
+          ? 'Listo. Revisa el correo de ' + email + ' para poner la contraseña.'
+          : 'El usuario quedó creado, pero no se pudo mandar el correo de invitación. ' +
+            'Revisa el envío de correo en Supabase (Authentication → Email).',
+      }, 200, origen);
+    }
+
+    // "Olvidé mi contraseña". Responde igual exista o no ese correo:
+    // decir la diferencia sería enseñarle a cualquiera qué correos
+    // tienen cuenta en el panel.
+    if (ruta === '/api/admin/recuperar') {
+      const email = String(b.email || '').trim();
+      if (email) {
+        try {
+          await auth(env, `recover?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`, { email });
+        } catch (_) {}
+      }
+      return json({ ok: true,
+        mensaje: 'Si ese correo tiene una cuenta, le llega un enlace para poner una contraseña nueva.',
+      }, 200, origen);
+    }
+
+    // Poner contraseña — se llega aquí desde el enlace de invitación o
+    // el de "olvidé mi contraseña". El access_token es el que Supabase
+    // deja en la URL de ese enlace, no el token del panel.
+    if (ruta === '/api/admin/definir-clave') {
+      const clave = String(b.password || '');
+      const accesoUsuario = String(b.access_token || '');
+      if (!accesoUsuario) {
+        return json({ ok: false, error: 'ENLACE_INVALIDO',
+          mensaje: 'Ese enlace no sirve. Pide que te inviten de nuevo.' }, 400, origen);
+      }
+      if (clave.length < 8) {
+        return json({ ok: false, error: 'CLAVE_CORTA',
+          mensaje: 'La contraseña necesita al menos 8 caracteres.' }, 400, origen);
+      }
+      const r = await auth(env, 'user', { password: clave }, accesoUsuario, 'PUT');
+      if (!r.ok) {
+        return json({ ok: false, error: 'ENLACE_VENCIDO',
+          mensaje: 'El enlace venció o ya se usó. Pide que te lo manden de nuevo.' }, 400, origen);
+      }
+      return json({ ok: true, mensaje: 'Contraseña puesta. Ya puedes entrar.' }, 200, origen);
+    }
+
     const token = String(b.token || '');
     if (!token) return json({ ok: false, error: 'NO_AUTORIZADO' }, 401, origen);
 
     try {
       let r;
+
+      // Dar de alta un usuario nuevo del panel. Aparte de la tabla ADMIN
+      // porque además manda la invitación por Supabase Auth — eso no
+      // encaja en "una función de Postgres y ya". Se crea PRIMERO el
+      // puesto en admin_usuarios (ahí es donde Postgres exige que quien
+      // llama sea propietario) y solo si eso queda bien se manda el
+      // correo: así un token sin permiso no dispara invitaciones a
+      // nombre de nadie.
+      if (ruta === '/api/admin/usuarios-crear') {
+        const nombre = TXT(b.nombre, 80);
+        const email  = TXT(b.email, 120);
+        if (!nombre || !email || !ROLES.has(b.rol)) {
+          return json({ ok: false, error: 'DATO_INVALIDO',
+            mensaje: 'Falta el nombre, el correo o el rol.' }, 400, origen);
+        }
+        r = await rpc(env, 'admin_crear_usuario', {
+          p_token: token, p_nombre: nombre, p_email: email, p_rol: b.rol, p_user_id: null,
+        });
+        if (r.ok) {
+          const inv = await auth(env, `invite?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`, { email });
+          r.mensaje = inv.ok
+            ? 'Listo. Le llega un correo a ' + email + ' para poner su contraseña.'
+            : 'El usuario quedó creado, pero no se pudo mandar el correo de invitación.';
+        }
+        return json(r, r && r.ok === false ? 400 : 200, origen);
+      }
 
       // ── el panel de admin ──
       if (ruta.startsWith('/api/admin/')) {

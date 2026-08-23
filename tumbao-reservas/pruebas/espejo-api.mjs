@@ -112,6 +112,31 @@ sembrarClases();
 // aqui es fijo para poder probar.
 const TOKEN_ADMIN = process.env.TOKEN_ADMIN || 'token-de-prueba';
 
+// token -> {rol, nombre}. El token de siempre (TOKEN_ADMIN) sigue vivo
+// con rol null, que es como quedan los token de antes de que existieran
+// los roles: acceso total, sin gestionar usuarios. Los que emite un
+// login de verdad (admin_token_para_usuario en la vida real) se van
+// agregando aqui con su rol.
+let sesiones = new Map();
+function sembrarSesiones() {
+  sesiones = new Map([[TOKEN_ADMIN, { rol: null, nombre: 'Recepción' }]]);
+}
+sembrarSesiones();
+
+// correo -> {password, nombre, rol, activo, id}. El reparto de quien
+// puede entrar, para poder probar el login y las tres vistas por rol
+// sin tocar Supabase.
+let cuentas = new Map();
+function sembrarCuentas() {
+  cuentas = new Map([
+    ['duena@tumbaobaila.com',  { id: 'u-1', password: 'clave1234', nombre: 'La Dueña',  rol: 'propietario',   activo: true }],
+    ['admin@tumbaobaila.com',  { id: 'u-2', password: 'clave1234', nombre: 'El Admin',  rol: 'administrador', activo: true }],
+    ['cajero@tumbaobaila.com', { id: 'u-3', password: 'clave1234', nombre: 'El Cajero', rol: 'cajero',        activo: true }],
+  ]);
+}
+sembrarCuentas();
+let seqUsuario = 4;
+
 // Devuelve las fechas de la semana con hora y desfase pegados, como las
 // devolvía admin_semana antes de la migración 0015. Sirve para correr la
 // prueba del panel contra la forma que lo tumbó.
@@ -231,16 +256,92 @@ createServer(async (req, res) => {
     } catch { res.writeHead(404); return res.end(); }
   }
 
+  // ---- login con correo y contraseña ----
+  if (url.pathname === '/api/admin/login' && req.method === 'POST') {
+    const b = await leerCuerpo(req);
+    const cuenta = cuentas.get(String(b.email || '').trim().toLowerCase());
+    if (!cuenta || cuenta.password !== b.password) {
+      return json(res, 401, { ok: false, error: 'CREDENCIALES', mensaje: 'Correo o contraseña incorrectos.' });
+    }
+    if (!cuenta.activo) {
+      return json(res, 403, { ok: false, error: 'inactivo', mensaje: 'Tu acceso está desactivado.' });
+    }
+    const tk = 'tk-' + cuenta.id + '-' + Math.random().toString(36).slice(2);
+    sesiones.set(tk, { rol: cuenta.rol, nombre: cuenta.nombre });
+    return json(res, 200, { ok: true, token: tk, rol: cuenta.rol, nombre: cuenta.nombre });
+  }
+
+  if (url.pathname === '/api/admin/recuperar' && req.method === 'POST') {
+    return json(res, 200, { ok: true,
+      mensaje: 'Si ese correo tiene una cuenta, le llega un enlace para poner una contraseña nueva.' });
+  }
+
+  if (url.pathname === '/api/admin/definir-clave' && req.method === 'POST') {
+    const b = await leerCuerpo(req);
+    if (!b.access_token) {
+      return json(res, 400, { ok: false, error: 'ENLACE_INVALIDO', mensaje: 'Ese enlace no sirve.' });
+    }
+    if (String(b.password || '').length < 8) {
+      return json(res, 400, { ok: false, error: 'CLAVE_CORTA', mensaje: 'Al menos 8 caracteres.' });
+    }
+    return json(res, 200, { ok: true, mensaje: 'Contraseña puesta. Ya puedes entrar.' });
+  }
+
   // ---- panel de admin ----
   // El panel ahora pega en /api/admin/<ruta> (Worker). Se acepta también
   // la forma vieja de n8n para no romper nada que todavía la use.
   if ((url.pathname.startsWith('/webhook/tumbao/admin/') ||
        url.pathname.startsWith('/api/admin/')) && req.method === 'POST') {
     const b = await leerCuerpo(req);
-    if (b.token !== TOKEN_ADMIN) {
+    const sesion = sesiones.get(b.token);
+    if (!sesion) {
       return json(res, 401, { ok: false, error: 'NO_AUTORIZADO' });
     }
     const que = url.pathname.split('/').pop();
+
+    // El cajero no toca el horario — mismo candado que en Postgres.
+    if (que === 'guardar' && sesion.rol === 'cajero') {
+      return json(res, 200, { ok: false, error: 'SIN_PERMISO',
+        mensaje: 'El cajero no puede tocar el horario. Pide a un administrador.' });
+    }
+
+    if (que === 'usuarios-listar' || que === 'usuarios-crear' ||
+        que === 'usuarios-estado' || que === 'usuarios-rol') {
+      if (sesion.rol !== 'propietario') {
+        return json(res, 200, { ok: false, error: 'SIN_PERMISO',
+          mensaje: 'Solo el propietario ve y gestiona los usuarios.' });
+      }
+      if (que === 'usuarios-listar') {
+        const lista = [...cuentas.entries()].map(([email, c]) => ({
+          id: c.id, nombre: c.nombre, email, rol: c.rol, activo: c.activo, tiene_acceso: true,
+        })).sort((a, b2) => a.nombre.localeCompare(b2.nombre));
+        return json(res, 200, { ok: true, usuarios: lista });
+      }
+      if (que === 'usuarios-crear') {
+        const email = String(b.email || '').trim().toLowerCase();
+        if (cuentas.has(email)) {
+          return json(res, 200, { ok: false, error: 'YA_EXISTE', mensaje: 'Ese correo ya tiene un perfil.' });
+        }
+        cuentas.set(email, { id: 'u-' + (seqUsuario++), password: 'sin-definir',
+          nombre: b.nombre, rol: b.rol, activo: true });
+        return json(res, 200, { ok: true, mensaje: 'Le llega un correo a ' + email + ' para poner su contraseña.' });
+      }
+      if (que === 'usuarios-estado') {
+        const par = [...cuentas.entries()].find(([, c]) => c.id === b.id);
+        if (!par) return json(res, 200, { ok: false, error: 'NO_EXISTE' });
+        par[1].activo = b.activo === true;
+        if (!par[1].activo) {
+          for (const [tk, ses] of sesiones) if (ses.nombre === par[1].nombre) sesiones.delete(tk);
+        }
+        return json(res, 200, { ok: true });
+      }
+      if (que === 'usuarios-rol') {
+        const par = [...cuentas.entries()].find(([, c]) => c.id === b.id);
+        if (!par) return json(res, 200, { ok: false, error: 'NO_EXISTE' });
+        par[1].rol = b.rol;
+        return json(res, 200, { ok: true });
+      }
+    }
 
     if (que === 'semana') {
       const dias = [];
@@ -936,6 +1037,9 @@ createServer(async (req, res) => {
     reservas.clear();
     asistencias.clear();
     ultimoComprobante = null;
+    sembrarSesiones();
+    sembrarCuentas();
+    seqUsuario = 4;
     return json(res, 200, { ok: true, clases: clases.length });
   }
 

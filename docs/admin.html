@@ -335,6 +335,20 @@ const CONFIG = {
      tomados en vez de ir todo del mismo gris. */
   .reparto .quedan{color:var(--ok);font-variant-numeric:tabular-nums}
 
+  /* La pestaña de usuarios: una fila por persona, el rol y el estado a
+     la vista, las acciones a la derecha. */
+  .usuario-fila{
+    display:flex;justify-content:space-between;align-items:center;gap:1rem;
+    flex-wrap:wrap;padding:.8rem 0;border-bottom:1px solid var(--line);
+  }
+  .usuario-fila .sub{color:var(--tx-3);font-size:.82rem;margin-top:.15rem}
+  .rol-pill{
+    display:inline-block;font-size:.72rem;padding:.1rem .5rem;border-radius:99px;
+    background:var(--bg-3);color:var(--tx-2);margin-left:.4rem;vertical-align:middle;
+  }
+  .rol-pill.mal{color:var(--bad)}
+  .fila-acciones{display:flex;align-items:center;gap:.5rem}
+
   .desglose{font-size:.75rem;color:var(--tx-3);display:flex;gap:.7rem;flex-wrap:wrap}
   .desglose .ok{color:var(--ok)}
   .desglose .ojo{color:var(--gold)}
@@ -757,12 +771,38 @@ const CONFIG = {
 
   <!-- ══════════ entrar ══════════ -->
   <section id="entrar" class="tarjeta">
-    <label for="token">Token del panel</label>
-    <input id="token" type="password" autocomplete="current-password" placeholder="Pegalo aquí">
-    <p>Se guarda solo en este navegador. Si lo perdiste, se emite otro desde Supabase con
-       <code>select crear_token_admin('tu nombre');</code></p>
+    <label for="correo">Correo</label>
+    <input id="correo" type="email" autocomplete="username" placeholder="tucorreo@tumbaobaila.com">
+    <label for="clave">Contraseña</label>
+    <input id="clave" type="password" autocomplete="current-password" placeholder="Tu contraseña">
     <div class="aviso mal" id="err-entrar" hidden></div>
     <button class="btn primario" id="btn-entrar">Entrar</button>
+    <p><a href="#" id="link-olvide">¿Olvidaste tu contraseña?</a></p>
+    <details id="modo-token">
+      <summary>Entrar con un token en vez de correo</summary>
+      <label for="token">Token del panel</label>
+      <input id="token" type="password" autocomplete="off" placeholder="Pegalo aquí">
+      <div class="aviso mal" id="err-entrar-token" hidden></div>
+      <button class="btn" id="btn-entrar-token">Entrar con el token</button>
+    </details>
+  </section>
+
+  <!-- ══════════ olvidé mi contraseña ══════════ -->
+  <section id="olvide" class="tarjeta" hidden>
+    <label for="olvide-correo">Correo</label>
+    <input id="olvide-correo" type="email" autocomplete="username" placeholder="tucorreo@tumbaobaila.com">
+    <div class="aviso" id="msg-olvide" hidden></div>
+    <button class="btn primario" id="btn-olvide">Mandar enlace</button>
+    <button class="btn" id="btn-olvide-volver">Volver</button>
+  </section>
+
+  <!-- ══════════ poner contraseña (invitación o recuperación) ══════════ -->
+  <section id="definir-clave" class="tarjeta" hidden>
+    <p>Pon la contraseña con la que vas a entrar al panel.</p>
+    <label for="clave-nueva">Contraseña nueva</label>
+    <input id="clave-nueva" type="password" autocomplete="new-password" placeholder="Al menos 8 caracteres">
+    <div class="aviso" id="msg-definir" hidden></div>
+    <button class="btn primario" id="btn-definir">Guardar y entrar</button>
   </section>
 
   <!-- ══════════ panel ══════════ -->
@@ -777,6 +817,7 @@ const CONFIG = {
         Por disfrutar<span class="globo" id="globo-disf" hidden></span>
       </button>
       <button class="tab" role="tab" id="tab-caja" aria-selected="false">Caja</button>
+      <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>Usuarios</button>
     </div>
 
     <!-- ── tablero ── -->
@@ -935,6 +976,19 @@ const CONFIG = {
 
       <div class="cierre" id="caja-cierre"></div>
     </div>
+
+    <!-- ── usuarios (solo propietario) ── -->
+    <div class="panel" id="p-usuarios">
+      <div class="semana-bar">
+        <b>Quién entra al panel</b>
+        <span class="sp"></span>
+        <button class="btn chico" id="usuarios-recargar">Recargar</button>
+        <button class="btn primario chico" id="usuarios-nuevo">Dar de alta</button>
+      </div>
+      <div class="aviso" id="msg-usuarios" hidden></div>
+      <div class="cargando" id="cargando-usuarios" hidden>Cargando…</div>
+      <div id="lista-usuarios"></div>
+    </div>
   </div>
 </div>
 
@@ -1041,6 +1095,35 @@ const CONFIG = {
   </div>
 </div>
 
+<div class="modal" id="modal-usuario" hidden>
+  <div class="caja-modal">
+    <h3><span class="pin"></span>Dar de alta a alguien</h3>
+
+    <label for="us-nombre">Nombre</label>
+    <input id="us-nombre" type="text" maxlength="80" placeholder="Como se llama"
+           autocomplete="off" autocapitalize="words">
+
+    <label for="us-email">Correo</label>
+    <input id="us-email" type="email" maxlength="120" placeholder="correo@tumbaobaila.com"
+           autocomplete="off">
+
+    <label for="us-rol">Rol</label>
+    <select id="us-rol">
+      <option value="cajero">Cajero — solo caja</option>
+      <option value="administrador">Administrador — el día a día</option>
+      <option value="propietario">Propietario — todo</option>
+    </select>
+    <p class="ap-pista">Le llega un correo de invitación para que ponga su propia contraseña.</p>
+
+    <div class="aviso mal" id="us-error" hidden></div>
+
+    <div class="modal-pie">
+      <button class="btn" id="us-cancelar">Cancelar</button>
+      <button class="btn primario" id="us-guardar">Dar de alta</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -1048,6 +1131,8 @@ const CONFIG = {
   const LLAVE = 'tumbao_admin_token';
 
   let token = null;
+  let rol = null;            // null = token sin rol (el de antes de los roles): acceso total
+  let nombreSesion = null;
   let semanaDesde = semanaInicial();
   let semana = null;
   let diaTablero = null;          // se fija al entrar, ya con hoyBogota()
@@ -1261,22 +1346,48 @@ const CONFIG = {
   }
 
   /* ---------- entrar / salir ---------- */
+  function guardarSesion() {
+    try { localStorage.setItem(LLAVE, JSON.stringify({ token, rol, nombre: nombreSesion })); }
+    catch (_) {}
+  }
+
   function cerrarSesion(motivo) {
-    token = null;
+    token = null; rol = null; nombreSesion = null;
     try { localStorage.removeItem(LLAVE); } catch (_) {}
     $('#app').hidden = true;
     $('#salir').hidden = true;
+    $('#olvide').hidden = true;
+    $('#definir-clave').hidden = true;
     $('#entrar').hidden = false;
     $('#token').value = '';
+    $('#clave').value = '';
     aviso($('#err-entrar'), motivo ? esc(motivo) : '', 'mal');
   }
 
-  async function entrar(tk) {
+  // Qué pestañas ve cada rol. null (los token de antes de que existieran
+  // los roles, como el de Recepción) sigue viendo todo, igual que
+  // siempre: esta migración no le quita nada a nadie que ya tuviera
+  // acceso, solo le pone límites a los roles nuevos.
+  function aplicarRol() {
+    const esCajero = rol === 'cajero';
+    const vePropietario = rol === 'propietario' || rol == null;
+    $('#tab-horario').hidden = esCajero;
+    $('#tab-disfrutar').hidden = esCajero;
+    $('#tab-usuarios').hidden = !vePropietario;
+    if (esCajero && (panelActual === 'horario' || panelActual === 'disfrutar')) verPanel('tablero');
+  }
+
+  async function entrar(tk, rolNuevo, nombreNuevo) {
     token = tk;
-    // La primera llamada hace de login: si el token no sirve, rebota 401.
+    rol = rolNuevo == null ? null : rolNuevo;
+    nombreSesion = nombreNuevo || null;
+    // La primera llamada hace de comprobación: si el token no sirve, rebota 401.
     await cargarSemana();
-    try { localStorage.setItem(LLAVE, tk); } catch (_) {}
+    guardarSesion();
+    aplicarRol();
     $('#entrar').hidden = true;
+    $('#olvide').hidden = true;
+    $('#definir-clave').hidden = true;
     $('#app').hidden = false;
     $('#salir').hidden = false;
     diaTablero = hoyBogota();
@@ -1287,19 +1398,105 @@ const CONFIG = {
   }
 
   $('#btn-entrar').addEventListener('click', async () => {
-    const tk = $('#token').value.trim();
-    if (!tk) { aviso($('#err-entrar'), 'Falta el token.', 'mal'); return; }
+    const correo = $('#correo').value.trim();
+    const clave = $('#clave').value;
+    if (!correo || !clave) { aviso($('#err-entrar'), 'Falta el correo o la contraseña.', 'mal'); return; }
     aviso($('#err-entrar'), '');
     $('#btn-entrar').disabled = true;
-    try { await entrar(tk); }
-    catch (e) { aviso($('#err-entrar'), esc(e.message), 'mal'); token = null; }
+    try {
+      const res = await fetch(`${CONFIG.CAJA_BASE}/api/admin/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: correo, password: clave }),
+      });
+      const datos = await res.json().catch(() => ({}));
+      if (!res.ok || datos.ok === false) {
+        throw new Error(datos.mensaje || 'Correo o contraseña incorrectos.');
+      }
+      await entrar(datos.token, datos.rol, datos.nombre);
+    } catch (e) { aviso($('#err-entrar'), esc(e.message), 'mal'); }
     finally { $('#btn-entrar').disabled = false; }
   });
-  $('#token').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-entrar').click(); });
+  $('#clave').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-entrar').click(); });
+
+  $('#btn-entrar-token').addEventListener('click', async () => {
+    const tk = $('#token').value.trim();
+    if (!tk) { aviso($('#err-entrar-token'), 'Falta el token.', 'mal'); return; }
+    aviso($('#err-entrar-token'), '');
+    $('#btn-entrar-token').disabled = true;
+    try { await entrar(tk, null, null); }
+    catch (e) { aviso($('#err-entrar-token'), esc(e.message), 'mal'); token = null; }
+    finally { $('#btn-entrar-token').disabled = false; }
+  });
+  $('#token').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-entrar-token').click(); });
   $('#salir').addEventListener('click', () => cerrarSesion());
 
+  /* ---------- olvidé mi contraseña ---------- */
+  $('#link-olvide').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('#entrar').hidden = true;
+    $('#olvide').hidden = false;
+    $('#olvide-correo').value = $('#correo').value;
+    aviso($('#msg-olvide'), '');
+  });
+  $('#btn-olvide-volver').addEventListener('click', () => {
+    $('#olvide').hidden = true;
+    $('#entrar').hidden = false;
+  });
+  $('#btn-olvide').addEventListener('click', async () => {
+    const correo = $('#olvide-correo').value.trim();
+    if (!correo) { aviso($('#msg-olvide'), 'Escribe el correo.', 'mal'); return; }
+    $('#btn-olvide').disabled = true;
+    try {
+      const res = await fetch(`${CONFIG.CAJA_BASE}/api/admin/recuperar`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: correo }),
+      });
+      const datos = await res.json().catch(() => ({}));
+      aviso($('#msg-olvide'), datos.mensaje ||
+        'Si ese correo tiene cuenta, le llega un enlace para poner una contraseña nueva.', 'bien');
+    } catch (_) {
+      aviso($('#msg-olvide'), 'No se pudo mandar. Intenta otra vez.', 'mal');
+    } finally { $('#btn-olvide').disabled = false; }
+  });
+
+  /* ---------- poner contraseña (invitación o recuperación) ----------
+   * Supabase manda a esta misma página con #access_token=...&type=... en
+   * la URL. Se lee del hash y no de la query porque así lo deja GoTrue,
+   * y nunca llega al servidor —los navegadores no mandan el fragmento en
+   * la petición— así que de paso nadie más que este navegador lo ve. */
+  let accesoParaClave = null;
+
+  function detectarEnlaceDeClave() {
+    const m = /access_token=([^&]+)/.exec(location.hash || '');
+    if (!m) return false;
+    accesoParaClave = decodeURIComponent(m[1]);
+    history.replaceState(null, '', location.pathname);
+    $('#entrar').hidden = true;
+    $('#definir-clave').hidden = false;
+    return true;
+  }
+
+  $('#btn-definir').addEventListener('click', async () => {
+    const clave = $('#clave-nueva').value;
+    if (clave.length < 8) { aviso($('#msg-definir'), 'Al menos 8 caracteres.', 'mal'); return; }
+    $('#btn-definir').disabled = true;
+    try {
+      const res = await fetch(`${CONFIG.CAJA_BASE}/api/admin/definir-clave`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accesoParaClave, password: clave }),
+      });
+      const datos = await res.json().catch(() => ({}));
+      if (!res.ok || datos.ok === false) throw new Error(datos.mensaje || 'No se pudo guardar.');
+      accesoParaClave = null;
+      $('#definir-clave').hidden = true;
+      $('#entrar').hidden = false;
+      aviso($('#err-entrar'), 'Contraseña puesta. Ya puedes entrar.', 'bien');
+    } catch (e) { aviso($('#msg-definir'), esc(e.message), 'mal'); }
+    finally { $('#btn-definir').disabled = false; }
+  });
+
   /* ---------- pestañas ---------- */
-  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja'];
+  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja', 'usuarios'];
   let panelActual = 'tablero';
   function verPanel(cual) {
     panelActual = cual;
@@ -2797,12 +2994,22 @@ const CONFIG = {
   }
 
   /* ---------- arranque ---------- */
-  let guardado = null;
-  try { guardado = localStorage.getItem(LLAVE); } catch (_) {}
-  if (guardado) {
-    entrar(guardado).catch(() => cerrarSesion());
+  if (detectarEnlaceDeClave()) {
+    // Se vino a poner contraseña: no se intenta entrar con nada guardado.
   } else {
-    $('#entrar').hidden = false;
+    let guardado = null;
+    try { guardado = localStorage.getItem(LLAVE); } catch (_) {}
+    if (guardado) {
+      // Antes de los roles LLAVE guardaba el token pelado. Si lo que hay
+      // no es JSON, es una sesión de esas: se sigue aceptando igual, sin
+      // rol (acceso total), para no botar a nadie a mitad de un turno.
+      let sesion;
+      try { sesion = JSON.parse(guardado); }
+      catch (_) { sesion = { token: guardado, rol: null, nombre: null }; }
+      entrar(sesion.token, sesion.rol, sesion.nombre).catch(() => cerrarSesion());
+    } else {
+      $('#entrar').hidden = false;
+    }
   }
   /* ═══════════════ caja ═══════════════
      No pasa por n8n: cada venta sería una ejecución del plan. Habla
@@ -3711,6 +3918,109 @@ const CONFIG = {
     } catch (e) {
       fallo(e, 'No se pudo registrar');
     } finally { $('#modal-guardar').disabled = false; }
+  });
+
+  /* ═══════════════ usuarios (solo propietario) ═══════════════
+     Postgres es quien de verdad exige el rol — esta pestaña ni siquiera
+     se muestra a quien no es propietario (aplicarRol()), pero si alguien
+     entrara igual a la ruta, admin_listar_usuarios le respondería
+     SIN_PERMISO y aquí se pinta el error tal cual. */
+  const ROL_ETIQUETA = { propietario: 'Propietario', administrador: 'Administrador', cajero: 'Cajero' };
+  let usuarios = [];
+
+  $('#tab-usuarios').addEventListener('click', () => { verPanel('usuarios'); cargarUsuarios(); });
+  $('#usuarios-recargar').addEventListener('click', () => cargarUsuarios(true));
+
+  async function cargarUsuarios(forzar) {
+    if (!forzar && esReciente('usuarios')) return;
+    traido.set('usuarios', Date.now());
+    $('#cargando-usuarios').hidden = false;
+    aviso($('#msg-usuarios'), '');
+    try {
+      const d = await api('usuarios-listar', {});
+      usuarios = d.usuarios || [];
+      pintarUsuarios();
+    } catch (e) {
+      aviso($('#msg-usuarios'), esc(e.message), 'mal');
+    } finally { $('#cargando-usuarios').hidden = true; }
+  }
+
+  function pintarUsuarios() {
+    const cont = $('#lista-usuarios');
+    if (!usuarios.length) {
+      cont.innerHTML = '<p class="vacio">Todavía no hay nadie dado de alta.</p>';
+      return;
+    }
+    cont.innerHTML = usuarios.map(u => `
+      <div class="usuario-fila">
+        <div>
+          <b>${esc(u.nombre)}</b> <span class="rol-pill">${esc(ROL_ETIQUETA[u.rol] || u.rol)}</span>
+          ${u.activo ? '' : '<span class="rol-pill mal">Desactivado</span>'}
+          ${u.tiene_acceso ? '' : '<span class="rol-pill">Invitación pendiente</span>'}
+          <div class="sub">${esc(u.email)}</div>
+        </div>
+        <div class="fila-acciones">
+          <select data-cambiar-rol="${esc(u.id)}" ${u.activo ? '' : 'disabled'}>
+            <option value="cajero"${u.rol === 'cajero' ? ' selected' : ''}>Cajero</option>
+            <option value="administrador"${u.rol === 'administrador' ? ' selected' : ''}>Administrador</option>
+            <option value="propietario"${u.rol === 'propietario' ? ' selected' : ''}>Propietario</option>
+          </select>
+          <button class="btn chico" data-alternar="${esc(u.id)}" data-activo="${u.activo}">
+            ${u.activo ? 'Desactivar' : 'Reactivar'}
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  $('#lista-usuarios').addEventListener('change', async (ev) => {
+    const id = ev.target.getAttribute('data-cambiar-rol');
+    if (!id) return;
+    const nuevoRol = ev.target.value;
+    try {
+      await api('usuarios-rol', { id, rol: nuevoRol });
+      nota('Rol cambiado', 'bien', ROL_ETIQUETA[nuevoRol]);
+      cargarUsuarios(true);
+    } catch (e) { fallo(e, 'No se pudo cambiar el rol'); cargarUsuarios(true); }
+  });
+
+  $('#lista-usuarios').addEventListener('click', async (ev) => {
+    const boton = ev.target.closest('[data-alternar]');
+    if (!boton) return;
+    const id = boton.getAttribute('data-alternar');
+    const activoAhora = boton.getAttribute('data-activo') === 'true';
+    if (activoAhora && !confirm('¿Desactivar a esta persona? Se le cae la sesión que tenga abierta.')) return;
+    boton.disabled = true;
+    try {
+      await api('usuarios-estado', { id, activo: !activoAhora });
+      nota(activoAhora ? 'Desactivado' : 'Reactivado', 'bien');
+      cargarUsuarios(true);
+    } catch (e) { fallo(e, 'No se pudo cambiar'); boton.disabled = false; }
+  });
+
+  $('#usuarios-nuevo').addEventListener('click', () => {
+    $('#us-nombre').value = ''; $('#us-email').value = ''; $('#us-rol').value = 'cajero';
+    aviso($('#us-error'), '');
+    $('#modal-usuario').hidden = false;
+  });
+  $('#us-cancelar').addEventListener('click', () => { $('#modal-usuario').hidden = true; });
+  $('#modal-usuario').addEventListener('click', e => { if (e.target.id === 'modal-usuario') $('#modal-usuario').hidden = true; });
+
+  $('#us-guardar').addEventListener('click', async () => {
+    const nombre = $('#us-nombre').value.trim();
+    const email = $('#us-email').value.trim();
+    const rolNuevo = $('#us-rol').value;
+    if (!nombre) { aviso($('#us-error'), 'Falta el nombre.', 'mal'); marcar('#us-nombre'); return; }
+    if (!email || !email.includes('@')) { aviso($('#us-error'), 'El correo no se ve válido.', 'mal'); marcar('#us-email'); return; }
+    aviso($('#us-error'), '');
+    $('#us-guardar').disabled = true;
+    try {
+      const d = await api('usuarios-crear', { nombre, email, rol: rolNuevo });
+      $('#modal-usuario').hidden = true;
+      nota('Usuario creado', 'bien', d.mensaje || email);
+      cargarUsuarios(true);
+    } catch (e) {
+      aviso($('#us-error'), esc(e.message), 'mal');
+    } finally { $('#us-guardar').disabled = false; }
   });
 })();
 </script>

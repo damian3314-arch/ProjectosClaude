@@ -222,9 +222,10 @@ await pagina.route('**/api/admin/**', async (route) => {
 console.log('\n── La caja, en un navegador de verdad ──\n');
 await pagina.goto(`http://localhost:${PUERTO}/admin.html`, { waitUntil: 'domcontentloaded' });
 
-// Entrar
+// Entrar — con el token, que es el modo avanzado plegado en un <details>.
+await pagina.evaluate(() => { document.querySelector('#modo-token').open = true; });
 await pagina.fill('#token', 'token-de-prueba');
-await pagina.click('#btn-entrar');
+await pagina.click('#btn-entrar-token');
 await pagina.waitForSelector('#app:not([hidden])', { timeout: 8000 })
   .then(() => bien('entra al panel'))
   .catch(() => falla('entra al panel', 'el panel nunca apareció'));

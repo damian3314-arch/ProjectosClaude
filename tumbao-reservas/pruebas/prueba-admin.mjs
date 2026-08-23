@@ -20,9 +20,14 @@ const errores = [];
 p.on('console', m => { if (m.type() === 'error') errores.push(m.text()); });
 p.on('pageerror', e => errores.push('pageerror: ' + e.message));
 
+// El login de correo y contraseña quedó como pantalla principal; el
+// token sigue vivo como modo avanzado, plegado en un <details>. Esta
+// suite prueba justo esa puerta vieja porque es la que usa cualquier
+// token emitido antes de que existieran los roles (el de Recepción).
 const entrar = async tk => {
+  await p.evaluate(() => { document.querySelector('#modo-token').open = true; });
   await p.fill('#token', tk);
-  await p.locator('#btn-entrar').click();
+  await p.locator('#btn-entrar-token').click();
 };
 
 // El espejo guarda estado en memoria y esta suite crea clases, reserva
@@ -40,8 +45,8 @@ ok('el panel esta escondido', await p.locator('#app').isHidden());
 await entrar('token-malo');
 await p.waitForTimeout(700);
 ok('un token malo no entra', await p.locator('#app').isHidden());
-ok('y lo dice', !(await p.locator('#err-entrar').isHidden()),
-   (await p.locator('#err-entrar').innerText()).slice(0, 60));
+ok('y lo dice', !(await p.locator('#err-entrar-token').isHidden()),
+   (await p.locator('#err-entrar-token').innerText()).slice(0, 60));
 
 await p.fill('#token', '');
 await entrar(TOKEN);
@@ -864,8 +869,7 @@ ok('sin errores de JavaScript inesperados', inesperados.length === 0, inesperado
 const dir = process.env.CAPTURAS || '/tmp';
 await p.goto(BASE, { waitUntil: 'networkidle' });
 await p.screenshot({ path: `${dir}/a0-entrar.png` });
-await p.fill('#token', TOKEN);
-await p.locator('#btn-entrar').click();
+await entrar(TOKEN);
 await p.waitForSelector('#p-tablero.on', { timeout: 8000 });
 // Las capturas son para mirarlas, no para comprobar nada: si el dia
 // siguiente no tiene clases —un sabado, mañana es domingo— se avanza
