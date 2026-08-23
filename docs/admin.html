@@ -319,13 +319,17 @@ const CONFIG = {
 
   /* El sábado va partido entre afiliados y sueltas. Aquí sí se dice,
      porque es lo que explica el número de libres de arriba. */
+  /* Dos renglones, no una fila que se parte sola: en una tarjeta de
+     media pantalla el "·" de en medio siempre acababa colgando al
+     final del primer renglón, separando de nada. Con la rejilla los
+     dos números quedan además alineados en columna. */
   .reparto{
-    display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;
+    display:grid;grid-template-columns:max-content max-content;
+    justify-content:start;align-items:baseline;gap:.22rem .5rem;
     font-size:.74rem;color:var(--tx-2);cursor:help;
-    background:var(--bg-3);border-radius:8px;padding:.3rem .6rem;margin-top:.55rem;
+    background:var(--bg-3);border-radius:8px;padding:.35rem .6rem;margin-top:.55rem;
   }
   .reparto b{color:var(--tx);font-variant-numeric:tabular-nums}
-  .reparto .sep{color:var(--tx-3)}
   /* Lo que todavía se puede vender de ese lado. Es el número que decide
      si se le abre la puerta a alguien más, así que se distingue de los
      tomados en vez de ir todo del mismo gris. */
@@ -1569,10 +1573,11 @@ const CONFIG = {
       (c.reparto
         ? `<div class="reparto" title="El sábado el aforo va partido en dos mitades. ` +
             `El cliente no lo ve: a cada quien se le muestran los cupos de su lado.">` +
-            `<span>Afiliados <b>${c.reparto.miembros_tomados}</b>/${c.reparto.miembros_tope}` +
+            `<span>Afiliados</span>` +
+            `<span><b>${c.reparto.miembros_tomados}</b>/${c.reparto.miembros_tope}` +
               `<span class="quedan"> · quedan ${c.reparto.miembros_libres}</span></span>` +
-            `<span class="sep">·</span>` +
-            `<span>Sueltas <b>${c.reparto.sueltas_tomadas}</b>/${c.reparto.sueltas_tope}` +
+            `<span>Sueltas</span>` +
+            `<span><b>${c.reparto.sueltas_tomadas}</b>/${c.reparto.sueltas_tope}` +
               `<span class="quedan"> · quedan ${c.reparto.sueltas_libres}</span></span>` +
           `</div>`
         : '') +
