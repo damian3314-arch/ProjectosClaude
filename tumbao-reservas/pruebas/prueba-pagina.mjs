@@ -79,24 +79,38 @@ await elegirTipo('suelta');
 await p.waitForSelector('.clase:not(:disabled)', { timeout: 8000 });
 ok('carga los días', await p.locator('.dia').count() > 0, `${await p.locator('.dia').count()} días`);
 
-// Tumbao arma el horario semana a semana: ofrecer dias de la semana que
-// viene es prometer clases que nadie ha puesto todavia, con un cupo que
-// nadie ha revisado. El servidor manda 7 dias corridos; la pagina tiene
-// que cortar en el domingo.
+/* Hasta dónde se ofrece.
+ *
+ * Ofrecer días que nadie ha puesto todavía es prometer clases con un
+ * cupo que nadie ha revisado. Pero la regla NO es "cortar el domingo":
+ * del viernes en adelante la página abre también la semana siguiente,
+ * porque desde el jueves la gente ya pregunta y las clases ya están
+ * creadas y activas — se perdían tres días de venta por una regla de la
+ * página, no del negocio.
+ *
+ * Esta comprobación tenía escrita la regla vieja, así que pasaba de
+ * lunes a jueves y fallaba de viernes a domingo sin que hubiera nada
+ * roto. Es la cuarta vez que una prueba de este proyecto se cae por el
+ * día en que se corre, así que aquí se calcula igual que la página, con
+ * el mismo DIA_QUE_ABRE.
+ */
 const fechas = await p.locator('.dia').evaluateAll(
   els => els.map(e => e.dataset.fecha));
+const DIA_QUE_ABRE = 5;   // viernes; mismo número que en index.html
 const finSemana = (() => {
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota',
     year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [a, m, d] = hoy.split('-').map(Number);
   const f = new Date(Date.UTC(a, m - 1, d));
   const dow = f.getUTCDay();
-  f.setUTCDate(f.getUTCDate() + (dow === 0 ? 7 : 7 - dow));
+  let faltan = dow === 0 ? 7 : 7 - dow;
+  if (dow >= DIA_QUE_ABRE) faltan += 7;
+  f.setUTCDate(f.getUTCDate() + faltan);
   return f.toISOString().slice(0, 10);
 })();
-ok('no ofrece días de la semana siguiente',
+ok('no ofrece más allá de la semana que toca',
    fechas.every(f => f <= finSemana),
-   `hasta ${fechas[fechas.length - 1]} (el corte es ${finSemana})`);
+   `hasta ${fechas[fechas.length - 1] || '(ninguno)'} · el corte de hoy es ${finSemana}`);
 
 ok('el chip de Pago está visible', !(await p.locator('#chip-pago').isHidden()));
 

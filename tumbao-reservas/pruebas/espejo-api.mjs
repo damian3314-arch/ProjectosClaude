@@ -377,6 +377,10 @@ createServer(async (req, res) => {
         const deLaClase = [...reservas.values()].filter(r => r.clase_id === c.clase_id);
         const cuenta = e => deLaClase.filter(r => e.includes(r.estado)).length;
         const confirmadas = cuenta(['confirmada']);
+        // El miembro no paga la clase: su plan ya la cubre. Contar todas
+        // las confirmadas como plata invento 180.000 el sabado 22.
+        const confirmadasDe = t =>
+          deLaClase.filter(r => r.estado === 'confirmada' && r.tipo === t).length;
         const porValidar  = cuenta(['pendiente_validacion']);
         const esperando   = cuenta(['pendiente_pago', 'verificando']);
         const aforo    = c.aforo ?? 30;
@@ -411,7 +415,12 @@ createServer(async (req, res) => {
           // etiqueta tenga algo que enseñar.
           por_soltar: c._primera ? 2 : 0,
           en_sala: conPlan + tomadas,
-          ingreso_cop: confirmadas * (c.precio_cop || 15000)
+          // Partidas: el miembro no paga la clase, su plan ya la cubre.
+          // Multiplicar TODAS las confirmadas por el precio inventaba
+          // 180.000 el sabado 22 de agosto.
+          confirmadas_suelta: confirmadasDe('suelta'),
+          confirmadas_miembro: confirmadasDe('miembro'),
+          ingreso_cop: confirmadasDe('suelta') * (c.precio_cop || 15000)
         };
       }).sort((a, z) => a.hora.localeCompare(z.hora));
 
@@ -424,6 +433,8 @@ createServer(async (req, res) => {
           vencen: suma('vencen'),
           a_la_venta: suma('a_la_venta'), reservadas: suma('reservadas'),
           libres: suma('libres'), confirmadas: suma('confirmadas'),
+          confirmadas_suelta: suma('confirmadas_suelta'),
+          confirmadas_miembro: suma('confirmadas_miembro'),
           por_validar: suma('por_validar'), esperando: suma('esperando'),
           en_sala: suma('en_sala'), ingreso_cop: suma('ingreso_cop')
         }
@@ -877,6 +888,32 @@ createServer(async (req, res) => {
   // Existe para poder probar en un navegador algo que solo se ve alli:
   // que el boton "Liberar" SI salga en las de mostrador aunque esten
   // confirmadas, y NO en las que entraron por la pagina.
+  // Un sabado con las dos cosas: miembros que reservan —solo pasa ese
+  // dia, porque el aforo va partido en dos mitades— y sueltas que si
+  // pagan. Es el caso donde el tablero decia COBRADO 285.000 cuando lo
+  // cobrado eran 105.000.
+  if (url.pathname === '/_prueba/sabado-mixto') {
+    const c = clases.find(x => x._dow === 6 && x._hora === 8);
+    if (!c) return json(res, 400, { ok: false, error: 'sin_sabado' });
+    for (const [t, n] of [['miembro', 12], ['suelta', 7]]) {
+      for (let i = 0; i < n; i++) {
+        const cod = codigo();
+        reservas.set(cod, {
+          codigo: cod, tipo: t, clase: c.nombre, clase_id: c.clase_id,
+          nombre: `${t === 'miembro' ? 'Afiliada' : 'Suelta'} ${i + 1}`,
+          telefono: '30099900' + String(i).padStart(2, '0'),
+          creadaAt: new Date().toISOString(), estado: 'confirmada',
+          origen: 'formulario',
+          fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
+          hora: hora12(c.fecha_hora), pagoEn: null,
+        });
+      }
+    }
+    c.cupos_disponibles = Math.max(c.cupo_total - 19, 0);
+    return json(res, 200, { ok: true, dia: diaDe(c.fecha_hora),
+                            clase_id: c.clase_id });
+  }
+
   if (url.pathname === '/_prueba/apuntar-a-mano') {
     const c = clases.find(x => x.clase_id === url.searchParams.get('clase'))
            || clases[0];

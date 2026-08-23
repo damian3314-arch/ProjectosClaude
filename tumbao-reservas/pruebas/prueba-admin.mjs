@@ -92,6 +92,68 @@ const tarj = await p.locator('.clase-card').count();
 ok('pinta una tarjeta por clase', tarj > 0, `${tarj} clases`);
 ok('cinco cifras arriba', await p.locator('#tiles-tab .tile').count() === 5);
 
+/* ─────────────────────────────────────────────────────────────
+   El sábado, y quién de verdad pagó
+
+   El sábado 22 de agosto la clase de las 8 tenía 19 confirmadas y el
+   tablero decía COBRADO $285.000. Doce de esas eran miembros: su plan
+   las cubre y no entregan un peso. Lo cobrado eran $105.000.
+
+   Y el reparto decía "3 de 15 afiliados", que se lee como "vinieron 3
+   de 15" cuando quería decir que quedaban 3 libres.
+   ───────────────────────────────────────────────────────────── */
+{
+  // Se apunta el día en el que está el tablero para volver a él al
+  // final: las comprobaciones que vienen después necesitan un día entre
+  // semana con sus tres clases, y "Hoy" puede no tener ninguna.
+  const diaAntes = await p.locator('#dia-fecha').inputValue();
+
+  // Se siembran las dos cosas en el sábado del espejo: miembros que
+  // reservan —solo pasa ese día, porque el aforo va partido— y sueltas
+  // que sí pagan.
+  const sab = await (await fetch('http://localhost:8899/_prueba/sabado-mixto')).json();
+
+  await p.locator('#tab-tablero').click();
+  await p.fill('#dia-fecha', sab.dia);
+  await p.waitForTimeout(900);
+
+  const card = p.locator('.clase-card').filter({ hasText: '8:00 am' }).first();
+  ok('el sábado sembrado se ve', await card.count() === 1, sab.dia);
+
+  if (await card.count()) {
+    const txt = (await card.innerText()).replace(/\s+/g, ' ');
+
+    // Lo que decidió el arreglo: la plata es solo la de las sueltas.
+    /\$105\.000/.test(txt) && !/\$285\.000/.test(txt)
+      ? ok('el cobrado de la tarjeta es solo el de las sueltas', true, '$105.000')
+      : ok('el cobrado de la tarjeta es solo el de las sueltas', false,
+           (txt.match(/\$[\d.]+/g) || []).join(' '));
+
+    // Y se dice de qué está hecho, en vez de un total ciego.
+    /7 sueltas pagadas/.test(txt) && /12 con plan/.test(txt)
+      ? ok('y dice cuántas son plata y cuántas plan', true)
+      : ok('y dice cuántas son plata y cuántas plan', false, txt.slice(0, 130));
+
+    // El reparto: tomados Y libres, con la palabra delante.
+    const rep = (await card.locator('.reparto').innerText()).replace(/\s+/g, ' ');
+    /Afiliados 12\/15/.test(rep) && /quedan 3/.test(rep)
+      ? ok('el reparto dice los afiliados tomados y los que quedan', true, rep)
+      : ok('el reparto dice los afiliados tomados y los que quedan', false, rep);
+    /Sueltas 7\/15/.test(rep) && /quedan 8/.test(rep)
+      ? ok('y lo mismo del lado de las sueltas', true)
+      : ok('y lo mismo del lado de las sueltas', false, rep);
+
+    // El mosaico de arriba, que es lo que se mira de un vistazo.
+    const tiles = (await p.locator('#tiles-tab').innerText()).replace(/\s+/g, ' ');
+    /7 pagadas · 12 con plan/.test(tiles)
+      ? ok('y arriba también se separan', true)
+      : ok('y arriba también se separan', false, tiles.slice(0, 160));
+  }
+
+  await p.fill('#dia-fecha', diaAntes);
+  await p.waitForTimeout(900);
+}
+
 // El aviso punteado de los que vencen ese dia. Solo sale donde hay
 // alguien venciendo: si saliera en todas, seria ruido.
 const conVence = p.locator('.clase-card').filter({ has: p.locator('.vencen') });
