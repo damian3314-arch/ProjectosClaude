@@ -654,8 +654,13 @@ const ctrl = pagina.locator('#caja-cierre .fila.control')
  * Se comprueba contra `banco.recibido_cop` —lo que el banco dice— y NO
  * contra la suma, que es justo lo que se dejó de hacer. */
 const esperadoBanco = dia().banco.recibido_cop;
-const totalBanco = await pagina.locator('#caja-cierre .fila.total')
-  .filter({ hasText: 'Entró por transferencia' }).innerText();
+// :not(.control) descarta el desglose de abajo ("De la transferencia,
+// cruzado en el mostrador" / "...reservas que entraron solas"), y
+// .first() se queda con la fila de "Recibido del día" y no con
+// "Apuntado sin respaldo... 1 transferencia" de la tarjeta del banco,
+// que también contiene la palabra "transferencia".
+const totalBanco = await pagina.locator('#caja-cierre .fila:not(.control)')
+  .filter({ hasText: 'Transferencia' }).first().innerText();
 const cifraBanco = Number((totalBanco.match(/\$([\d.]+)/) || [])[1]?.replace(/\./g, ''));
 cifraBanco === esperadoBanco
   ? bien('el total de transferencias lo pone el banco',
