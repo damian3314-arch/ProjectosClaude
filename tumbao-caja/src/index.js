@@ -1034,8 +1034,24 @@ export default {
         const hasta = `${dia}T23:59:59.999-05:00`;
         const pagos = await leer(env, 'pagos',
           `fecha_pago=gte.${encodeURIComponent(desde)}&fecha_pago=lte.${encodeURIComponent(hasta)}` +
-          `&select=remitente,valor_cop,fecha_pago,referencia,consumido,banco&order=fecha_pago.asc`);
+          `&select=id,remitente,valor_cop,fecha_pago,referencia,consumido,banco&order=fecha_pago.asc`);
         return json({ ok: true, dia, pagos }, 200, origen);
+
+      // Con qué reserva quedó un depósito, y para qué clase (fecha) es
+      // esa reserva — para distinguir un pago que sí es de hoy de uno
+      // adelantado para una clase futura.
+      } else if (ruta === '/api/pago-reserva') {
+        const pago = String(b.pago_id || '');
+        if (!/^[0-9a-f-]{36}$/i.test(pago)) return json({ ok: false, error: 'PAGO_INVALIDO' }, 400, origen);
+        const v = await rpc(env, 'verificar_token_admin', { p_token: token });
+        if (!v) return json({ ok: false, error: 'NO_AUTORIZADO' }, 401, origen);
+        const reservas = await leer(env, 'reservas',
+          `pago_id=eq.${pago}&select=nombre,telefono,tipo,estado,clase_id`);
+        for (const r of reservas) {
+          const clases = await leer(env, 'clases', `id=eq.${r.clase_id}&select=fecha_hora,nombre`);
+          r.clase = clases[0] || null;
+        }
+        return json({ ok: true, reservas }, 200, origen);
 
       } else if (ruta === '/api/registrar') {
         const sentido = b.sentido === 'egreso' ? 'egreso' : 'ingreso';
