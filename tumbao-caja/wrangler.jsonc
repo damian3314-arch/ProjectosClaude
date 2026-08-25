@@ -44,11 +44,21 @@
   "ai": { "binding": "AI" },
 
   "vars": {
-    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co",
+    // El webhook de n8n que revisa Gmail al instante cuando alguien dice
+    // "ya pagué", en vez de esperar al sondeo de fondo. No es secreto:
+    // sin el token de abajo no hace nada.
+    "N8N_REVISAR_URL": "https://barragan.app.n8n.cloud/webhook/tumbao/revisar-pago-ahora"
   }
-  // SECRETO — se pone en el dashboard, nunca aquí:
+  // SECRETOS — se ponen en el dashboard, nunca aquí:
   //   SUPABASE_SERVICE_KEY
+  //   OPENAI_API_KEY       (para leer comprobantes; sin ella se usa un
+  //                         modelo más flojo, ver leerComprobante())
+  //   N8N_REVISAR_TOKEN    (el mismo valor que el onlyRunIf del webhook
+  //                         "Revisar ahora" en n8n; sin él, el aviso
+  //                         simplemente no se manda — el sondeo de fondo
+  //                         sigue cruzando el pago igual, solo más lento)
   //
-  // Sin él el Worker responde 503 con un mensaje claro en vez de
-  // fallar raro: así se sabe al instante que falta la llave.
+  // Sin SUPABASE_SERVICE_KEY el Worker responde 503 con un mensaje claro
+  // en vez de fallar raro: así se sabe al instante que falta la llave.
 }

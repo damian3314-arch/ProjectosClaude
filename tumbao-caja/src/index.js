@@ -566,7 +566,21 @@ async function leerComprobante(env, imagen) {
  * La decisión de confirmar NO vive aquí: vive en las funciones de
  * Postgres, que bloquean fila. Aquí solo se enruta y se da formato.
  * ------------------------------------------------------------------- */
-async function pagina(request, env, ruta, origen) {
+// Avisarle a n8n que revise Gmail YA, en vez de esperar al sondeo de
+// fondo. Nunca bloquea la respuesta al cliente ni la revienta: si el
+// token no está puesto, si n8n está caído o si la llamada tarda, el
+// sondeo de fondo igual va a cruzar el pago — esto solo lo adelanta.
+function avisarRevisionInmediata(env, ctx) {
+  if (!env.N8N_REVISAR_URL || !env.N8N_REVISAR_TOKEN) return;
+  const aviso = fetch(env.N8N_REVISAR_URL, {
+    method: 'POST',
+    headers: { 'x-tumbao-token': env.N8N_REVISAR_TOKEN, 'Content-Type': 'application/json' },
+    body: '{}',
+  }).catch(() => {});
+  if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(aviso);
+}
+
+async function pagina(request, env, ruta, origen, ctx) {
   const url = new URL(request.url);
   const q = url.searchParams;
   const metodo = request.method;
@@ -705,6 +719,9 @@ async function pagina(request, env, ruta, origen) {
         p_qr:         opc(b.qr, 500),
       });
       if (r && r.ok) {
+        // La persona está a punto de entrar a la barra de espera. Que
+        // n8n revise Gmail ya mismo, sin esperar al sondeo de fondo.
+        avisarRevisionInmediata(env, ctx);
         return json({ ok: true, estado: r.estado, codigo: r.codigo,
           mensaje: r.mensaje || null }, 200, origen);
       }
@@ -760,7 +777,7 @@ async function pagina(request, env, ruta, origen) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origen = request.headers.get('Origin');
     const ruta = new URL(request.url).pathname;
 
@@ -799,7 +816,7 @@ export default {
      * tenga que enterarse de nada.
      * ───────────────────────────────────────────────────────────── */
     if (ruta.startsWith('/tumbao/')) {
-      return await pagina(request, env, ruta, origen);
+      return await pagina(request, env, ruta, origen, ctx);
     }
 
     // La revisión diaria. Sin token: no devuelve más que cuentas.
