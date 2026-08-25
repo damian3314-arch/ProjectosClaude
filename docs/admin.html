@@ -3384,8 +3384,12 @@ const CONFIG = {
         );
       })() +
 
+      // Sin la promesa de que estos cuatro coinciden con AdminGym: no
+      // coinciden cuando hay anticipos para otro día, porque AdminGym
+      // no los registra —y no tiene por qué—. Van aquí solo como
+      // referencia para pasarlos a la otra pantalla, no como algo que
+      // tenga que dar igual.
       `<hr>` + titulo('PARA COMPARAR CON ADMINGYM') +
-      `<div class="peq" style="margin-bottom:.8mm">Estos cuatro tienen que decir lo mismo en las dos pantallas.</div>` +
       linea('Venta Membresías', pesos(a.venta_membresias)) +
       linea('Ingresos a Banco', pesos(a.ingresos_a_banco)) +
       linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
