@@ -913,13 +913,19 @@ const t = tirilla.replace(/\s+/g, ' ');
   ? bien('los negativos salen como −$5.000, no $-5.000')
   : falla('el signo del negativo', (t.match(/\$-[\d.]+/) || [])[0]);
 
-/APERTURA/.test(t) && /95\.000/.test(t)
+/AL ABRIR/.test(t) && /95\.000/.test(t)
   ? bien('deja constancia de la apertura y su conteo')
   : falla('la apertura en la tirilla', t.slice(0, 200));
 
-/CONTRA ADMINGYM/.test(t) && /DINERO EN CAJA/.test(t)
+/COMPARAR CON ADMINGYM/.test(t) && /DINERO EN CAJA/.test(t)
   ? bien('trae los cuatro números de AdminGym')
   : falla('AdminGym en la tirilla', t.slice(0, 200));
+
+// El veredicto tiene que verse solo, sin tener que restar nada.
+/SÍ CUADRA|NO CUADRA/.test(t)
+  ? bien('dice si cuadra o no, en una palabra',
+         (t.match(/SÍ CUADRA[^—]*|NO CUADRA[^—]*—[^A-Z]*/) || [])[0])
+  : falla('el veredicto de cuadre', t.slice(0, 300));
 
 /Firma/.test(t)
   ? bien('y una línea para firmar') : falla('la firma');

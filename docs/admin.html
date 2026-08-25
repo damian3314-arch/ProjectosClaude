@@ -755,12 +755,22 @@ const CONFIG = {
     #tirilla .l{display:flex;justify-content:space-between;gap:3mm}
     #tirilla .l span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
     #tirilla .l.g{font-weight:700;border-top:1px solid #000;margin-top:1mm;padding-top:1mm}
+    /* El total de cada sección, más grande que el resto: es el único
+       número que alguien necesita ver si no lee nada más de esa parte. */
+    #tirilla .l.grande{font-size:11pt}
     #tirilla .peq{font-size:7.5pt}
     #tirilla .firma{margin-top:8mm;border-top:1px solid #000;padding-top:1mm;
       text-align:center;font-size:7.5pt}
     /* Un descuadre no puede pasar desapercibido en papel en blanco y
        negro, donde el color no existe: se marca con recuadro. */
     #tirilla .ojo{border:1px solid #000;padding:1mm 1.5mm;margin:1mm 0;font-weight:700}
+    /* El veredicto de "¿cuadra?": una sola palabra, grande, centrada.
+       No hay que leer números para saber si algo salió mal. */
+    #tirilla .veredicto{
+      text-align:center;font-weight:700;font-size:11pt;
+      border:1.5px solid #000;padding:1.5mm;margin:1.5mm 0;
+    }
+    #tirilla .veredicto.mal{border-width:2px}
   }
 
 </style>
@@ -3283,6 +3293,18 @@ const CONFIG = {
 
     const dif = Number(c.diferencia_cop || 0);
 
+    // La tirilla la tiene que entender cualquiera, no solo quien ya
+    // conoce la historia de este panel. Por eso cada número que suma va
+    // con su signo (+ / = ), cada sección responde UNA pregunta que se
+    // puede decir en voz alta, y el veredicto de "¿cuadra?" se ve sin
+    // tener que leer nada más: es grande y dice SÍ o NO, no un número
+    // pelado que hay que interpretar.
+    const detalle = (sentido) => {
+      const filas = (d.resumen_conceptos || []).filter(x => x.sentido === sentido);
+      if (!filas.length) return '';
+      return `<div class="peq" style="margin-top:1.5mm">Detalle:</div>` + conceptos(sentido);
+    };
+
     $('#tirilla').innerHTML =
       `<h1>TUMBAO</h1>` +
       `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
@@ -3290,19 +3312,19 @@ const CONFIG = {
       `<hr>` +
 
       (d.apertura
-        ? titulo('APERTURA') +
-          linea(`${d.apertura.hora} · ${d.apertura.quien || 'sin nombre'}`, '') +
-          linea('Contado al abrir', pesos(d.apertura.contado_cop)) +
+        ? titulo('AL ABRIR') +
+          linea('Hora', `${d.apertura.hora} · ${d.apertura.quien || 'sin nombre'}`) +
+          linea('Había en el cajón', pesos(d.apertura.contado_cop)) +
           (Number(d.apertura.diferencia_cop || 0) !== 0
             ? `<div class="ojo">` +
-              linea('Diferencia con anoche', conSigno(d.apertura.diferencia_cop)) +
+              linea('No cuadró con anoche', conSigno(d.apertura.diferencia_cop)) +
               `</div>`
             : '') +
           (d.apertura.nota ? `<div class="peq">${esc(d.apertura.nota)}</div>` : '')
         // Si nadie abrió, la tirilla lo dice. Callarlo haría parecer que
         // la base salió de un conteo que no existió.
-        : titulo('APERTURA') +
-          `<div class="peq">No se abrió la caja. La base viene del cierre anterior.</div>` +
+        : titulo('AL ABRIR') +
+          `<div class="peq">Nadie contó el cajón al empezar. Se usó lo que quedó ayer.</div>` +
           linea('Base', pesos(d.base_cop))) +
 
       // Solo tres preguntas, en el mismo orden que en pantalla: cuánto
@@ -3313,8 +3335,10 @@ const CONFIG = {
         const transferencia = b.recibido_cop != null
           ? b.recibido_cop : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
         const efectivo = Number(d.ingreso_efectivo || 0);
+        const totalEntro = efectivo + transferencia;
         const gastos = Number(d.total_egresos || 0);
         const retirado = Number(c.retirado_cop || 0);
+        const totalSalio = gastos + retirado;
         // Anticipos: pagado hoy para una clase de otro día. Sigue
         // sumando al total de arriba —esa plata sí entró—, pero se
         // separa de lo que un cliente disfrutó hoy, que es lo que hay
@@ -3323,38 +3347,45 @@ const CONFIG = {
         const futurasN = Number(d.reservas_futuras_n || 0);
 
         return (
-        `<hr>` + titulo('ENTRÓ') + conceptos('ingreso') +
+        `<hr>` + titulo('LO QUE ENTRÓ HOY') +
         linea('Efectivo', pesos(efectivo)) +
-        linea('Transferencia' + (b.recibido_cop != null ? ' (lo dice el banco)' : ''), pesos(transferencia)) +
-        linea('TOTAL ENTRÓ', pesos(efectivo + transferencia), 'g') +
+        linea('+ Transferencias', pesos(transferencia)) +
+        linea('= Total entró', pesos(totalEntro), 'g grande') +
+
         (futuras > 0
-          ? linea('De eso, de clientes de hoy', pesos(transferencia - futuras)) +
-            linea(`De eso, para clases de otro día (${futurasN})`, pesos(futuras))
+          ? `<div class="ojo">De esto, <b>${pesos(futuras)}</b> es de ` +
+            `${futurasN} ${futurasN === 1 ? 'cliente' : 'clientes'} que pagaron hoy una clase ` +
+            `de OTRO día. Todavía no se la toman — ya quedó cobrada, nada más.</div>`
           : '') +
         // El 10 de agosto una reserva confirmada a mano se sumó dos
         // veces: una como movimiento de caja y otra como reserva. Esta
         // línea es la comprobación de que esa plata ya está contada
         // arriba y no hay que sumarla de nuevo.
         (Number(d.reservas_a_mano_n || 0) > 0
-          ? `<div class="peq">Confirmadas en el mostrador: ${d.reservas_a_mano_n} ` +
-            `(${pesos(d.reservas_a_mano_cop)}) — ya están en el total de arriba.</div>`
+          ? `<div class="peq">Ya se cobraron en el mostrador: ${d.reservas_a_mano_n} ` +
+            `(${pesos(d.reservas_a_mano_cop)}). No los vuelvas a sumar.</div>`
           : '') +
+        detalle('ingreso') +
 
-        `<hr>` + titulo('SALIÓ') + conceptos('egreso') +
-        (retirado ? linea('Retirado del cajón al cerrar', pesos(retirado)) : '') +
-        linea('TOTAL SALIÓ', pesos(gastos + retirado), 'g') +
+        `<hr>` + titulo('LO QUE SALIÓ HOY') +
+        linea('Gastos', pesos(gastos)) +
+        (retirado ? linea('+ Se sacó del cajón', pesos(retirado)) : '') +
+        linea('= Total salió', pesos(totalSalio), 'g grande') +
+        detalle('egreso') +
 
-        `<hr>` + titulo('¿CUADRA?') +
-        linea('Debería haber en el cajón', pesos(d.esperado_efectivo)) +
-        linea('Contado', pesos(c.contado_cop || 0)) +
+        `<hr>` + titulo('¿CUADRA LA CAJA?') +
+        linea('Debía haber', pesos(d.esperado_efectivo)) +
+        linea('Se contó', pesos(c.contado_cop || 0)) +
         (dif === 0
-          ? linea('Diferencia', '0', 'g')
-          : `<div class="ojo">` + linea('DIFERENCIA', conSigno(dif)) + `</div>`) +
-        linea('Se dejó para mañana', pesos(c.dejado_cop || 0))
+          ? `<div class="veredicto">SÍ CUADRA ✓</div>`
+          : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
+        linea('Se deja para mañana', pesos(c.dejado_cop || 0)) +
+        (retirado ? linea('Se retira hoy', pesos(retirado)) : '')
         );
       })() +
 
-      `<hr>` + titulo('CONTRA ADMINGYM') +
+      `<hr>` + titulo('PARA COMPARAR CON ADMINGYM') +
+      `<div class="peq" style="margin-bottom:.8mm">Estos cuatro tienen que decir lo mismo en las dos pantallas.</div>` +
       linea('Venta Membresías', pesos(a.venta_membresias)) +
       linea('Ingresos a Banco', pesos(a.ingresos_a_banco)) +
       linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
@@ -3364,15 +3395,15 @@ const CONFIG = {
       // a ningún día. No es del cierre de hoy, así que va aparte y sin
       // pretender que sea parte del cuadre de arriba.
       (b.recibido_cop != null && Number(b.libre_hoy_cop || 0) > 0
-        ? `<hr>` + titulo('BANCO SIN APLICAR') +
-          `<div class="ojo">` + linea('Sin identificar, de hoy', pesos(b.libre_hoy_cop)) + `</div>`
+        ? `<div class="peq" style="margin-top:1mm">Ojo: además, el banco tiene ${pesos(b.libre_hoy_cop)} ` +
+          `de hoy que nadie ha reclamado todavía. No es de este cierre.</div>`
         : '') +
 
       `<hr>` +
       `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
       (c.nota ? `<div class="peq">${esc(c.nota)}</div>` : '') +
       (Number(c.rehecho_n || 0) > 0
-        ? `<div class="ojo peq">Cierre rehecho ${c.rehecho_n} ` +
+        ? `<div class="ojo peq">Este cierre se rehizo ${c.rehecho_n} ` +
           `${Number(c.rehecho_n) === 1 ? 'vez' : 'veces'}` +
           (c.rehecho_motivo ? `: ${esc(c.rehecho_motivo)}` : '') + `</div>`
         : '') +
