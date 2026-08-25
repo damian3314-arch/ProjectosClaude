@@ -656,7 +656,7 @@ const ctrl = pagina.locator('#caja-cierre .fila.control')
 const esperadoBanco = dia().banco.recibido_cop;
 // :not(.control) descarta el desglose de abajo ("De la transferencia,
 // cruzado en el mostrador" / "...reservas que entraron solas"), y
-// .first() se queda con la fila de "Recibido del día" y no con
+// .first() se queda con la fila "Transferencia" de la tarjeta "Entró" y no con
 // "Apuntado sin respaldo... 1 transferencia" de la tarjeta del banco,
 // que también contiene la palabra "transferencia".
 const totalBanco = await pagina.locator('#caja-cierre .fila:not(.control)')
@@ -675,10 +675,14 @@ cifraBanco !== sumaAMano || sumaAMano === esperadoBanco
   ? bien('y no la suma de los movimientos')
   : falla('sigue enseñando la suma a mano', `${cifraBanco}`);
 
+// La cola del banco (lo sin identificar, lo sin respaldo) ya no es una
+// tarjeta más con semáforos de color — el cierre solo tiene tres
+// tarjetas (Entró, Salió, ¿Cuadra?) y esto es una línea aparte,
+// informativa, que ni siquiera es del cierre de hoy.
 const cierreTxt = await pagina.locator('#caja-cierre').innerText();
-/Apuntado sin respaldo del banco/.test(cierreTxt) && /125\.000/.test(cierreTxt)
+/apuntado sin respaldo del banco/i.test(cierreTxt) && /125\.000/.test(cierreTxt)
   ? bien('lo apuntado sin respaldo sale contado aparte en el cierre')
-  : falla('sin respaldo en el cierre', cierreTxt.slice(0, 160));
+  : falla('sin respaldo en el cierre', cierreTxt.slice(0, 200));
 
 // Lo que ya no puede pasar: que un desfase de fechas se pinte de rojo.
 // Rojo estaba reservado para "comprobante falso" y disparaba solo por
@@ -687,25 +691,6 @@ const cls = await tarjeta.getAttribute('class');
 !cls.includes('malo')
   ? bien('nunca se pone en rojo por un desfase de fechas')
   : falla('rojo por desfase', cls);
-
-// El color se comprueba computado y no por la clase: la fila del banco
-// es una `.fila.total` y su cifra es el último hijo, así que el oro del
-// total le ganaba por especificidad y el semáforo no se veía.
-const difs = pagina.locator('#caja-cierre .grupo.banco .dif');
-const color = i => difs.nth(i).evaluate(e => getComputedStyle(e).color);
-
-// Fila 1: sin identificar, en cero. Va SIN color: que no haya nada
-// pendiente es lo normal, y anunciar lo normal en verde es parte de lo
-// que saturaba la pantalla. Tiene que heredar el gris del texto.
-(await color(0)) === 'rgb(244, 239, 246)'
-  ? bien('el cero no se anuncia con color')
-  : falla('el cero debería ir sin color', await color(0));
-
-// Fila 2: apuntado sin respaldo. Hay 125.000, así que ámbar — nunca
-// rojo, porque la pantalla no puede saber si fue Nequi o un engaño.
-(await color(1)) === 'rgb(255, 193, 77)'
-  ? bien('lo que falta por respaldar se pinta ámbar, no del oro del total')
-  : falla('el color del sin respaldo', await color(1));
 
 // ═══════════════ avisos y cerrar el día ═══════════════
 // Antes aquí solo se comprobaba que el botón estuviera habilitado. Con

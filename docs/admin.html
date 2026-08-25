@@ -675,6 +675,7 @@ const CONFIG = {
      partía "Nota (opcional)" en dos renglones. Esta es la de texto. */
   .suave{color:var(--tx-3);font-size:.75rem}
   p.suave{margin:.5rem 0 0;font-style:italic}
+  .cierre .banco-nota{margin:0 0 1rem;padding:.5rem .7rem;border-radius:8px;background:var(--bg-3)}
   .cierre input{
     width:100%;background:var(--bg);border:1px solid var(--line);color:var(--tx);
     border-radius:10px;padding:.6rem .8rem;font:inherit;font-size:1rem;
@@ -3223,56 +3224,19 @@ const CONFIG = {
     const sinResp = Number(b.sin_respaldo_cop || 0);
     const nSinResp = Number(b.sin_respaldo_n || 0);
 
-    // El pie habla solo de lo que exige hacer algo hoy. El arrastre se
-    // menciona como lo que es —cola vieja— y sin urgencia, porque
-    // urgirlo todos los días es la forma más rápida de que se ignore.
-    const pie = !hoy && !sinResp
-      ? 'Todo lo que entró hoy tiene dueño.' +
-        (atras ? ' Lo de días atrás se va limpiando solo: cada vez que ' +
-                 'alguien cobra una transferencia y escoge su depósito, ' +
-                 'sale de la cola.' : '')
-      : [
-          hoy ? 'Entró plata hoy que nadie ha reclamado: alguien pagó y no ' +
-                'se le registró el servicio. Al cobrarle, escoge su ' +
-                'depósito de la lista.' : '',
-          sinResp ? 'Y hay transferencias apuntadas que no señalan ningún ' +
-                    'depósito: o entraron por otra cuenta, o el comprobante ' +
-                    'no era real.' : '',
-        ].filter(Boolean).join(' ');
-
-    // Lo que el banco confirmó HOY ya se cuenta en la tarjeta "Recibido
-    // del día" — repetirlo aquí era el mismo número dos veces. Esta
-    // tarjeta es la otra mitad: la plata que el banco reportó y que
-    // todavía NO quedó aplicada a ningún día, ni hoy ni antes. Es
-    // informativa a propósito — no bloquea el cierre, solo avisa que
-    // hay algo pendiente de identificar.
-    return `<div class="grupo banco"><div class="et">Banco sin aplicar` +
-        `<span class="et-x">informativo · no hace parte del cierre de hoy</span></div>` +
-      `<div class="fila total"><span>Sin identificar, de hoy` +
-        `<span class="ag">${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'}</span></span>` +
-        // En cero va sin color: que no haya nada pendiente es lo normal,
-        // y lo normal no necesita anunciarse. El verde se guarda para el
-        // arqueo del efectivo, que sí confirma algo que acabas de hacer.
-        `<span class="dif ${hoy ? 'ojo' : ''}">${pesos(hoy)}</span></div>` +
-      (sinResp
-        ? `<div class="fila"><span>Apuntado sin respaldo del banco` +
-          `<span class="ag">${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'}` +
-          `</span></span><span class="dif ojo">${pesos(sinResp)}</span></div>`
-        : '') +
-      `<p class="suave">${pie}</p>` +
-      // Debajo de la línea y en gris: no es de este día.
-      (atras
-        ? `<div class="cola">De días anteriores quedan ` +
-          `<b>${pesos(atras)}</b> en ${nAtras} ` +
-          `${nAtras === 1 ? 'depósito' : 'depósitos'} sin reclamar ` +
-          `(${Number(b.ventana_dias || 20)} días atrás). Casi todo es de antes ` +
-          `de que existiera esta pantalla.</div>`
-        : '') +
-      (b.mes_cop != null
-        ? `<div class="cola">En lo que va del mes han entrado ` +
-          `<b>${pesos(b.mes_cop)}</b> al banco.</div>`
-        : '') +
-    `</div>`;
+    // Una línea, no una tarjeta más: esto no es del cierre de hoy, es la
+    // cola de depósitos que el banco reportó y todavía nadie reclamó. Se
+    // dice para que no se pierda de vista, pero sin competir en la
+    // pantalla con las tres preguntas que sí importan para cerrar hoy.
+    if (!hoy && !sinResp && !atras) {
+      return `<p class="suave banco-nota">✓ El banco no tiene nada suelto: todo lo que ha entrado tiene dueño.</p>`;
+    }
+    const partes = [];
+    if (hoy) partes.push(`${pesos(hoy)} de hoy sin reclamar (${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'})`);
+    if (sinResp) partes.push(`${pesos(sinResp)} apuntado sin respaldo del banco (${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'})`);
+    if (atras) partes.push(`${pesos(atras)} de días atrás (${nAtras})`);
+    return `<p class="suave banco-nota">⚠ Aparte de esto, el banco tiene suelto: ` +
+      partes.join(' · ') + `. No es del cierre de hoy, pero conviene revisarlo.</p>`;
   }
 
   // Una fila del cierre. `sub` es la línea chica de debajo: en los
@@ -3341,55 +3305,44 @@ const CONFIG = {
           `<div class="peq">No se abrió la caja. La base viene del cierre anterior.</div>` +
           linea('Base', pesos(d.base_cop))) +
 
-      `<hr>` + titulo('ENTRÓ') + conceptos('ingreso') +
-      titulo('SALIÓ') + conceptos('egreso') +
+      // Solo tres preguntas, en el mismo orden que en pantalla: cuánto
+      // entró, cuánto salió, y si cuadra. El listado por concepto queda
+      // DENTRO de cada una, como el detalle que sustenta el total — no
+      // como secciones aparte que hay que sumar a mano para saber algo.
+      (() => {
+        const transferencia = b.recibido_cop != null
+          ? b.recibido_cop : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
+        const efectivo = Number(d.ingreso_efectivo || 0);
+        const gastos = Number(d.total_egresos || 0);
+        const retirado = Number(c.retirado_cop || 0);
 
-      `<hr>` + titulo('MOVIMIENTO DE CAJA') +
-      linea('Base', pesos(d.base_cop)) +
-      linea('+ Entró en efectivo', pesos(d.ingreso_efectivo)) +
-      linea('− Salió en efectivo', pesos(d.egreso_efectivo)) +
-      linea('Debería haber', pesos(d.esperado_efectivo), 'g') +
-      linea('Contado', pesos(c.contado_cop || 0)) +
-      (dif === 0
-        ? linea('Diferencia', '0', 'g')
-        : `<div class="ojo">` + linea('DIFERENCIA', conSigno(dif)) + `</div>`) +
-      // Los dos van planos: son el reparto de lo contado, no un total
-      // que sume con lo de arriba. En negrita parecía que "Se retiró"
-      // cerraba una cuenta, y no cierra ninguna.
-      linea('Se dejó para mañana', pesos(c.dejado_cop || 0)) +
-      linea('Se retiró', pesos(c.retirado_cop || 0)) +
+        return (
+        `<hr>` + titulo('ENTRÓ') + conceptos('ingreso') +
+        linea('Efectivo', pesos(efectivo)) +
+        linea('Transferencia' + (b.recibido_cop != null ? ' (lo dice el banco)' : ''), pesos(transferencia)) +
+        linea('TOTAL ENTRÓ', pesos(efectivo + transferencia), 'g') +
+        // El 10 de agosto una reserva confirmada a mano se sumó dos
+        // veces: una como movimiento de caja y otra como reserva. Esta
+        // línea es la comprobación de que esa plata ya está contada
+        // arriba y no hay que sumarla de nuevo.
+        (Number(d.reservas_a_mano_n || 0) > 0
+          ? `<div class="peq">Confirmadas en el mostrador: ${d.reservas_a_mano_n} ` +
+            `(${pesos(d.reservas_a_mano_cop)}) — ya están en el total de arriba.</div>`
+          : '') +
 
-      // Responde una sola pregunta: ¿cuánto entró hoy, en total, por los
-      // dos medios? El efectivo ya se contó arriba como movimiento del
-      // cajón; aquí se repite nada más para que el total quede completo
-      // sin tener que sumar entre tarjetas.
-      `<hr>` + titulo('RECIBIDO DEL DÍA') +
-      linea('Efectivo', pesos(d.ingreso_efectivo)) +
-      linea('Transferencias (mostrador)', pesos(d.ingreso_transferencia)) +
-      linea('Reservas cobradas hoy', pesos(d.reservas_cop)) +
-      linea('Total recibido hoy', pesos(
-        Number(d.ingreso_efectivo || 0) + Number(d.ingreso_transferencia || 0) +
-        Number(d.reservas_cop || 0)), 'g') +
-      // Decía "ya contadas arriba", y era mentira: desde la 0030 las de
-      // mostrador NO se suman en reservas_cop, justamente para no
-      // contarlas dos veces. Esa frase decía que no había nada que
-      // hacer, así que nadie iba a comprobarlo — y el 19 de agosto se
-      // quedaron 15.000 en el cajón que el sistema no sabía que existían.
-      (Number(d.reservas_a_mano_n || 0) > 0
-        ? `<div class="peq">Apuntadas en mostrador: ${d.reservas_a_mano_n} ` +
-          `(${pesos(d.reservas_a_mano_cop)}). No suman aquí: ya entraron en ` +
-          `MOVIMIENTO DE CAJA.</div>`
-        : '') +
-      // Dos relojes distintos, y confundirlos era justo el problema:
-      // una reserva se COBRA el día que entra la plata y se DICTA el
-      // día de la clase. Arriba va la plata, que es lo que cuadra el
-      // cierre. Esto de aquí es cuánto valió la operación del día, y
-      // por eso se dice explícito que no suma.
-      (d.reservas_dictadas_cop != null
-        ? `<div class="peq">Clases dictadas hoy: ${d.reservas_dictadas_n} ` +
-          `(${pesos(d.reservas_dictadas_cop)}) — no suma aquí, se cobraron ` +
-          `el día que cada quien pagó</div>`
-        : '') +
+        `<hr>` + titulo('SALIÓ') + conceptos('egreso') +
+        (retirado ? linea('Retirado del cajón al cerrar', pesos(retirado)) : '') +
+        linea('TOTAL SALIÓ', pesos(gastos + retirado), 'g') +
+
+        `<hr>` + titulo('¿CUADRA?') +
+        linea('Debería haber en el cajón', pesos(d.esperado_efectivo)) +
+        linea('Contado', pesos(c.contado_cop || 0)) +
+        (dif === 0
+          ? linea('Diferencia', '0', 'g')
+          : `<div class="ojo">` + linea('DIFERENCIA', conSigno(dif)) + `</div>`) +
+        linea('Se dejó para mañana', pesos(c.dejado_cop || 0))
+        );
+      })() +
 
       `<hr>` + titulo('CONTRA ADMINGYM') +
       linea('Venta Membresías', pesos(a.venta_membresias)) +
@@ -3397,16 +3350,12 @@ const CONFIG = {
       linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
       linea('DINERO EN CAJA', pesos(a.dinero_en_caja), 'g') +
 
-      (b.recibido_cop != null
-        // Informativo: lo que el banco reportó y todavía no quedó
-        // aplicado a ningún día. "Bancolombia confirmó" ya está arriba,
-        // en RECIBIDO DEL DÍA — repetirlo aquí era el mismo número dos
-        // veces en la misma tirilla.
+      // Informativo: lo que el banco reportó y todavía no quedó aplicado
+      // a ningún día. No es del cierre de hoy, así que va aparte y sin
+      // pretender que sea parte del cuadre de arriba.
+      (b.recibido_cop != null && Number(b.libre_hoy_cop || 0) > 0
         ? `<hr>` + titulo('BANCO SIN APLICAR') +
-          (Number(b.libre_hoy_cop || 0) > 0
-            ? `<div class="ojo">` +
-              linea('Sin identificar, de hoy', pesos(b.libre_hoy_cop)) + `</div>`
-            : linea('Sin identificar, de hoy', '0'))
+          `<div class="ojo">` + linea('Sin identificar, de hoy', pesos(b.libre_hoy_cop)) + `</div>`
         : '') +
 
       `<hr>` +
@@ -3473,106 +3422,90 @@ const CONFIG = {
         `<button class="btn primario" id="btn-abrir-cierre">Cerrar el día</button>`;
       return;
     }
-    // Tres tarjetas, cada una con una sola pregunta:
-    //   1. Movimiento de caja  — ¿cuadra el cajón que se cuenta a mano?
-    //   2. Recibido del día    — ¿cuánto entró hoy, por efectivo y por
-    //      transferencia? Esta es la que responde "¿cuánto vendimos hoy?".
-    //   3. Control del banco   — informativo: lo que el banco reporta que
-    //      NO quedó aplicado a ningún día. No es parte del cierre de hoy,
-    //      es la cola de lo pendiente.
-    // Antes "lo que no pasó por el cajón" y "el banco" mezclaban el total
-    // del día con esa cola pendiente en la misma tarjeta, y no quedaba
-    // claro cuál de los dos números había que mirar para saber qué entró
-    // hoy. Separarlas es la mejora que se pidió.
+    // Solo tres tarjetas — ENTRÓ, SALIÓ, CUADRADO — porque eso es
+    // exactamente lo que alguien necesita saber al cerrar, ni una cosa
+    // más. Antes había una tarjeta por cada fuente de datos (el cajón,
+    // el banco, AdminGym) y para saber "¿cuánto entró?" había que sumar
+    // entre tres sitios distintos. Ahora cada tarjeta responde una sola
+    // pregunta y ya.
+    const bk = d.banco || {};
+    // MANDA EL BANCO, NO LA SUMA A MANO.
+    //
+    // La transferencia se armaba sumando las transferencias del
+    // mostrador más las reservas cobradas. El 20 de agosto eso dio
+    // 490.000 cuando al banco entraron 475.000: los 15.000 de más eran
+    // un movimiento apuntado a mano sin depósito detrás, o sea la misma
+    // plata dos veces. Ahora la transferencia sale de lo que dice el
+    // banco, que no hay que sumar ni puede equivocarse.
+    // `banco` puede no venir: el servidor de antes de ese bloque no lo
+    // mandaba, y el simulacro lo finge para comprobarlo.
+    const transferencia = bk.recibido_cop != null
+      ? bk.recibido_cop : d.ingreso_transferencia + d.reservas_cop;
+    const efectivoEntro = Number(d.ingreso_efectivo || 0);
+    const gastos = Number(d.total_egresos || 0);
+    const retirado = d.cerrado ? Number(d.cierre.retirado_cop || 0) : 0;
+
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
       `<p class="sub-c">Los nombres de AdminGym van al lado: cuadrar es comparar dos columnas.</p>` +
 
-      `<div class="grupo"><div class="et">Movimiento de caja</div>` +
-        fila('Base con la que abrió', pesos(d.base_cop)) +
-        fila('Entró en efectivo', pesos(a.venta_membresias), campoAG('Venta Membresías')) +
-        fila('Salió en efectivo', '−' + pesos(a.retirar_dinero_de_caja), campoAG('Retirar Dinero')) +
-        fila('Debería haber', pesos(a.dinero_en_caja), campoAG('DINERO EN CAJA'), 'total arqueo') +
-      `</div>` +
-
-      // MANDA EL BANCO, NO LA SUMA A MANO.
-      //
-      // La transferencia se armaba sumando las transferencias del
-      // mostrador más las reservas cobradas. El 20 de agosto eso dio
-      // 490.000 cuando al banco entraron 475.000: los 15.000 de más eran
-      // un movimiento apuntado a mano sin depósito detrás, o sea la misma
-      // plata dos veces. Y ese número se copia en AdminGym, así que el
-      // error viajaba.
-      //
-      // Ahora la transferencia sale de lo que dice el banco, que no hay
-      // que sumar ni puede equivocarse, y lo registrado a mano baja a ser
-      // lo que siempre debió ser: una comprobación.
-      // `banco` puede no venir: el servidor de antes de ese bloque no lo
-      // mandaba, y el simulacro lo finge para comprobarlo. Sin esta
-      // guarda la pantalla de cierre entera reventaba, que es peor que
-      // enseñar el total viejo.
-      ((bk) => {
-        const transferencia = bk.recibido_cop != null
-          ? bk.recibido_cop
-          : d.ingreso_transferencia + d.reservas_cop;
-        const efectivo = Number(d.ingreso_efectivo || 0);
-        return (
-        `<div class="grupo"><div class="et">Recibido del día` +
-          `<span class="et-x">efectivo + transferencia, lo que entró hoy</span></div>` +
-        fila('Efectivo', pesos(efectivo)) +
+      `<div class="grupo"><div class="et">Entró</div>` +
+        fila('Efectivo', pesos(efectivoEntro), campoAG('Venta Membresías')) +
         fila('Transferencia', pesos(transferencia),
-             bk.recibido_cop != null && bk.corte ? 'hasta las ' + esc(bk.corte) : null) +
-        fila('Total recibido hoy', pesos(efectivo + transferencia), null, 'total') +
+             bk.recibido_cop != null
+               ? 'lo dice el banco' + (bk.corte ? ' · hasta las ' + esc(bk.corte) : '')
+               : null) +
+        fila('Total entró hoy', pesos(efectivoEntro + transferencia), null, 'total') +
 
-        (bk.recibido_cop == null
-          ? ''
-          // El desglose va DEBAJO del total y marcado como que no suma:
-          // son las dos puertas por las que llegó esa MISMA plata, no
-          // dos cosas que se sumen.
-          : `<div class="fila control"><span>De la transferencia, cruzado en el mostrador` +
-              `<span class="ag">transferencias que registró recepción</span></span>` +
-              `<span class="no-suma">${pesos(d.ingreso_transferencia - (bk.sin_respaldo_cop || 0))}</span></div>` +
-            `<div class="fila control"><span>De la transferencia, reservas que entraron solas` +
-              `<span class="ag">${d.reservas_n || 0} ` +
-              `${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · por la fecha ` +
-              `del pago, no la de la clase</span></span>` +
-              `<span class="no-suma">${pesos(d.reservas_cop)}</span></div>`) +
-
-        // NO suma, y por eso va debajo del total. Son las reservas que se
-        // confirmaron en el mostrador: su plata ya entró por Caja y está
-        // en "Movimiento de caja". Sumarla otra vez fue el error que el
-        // 10 de agosto iba a inflar el cierre en $30.000.
-        // Se enseña para poder comprobar que esté: si alguien confirma a
-        // mano y se le olvida registrarla en Caja, esta cifra deja de
-        // cuadrar con los movimientos y se nota el mismo día.
+        // El desglose va DEBAJO del total y marcado como que no suma:
+        // son las puertas por las que llegó esa MISMA plata, no algo que
+        // se sume aparte. Se enseña para poder comprobar que, si alguien
+        // confirma a mano y se le olvida registrarla en Caja, la cifra
+        // deje de cuadrar con los movimientos y se note el mismo día.
+        (bk.recibido_cop == null ? '' :
+          `<div class="fila control"><span>De eso, cruzado en el mostrador` +
+            `<span class="ag">transferencias que registró recepción</span></span>` +
+            `<span class="no-suma">${pesos(d.ingreso_transferencia - (bk.sin_respaldo_cop || 0))}</span></div>` +
+          `<div class="fila control"><span>De eso, reservas que entraron solas` +
+            `<span class="ag">${d.reservas_n || 0} ` +
+            `${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · por la fecha del pago` +
+            `</span></span><span class="no-suma">${pesos(d.reservas_cop)}</span></div>`) +
         (Number(d.reservas_a_mano_n || 0) > 0
           ? `<div class="fila control"><span>Confirmadas en el mostrador` +
             `<span class="ag">${d.reservas_a_mano_n} ` +
-            `${Number(d.reservas_a_mano_n) === 1 ? 'reserva' : 'reservas'} · ` +
-            `su plata ya está en Movimiento de caja</span></span>` +
-            `<span class="no-suma">${pesos(d.reservas_a_mano_cop)}</span></div>`
+            `${Number(d.reservas_a_mano_n) === 1 ? 'reserva' : 'reservas'} · ya contadas arriba` +
+            `</span></span><span class="no-suma">${pesos(d.reservas_a_mano_cop)}</span></div>`
           : '') +
-        `</div>`
-        );
-      })(d.banco || {}) +
+      `</div>` +
 
-      bloqueBanco() +
+      `<div class="grupo"><div class="et">Salió</div>` +
+        fila('Gastos del día', pesos(gastos), campoAG('Retirar Dinero')) +
+        (d.cerrado ? fila('Retirado del cajón al cerrar', pesos(retirado)) : '') +
+        fila('Total salió' + (d.cerrado ? '' : ' hasta ahora'), pesos(gastos + retirado), null, 'total') +
+      `</div>` +
 
-      (d.cerrado
-        ? `<div class="grupo"><div class="et">Arqueo</div>` +
-            fila('Contado en el cajón', pesos(d.cierre.contado_cop)) +
-            `<div class="fila"><span>Diferencia</span><span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
+      `<div class="grupo"><div class="et">¿Cuadra?</div>` +
+        fila('Debería haber en el cajón', pesos(d.esperado_efectivo), campoAG('DINERO EN CAJA')) +
+        (d.cerrado
+          ? fila('Contado', pesos(d.cierre.contado_cop)) +
+            `<div class="fila total"><span>Diferencia</span>` +
+            `<span class="dif ${d.cierre.diferencia_cop === 0 ? 'bien' : 'mal'}">` +
             `${d.cierre.diferencia_cop > 0 ? '+' : ''}${pesos(d.cierre.diferencia_cop)}</span></div>` +
             fila('Se dejó de base para mañana', pesos(d.cierre.dejado_cop)) +
-            fila('Se retiró', pesos(d.cierre.retirado_cop)) +
             (d.cierre.nota ? `<p class="suave">“${esc(d.cierre.nota)}”</p>` : '') +
             (Number(d.cierre.rehecho_n || 0) > 0
               ? `<p class="suave">Este cierre se rehizo ${d.cierre.rehecho_n} ` +
                 `${Number(d.cierre.rehecho_n) === 1 ? 'vez' : 'veces'}` +
                 (d.cierre.rehecho_motivo ? `: “${esc(d.cierre.rehecho_motivo)}”` : '') + `.</p>`
-              : '') +
-          `</div>` +
-          `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
+              : '')
+          : '') +
+      `</div>` +
+
+      // Informativo, no del cierre de hoy: una línea, no una tarjeta más.
+      bloqueBanco() +
+
+      (d.cerrado
+        ? `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
           `<button class="btn" id="btn-rehacer">Corregir el cierre</button>`
         : `<div class="grupo"><div class="et">Cerrar el día</div>` +
             // LOS GASTOS SE PREGUNTAN, NO SE ESPERAN.
@@ -3582,7 +3515,7 @@ const CONFIG = {
             // se acuerda de ir a otra pestaña a apuntar un gasto cuando
             // está cerrando. Así que si no hay ninguno, hay que decir
             // que de verdad no hubo — un toque, pero explícito.
-            (Number(d.total_egresos || 0) === 0
+            (gastos === 0
               ? `<div class="fila ojo" style="margin-bottom:.8rem">` +
                   `<label for="c-sin-gastos" style="display:flex;gap:.55rem;` +
                   `align-items:flex-start;cursor:pointer;margin:0">` +
@@ -3592,11 +3525,9 @@ const CONFIG = {
                       `Si hubo alguno, apúntalo en Movimientos antes de cerrar.</span>` +
                     `</span>` +
                   `</label></div>`
-              : `<div class="fila control"><span>Gastos de hoy` +
-                  `<span class="ag">ya registrados</span></span>` +
-                  `<span class="no-suma">${pesos(d.total_egresos)}</span></div>`) +
+              : '') +
             `<label for="c-contado">¿Cuánto contaste en el cajón?</label>` +
-            `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(a.dinero_en_caja || 0)}">` +
+            `<input id="c-contado" type="text" inputmode="numeric" placeholder="${String(d.esperado_efectivo || 0)}">` +
             `<label for="c-dejado">¿Cuánto dejas de base para mañana?</label>` +
             `<input id="c-dejado" type="text" inputmode="numeric" value="100000">` +
             `<label for="c-nota">Nota <span class="suave">(opcional)</span></label>` +
