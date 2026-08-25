@@ -1019,6 +1019,24 @@ export default {
           p_dia: /^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : null,
         });
 
+      // Diagnóstico puntual: el detalle crudo de cada depósito que el
+      // banco confirmó ese día, para cruzar contra AdminGym transacción
+      // por transacción cuando un total no cuadra y hay que ver de
+      // dónde sale la diferencia. Reusa verificar_token_admin —
+      // cualquier token vivo puede pedirlo, como cualquier otra pantalla
+      // de solo lectura del panel.
+      } else if (ruta === '/api/pagos-del-dia') {
+        const dia = /^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : null;
+        if (!dia) return json({ ok: false, error: 'DIA_INVALIDO' }, 400, origen);
+        const v = await rpc(env, 'verificar_token_admin', { p_token: token });
+        if (!v) return json({ ok: false, error: 'NO_AUTORIZADO' }, 401, origen);
+        const desde = `${dia}T00:00:00-05:00`;
+        const hasta = `${dia}T23:59:59.999-05:00`;
+        const pagos = await leer(env, 'pagos',
+          `fecha_pago=gte.${encodeURIComponent(desde)}&fecha_pago=lte.${encodeURIComponent(hasta)}` +
+          `&select=remitente,valor_cop,fecha_pago,referencia,consumido,banco&order=fecha_pago.asc`);
+        return json({ ok: true, dia, pagos }, 200, origen);
+
       } else if (ruta === '/api/registrar') {
         const sentido = b.sentido === 'egreso' ? 'egreso' : 'ingreso';
         const concepto = String(b.concepto || '');
