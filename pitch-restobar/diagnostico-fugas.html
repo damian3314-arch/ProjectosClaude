@@ -1,0 +1,459 @@
+<title>Diagnóstico de Fugas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=Chivo+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --bg:#F1F0EC;
+  --surface:#FFFFFF;
+  --surface-2:#E7E5DF;
+  --ink:#1A1917;
+  --ink-2:#3D3B37;
+  --muted:#6E6A62;
+  --line:#DCD8D0;
+  --line-soft:#E8E5DE;
+  --leak:#AE3418;
+  --leak-soft:#F7E4DE;
+  --save:#0E6A52;
+  --save-soft:#DCEDE7;
+  --shadow:0 1px 2px rgba(26,25,23,.06), 0 10px 26px -18px rgba(26,25,23,.4);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#131211;
+    --surface:#1C1B19;
+    --surface-2:#252320;
+    --ink:#EFEDE8;
+    --ink-2:#CDC9C1;
+    --muted:#98938A;
+    --line:#2E2C28;
+    --line-soft:#242220;
+    --leak:#E8825F;
+    --leak-soft:#301A12;
+    --save:#5DC5A4;
+    --save-soft:#122C25;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131211;
+  --surface:#1C1B19;
+  --surface-2:#252320;
+  --ink:#EFEDE8;
+  --ink-2:#CDC9C1;
+  --muted:#98938A;
+  --line:#2E2C28;
+  --line-soft:#242220;
+  --leak:#E8825F;
+  --leak-soft:#301A12;
+  --save:#5DC5A4;
+  --save-soft:#122C25;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Karla","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:640px;margin:0 auto;padding:0 18px 200px}
+h1,h2,.big{font-family:"Chivo","Arial Black",Helvetica,sans-serif;font-weight:900;letter-spacing:-.025em;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.1rem,8.5vw,3.2rem);line-height:.98;text-transform:uppercase}
+h2{font-size:clamp(1.25rem,4.6vw,1.6rem);line-height:1.1;text-transform:uppercase}
+h3{font-family:"Karla",sans-serif;font-weight:700;font-size:1rem;margin:0;line-height:1.3}
+p{margin:0}
+.mono{font-family:"Chivo Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.lbl{font-family:"Chivo Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+:focus-visible{outline:2px solid var(--leak);outline-offset:3px;border-radius:4px}
+
+header{padding:40px 0 22px;display:flex;flex-direction:column;gap:14px}
+header .kicker{display:flex;align-items:center;gap:8px}
+header .dot{width:8px;height:8px;border-radius:50%;background:var(--leak);flex:none}
+header .deck{color:var(--ink-2);font-size:1.02rem;max-width:46ch}
+hr{border:0;height:1px;background:var(--line);margin:0}
+
+section{padding:34px 0 0;display:flex;flex-direction:column;gap:16px}
+.intro{font-size:.95rem;color:var(--muted);max-width:56ch}
+
+/* ----- form ----- */
+.q{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:15px 16px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow);
+}
+.q .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.q .hint{font-size:.8rem;color:var(--muted);line-height:1.4}
+.val{
+  font-family:"Chivo",sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:var(--surface-2)}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--surface-2)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;
+  background:var(--leak);border:3px solid var(--surface);margin-top:-9px;
+  box-shadow:0 1px 6px rgba(0,0,0,.25);
+}
+input[type=range]::-moz-range-thumb{
+  width:24px;height:24px;border-radius:50%;background:var(--leak);border:3px solid var(--surface);
+  box-shadow:0 1px 6px rgba(0,0,0,.25);
+}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ----- results ----- */
+.breakdown{display:flex;flex-direction:column;gap:9px}
+.leakrow{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.leakrow .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.leakrow .amt{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.15rem;color:var(--leak);font-variant-numeric:tabular-nums;white-space:nowrap}
+.leakrow p{font-size:.85rem;color:var(--muted);line-height:1.45}
+.bar{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leak);border-radius:99px;transition:width .25s ease}
+
+.verdict{
+  background:var(--save-soft);border:1px solid color-mix(in srgb,var(--save) 34%,transparent);
+  border-radius:14px;padding:17px;display:flex;flex-direction:column;gap:12px;
+}
+.verdict .big{font-size:clamp(1.9rem,7vw,2.6rem);color:var(--save);line-height:1;font-variant-numeric:tabular-nums}
+.verdict p{font-size:.9rem;color:var(--ink-2)}
+.vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.vcell{background:var(--surface);border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}
+.vcell b{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.2rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.vcell span{font-size:.76rem;color:var(--muted);line-height:1.3}
+
+/* ----- sticky total ----- */
+.sticky{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:11px 18px calc(11px + env(safe-area-inset-bottom));
+}
+.sticky .in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.sticky .amt{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.5rem;color:var(--leak);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sticky .lbl{display:block;margin-bottom:2px}
+.btn{
+  font-family:"Karla",sans-serif;font-weight:700;font-size:.88rem;
+  background:var(--ink);color:var(--bg);border:0;border-radius:99px;padding:11px 17px;cursor:pointer;
+  white-space:nowrap;text-decoration:none;display:inline-block;
+}
+.btn:hover{opacity:.88}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+
+/* ----- method ----- */
+.method{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.method summary{cursor:pointer;padding:14px 16px;font-weight:700;font-size:.92rem;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.method summary::-webkit-details-marker{display:none}
+.method summary::after{content:"+";font-family:"Chivo Mono",monospace;color:var(--muted)}
+.method[open] summary::after{content:"–"}
+.method .in{padding:0 16px 16px;display:flex;flex-direction:column;gap:11px;font-size:.86rem;color:var(--ink-2);border-top:1px solid var(--line-soft);padding-top:13px}
+.method .in b{font-weight:700;color:var(--ink)}
+.method .in code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+
+.fine{font-size:.8rem;color:var(--muted);line-height:1.5;max-width:60ch}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.78rem;display:flex;flex-direction:column;gap:6px}
+
+@media (min-width:680px){
+  .wrap{padding:0 28px 190px}
+  .vgrid{grid-template-columns:repeat(3,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="kicker"><span class="dot"></span><span class="lbl">Loggro Restobar · Diagnóstico</span></div>
+    <h1>¿Cuánto se está fugando tu restaurante este mes?</h1>
+    <p class="deck">Mueve seis controles con los números de tu negocio. En un minuto sabes cuánto vale el desorden — con la cuenta a la vista para que la revises tú mismo.</p>
+  </header>
+
+  <hr>
+
+  <section>
+    <div>
+      <p class="lbl">Paso 1 — Tu operación</p>
+      <h2>Los números de tu negocio</h2>
+    </div>
+    <p class="intro">Si no sabes alguno exacto, deja el valor que viene: son promedios de restaurantes de servicio a la mesa en Colombia. Nada de esto se envía a ningún lado.</p>
+
+    <div class="q">
+      <div class="top"><h3>Ventas mensuales</h3><span class="val mono" id="v-ventas">$30.000.000</span></div>
+      <input type="range" id="ventas" min="5000000" max="150000000" step="1000000" value="30000000" aria-label="Ventas mensuales">
+      <p class="hint">Facturación total del mes, antes de descontar cualquier cosa.</p>
+    </div>
+
+    <div class="q">
+      <div class="top"><h3>Costo de insumos</h3><span class="val mono" id="v-food">33%</span></div>
+      <input type="range" id="food" min="20" max="50" step="1" value="33" aria-label="Costo de insumos sobre ventas">
+      <p class="hint">Cuánto de cada venta se va en comida y bebida. El rango sano de la industria va de 28% a 35%.</p>
+    </div>
+
+    <div class="q">
+      <div class="top"><h3>Cierre de caja al día</h3><span class="val mono" id="v-caja">40 min</span></div>
+      <input type="range" id="caja" min="0" max="120" step="5" value="40" aria-label="Minutos diarios de cierre de caja">
+      <p class="hint">Cuadrar la caja, revisar vouchers, cazar el descuadre.</p>
+    </div>
+
+    <div class="q">
+      <div class="top"><h3>Conteo de inventario al día</h3><span class="val mono" id="v-inv">30 min</span></div>
+      <input type="range" id="inv" min="0" max="120" step="5" value="30" aria-label="Minutos diarios de conteo de inventario">
+      <p class="hint">Contar neveras y bodega, anotar en la libreta, pasar al Excel.</p>
+    </div>
+
+    <div class="q">
+      <div class="top"><h3>Mesas que se van sin pagar</h3><span class="val mono" id="v-fuga">4 al mes</span></div>
+      <input type="range" id="fuga" min="0" max="30" step="1" value="4" aria-label="Mesas que se van sin pagar al mes">
+      <div class="pair">
+        <div>
+          <p class="lbl">Cuenta promedio</p>
+          <span class="val mono" id="v-cuenta">$45.000</span>
+        </div>
+        <input type="range" id="cuenta" min="15000" max="200000" step="5000" value="45000" aria-label="Cuenta promedio">
+      </div>
+    </div>
+
+    <div class="q">
+      <div class="top"><h3>Platos que se rehacen</h3><span class="val mono" id="v-repro">5 por semana</span></div>
+      <input type="range" id="repro" min="0" max="40" step="1" value="5" aria-label="Platos rehechos por semana">
+      <div class="pair">
+        <div>
+          <p class="lbl">Insumo por plato</p>
+          <span class="val mono" id="v-insumo">$12.000</span>
+        </div>
+        <input type="range" id="insumo" min="3000" max="60000" step="1000" value="12000" aria-label="Costo de insumo por plato">
+      </div>
+      <p class="hint">Comanda mal escrita, mal cantada o mal entendida. El insumo se pierde y la cocina cocina dos veces.</p>
+    </div>
+  </section>
+
+  <section>
+    <div>
+      <p class="lbl">Paso 2 — El resultado</p>
+      <h2>Por dónde se te va</h2>
+    </div>
+
+    <div class="breakdown">
+      <div class="leakrow">
+        <div class="head"><h3>Inventario sin control</h3><span class="amt mono" id="r-merma">—</span></div>
+        <div class="bar"><i id="b-merma" style="width:0%"></i></div>
+        <p id="p-merma">—</p>
+      </div>
+      <div class="leakrow">
+        <div class="head"><h3>Horas administrativas</h3><span class="amt mono" id="r-tiempo">—</span></div>
+        <div class="bar"><i id="b-tiempo" style="width:0%"></i></div>
+        <p id="p-tiempo">—</p>
+      </div>
+      <div class="leakrow">
+        <div class="head"><h3>Cuentas que no se cobran</h3><span class="amt mono" id="r-nopago">—</span></div>
+        <div class="bar"><i id="b-nopago" style="width:0%"></i></div>
+        <p id="p-nopago">—</p>
+      </div>
+      <div class="leakrow">
+        <div class="head"><h3>Platos rehechos</h3><span class="amt mono" id="r-repro">—</span></div>
+        <div class="bar"><i id="b-repro" style="width:0%"></i></div>
+        <p id="p-repro">—</p>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div>
+        <p class="lbl">Se queda en tu bolsillo al mes</p>
+        <p class="big mono" id="r-neto">—</p>
+      </div>
+      <div class="vgrid">
+        <div class="vcell"><b class="mono" id="r-total">—</b><span>Fuga mensual estimada</span></div>
+        <div class="vcell"><b class="mono">$200.000</b><span>Inversión en Loggro Restobar</span></div>
+        <div class="vcell"><b class="mono" id="r-roi">—</b><span>Veces que se paga solo</span></div>
+      </div>
+      <p id="r-frase">—</p>
+    </div>
+
+    <details class="method">
+      <summary>Cómo se calculó cada cifra</summary>
+      <div class="in">
+        <p><b>Inventario.</b> La merma se mide sobre lo que compras, no sobre lo que vendes. Tomamos tus insumos del mes <code>ventas × costo de insumos</code> y calculamos los puntos de merma recuperables: un restaurante con control se mantiene por debajo del 5% de sus insumos; sin control se va a 8–12%. La cifra que ves es el rango medio de esa diferencia — la parte que se recupera midiendo, no un porcentaje de tus ventas.</p>
+        <p><b>Horas administrativas.</b> Salario mínimo 2026 de <code>$1.750.905</code> ÷ 210 horas = <code>$8.338</code> la hora ordinaria. Multiplicado por un factor prestacional de 1,45 (cesantías, primas, vacaciones, pensión, ARL y caja de compensación) da <code>$12.090</code> por hora real. Se multiplica por los minutos que marcaste, 30 días al mes.</p>
+        <p><b>Cuentas que no se cobran y platos rehechos.</b> Son tus propios números, sin porcentajes de industria de por medio. En los platos rehechos se suma el insumo perdido más 12 minutos de cocina valorados a la misma hora real.</p>
+        <p><b>Lo que este cálculo no hace.</b> No promete que recuperas el 100%: promete que hoy nadie está midiendo esa plata. Tampoco cuenta la rotación de mesas ni las ventas que se pierden por demora, aunque también se muevan — preferimos dejarlas fuera antes que inflar el número.</p>
+      </div>
+    </details>
+
+    <p class="fine">La inversión de referencia son $200.000 al mes, dentro del rango publicado de los planes Loggro Restobar ($120.990 a $219.990 mensuales, IVA 0%). El plan exacto depende de mesas, cajas y usuarios.</p>
+  </section>
+
+  <section>
+    <div>
+      <p class="lbl">Paso 3 — Compruébalo</p>
+      <h2>No nos creas: míralo con tu carta</h2>
+    </div>
+    <p class="intro">Cargamos tus diez platos más vendidos en el sistema y te mostramos un turno real —comanda a cocina, descuento de inventario, cuenta cerrada— antes de que firmes nada. Toma quince minutos, en tu local, en la hora que menos te sirva.</p>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn" id="copiar">Copiar mi diagnóstico</button>
+      <a class="btn ghost" id="wa" href="#" hidden>Enviarlo por WhatsApp</a>
+    </div>
+    <p class="fine" id="copiado" hidden>Listo, quedó copiado. Pégalo en el chat con tu asesor.</p>
+  </section>
+
+  <footer>
+    <p>Loggro Restobar · Software 100% colombiano · Proveedor tecnológico autorizado por la DIAN.</p>
+    <p>Los cálculos se hacen en tu propio dispositivo. No se guarda ni se envía ninguno de estos datos.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // Reemplazar por el WhatsApp del asesor en formato 57 + numero. Si queda vacio, el boton no aparece.
+  var ASESOR_WHATSAPP = "";
+
+  var HORA_REAL = 12090;      // $8.338 hora ordinaria SMLV 2026 x factor prestacional 1,45
+  var DIAS_MES = 30;
+  var SEMANAS_MES = 4.33;
+  var MIN_COCINA_REPROCESO = 12;
+  var PUNTOS_MERMA_BAJO = 3;  // recuperables sobre insumos
+  var PUNTOS_MERMA_ALTO = 7;
+  var INVERSION = 200000;
+
+  var cop = function(n){
+    return "$" + Math.round(n).toLocaleString("es-CO");
+  };
+  var el = function(id){ return document.getElementById(id); };
+
+  var inputs = ["ventas","food","caja","inv","fuga","cuenta","repro","insumo"].map(el);
+
+  function calc(){
+    var ventas  = +el("ventas").value;
+    var food    = +el("food").value;
+    var caja    = +el("caja").value;
+    var inv     = +el("inv").value;
+    var fuga    = +el("fuga").value;
+    var cuenta  = +el("cuenta").value;
+    var repro   = +el("repro").value;
+    var insumo  = +el("insumo").value;
+
+    // Etiquetas en vivo
+    el("v-ventas").textContent = cop(ventas);
+    el("v-food").textContent   = food + "%";
+    el("v-caja").textContent   = caja + " min";
+    el("v-inv").textContent    = inv + " min";
+    el("v-fuga").textContent   = fuga === 1 ? "1 al mes" : fuga + " al mes";
+    el("v-cuenta").textContent = cop(cuenta);
+    el("v-insumo").textContent = cop(insumo);
+    el("v-repro").textContent  = repro === 1 ? "1 por semana" : repro + " por semana";
+
+    var insumos    = ventas * (food/100);
+    var mermaBajo  = insumos * (PUNTOS_MERMA_BAJO/100);
+    var mermaAlto  = insumos * (PUNTOS_MERMA_ALTO/100);
+    var merma      = (mermaBajo + mermaAlto) / 2;
+
+    var horas      = ((caja + inv) * DIAS_MES) / 60;
+    var tiempo     = horas * HORA_REAL;
+
+    var nopago     = fuga * cuenta;
+
+    var costoRepro = insumo + (MIN_COCINA_REPROCESO/60) * HORA_REAL;
+    var reproceso  = repro * SEMANAS_MES * costoRepro;
+
+    var total = merma + tiempo + nopago + reproceso;
+    var neto  = total - INVERSION;
+    var max   = Math.max(merma, tiempo, nopago, reproceso, 1);
+
+    function pinta(key, valor, texto){
+      el("r-"+key).textContent = cop(valor);
+      el("b-"+key).style.width = (valor/max*100).toFixed(1) + "%";
+      el("p-"+key).textContent = texto;
+    }
+
+    pinta("merma", merma,
+      "Compras " + cop(insumos) + " en insumos al mes. Entre " + cop(mermaBajo) + " y " + cop(mermaAlto) +
+      " se van en porciones sin medir, producto vencido y salidas que nadie registró.");
+    pinta("tiempo", tiempo,
+      horas.toFixed(0) + " horas al mes cuadrando a mano, a " + cop(HORA_REAL) + " la hora real con prestaciones. Es un tercio de un sueldo que no produce un solo plato.");
+    pinta("nopago", nopago,
+      fuga === 0 ? "No marcaste ninguna. Si aparece una sola al mes, ya son " + cop(cuenta) + "."
+                 : fuga + " cuentas de " + cop(cuenta) + " que salieron por la puerta.");
+    pinta("repro", reproceso,
+      Math.round(repro*SEMANAS_MES) + " platos al mes a " + cop(costoRepro) + " cada uno: el insumo perdido más doce minutos de cocina que ya estaban pagados.");
+
+    el("r-total").textContent = cop(total);
+    el("r-neto").textContent  = cop(Math.max(neto, 0));
+    el("r-roi").textContent   = (total/INVERSION).toFixed(1) + "×";
+
+    var dias = total > 0 ? Math.max(1, Math.round(INVERSION / (total/30))) : 30;
+    el("r-frase").textContent = total > INVERSION
+      ? "Con estos números, Loggro Restobar se paga solo en " + dias + (dias === 1 ? " día" : " días") + " de operación. El resto del mes es plata que hoy se está yendo."
+      : "Con estos números la fuga es menor que la inversión. Tu operación ya está bastante controlada — vale la pena revisar juntos si el ahorro está en otro lado antes de que compres nada.";
+
+    return { ventas: ventas, total: total, merma: merma, tiempo: tiempo, nopago: nopago, reproceso: reproceso, neto: neto };
+  }
+
+  inputs.forEach(function(i){ i.addEventListener("input", function(){ var r = calc(); pintaSticky(r); }); });
+
+  function pintaSticky(r){
+    el("s-total").textContent = cop(r.total);
+  }
+
+  function resumen(r){
+    return [
+      "Diagnóstico de fugas · Loggro Restobar",
+      "Ventas mensuales: " + cop(r.ventas),
+      "— Inventario sin control: " + cop(r.merma),
+      "— Horas administrativas: " + cop(r.tiempo),
+      "— Cuentas no cobradas: " + cop(r.nopago),
+      "— Platos rehechos: " + cop(r.reproceso),
+      "FUGA TOTAL: " + cop(r.total) + " al mes",
+      "Neto tras invertir $200.000: " + cop(Math.max(r.neto,0)),
+      "Quiero ver un turno real con mi propia carta."
+    ].join("\n");
+  }
+
+  el("copiar").addEventListener("click", function(){
+    var texto = resumen(calc());
+    var ok = function(){ el("copiado").hidden = false; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(ok, function(){ fallback(texto, ok); });
+    } else { fallback(texto, ok); }
+  });
+
+  function fallback(texto, ok){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = texto; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+      ok();
+    }catch(e){ /* sin portapapeles disponible */ }
+  }
+
+  if (ASESOR_WHATSAPP) {
+    var wa = el("wa");
+    wa.hidden = false;
+    wa.addEventListener("click", function(ev){
+      ev.preventDefault();
+      window.open("https://wa.me/" + ASESOR_WHATSAPP + "?text=" + encodeURIComponent(resumen(calc())), "_blank", "noopener");
+    });
+  }
+
+  // Barra fija con el total
+  var bar = document.createElement("div");
+  bar.className = "sticky";
+  bar.innerHTML = '<div class="in"><div><span class="lbl">Fuga mensual estimada</span>' +
+                  '<span class="amt mono" id="s-total">—</span></div>' +
+                  '<a class="btn" href="#" id="s-cta">Ver el desglose</a></div>';
+  document.body.appendChild(bar);
+  document.getElementById("s-cta").addEventListener("click", function(ev){
+    ev.preventDefault();
+    document.getElementById("r-total").scrollIntoView({behavior:"smooth", block:"center"});
+  });
+
+  pintaSticky(calc());
+})();
+</script>

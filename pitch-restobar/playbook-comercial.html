@@ -1,0 +1,634 @@
+<title>Playbook Restobar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500&family=Karla:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap">
+
+<style>
+:root{
+  --bg:#F0F1F4;
+  --surface:#FFFFFF;
+  --surface-2:#E5E7EC;
+  --ink:#161923;
+  --ink-2:#39404F;
+  --muted:#697184;
+  --line:#D8DCE4;
+  --line-soft:#E6E9EE;
+  --accent:#A0680B;
+  --accent-soft:#F6EBD6;
+  --accent-ink:#7A4F06;
+  --crit:#A32A2A;
+  --crit-soft:#F7E3E3;
+  --ok:#1E6B4E;
+  --ok-soft:#DEEDE6;
+  --shadow:0 1px 2px rgba(22,25,35,.05), 0 10px 26px -18px rgba(22,25,35,.35);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101219;
+    --surface:#181B24;
+    --surface-2:#212530;
+    --ink:#E7EAF1;
+    --ink-2:#C3C9D6;
+    --muted:#8D95A6;
+    --line:#282D39;
+    --line-soft:#20242E;
+    --accent:#E0A63F;
+    --accent-soft:#2A2210;
+    --accent-ink:#F0C97A;
+    --crit:#E58585;
+    --crit-soft:#2C1616;
+    --ok:#5FC69B;
+    --ok-soft:#12291F;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101219;
+  --surface:#181B24;
+  --surface-2:#212530;
+  --ink:#E7EAF1;
+  --ink-2:#C3C9D6;
+  --muted:#8D95A6;
+  --line:#282D39;
+  --line-soft:#20242E;
+  --accent:#E0A63F;
+  --accent-soft:#2A2210;
+  --accent-ink:#F0C97A;
+  --crit:#E58585;
+  --crit-soft:#2C1616;
+  --ok:#5FC69B;
+  --ok-soft:#12291F;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -20px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Karla","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.58;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:740px;margin:0 auto;padding:0 18px 80px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1,h2{font-family:"Newsreader",Georgia,serif;font-weight:600;letter-spacing:-.012em}
+h1{font-size:clamp(2rem,7vw,3rem);line-height:1.04}
+h2{font-size:clamp(1.35rem,4.6vw,1.85rem);line-height:1.14}
+h3{font-family:"Karla",sans-serif;font-weight:700;font-size:1rem;line-height:1.3}
+p{margin:0}
+a{color:var(--accent-ink);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.lbl{font-family:"Chivo Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:"Chivo Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+header{padding:42px 0 24px;display:flex;flex-direction:column;gap:15px}
+header .deck{font-size:1.05rem;color:var(--ink-2);max-width:54ch}
+hr{border:0;height:1px;background:var(--line);margin:0}
+
+.nav{position:sticky;top:0;z-index:20;margin:0 -18px;padding:9px 18px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft)}
+.nav ul{display:flex;gap:6px;overflow-x:auto;list-style:none;margin:0;padding:0;scrollbar-width:none}
+.nav ul::-webkit-scrollbar{display:none}
+.nav a{display:block;white-space:nowrap;text-decoration:none;color:var(--ink-2);font-size:.79rem;font-weight:500;padding:6px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface)}
+.nav a:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+section{padding:42px 0 0;display:flex;flex-direction:column;gap:17px}
+.shead{display:flex;flex-direction:column;gap:6px}
+.shead p{color:var(--muted);font-size:.95rem;max-width:62ch}
+
+.callout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:15px 17px;display:flex;flex-direction:column;gap:9px}
+.callout p{font-size:.94rem;color:var(--ink-2)}
+.callout.crit{border-left-color:var(--crit);background:var(--crit-soft);border-color:color-mix(in srgb,var(--crit) 28%,transparent)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 28%,transparent)}
+.callout .lbl.crit{color:var(--crit)}
+.callout .lbl.ok{color:var(--ok)}
+
+.fixes{display:flex;flex-direction:column;gap:12px}
+.fix{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.fix .head{display:flex;gap:12px;padding:15px 16px 12px;align-items:flex-start}
+.sev{font-family:"Chivo Mono",monospace;font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:6px;flex:none;background:var(--surface-2);color:var(--muted)}
+.sev.crit{background:var(--crit-soft);color:var(--crit)}
+.sev.med{background:var(--accent-soft);color:var(--accent-ink)}
+.fix .rows{border-top:1px solid var(--line-soft)}
+.r{display:flex;flex-direction:column;gap:4px;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+.r:last-child{border-bottom:0}
+.r p{font-size:.91rem;color:var(--ink-2)}
+.r.now{background:var(--surface-2)}
+.r.now .lbl{color:var(--accent-ink)}
+.was{font-family:"Chivo Mono",monospace;font-size:.84rem;color:var(--muted);text-decoration:line-through;text-decoration-color:var(--crit)}
+
+.script{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden}
+.script .t{padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--line-soft);background:var(--surface-2)}
+.script .body{padding:15px 16px;font-size:.93rem;color:var(--ink);white-space:pre-wrap;line-height:1.6}
+.script .why{padding:0 16px 14px;font-size:.83rem;color:var(--muted)}
+.copy{font-family:"Karla",sans-serif;font-size:.74rem;font-weight:700;background:var(--ink);color:var(--bg);border:0;border-radius:99px;padding:6px 12px;cursor:pointer}
+.copy:hover{opacity:.85}
+.copy.done{background:var(--ok)}
+
+.moves{display:flex;flex-direction:column;gap:11px}
+.move{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:8px}
+.move .top{display:flex;gap:11px;align-items:baseline}
+.move .n{font-family:"Chivo Mono",monospace;font-size:.75rem;color:var(--accent-ink);background:var(--accent-soft);border-radius:6px;padding:3px 7px;flex:none}
+.move p{font-size:.92rem;color:var(--ink-2)}
+.move .do{font-size:.88rem;color:var(--ink);border-top:1px dashed var(--line);padding-top:8px}
+.move .do b{color:var(--accent-ink)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:.86rem}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+thead th{font-family:"Chivo Mono",monospace;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:400;background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:"Chivo Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+td .old{color:var(--crit);text-decoration:line-through}
+td .new{color:var(--ok);font-weight:700}
+
+ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+ul.plain li{display:flex;gap:10px;font-size:.92rem;color:var(--ink-2);line-height:1.5}
+ul.plain li::before{content:"→";color:var(--accent);flex:none;font-family:"Chivo Mono",monospace}
+ul.plain li b{color:var(--ink)}
+
+.check{display:flex;flex-direction:column;gap:8px}
+.check label{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.9rem;color:var(--ink-2);cursor:pointer}
+.check input{margin-top:4px;accent-color:var(--accent);flex:none;width:16px;height:16px}
+.check label:has(input:checked){opacity:.55}
+.check label:has(input:checked) span{text-decoration:line-through}
+
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem;display:flex;flex-direction:column;gap:6px}
+
+@media (min-width:720px){
+  .wrap{padding:0 28px 96px}
+  .nav{margin:0 -28px;padding:10px 28px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="lbl">Documento interno · Equipo comercial · Agosto 2026</p>
+    <h1>Playbook Restobar</h1>
+    <p class="deck">Qué arreglar del pitch actual, por qué pedir una reunión dejó de funcionar y qué hace hoy un comercial que vende más que el resto. Con los guiones listos para copiar.</p>
+  </header>
+
+  <nav class="nav" aria-label="Secciones">
+    <ul>
+      <li><a href="#veredicto">Veredicto</a></li>
+      <li><a href="#arreglos">Qué arreglar</a></li>
+      <li><a href="#numeros">Los números</a></li>
+      <li><a href="#pitch">Pitch nuevo</a></li>
+      <li><a href="#metodo">El método</a></li>
+      <li><a href="#guiones">Guiones</a></li>
+      <li><a href="#gatillos">A quién llamar</a></li>
+      <li><a href="#kpi">Qué medir</a></li>
+      <li><a href="#verificar">Verificar</a></li>
+    </ul>
+  </nav>
+
+  <section id="veredicto">
+    <div class="shead">
+      <p class="lbl">01</p>
+      <h2>Veredicto en treinta segundos</h2>
+    </div>
+
+    <div class="callout ok">
+      <span class="lbl ok">Lo que está bien y hay que conservar</span>
+      <p>La tesis es correcta y es difícil de refutar: vender el costo de no hacer nada, no las funciones del software. La línea <em>“no se trata de vender más, se trata de dejar de perder lo que ya están ganando”</em> es lo mejor del documento. El salario mínimo y la hora ordinaria están bien calculados para agosto de 2026.</p>
+    </div>
+
+    <div class="callout crit">
+      <span class="lbl crit">Lo que hay que corregir hoy</span>
+      <p>La merma de inventario está calculada sobre las ventas, y se mide sobre las compras. Eso infla la pérdida unas tres veces. El primer prospecto con contador que revise la cuenta va a descartar el documento entero — y con él, todo lo demás que sí era cierto.</p>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">La razón de fondo por la que se está quedando corto</span>
+      <p>El pitch pide una reunión <em>para</em> entregar un diagnóstico. Tiene que entregar el diagnóstico <em>para ganarse</em> la reunión. Todo el material está bien: está en el orden equivocado y en el formato equivocado — un PDF estático con celdas que dicen <span class="mono">[COMPLETAR]</span>, que alguien tiene que llenar a mano en una reunión que todavía no consiguió.</p>
+    </div>
+  </section>
+
+  <section id="arreglos">
+    <div class="shead">
+      <p class="lbl">02 — Auditoría</p>
+      <h2>Seis arreglos, en orden de urgencia</h2>
+      <p>Los dos primeros cuestan credibilidad. Los otros cuatro cuestan atención.</p>
+    </div>
+
+    <div class="fixes">
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev crit">Crítico</span>
+          <div><h3>La merma no se calcula sobre las ventas</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que dice hoy</span>
+            <p class="was">“Negocios sin control de inventario pierden entre 5% y 10% de sus ingresos” → sobre $30.000.000 de ventas: $1.500.000 a $3.000.000.</p>
+          </div>
+          <div class="r">
+            <span class="lbl">Por qué está mal</span>
+            <p>La merma se mide sobre el costo de insumos, no sobre la facturación. Con un food cost sano de 33%, ese restaurante compra $9.900.000 en insumos. Los benchmarks del sector ponen una merma controlada por debajo del 5% de <em>esos insumos</em>, y una descontrolada entre 8% y 12%. Lo recuperable es la diferencia: de 3 a 7 puntos.</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cifra correcta</span>
+            <p>Entre <b>$297.000 y $693.000</b> al mes en el mismo ejemplo. Es un tercio de lo que dice el pitch — y es la que sobrevive a que el cliente la revise con su contador.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev crit">Crítico</span>
+          <div><h3>El total mezcla datos reales con ejemplos inventados, y lo confiesa al final</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que dice hoy</span>
+            <p class="was">“TOTAL PÉRDIDAS $2.466.280 a $4.146.280 /mes” … y abajo, en letra pequeña: “este total combina un dato real con estimados y ejemplos ilustrativos”.</p>
+          </div>
+          <div class="r">
+            <span class="lbl">Por qué está mal</span>
+            <p>Esa nota es honesta, y es exactamente lo que anula el cierre. Un dueño de restaurante lleva años oyendo promesas de proveedores; la letra pequeña le confirma que el número grande no era suyo. Además el factor prestacional del 68% está alto: para un salario bajo el empleador está exonerado de salud, SENA e ICBF, así que el factor defendible ronda 1,45.</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cómo se arregla</span>
+            <p>Que <b>ningún número sea un ejemplo</b>. Todos salen de lo que el prospecto responde en el diagnóstico interactivo. Cuando todas las cifras son suyas, sobra el disclaimer — y el total no se discute, porque lo armó él.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev med">Alto</span>
+          <div><h3>El argumento que más vende está enterrado al final</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que pasa hoy</span>
+            <p>“Poder salir a comer con tu familia, tomarte un fin de semana, confiar en que el negocio funciona sin que lo estés vigilando” aparece en la última sección, sin números, y bajo un título repetido — hay dos secciones numeradas “5. Disfruta tu tiempo”.</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cómo se arregla</span>
+            <p>Eso es <b>la portada</b>, no el cierre. El dueño de restaurante no compra ahorro: compra control y tiempo. El ahorro es la prueba de que el control existe, no el argumento.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev med">Alto</span>
+          <div><h3>Cero pruebas</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que pasa hoy</span>
+            <p>Tres páginas sin un solo nombre de cliente, sin una referencia, sin una captura de pantalla, sin un número verificable de otro restaurante. Todo es aritmética hipotética sobre un negocio que no existe.</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cómo se arregla</span>
+            <p>Una frase con nombre y barrio vale más que la tabla completa: <b>“El asadero de la 33 pasó de cerrar caja en 40 minutos a 6, y encontró $400.000 mensuales de faltante el primer mes.”</b> Si no existe todavía un caso así documentado, conseguir uno es más urgente que rediseñar el PDF.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev med">Medio</span>
+          <div><h3>La sección de reservas se nota copiada</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que pasa hoy</span>
+            <p class="was">“Eficiencia en la gestión: los sistemas de reservas automatizan el proceso… Mejora de la experiencia del cliente: las reservas permiten a los clientes planificar sus visitas…”</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cómo se arregla</span>
+            <p>Ese bloque es texto genérico de internet y baja el nivel de todo lo demás. O se reemplaza por <b>una frase concreta con un número del negocio</b>, o se elimina. En la versión nueva se eliminó.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="fix">
+        <div class="head">
+          <span class="sev med">Medio</span>
+          <div><h3>No hay siguiente paso</h3></div>
+        </div>
+        <div class="rows">
+          <div class="r">
+            <span class="lbl">Lo que pasa hoy</span>
+            <p>El documento termina en una tabla y una nota aclaratoria. No hay oferta, no hay llamado a la acción, no hay nada que el cliente pueda decir que sí.</p>
+          </div>
+          <div class="r now">
+            <span class="lbl">Cómo se arregla</span>
+            <p>Un solo siguiente paso, pequeño y con el riesgo del lado nuestro: <b>“Cargamos tus diez platos más vendidos y te mostramos un turno real antes de que firmes nada.”</b> No “agendemos una reunión”.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="numeros">
+    <div class="shead">
+      <p class="lbl">03 — Aritmética</p>
+      <h2>La calculadora, corregida</h2>
+      <p>Mismo ejemplo del pitch original: ventas de $30.000.000, food cost 33%, 70 minutos diarios de trabajo manual, 4 cuentas perdidas al mes de $45.000, 5 platos rehechos por semana.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Rubro</th><th>Pitch actual</th><th>Cifra defendible</th><th>Por qué cambia</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inventario sin control</td>
+            <td class="num"><span class="old">$1.500.000–3.000.000</span></td>
+            <td class="num"><span class="new">$297.000–693.000</span></td>
+            <td>Se calcula sobre los $9.900.000 de insumos, no sobre las ventas</td>
+          </tr>
+          <tr>
+            <td>Horas administrativas</td>
+            <td class="num"><span class="old">$490.280</span></td>
+            <td class="num"><span class="new">$423.150</span></td>
+            <td>Factor prestacional 1,45 en vez de 1,68 (hay exoneración de salud, SENA e ICBF)</td>
+          </tr>
+          <tr>
+            <td>Cuentas no cobradas</td>
+            <td class="num">$180.000</td>
+            <td class="num"><span class="new">$180.000</span></td>
+            <td>Ya era un dato del prospecto. Sin cambios</td>
+          </tr>
+          <tr>
+            <td>Platos rehechos</td>
+            <td class="num">$296.000</td>
+            <td class="num"><span class="new">$312.150</span></td>
+            <td>Sube levemente al valorar los 12 minutos de cocina con la hora real</td>
+          </tr>
+          <tr>
+            <td><b>Fuga total</b></td>
+            <td class="num"><span class="old">$2.466.280–4.146.280</span></td>
+            <td class="num"><span class="new">$1.410.300</span></td>
+            <td>Un solo número, sin escenarios inflados</td>
+          </tr>
+          <tr>
+            <td><b>Retorno</b></td>
+            <td class="num">—</td>
+            <td class="num"><span class="new">7,1×</span></td>
+            <td>Se paga solo en 4 días de operación</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">Lo importante</span>
+      <p>El argumento no se debilitó: sigue siendo siete veces la inversión y se paga en cuatro días. Pero ahora aguanta que el contador del cliente lo revise línea por línea. Un número que sobrevive al escrutinio cierra más que uno grande que no.</p>
+    </div>
+  </section>
+
+  <section id="pitch">
+    <div class="shead">
+      <p class="lbl">04 — Reescritura</p>
+      <h2>El pitch nuevo</h2>
+      <p>Una página. Se manda por WhatsApp o se lee en voz alta en la mesa. El orden es deliberado: primero lo que el dueño siente, después lo que le cuesta, después la prueba, después un solo paso.</p>
+    </div>
+
+    <div class="script">
+      <div class="t"><span class="lbl">Pitch Restobar · versión corta</span><button class="copy" data-copy="pitch">Copiar</button></div>
+      <div class="body" id="pitch">Hoy, si no estás en el restaurante, no sabes qué está pasando en el restaurante.
+
+Eso no es desconfianza. Es la consecuencia lógica de que la caja, la cocina y la bodega no se hablen entre sí. Y sale caro en tres sitios que nadie mide:
+
+El inventario que sale sin registrarse. Compras cerca de un tercio de tus ventas en insumos. Entre tres y siete puntos de eso se van en porciones sin medir, producto vencido y salidas que nadie anotó. Nunca aparecen con nombre propio en el estado de resultados, pero salen del mismo bolsillo.
+
+Las horas que se pagan dos veces. Cuadrar la caja a mano y contar la bodega se lleva más de una hora al día. Al mes son 35 horas: un tercio de un sueldo que no produce un solo plato.
+
+Los platos que se cocinan dos veces. Una comanda mal escrita o mal cantada cuesta el insumo perdido más los minutos de cocina que ya estaban pagados.
+
+Loggro Restobar no es otro POS. Es que el pedido salga de la mesa directo a la pantalla de cocina, que el inventario se descuente solo por receta cuando se vende el plato, que la factura electrónica se genere en la misma caja, y que tú veas ventas, inventario y caja en el celular estés donde estés.
+
+Lo que compras no es software. Es poder irte el domingo sin que el negocio se descuadre.
+
+No te pido que me creas: te pido quince minutos. Cargamos tus diez platos más vendidos y te mostramos un turno real —comanda a cocina, inventario descontado, cuenta cerrada— con tu propia carta, antes de que firmes nada.</div>
+      <p class="why">Qué cambió: abre por el control y no por el ahorro; los números van sin exagerar y sin ejemplos ajenos; desapareció el bloque genérico de reservas; y termina en un paso concreto de quince minutos en vez de una tabla.</p>
+    </div>
+  </section>
+
+  <section id="metodo">
+    <div class="shead">
+      <p class="lbl">05 — El diagnóstico</p>
+      <h2>Por qué “agendemos una reunión” dejó de funcionar</h2>
+      <p>No es que el comercial lo esté haciendo mal. Es que la pregunta pide justo lo que el dueño de un restaurante no tiene.</p>
+    </div>
+
+    <div class="callout">
+      <span class="lbl">El problema en una frase</span>
+      <p>Pedir una reunión es pedirle su recurso más escaso <em>antes</em> de haberle dado nada. El dueño trabaja de once de la mañana a once de la noche, atiende proveedores, cubre meseros que no llegaron y cierra caja. Media hora suya cuesta más que tu software. La reunión no es el primer paso: <b>es el premio</b>.</p>
+    </div>
+
+    <div class="shead" style="padding-top:14px">
+      <h2>Los cinco movimientos, en orden</h2>
+      <p>Es una secuencia, no un menú: cada movimiento existe para ganarse el derecho al siguiente.</p>
+    </div>
+
+    <div class="moves">
+
+      <article class="move">
+        <div class="top"><span class="n">01</span><h3>Entrega el diagnóstico antes de pedir nada</h3></div>
+        <p>En vez de “¿tienes 30 minutos?”, mandas un enlace donde él mueve seis controles con sus propios números y ve su fuga mensual en un minuto, desde el celular. No es un PDF que tú llenas: es una herramienta que él usa solo.</p>
+        <p class="do"><b>Qué hace esto:</b> invierte la deuda. Él ya recibió algo útil, y el número que le duele lo calculó él mismo — así que no lo va a discutir contigo.</p>
+      </article>
+
+      <article class="move">
+        <div class="top"><span class="n">02</span><h3>Nunca demuestres con la carta de demostración</h3></div>
+        <p>Pídele una foto de su carta por WhatsApp. Carga sus diez platos más vendidos. Graba un video de dos minutos vendiendo <em>su</em> plato estrella: la comanda saliendo a cocina, el inventario descontándose, la cuenta cerrando. Se lo mandas sin haberlo visto en persona.</p>
+        <p class="do"><b>Qué hace esto:</b> reemplaza la primera reunión completa. Un video con su propio menú se responde; “¿tienes media hora?” se ignora.</p>
+      </article>
+
+      <article class="move">
+        <div class="top"><span class="n">03</span><h3>Visita de quince minutos, en la hora muerta</h3></div>
+        <p>Entre 3 y 5 de la tarde, martes a jueves. Nunca de 12 a 3, nunca después de las 7. Quince minutos en su local, de pie si toca, con el sistema ya cargado con su carta. No llevas presentación: llevas su restaurante funcionando.</p>
+        <p class="do"><b>Qué hace esto:</b> quince minutos en su terreno se conceden; cuarenta y cinco en tu oficina, no. Y ver su propio menú en pantalla vale más que cualquier slide.</p>
+      </article>
+
+      <article class="move">
+        <div class="top"><span class="n">04</span><h3>Vende un problema, no la plataforma</h3></div>
+        <p>“Todo tu negocio en una sola plataforma” suena a proyecto de tres meses. “Esta semana montamos las comandas a cocina y dejas de perder platos” suena a una decisión que puede tomar hoy. Entras por el dolor que él nombró en el diagnóstico y expandes cuando ya confía.</p>
+        <p class="do"><b>Qué hace esto:</b> baja el costo de decir que sí. El resto de los módulos se venden solos desde adentro, cuando ya eres el sistema que usa todos los días.</p>
+      </article>
+
+      <article class="move">
+        <div class="top"><span class="n">05</span><h3>Cierra en el local, con el riesgo de tu lado</h3></div>
+        <p>Nada de “te mando la propuesta por correo”. La propuesta se firma donde se hizo la demostración, con una garantía que él pueda repetir en voz alta: <em>la implementación con tu carta cargada corre por nuestra cuenta, y si en 30 días no encontramos fugas por más de lo que pagas, te devolvemos el mes.</em></p>
+        <p class="do"><b>Qué hace esto:</b> el correo es donde mueren los negocios de restaurantes. Y la garantía traslada el riesgo a quien tiene los datos para respaldarla — nosotros.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="guiones">
+    <div class="shead">
+      <p class="lbl">06 — Listo para usar</p>
+      <h2>Guiones</h2>
+      <p>Copiar, cambiar el nombre del restaurante, mandar. La nota de voz funciona mejor que el texto: el dueño la oye mientras hace otra cosa.</p>
+    </div>
+
+    <div class="script">
+      <div class="t"><span class="lbl">WhatsApp · primer contacto</span><button class="copy" data-copy="g1">Copiar</button></div>
+      <div class="body" id="g1">Buenas [nombre], soy [tu nombre] de Loggro. No te voy a pedir una reunión.
+
+Te mando una calculadora de un minuto que te dice cuánto se te está yendo al mes en inventario sin medir, horas de cuadre manual y platos que se rehacen. La llenas tú, con tus números, y ahí mismo ves el resultado: [enlace]
+
+Si el número te parece bajo, borra este chat y no te vuelvo a escribir. Si te parece alto, hablamos quince minutos cualquier tarde en tu local.</div>
+      <p class="why">Por qué funciona: quita la petición de tiempo, le da control, y el permiso explícito para ignorarte hace que responda más gente, no menos.</p>
+    </div>
+
+    <div class="script" style="margin-top:12px">
+      <div class="t"><span class="lbl">Nota de voz · 40 segundos</span><button class="copy" data-copy="g2">Copiar</button></div>
+      <div class="body" id="g2">[Nombre], quítame cuarenta segundos.
+
+Trabajo con restaurantes acá en [zona] y hay tres huecos que se repiten en todos: el inventario que sale sin que nadie lo anote, la hora larga que se va cuadrando caja todas las noches, y los platos que la cocina hace dos veces porque la comanda salió mal.
+
+Armé una calculadora para que tú mismo veas cuánto vale eso en tu negocio. Te la mando por acá. Si el número te mueve algo, yo caigo una tarde de estas quince minutos y te lo muestro funcionando con tu propia carta. Si no, no pasa nada.</div>
+      <p class="why">Por qué funciona: el dueño escucha mientras recibe mercancía. Nombrar la zona activa la prueba social del vecino, que en restaurantes pesa más que cualquier caso de estudio.</p>
+    </div>
+
+    <div class="script" style="margin-top:12px">
+      <div class="t"><span class="lbl">La visita de 15 minutos · estructura</span><button class="copy" data-copy="g3">Copiar</button></div>
+      <div class="body" id="g3">MINUTO 1-3 — No hables del software. Pregunta:
+"¿Cómo cierras caja hoy?" y después "¿cuándo fue la última vez que te faltó producto y no supiste por qué?"
+Cállate y deja que conteste. Ahí sale el dolor real, y casi nunca es el que traías pensado.
+
+MINUTO 4-10 — Muestra un turno con SU carta ya cargada.
+Tomas el pedido de su plato estrella. La comanda aparece en cocina. El inventario baja solo. Cierras la cuenta y sacas la factura electrónica.
+Una sola frase mientras lo haces: "esto que acabas de ver es todo lo que tu equipo tiene que aprender."
+
+MINUTO 11-13 — Su número, no el tuyo.
+Abres el diagnóstico que él llenó y lo dejas hablar de su propia cifra.
+
+MINUTO 14-15 — Un solo paso.
+"Arrancamos esta semana solo con comandas a cocina. La carga de tu carta corre por nuestra cuenta. Si en 30 días no encuentras las fugas, te devolvemos el mes. ¿Lo montamos el jueves?"
+
+REGLA: si en 15 minutos no cerraste ni acordaste una fecha concreta, no alargues la visita. Sales y dejas cargado el sistema con su carta.</div>
+      <p class="why">Por qué funciona: las dos preguntas del arranque hacen que el prospecto se venda solo. Y dejar el sistema cargado con su carta convierte el “lo voy a pensar” en algo que ya le pertenece.</p>
+    </div>
+
+    <div class="script" style="margin-top:12px">
+      <div class="t"><span class="lbl">Objeciones</span><button class="copy" data-copy="g4">Copiar</button></div>
+      <div class="body" id="g4">"Está muy caro."
+→ "¿Comparado con qué? En tu propio diagnóstico salieron [cifra] al mes. Lo caro es el mes que viene sin medirlo."
+
+"Ya tengo un POS."
+→ "¿Y quién pasa esas ventas a la contabilidad? ¿Y quién descuenta el inventario?" El problema nunca es el POS: es el puente manual entre el POS y todo lo demás.
+
+"Mi gente no se va a adaptar."
+→ "Tu mesero ya sabe usar WhatsApp. Toma el pedido en el celular y sale a cocina. Eso es todo lo que tiene que aprender el primer día." Y lo muestras, no lo explicas.
+
+"Déjame pensarlo."
+→ "Claro. ¿Qué es lo que hay que pensar: el precio, o si tu equipo lo va a usar?" La respuesta te dice cuál es la objeción de verdad. Nunca te vayas con un "lo pienso" sin saber eso.
+
+"Estoy en temporada, ahora no."
+→ "Por eso mismo. En temporada es cuando más se pierde y menos se mide. Arrancamos con una sola cosa: comandas a cocina, esta semana."</div>
+      <p class="why">Regla general: nunca respondas una objeción con una función. Respóndela con una pregunta o con el número que él mismo puso.</p>
+    </div>
+  </section>
+
+  <section id="gatillos">
+    <div class="shead">
+      <p class="lbl">07 — Prospección</p>
+      <h2>A quién llamar esta semana</h2>
+      <p>Dejar de recorrer listas y empezar a perseguir señales. Un restaurante con un evento reciente compra; uno sin nada que haya cambiado, no.</p>
+    </div>
+
+    <ul class="plain">
+      <li><b>Abrió hace 30 a 90 días.</b> Matrículas nuevas en la Cámara de Comercio y en el RUES. Ya pasó el caos de la apertura y todavía no compró sistema. Es la ventana más caliente que existe.</li>
+      <li><b>Publicó vacante de mesero o de administrador.</b> Está creciendo o rotando personal — los dos casos duelen donde nosotros resolvemos.</li>
+      <li><b>Abrió segunda sede.</b> El día que hay dos locales, el Excel deja de funcionar y el dueño lo sabe.</li>
+      <li><b>Tiene reseñas de Google quejándose de la demora en la cuenta o del pedido equivocado.</b> Es tu pitch escrito por sus propios clientes: cítalo textualmente.</li>
+      <li><b>Aún factura con talonario o con POS no electrónico.</b> El documento equivalente POS electrónico ya no es opcional. Ese es un plazo, no una preferencia.</li>
+      <li><b>Vende en apps de domicilio sin conciliar comisiones.</b> Nunca sabe cuánto le queda de un pedido de Rappi. Pregúntaselo y mira la cara.</li>
+      <li><b>El contador y el distribuidor de insumos son canal, no competencia.</b> Un contador que atiende ocho restaurantes es ocho prospectos calificados con recomendación incluida. Vale más cultivar tres contadores que tocar cien puertas.</li>
+    </ul>
+
+    <div class="callout">
+      <span class="lbl">Cuándo contactar</span>
+      <p>Martes a jueves, de 3 a 5 de la tarde. Nunca de 12 a 3 ni después de las 7: estás compitiendo con el servicio y vas a perder. El lunes está resolviendo el desastre del fin de semana y el viernes ya no le importas.</p>
+    </div>
+  </section>
+
+  <section id="kpi">
+    <div class="shead">
+      <p class="lbl">08 — Gestión</p>
+      <h2>Cambia lo que mides y cambia lo que hacen</h2>
+      <p>Mientras el comercial se evalúe por reuniones agendadas, va a seguir pidiendo reuniones. El indicador es la causa del comportamiento, no su consecuencia.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Deja de medir</th><th>Empieza a medir</th><th>Por qué</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Reuniones agendadas</td><td><b>Diagnósticos completados</b></td><td>Mide valor entregado, no tiempo pedido. Y un diagnóstico lleno es un prospecto que ya se calificó solo</td></tr>
+          <tr><td>Llamadas hechas</td><td><b>Cartas cargadas en el sistema</b></td><td>Cargar la carta de un prospecto es el acto que más correlaciona con el cierre — y es trabajo nuestro, no suyo</td></tr>
+          <tr><td>Propuestas enviadas</td><td><b>Turnos demostrados en local</b></td><td>La propuesta por correo es donde mueren estos negocios</td></tr>
+          <tr><td>Cierres del mes</td><td><b>Días hasta el primer turno real</b></td><td>Un cliente que no operó su primer turno en la primera semana es un cliente que se va a ir</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="verificar">
+    <div class="shead">
+      <p class="lbl">09 — Antes de usar</p>
+      <h2>Cinco cosas que hay que confirmar</h2>
+      <p>Nada de esto lo puedo verificar desde fuera, y prometer algo que el producto no hace cuesta más caro que no prometerlo.</p>
+    </div>
+
+    <div class="check">
+      <label><input type="checkbox"><span><b>El datáfono Credibanco sincronizado en tiempo real.</b> El pitch actual lo promete. Confirmar con producto que la integración existe hoy, en qué planes y con qué adquirentes — es un argumento fuerte y una promesa falsa muy costosa.</span></label>
+      <label><input type="checkbox"><span><b>El precio de referencia de $200.000.</b> Los planes Restobar publicados van de $120.990 a $219.990 mensuales, y la integración con Rappi se cobra aparte. Definir qué plan es el que corresponde al ejemplo del diagnóstico.</span></label>
+      <label><input type="checkbox"><span><b>Los topes de documentos electrónicos.</b> Los ilimitados aplican con contrato anual. Decirlo en la primera conversación evita la pelea del mes tres, que es de donde vienen los clientes de la competencia.</span></label>
+      <label><input type="checkbox"><span><b>Un caso real con nombre, cifra y permiso de citarlo.</b> Es lo que más falta hace y lo único que no se puede improvisar. Un solo cliente dispuesto a que lo citen vale más que todo este documento.</span></label>
+      <label><input type="checkbox"><span><b>El número de WhatsApp del asesor en el diagnóstico.</b> El archivo trae la variable <span class="mono">ASESOR_WHATSAPP</span> vacía al inicio del script: mientras esté así, el botón de WhatsApp no aparece y solo funciona copiar.</span></label>
+    </div>
+
+    <footer>
+      <p>Documento interno. No compartir con clientes — el diagnóstico de fugas es la pieza que sí va para afuera.</p>
+      <p>Cifras laborales verificadas para agosto de 2026: SMLV $1.750.905, hora ordinaria $8.338 con divisor de 210 horas vigente desde el 15 de julio de 2026.</p>
+    </footer>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var node = document.getElementById(btn.getAttribute("data-copy"));
+      if(!node) return;
+      var texto = node.innerText;
+      var ok = function(){
+        var antes = btn.textContent;
+        btn.textContent = "Copiado";
+        btn.classList.add("done");
+        setTimeout(function(){ btn.textContent = antes; btn.classList.remove("done"); }, 1800);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texto).then(ok, function(){ fallback(texto, ok); });
+      } else { fallback(texto, ok); }
+    });
+  });
+  function fallback(texto, ok){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = texto; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+      ok();
+    }catch(e){}
+  }
+})();
+</script>
