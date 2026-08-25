@@ -24,8 +24,12 @@ const CONFIG = {
   // Si algo se rompiera, volver a n8n es cambiar esta línea por
   // 'https://barragan.app.n8n.cloud/webhook/tumbao': los webhooks
   // siguen encendidos y contestan igual.
+  // Leer la foto del comprobante también pasa por el Worker desde el 25
+  // de agosto — antes era la última llamada que le quedaba a n8n, y cada
+  // comprobante subido se comía una ejecución del plan.
   API_BASE:  'https://tumbao-caja.damian3314.workers.dev/tumbao',
-  // Lo único que todavía pasa por n8n es leer la foto del comprobante.
+  // Ya no se usa para nada de la página. Se deja apuntando al webhook por
+  // si hubiera que volver atrás: cambiar la línea de abajo por esta.
   N8N_BASE:  'https://barragan.app.n8n.cloud/webhook',
   // Para reservar varios cupos de una.
   CAJA_BASE: 'https://tumbao-caja.damian3314.workers.dev',
@@ -1209,7 +1213,7 @@ const CONFIG = {
     try {
       imagen = await achicar(file);
 
-      const res = await fetch(`${CONFIG.N8N_BASE}/tumbao/leer-comprobante`, {
+      const res = await fetch(`${CONFIG.API_BASE}/leer-comprobante`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imagen })
