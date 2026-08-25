@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Investigación de mercado: dolores del cliente, mapa competitivo, precios y argumentos de Loggro frente a la competencia en Colombia (agosto 2026).">
+<style>*,*::before,*::after{box-sizing:border-box}img,svg,video{max-width:100%;height:auto}</style>
+<title>Loggro vs. el Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg:#F1F4F2;
+  --surface:#FFFFFF;
+  --surface-2:#E9EEEB;
+  --ink:#14201D;
+  --ink-2:#3B4A45;
+  --muted:#65756F;
+  --line:#D6DEDA;
+  --line-soft:#E4EAE7;
+  --accent:#0C6A58;
+  --accent-soft:#DCEFE9;
+  --accent-ink:#08483C;
+  --pain:#9A4A1E;
+  --pain-soft:#F6E7DB;
+  --warn:#8A6A12;
+  --warn-soft:#F5EDD6;
+  --shadow:0 1px 2px rgba(20,32,29,.05), 0 8px 24px -16px rgba(20,32,29,.28);
+  --radius:14px;
+}
+:root:not([data-theme="light"]){ color-scheme:light; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1614;
+    --surface:#16211E;
+    --surface-2:#1D2A26;
+    --ink:#E7EFEB;
+    --ink-2:#C2D0CB;
+    --muted:#8FA29C;
+    --line:#26332F;
+    --line-soft:#1F2C28;
+    --accent:#4FC2A2;
+    --accent-soft:#123029;
+    --accent-ink:#8FDCC5;
+    --pain:#E0996A;
+    --pain-soft:#2E1F14;
+    --warn:#D6B65C;
+    --warn-soft:#2A2413;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1614;
+  --surface:#16211E;
+  --surface-2:#1D2A26;
+  --ink:#E7EFEB;
+  --ink-2:#C2D0CB;
+  --muted:#8FA29C;
+  --line:#26332F;
+  --line-soft:#1F2C28;
+  --accent:#4FC2A2;
+  --accent-soft:#123029;
+  --accent-ink:#8FDCC5;
+  --pain:#E0996A;
+  --pain-soft:#2E1F14;
+  --warn:#D6B65C;
+  --warn-soft:#2A2413;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 72px}
+h1,h2,h3{font-family:"Fraunces",Georgia,"Times New Roman",serif;font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,7.5vw,3.1rem);line-height:1.02;letter-spacing:-.02em}
+h2{font-size:clamp(1.4rem,4.6vw,1.9rem);line-height:1.12;letter-spacing:-.01em}
+h3{font-size:1.06rem;line-height:1.25;font-weight:600}
+p{margin:0}
+a{color:var(--accent-ink);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+}
+
+/* ---------- hero ---------- */
+.hero{padding:44px 0 26px;display:flex;flex-direction:column;gap:18px}
+.hero .deck{font-size:1.06rem;color:var(--ink-2);max-width:56ch}
+.rule{height:1px;background:var(--line);border:0;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.7rem;letter-spacing:.02em;
+  padding:5px 9px;border:1px solid var(--line);border-radius:99px;color:var(--muted);background:var(--surface);
+}
+.chip.on{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink)}
+
+/* ---------- nav ---------- */
+.nav{
+  position:sticky;top:0;z-index:20;margin:0 -18px;padding:9px 18px;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+}
+.nav ul{display:flex;gap:6px;overflow-x:auto;list-style:none;margin:0;padding:0;scrollbar-width:none}
+.nav ul::-webkit-scrollbar{display:none}
+.nav a{
+  display:block;white-space:nowrap;text-decoration:none;color:var(--ink-2);
+  font-size:.8rem;font-weight:500;padding:6px 11px;border-radius:99px;border:1px solid var(--line);
+  background:var(--surface);
+}
+.nav a:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+/* ---------- sections ---------- */
+section{padding:44px 0 0;display:flex;flex-direction:column;gap:18px}
+.shead{display:flex;flex-direction:column;gap:7px}
+.shead p{color:var(--muted);font-size:.95rem;max-width:60ch}
+
+/* ---------- stat cards ---------- */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow);
+}
+.stat b{
+  font-family:"Fraunces",Georgia,serif;font-size:1.75rem;line-height:1;font-weight:700;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.stat span{font-size:.82rem;color:var(--muted);line-height:1.35}
+.stat.hl b{color:var(--accent)}
+
+/* ---------- horizontal card decks ---------- */
+.deckwrap{margin:0 -18px}
+.cards{
+  display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:12px;
+  overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 18px 12px;
+  scrollbar-width:none;
+}
+.cards::-webkit-scrollbar{display:none}
+.cards > *{scroll-snap-align:start}
+.swipe{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);padding-left:18px;
+}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow);
+}
+.card .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tag{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.08em;
+  text-transform:uppercase;padding:3px 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);
+}
+.tag.acc{background:var(--accent-soft);color:var(--accent-ink)}
+.tag.pain{background:var(--pain-soft);color:var(--pain)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.card p{font-size:.9rem;color:var(--ink-2)}
+.card .who{font-size:.82rem;color:var(--muted)}
+
+/* ---------- pain blocks ---------- */
+.pain-list{display:flex;flex-direction:column;gap:12px}
+.pain{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.pain > .head{display:flex;gap:12px;padding:16px 16px 12px;align-items:flex-start}
+.rank{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;font-weight:500;
+  background:var(--pain-soft);color:var(--pain);border-radius:8px;padding:5px 7px;flex:none;
+  font-variant-numeric:tabular-nums;
+}
+.pain h3{margin-bottom:3px}
+.freq{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pain .body{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line-soft)}
+.row{display:flex;flex-direction:column;gap:4px;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:0}
+.row .lbl{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.65rem;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);
+}
+.row p{font-size:.92rem;color:var(--ink-2)}
+.row.quote{background:var(--surface-2)}
+.row.quote p{font-family:"Fraunces",Georgia,serif;font-size:1rem;font-style:italic;color:var(--ink)}
+.row.fix .lbl{color:var(--accent)}
+.row.value{background:var(--accent-soft)}
+.row.value p{color:var(--accent-ink);font-weight:500}
+.row.value .lbl{color:var(--accent-ink);opacity:.75}
+
+/* ---------- win points ---------- */
+.wins{display:flex;flex-direction:column;gap:10px;counter-reset:win}
+.win{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:14px 15px;display:flex;flex-direction:column;gap:6px;
+}
+.win h3{color:var(--ink)}
+.win p{font-size:.9rem;color:var(--ink-2)}
+.win .vs{
+  font-size:.82rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:7px;margin-top:2px;
+}
+.win .vs b{color:var(--ink-2);font-weight:600}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:.86rem}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+thead th{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);font-weight:400;background:var(--surface-2);
+  position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+tr.us td{background:var(--accent-soft)}
+tr.us td:first-child{font-weight:600;color:var(--accent-ink)}
+
+/* ---------- objections ---------- */
+.obj{display:flex;flex-direction:column;gap:10px}
+.obj details{
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;
+}
+.obj summary{
+  cursor:pointer;padding:13px 15px;font-weight:500;font-size:.94rem;list-style:none;
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+}
+.obj summary::-webkit-details-marker{display:none}
+.obj summary::after{content:"+";font-family:"IBM Plex Mono",monospace;color:var(--muted);flex:none}
+.obj details[open] summary::after{content:"–"}
+.obj .ans{padding:0 15px 14px;font-size:.9rem;color:var(--ink-2);display:flex;flex-direction:column;gap:8px}
+.obj .ans .lbl{font-family:"IBM Plex Mono",monospace;font-size:.65rem;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+
+/* ---------- notes / sources ---------- */
+.note{
+  background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);
+  border-radius:10px;padding:13px 15px;font-size:.86rem;color:var(--ink-2);
+  display:flex;flex-direction:column;gap:6px;
+}
+.note .lbl{font-family:"IBM Plex Mono",monospace;font-size:.65rem;letter-spacing:.11em;text-transform:uppercase;color:var(--warn)}
+.sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;font-size:.84rem}
+.sources li{color:var(--muted);line-height:1.4}
+.sources a{color:var(--ink-2)}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+
+@media (min-width:720px){
+  .wrap{padding:0 28px 88px}
+  .nav{margin:0 -28px;padding:10px 28px}
+  .deckwrap{margin:0}
+  .cards{grid-auto-flow:row;grid-template-columns:repeat(2,1fr);grid-auto-columns:auto;overflow:visible;padding:0}
+  .swipe{display:none}
+  .stats{grid-template-columns:repeat(3,1fr)}
+  .pain > .head{padding:18px 20px 14px}
+  .row{padding:13px 20px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Investigación de mercado · Colombia · Agosto 2026</p>
+    <h1>Loggro vs. el mercado</h1>
+    <p class="deck">Qué duele hoy en las pymes colombianas, qué está ofreciendo la competencia y dónde Loggro gana la conversación. Diseñado para leerse en el celular, antes de entrar a una reunión.</p>
+    <div class="chips">
+      <span class="chip on">8 dolores priorizados</span>
+      <span class="chip">7 razones para ganar</span>
+      <span class="chip">Precios verificados</span>
+      <span class="chip">Guion de objeciones</span>
+    </div>
+  </header>
+
+  <nav class="nav" aria-label="Secciones">
+    <ul>
+      <li><a href="#mercado">Mercado</a></li>
+      <li><a href="#quien">Quién es quién</a></li>
+      <li><a href="#dolores">Dolores</a></li>
+      <li><a href="#ganamos">Por qué ganamos</a></li>
+      <li><a href="#precios">Precios</a></li>
+      <li><a href="#limites">Dónde no ganamos</a></li>
+      <li><a href="#objeciones">Objeciones</a></li>
+      <li><a href="#fuentes">Fuentes</a></li>
+    </ul>
+  </nav>
+
+  <section id="mercado">
+    <div class="shead">
+      <p class="eyebrow">01 — El terreno</p>
+      <h2>Un mercado grande, poco digitalizado y con la DIAN empujando</h2>
+      <p>La demanda no la está creando el marketing de software: la están creando la obligación normativa y el desorden operativo. Ese es el contexto en el que se compra.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>90%</b><span>del tejido empresarial colombiano son pymes (DANE / Confecámaras)</span></div>
+      <div class="stat"><b>65%</b><span>del empleo del país lo generan esas pymes</span></div>
+      <div class="stat hl"><b>40%</b><span>aún no inicia su transformación digital (ANDI) — mercado sin atender</span></div>
+      <div class="stat"><b>2026</b><span>la nómina electrónica ya alcanza a prácticamente todo empleador</span></div>
+      <div class="stat"><b>000227</b><span>Resolución DIAN de sept. 2025: consolida y endurece el sistema de facturación</span></div>
+      <div class="stat hl"><b>+20.000</b><span>negocios usan Loggro en más de 200 municipios</span></div>
+    </div>
+
+    <div class="note">
+      <span class="lbl">Lectura comercial</span>
+      <p>El documento equivalente POS electrónico y la nómina electrónica convirtieron un “algún día me organizo” en una fecha límite. El comprador ya no evalúa software: evalúa quién le evita una sanción sin romperle la operación del mostrador.</p>
+    </div>
+  </section>
+
+  <section id="quien">
+    <div class="shead">
+      <p class="eyebrow">02 — Competencia</p>
+      <h2>Quién es quién</h2>
+      <p>El mercado está partido en tres bandos que casi nunca se solapan bien: los contables-primero, los de escritorio con raíz en el contador, y los POS verticales sin contabilidad.</p>
+    </div>
+
+    <p class="swipe">← Desliza para ver los 6 →</p>
+    <div class="deckwrap">
+      <div class="cards">
+
+        <article class="card">
+          <div class="top"><h3>Alegra</h3><span class="tag acc">Contable-primero</span></div>
+          <p class="who">Nube · desde $69.900/mes · sin contrato anual</p>
+          <p>El más barato de arrancar y el más fácil de usar sin contador. Incluye POS básico y soporte 24/7, y es el único que publicita automatización con IA en conciliación.</p>
+          <p class="who"><b>Nos gana en:</b> precio de entrada y simplicidad. <b>Le ganamos en:</b> profundidad de inventario, verticales y operación multi-caja.</p>
+        </article>
+
+        <article class="card">
+          <div class="top"><h3>Siigo</h3><span class="tag acc">Contable-primero</span></div>
+          <p class="who">Nube + escritorio · desde $145.993/mes con pago anual obligatorio</p>
+          <p>Marca fuerte, catálogo completo y programa de contadores. Pero POS y nómina se cobran aparte: un negocio completo se va por encima de $350.000/mes, y el soporte es lun–vie en horario de oficina.</p>
+          <p class="who"><b>Nos gana en:</b> reconocimiento y canal de contadores. <b>Le ganamos en:</b> costo total, horario de soporte y POS nativo.</p>
+        </article>
+
+        <article class="card">
+          <div class="top"><h3>World Office</h3><span class="tag">Escritorio</span></div>
+          <p class="who">Instalado · precio bajo cotización · implementación 4–6 semanas</p>
+          <p>Arraigo enorme entre contadores. El costo real es operativo: información atada a un PC, sin visibilidad remota, curva de entrada dura para quien no es contador.</p>
+          <p class="who"><b>Nos gana en:</b> confianza del contador de toda la vida. <b>Le ganamos en:</b> nube, app móvil, multi-sede y tiempo de puesta en marcha.</p>
+        </article>
+
+        <article class="card">
+          <div class="top"><h3>Helisa / ContaPyme</h3><span class="tag">Escritorio</span></div>
+          <p class="who">ContaPyme ≈ $90.000–$200.000/mes · Helisa por licencia</p>
+          <p>Sólidos en contabilidad y nómina, interfaz y cobertura tecnológica rezagadas. Compiten por precio y por costumbre, no por operación.</p>
+          <p class="who"><b>Nos gana en:</b> precio en contabilidad pura. <b>Le ganamos en:</b> todo lo que pasa fuera del escritorio del contador.</p>
+        </article>
+
+        <article class="card">
+          <div class="top"><h3>Toteat</h3><span class="tag pain">POS vertical</span></div>
+          <p class="who">Chile · multi-sede $139.900–$459.900/mes · precio no público</p>
+          <p>Muy bueno en gestión gastronómica y cadenas. No resuelve contabilidad, nómina ni cumplimiento DIAN completo: el cliente termina pagando dos proveedores.</p>
+          <p class="who"><b>Nos gana en:</b> profundidad para cadenas grandes. <b>Le ganamos en:</b> suite única con contabilidad y nómina detrás del POS.</p>
+        </article>
+
+        <article class="card">
+          <div class="top"><h3>Fudo</h3><span class="tag pain">POS vertical</span></div>
+          <p class="who">Argentina · ~US$50/mes · tarifa en dólares</p>
+          <p>Ligero y rápido de montar. Dos problemas para el dueño colombiano: el precio se mueve con la devaluación y no hay módulos de rentabilidad ni contabilidad local.</p>
+          <p class="who"><b>Nos gana en:</b> agilidad de arranque. <b>Le ganamos en:</b> precio estable en pesos y cumplimiento local.</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="dolores">
+    <div class="shead">
+      <p class="eyebrow">03 — Voz del cliente</p>
+      <h2>Los 8 dolores más frecuentes</h2>
+      <p>Ordenados por frecuencia con la que aparecen en reseñas, comparativas y motivos de migración documentados. Cada tarjeta va del síntoma a la respuesta de Loggro y al valor que se lleva la organización.</p>
+    </div>
+
+    <div class="pain-list">
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D1</span>
+          <div>
+            <h3>“Tengo tres sistemas y ninguno se habla”</h3>
+            <p class="freq">Frecuencia: muy alta · Todos los segmentos</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“El POS por un lado, la contabilidad por otro y la nómina en otro. Al final del mes nadie sabe cuál es la cifra buena.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>Los contables-primero (Alegra, Siigo) nacieron del libro mayor y el POS es un añadido; los POS verticales (Toteat, Fudo) nacieron del mostrador y no tienen contabilidad. El cliente arma un Frankenstein y paga la integración con digitación manual.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Una sola suite: POS retail, Restobar, Alojamientos, ERP, tesorería y nómina sobre la misma base de datos. La venta en caja ya es asiento contable, movimiento de inventario y documento electrónico.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Se elimina la doble digitación y el cierre de mes deja de depender de cuadrar dos sistemas: una sola cifra, un solo proveedor, una sola factura de software.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D2</span>
+          <div>
+            <h3>Costos ocultos: el plan base nunca alcanza</h3>
+            <p class="freq">Frecuencia: muy alta · Pymes y comercio</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Me vendieron un plan barato y al tercer mes ya iba en el doble.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>Módulos cobrados aparte y topes de documentos electrónicos que nadie explicó. Para una pyme que necesita contabilidad, facturación y nómina, el costo real termina entre 30% y 80% por encima del plan base; con Siigo, una operación completa supera los $350.000/mes.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Entrada real desde $54.990/mes con POS, inventario ilimitado y app móvil, y una ruta de crecimiento publicada hasta el ERP Premium de $279.990 sin cambiar de proveedor. Los topes de documentos y el costo de cada extra están en la página de planes, no en la letra menuda.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Presupuesto predecible a 12 meses y una migración menos: el negocio crece de caja única a multi-sede dentro de la misma plataforma.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D3</span>
+          <div>
+            <h3>Miedo a la DIAN: la norma cambia y yo no</h3>
+            <p class="freq">Frecuencia: muy alta · Obligación, no preferencia</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“¿Y si mi software no emite el documento equivalente POS electrónico? ¿Quién responde por la sanción?”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>Facturación electrónica, documento soporte, nómina electrónica, RADIAN y la sustitución de documentos equivalentes por su versión electrónica —consolidados en la Resolución DIAN 000227 de 2025— llegaron por calendario, no por decisión del empresario. La fiscalización ya es 100% digital.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Loggro es proveedor tecnológico autorizado por la DIAN: la emisión es nativa, no una integración de un tercero. Cubre factura electrónica, documento equivalente POS, documento soporte, nómina electrónica y facturación de contingencia cuando el sistema de la DIAN falla.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>El riesgo tributario se transfiere al proveedor. La caja no se detiene aunque la DIAN esté caída, y cada cambio normativo llega como actualización, no como proyecto.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D4</span>
+          <div>
+            <h3>Soporte que no resuelve a tiempo</h3>
+            <p class="freq">Frecuencia: alta · Principal motivo de migración</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Escribí el martes por un error en la transmisión y me contestaron el viernes. Facturando a mano.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>Es la causa documentada número uno para dejar una plataforma conocida: el soporte no resuelve problemas contables a tiempo. Siigo atiende lun–vie 8:00–17:30 y arrastra un historial de quejas de servicio; World Office ofrece soporte pensado para contadores y a veces con costo adicional.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Soporte local en Colombia por correo, chat, WhatsApp y teléfono, con más de 200 personas en el equipo, implementación personalizada según plan y formación permanente en Universidad Loggro.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Menos horas de caja detenida y menos dependencia de un asesor externo: el equipo del cliente aprende a resolver solo lo cotidiano.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D5</span>
+          <div>
+            <h3>Inventario que se pierde, vence o nadie costea</h3>
+            <p class="freq">Frecuencia: alta · Comercio, alimentos, farma, distribución</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Sé cuánto vendí. No sé cuánto me costó, ni qué se venció en la bodega.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>La mayoría de soluciones en la nube manejan inventario plano: cantidad y precio. Sin lote ni vencimiento no hay control sanitario; sin costeo por receta no hay margen real por plato o referencia.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Trazabilidad por lote, serial y fecha de vencimiento, valoración FIFO, LIFO y promedio ponderado con enlace directo a contabilidad, multi-bodega y multi-sede, y costeo de recetas en tiempo real en Restobar.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Margen visible por producto y por sede, mermas y vencimientos detectados antes de perderse, y respaldo documental para requisitos Invima o HACCP.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D6</span>
+          <div>
+            <h3>La información vive en un PC del local</h3>
+            <p class="freq">Frecuencia: alta · Usuarios de software de escritorio</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Si no estoy en el negocio, no sé cómo va el negocio.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>World Office y Helisa siguen anclados al escritorio: la información no viaja, el multi-sede se resuelve con archivos y el dueño depende de que alguien le pase un reporte.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Aplicaciones 100% web más app móvil: ventas, caja, inventario y estados financieros en tiempo real desde cualquier lugar, con consolidación de varias sedes y centros de costo.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Decisiones el mismo día en vez de la semana siguiente, y control del negocio sin tener que estar físicamente en él.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D7</span>
+          <div>
+            <h3>Parálisis por miedo a migrar</h3>
+            <p class="freq">Frecuencia: media-alta · Freno de compra, no de producto</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Prefiero aguantarme este sistema a arriesgar diez años de información.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>Miedo a perder el histórico contable, resistencia al cambio y percepción de que un ERP es caro y complejo: por eso el 40% de las pymes colombianas todavía no arranca su transformación digital. Los mitos vienen de implementaciones fallidas del pasado, no de la tecnología actual.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Implementación acompañada incluida desde los planes intermedios, arranque por módulos —se puede empezar solo por POS o solo por facturación— y capacitación en Universidad Loggro antes de mover la operación completa.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>Se baja el costo de cambiar: el negocio entra por donde más le duele y expande cuando ya confía, sin un proyecto de meses ni caja detenida.</p></div>
+        </div>
+      </article>
+
+      <article class="pain">
+        <div class="head">
+          <span class="rank">D8</span>
+          <div>
+            <h3>“Mi negocio no cabe en un software genérico”</h3>
+            <p class="freq">Frecuencia: media-alta · Restaurantes, bares, hoteles, glamping</p>
+          </div>
+        </div>
+        <div class="body">
+          <div class="row quote"><p>“Me toca inventarme cómo registrar una mesa, una propina o una reserva de Booking.”</p></div>
+          <div class="row"><span class="lbl">Qué lo causa</span><p>El software contable genérico no entiende mesas, comandas ni tarifas por noche; el POS gastronómico no entiende contabilidad. Casi nadie cubre alojamientos: es el hueco más grande del mercado colombiano.</p></div>
+          <div class="row fix"><span class="lbl">Respuesta Loggro</span><p>Verticales de fábrica: Restobar con mesas, zonas de comanda, cocina, carta digital con QR e integración con Rappi; y Alojamientos como PMS con channel manager hacia Booking, Expedia, Airbnb y Ayenda, check-in en línea, tarifas dinámicas y reportes SIRE/TRA.</p></div>
+          <div class="row value"><span class="lbl">Valor</span><p>El operador trabaja como trabaja su negocio, no como lo entiende un software contable — y aun así la contabilidad y la DIAN quedan resueltas por debajo.</p></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="ganamos">
+    <div class="shead">
+      <p class="eyebrow">04 — Posición</p>
+      <h2>Por qué Loggro gana</h2>
+      <p>Siete argumentos que se sostienen con hechos verificables, cada uno con el contraste explícito frente a quien compite en esa mesa.</p>
+    </div>
+
+    <div class="wins">
+
+      <article class="win">
+        <h3>1. Una plataforma para el mostrador y para el contador</h3>
+        <p>POS, restaurantes, alojamientos, ERP, tesorería y nómina en la misma suite: la operación diaria y el cierre contable son el mismo dato.</p>
+        <p class="vs"><b>Contra Alegra y Siigo:</b> ellos suman POS a un contable. <b>Contra Toteat y Fudo:</b> ellos no tienen contabilidad ni nómina colombiana.</p>
+      </article>
+
+      <article class="win">
+        <h3>2. Verticales reales, no configuraciones</h3>
+        <p>Restobar y Alojamientos son productos propios, con mesas, comandas, cocina, channel manager y reportes SIRE/TRA. El PMS integrado a ERP prácticamente no tiene competencia local.</p>
+        <p class="vs"><b>Contra el mercado contable:</b> ninguno ofrece PMS. <b>Contra los POS verticales:</b> ninguno ofrece el resto de la empresa.</p>
+      </article>
+
+      <article class="win">
+        <h3>3. Cumplimiento DIAN nativo, no tercerizado</h3>
+        <p>Proveedor tecnológico autorizado por la DIAN, con factura electrónica, documento equivalente POS, documento soporte, nómina electrónica y contingencia dentro del mismo producto.</p>
+        <p class="vs"><b>Contra soluciones extranjeras:</b> el cumplimiento local es el requisito que las deja fuera de la lista corta.</p>
+      </article>
+
+      <article class="win">
+        <h3>4. Inventario de grado industrial en la nube</h3>
+        <p>Lote, serial, vencimiento, FIFO/LIFO/promedio ponderado y recetas costeadas: lo que exigen alimentos, farmacéutico y distribución con requisitos Invima o HACCP.</p>
+        <p class="vs"><b>Contra Alegra:</b> es la brecha funcional más citada a nuestro favor en comparativas independientes.</p>
+      </article>
+
+      <article class="win">
+        <h3>5. Precio de entrada bajo con techo alto</h3>
+        <p>Desde $54.990/mes en POS hasta ERP Premium en $279.990/mes, con nómina desde $72.990. El negocio escala sin migrar de proveedor ni volver a cargar su histórico.</p>
+        <p class="vs"><b>Contra Siigo:</b> arranca en $145.993/mes con pago anual obligatorio y cobra POS y nómina aparte.</p>
+      </article>
+
+      <article class="win">
+        <h3>6. Compañía colombiana con 30+ años de linaje</h3>
+        <p>Spin-off de Productora de Software (PSL, 1984), operando desde Medellín con más de 200 personas, +20.000 negocios en más de 200 municipios y la adquisición de PirPos en 2022. Forbes la nombró entre las 100 mejores startups del país y el top 5 fintech en 2023.</p>
+        <p class="vs"><b>Contra todos:</b> soporte en horario y lenguaje local, y una hoja de ruta que responde a la DIAN, no a otro mercado.</p>
+      </article>
+
+      <article class="win">
+        <h3>7. Ecosistema abierto</h3>
+        <p>API pública, integración con apps de domicilio, conciliación con bancos y sincronización con canales de reserva. El sistema se conecta con lo que el negocio ya usa.</p>
+        <p class="vs"><b>Contra el software de escritorio:</b> ahí la integración simplemente no existe.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="precios">
+    <div class="shead">
+      <p class="eyebrow">05 — Dinero</p>
+      <h2>Precios comparados</h2>
+      <p>Tarifas mensuales en pesos colombianos, tomadas de páginas públicas en agosto de 2026. Loggro publica IVA 0%.</p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Solución</th><th>Entrada</th><th>Modelo</th><th>Lo que hay que mirar</th></tr>
+        </thead>
+        <tbody>
+          <tr class="us"><td>Loggro POS Tienda</td><td class="num">$54.990</td><td>Mensual o anual</td><td>350 documentos, 1 usuario, 1 caja, inventario ilimitado, app móvil</td></tr>
+          <tr class="us"><td>Loggro POS Avanzado</td><td class="num">$96.990</td><td>Mensual o anual</td><td>2.000 documentos, 2 usuarios, inventario con lote y vencimiento</td></tr>
+          <tr class="us"><td>Loggro Restobar Básico</td><td class="num">$120.990</td><td>Mensual o anual</td><td>3 usuarios, 15 mesas; Premium $219.990 con Rappi incluido</td></tr>
+          <tr class="us"><td>Loggro Contable Estándar</td><td class="num">$133.990</td><td>Mensual o anual</td><td>3 usuarios, 2 establecimientos, implementación personalizada</td></tr>
+          <tr class="us"><td>Loggro Nómina Estándar</td><td class="num">$72.990</td><td>Mensual o anual</td><td>Nómina electrónica DIAN y portal del empleado</td></tr>
+          <tr><td>Alegra</td><td class="num">$69.900</td><td>Mensual, sin contrato</td><td>Contabilidad + POS + soporte 24/7 incluidos; inventario menos profundo</td></tr>
+          <tr><td>Siigo Nube</td><td class="num">$145.993</td><td>Anual obligatorio</td><td>POS y nómina aparte; operación completa supera $350.000</td></tr>
+          <tr><td>ContaPyme</td><td class="num">$90.000–200.000</td><td>Licencia</td><td>Contabilidad sólida, cobertura tecnológica rezagada</td></tr>
+          <tr><td>World Office</td><td class="num">Cotización</td><td>Escritorio</td><td>Implementación de 4 a 6 semanas; sin beneficios de nube</td></tr>
+          <tr><td>Toteat</td><td class="num">$139.900–459.900</td><td>Contrato, precio no público</td><td>Solo gastronomía; sin contabilidad ni nómina</td></tr>
+          <tr><td>Fudo</td><td class="num">≈ US$50</td><td>Tarifa en dólares</td><td>Expuesto a devaluación; sin rentabilidad profunda</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="lbl">Cómo usar esta tabla</span>
+      <p>No compares plan contra plan: compara el costo del negocio completo. La pregunta que desarma a la competencia es “¿cuánto me cuesta al mes con contabilidad, POS, nómina y facturación sin topes?”. Ahí es donde la suite única gana.</p>
+    </div>
+  </section>
+
+  <section id="limites">
+    <div class="shead">
+      <p class="eyebrow">06 — Honestidad competitiva</p>
+      <h2>Dónde no ganamos</h2>
+      <p>Un battlecard que solo dice cosas buenas no sobrevive a la primera reunión. Estas son las mesas donde conviene no pelear.</p>
+    </div>
+
+    <div class="deckwrap">
+      <div class="cards">
+        <article class="card">
+          <div class="top"><h3>Precio puro de arranque</h3><span class="tag warn">Alegra</span></div>
+          <p>$69.900 con contabilidad, inventario y POS incluidos y sin contrato anual es difícil de superar en el segmento micro. Si el cliente solo factura servicios y no tiene inventario, no somos la respuesta obvia.</p>
+        </article>
+        <article class="card">
+          <div class="top"><h3>Canal de contadores</h3><span class="tag warn">Siigo / World Office</span></div>
+          <p>Tienen programas para contadores con descuentos por volumen y gestión de cartera de clientes. Cuando el contador decide, ese arraigo pesa más que la funcionalidad.</p>
+        </article>
+        <article class="card">
+          <div class="top"><h3>IA visible</h3><span class="tag warn">Alegra</span></div>
+          <p>Es el único que documenta públicamente automatización con IA en conciliación bancaria. Nosotros no tenemos ese titular; conviene llevar la conversación a resultados operativos y no a la etiqueta.</p>
+        </article>
+        <article class="card">
+          <div class="top"><h3>Reputación pública escasa</h3><span class="tag warn">Reseñas</span></div>
+          <p>Hay poca reseña independiente y con muestras muy pequeñas (3,6/5 sobre 3 opiniones en ComparaSoftware), con quejas puntuales por disponibilidad telefónica y por manejo de depreciación de activos. Conviene llegar con casos propios y referencias verificables.</p>
+        </article>
+        <article class="card">
+          <div class="top"><h3>Topes de documentos</h3><span class="tag warn">Planes mensuales</span></div>
+          <p>Los ilimitados aplican con contrato de 12 meses; en mensual hay límites y un costo adicional desde $45.990. Decirlo antes evita la conversación incómoda del mes tres — la misma que nos trae clientes de otros.</p>
+        </article>
+        <article class="card">
+          <div class="top"><h3>Cadenas gastronómicas grandes</h3><span class="tag warn">Toteat</span></div>
+          <p>En operaciones multi-sede muy complejas, con reservas y delivery propio a gran escala, la especialización de Toteat es real. Ahí competimos por costo total, no por profundidad gastronómica.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="objeciones">
+    <div class="shead">
+      <p class="eyebrow">07 — Guion</p>
+      <h2>Objeciones y cómo responderlas</h2>
+      <p>Cinco frases que van a aparecer, con la respuesta que devuelve la conversación al terreno donde ganamos.</p>
+    </div>
+
+    <div class="obj">
+      <details>
+        <summary>“Alegra me sale más barato.”</summary>
+        <div class="ans">
+          <span class="lbl">Respuesta</span>
+          <p>Cierto en el plan de entrada. Pregunta cuántas cajas tiene, si maneja lotes o vencimientos y si necesita costear recetas. Si la respuesta es sí a cualquiera, el ahorro se lo come el primer inventario mal costeado. Si la respuesta es no a todas, es un cliente que hoy no es nuestro — y volverá cuando abra la segunda sede.</p>
+        </div>
+      </details>
+      <details>
+        <summary>“Mi contador trabaja con World Office / Helisa.”</summary>
+        <div class="ans">
+          <span class="lbl">Respuesta</span>
+          <p>No pelees contra el contador: muéstrale que sigue teniendo su contabilidad y sus informes, pero que el dueño deja de esperar el reporte del lunes. El argumento es la visibilidad multi-sede y la app móvil, no reemplazar a quien firma los estados financieros.</p>
+        </div>
+      </details>
+      <details>
+        <summary>“Ya tengo un POS que me funciona.”</summary>
+        <div class="ans">
+          <span class="lbl">Respuesta</span>
+          <p>Pregunta quién pasa las ventas a la contabilidad y cuánto se demora el cierre de mes. El dolor no está en el POS: está en el puente manual entre el POS y todo lo demás — y en quién responde ante la DIAN cuando ese puente falla.</p>
+        </div>
+      </details>
+      <details>
+        <summary>“Migrar es muy arriesgado, prefiero quedarme así.”</summary>
+        <div class="ans">
+          <span class="lbl">Respuesta</span>
+          <p>Nadie migra todo el primer día. Propón entrar por un solo módulo —POS o facturación electrónica— y dejar el histórico donde está mientras el equipo se forma en Universidad Loggro. La conversación deja de ser “cambiar de sistema” y pasa a ser “resolver una cosa”.</p>
+        </div>
+      </details>
+      <details>
+        <summary>“¿Y ustedes qué tan grandes son?”</summary>
+        <div class="ans">
+          <span class="lbl">Respuesta</span>
+          <p>Más de 200 personas en Medellín, +20.000 negocios en más de 200 municipios, linaje de PSL desde 1984, proveedor tecnológico autorizado por la DIAN y reconocimiento de Forbes en 2023 entre las 100 mejores startups del país y el top 5 fintech. Suficiente respaldo para un ERP, suficiente cercanía para contestar el teléfono.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="fuentes">
+    <div class="shead">
+      <p class="eyebrow">08 — Metodología</p>
+      <h2>De dónde salió cada dato</h2>
+      <p>Investigación de escritorio sobre fuentes públicas, agosto de 2026. Los precios cambian: verifica antes de citarlos en una propuesta formal.</p>
+    </div>
+
+    <div class="note">
+      <span class="lbl">Advertencias de confianza</span>
+      <p>Las cifras de clientes provienen de comunicación propia de cada compañía y no están auditadas: la web de Loggro reporta “+20.000” y “+15.000” en distintas secciones, y agregadores externos citan cifras menores. Las reseñas independientes en Colombia tienen muestras muy pequeñas y no son estadísticamente representativas. Los precios de la competencia se tomaron de comparadores especializados y pueden diferir de una cotización real.</p>
+    </div>
+
+    <ul class="sources">
+      <li>Loggro — <a href="https://loggro.com/">sitio corporativo</a>, <a href="https://loggro.com/pymes/planes/">planes y precios</a>, <a href="https://loggro.com/restobar/">Restobar</a>, <a href="https://loggro.com/alojamientos/">Alojamientos</a> y <a href="https://loggro.com/pymes/software-administrativo-de-gestion-integral-erp/">ERP</a>.</li>
+      <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Loggro">Loggro S.A.S.</a>: origen como spin-off de PSL, adquisición de PirPos, tamaño de la compañía y reconocimiento Forbes 2023.</li>
+      <li>ACIS — <a href="https://www.acis.org.co/blog/noticias-2/el-40-de-las-pymes-en-colombia-aun-no-inicia-su-transformacion-digital-por-que-persisten-los-mitos-sobre-los-erp-1710">40% de las pymes aún no inicia su transformación digital</a> (datos ANDI, DANE y Confecámaras).</li>
+      <li>Programas de Contabilidad — <a href="https://programascontabilidad.com/comparativas-de-software/precios-de-software-contable-colombia-2026/">precios 2026</a> y <a href="https://programascontabilidad.com/comparativas-de-software/cual-elegir-entre-alegra-vs-loggro/">alternativas a Loggro</a>.</li>
+      <li>ComparaSoftware — <a href="https://www.comparasoftware.co/loggro-software-contable">opiniones de usuarios sobre Loggro</a>.</li>
+      <li>Normativa DIAN — <a href="https://siemprealdia.co/colombia/impuestos/sistema-de-facturacion-electronica-en-colombia/">sistema de facturación electrónica 2026</a> y <a href="https://facele.co/normativa-de-facturacion-electronica-en-colombia-2026/">Resolución 000227 de 2025</a>.</li>
+      <li>Panorama de POS gastronómico — <a href="https://warocol.com/blog/software-pos-restaurantes-colombia">comparativas de precios en Colombia</a>.</li>
+    </ul>
+
+    <footer>
+      Documento de trabajo interno · Investigación de escritorio, agosto de 2026 · Sin datos confidenciales de clientes.
+    </footer>
+  </section>
+
+</div>
+</body>
+</html>
