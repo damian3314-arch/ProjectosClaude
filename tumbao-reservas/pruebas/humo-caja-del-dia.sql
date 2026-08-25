@@ -86,6 +86,23 @@ select chk('y el día de la clase ya no las cuenta otra vez',
 
 
 \echo ''
+\echo '-- 1b. Y separado: cuánto de eso es un anticipo para otro día --------'
+-- El 24 de agosto esto fue justo lo que faltaba: $105.000 del banco
+-- parecían perdidos comparados con AdminGym, y eran dos personas que
+-- pagaron ese día por clases del día siguiente. La plata sí es de hoy
+-- para el arqueo -no se resta de nada-, pero hay que poder decir
+-- aparte cuánto de lo recibido es anticipo y cuánto es de un cliente
+-- que disfrutó algo hoy mismo.
+
+select chk('de esos 45.000, 30.000 son anticipo de otro día',
+  (caja(hoy())->>'reservas_futuras_cop')::int, 30000);
+select chk('dos reservas de las tres',
+  (caja(hoy())->>'reservas_futuras_n')::int, 2);
+select chk('pasado mañana no hay anticipos: ese día ya se pagó',
+  (caja(hoy() + 2)->>'reservas_futuras_cop')::int, 0);
+
+
+\echo ''
 \echo '-- 2. Y cuadra con lo que dice el banco ------------------------------'
 -- Esto es lo que hace que un cierre se pueda cuadrar: las dos mitades
 -- del panel hablan por fin del mismo día.

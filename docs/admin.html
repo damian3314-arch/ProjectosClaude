@@ -3315,12 +3315,22 @@ const CONFIG = {
         const efectivo = Number(d.ingreso_efectivo || 0);
         const gastos = Number(d.total_egresos || 0);
         const retirado = Number(c.retirado_cop || 0);
+        // Anticipos: pagado hoy para una clase de otro día. Sigue
+        // sumando al total de arriba —esa plata sí entró—, pero se
+        // separa de lo que un cliente disfrutó hoy, que es lo que hay
+        // que cuadrar contra el cierre de AdminGym.
+        const futuras = Number(d.reservas_futuras_cop || 0);
+        const futurasN = Number(d.reservas_futuras_n || 0);
 
         return (
         `<hr>` + titulo('ENTRÓ') + conceptos('ingreso') +
         linea('Efectivo', pesos(efectivo)) +
         linea('Transferencia' + (b.recibido_cop != null ? ' (lo dice el banco)' : ''), pesos(transferencia)) +
         linea('TOTAL ENTRÓ', pesos(efectivo + transferencia), 'g') +
+        (futuras > 0
+          ? linea('De eso, de clientes de hoy', pesos(transferencia - futuras)) +
+            linea(`De eso, para clases de otro día (${futurasN})`, pesos(futuras))
+          : '') +
         // El 10 de agosto una reserva confirmada a mano se sumó dos
         // veces: una como movimiento de caja y otra como reserva. Esta
         // línea es la comprobación de que esa plata ya está contada
@@ -3444,6 +3454,15 @@ const CONFIG = {
     const efectivoEntro = Number(d.ingreso_efectivo || 0);
     const gastos = Number(d.total_egresos || 0);
     const retirado = d.cerrado ? Number(d.cierre.retirado_cop || 0) : 0;
+    // Lo que se pagó hoy pero es para una clase de otro día — un
+    // anticipo. El 24 de agosto esto fue justo lo que hacía parecer que
+    // faltaban $105.000 al comparar contra AdminGym: dos personas
+    // pagaron ese día por clases del día siguiente. Esa plata SIGUE
+    // sumando al total de arriba —entró de verdad, y el arqueo la
+    // necesita—, pero aquí se separa de lo que un cliente disfrutó hoy
+    // mismo, que es lo que hay que cuadrar contra el cierre de AdminGym.
+    const futuras = Number(d.reservas_futuras_cop || 0);
+    const futurasN = Number(d.reservas_futuras_n || 0);
 
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
@@ -3457,6 +3476,16 @@ const CONFIG = {
                : null) +
         fila('Total entró hoy', pesos(efectivoEntro + transferencia), null, 'total') +
 
+        // La separación que sí importa para cuadrar contra AdminGym: de
+        // hoy y de mañana suman el total de arriba, ni un peso de más
+        // ni de menos.
+        (futuras > 0
+          ? fila('De eso, de clientes de hoy', pesos(transferencia - futuras)) +
+            `<div class="fila control"><span>De eso, para clases de otro día` +
+              `<span class="ag">${futurasN} ${futurasN === 1 ? 'reserva' : 'reservas'} · ya pagadas, se disfrutan después</span></span>` +
+              `<span class="no-suma">${pesos(futuras)}</span></div>`
+          : '') +
+
         // El desglose va DEBAJO del total y marcado como que no suma:
         // son las puertas por las que llegó esa MISMA plata, no algo que
         // se sume aparte. Se enseña para poder comprobar que, si alguien
@@ -3465,11 +3494,7 @@ const CONFIG = {
         (bk.recibido_cop == null ? '' :
           `<div class="fila control"><span>De eso, cruzado en el mostrador` +
             `<span class="ag">transferencias que registró recepción</span></span>` +
-            `<span class="no-suma">${pesos(d.ingreso_transferencia - (bk.sin_respaldo_cop || 0))}</span></div>` +
-          `<div class="fila control"><span>De eso, reservas que entraron solas` +
-            `<span class="ag">${d.reservas_n || 0} ` +
-            `${Number(d.reservas_n) === 1 ? 'reserva' : 'reservas'} · por la fecha del pago` +
-            `</span></span><span class="no-suma">${pesos(d.reservas_cop)}</span></div>`) +
+            `<span class="no-suma">${pesos(d.ingreso_transferencia - (bk.sin_respaldo_cop || 0))}</span></div>`) +
         (Number(d.reservas_a_mano_n || 0) > 0
           ? `<div class="fila control"><span>Confirmadas en el mostrador` +
             `<span class="ag">${d.reservas_a_mano_n} ` +

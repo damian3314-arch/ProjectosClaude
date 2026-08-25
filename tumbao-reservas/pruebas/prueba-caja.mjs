@@ -76,6 +76,8 @@ const dia = () => ({
   // el cierre no se podía cuadrar contra el banco.
   reservas_cop: 15000,
   reservas_n: sinCajaAlDia ? undefined : 1,
+  reservas_futuras_cop: futurasCop,
+  reservas_futuras_n: futurasN,
   // Lo que valen las clases dictadas hoy. Otro reloj, otra pregunta:
   // va aparte y no suma.
   reservas_dictadas_cop: 45000,
@@ -135,6 +137,10 @@ const resumen = () => {
 let hayBanco = false;
 let libres = [];
 let errorCierre = null;   // fuerza un fallo del servidor al cerrar
+// Anticipos: lo que se pagó hoy para una clase de otro día. En 0 no
+// aparece la fila — es justo lo que probó que el 24 de agosto la plata
+// no estaba perdida, solo sin separar.
+let futurasCop = 0, futurasN = 0;
 const banco = () => {
   if (!hayBanco) return undefined;
   const sinResp = movimientos.filter(
@@ -674,6 +680,33 @@ const sumaAMano = dia().contra_admingym.ingresos_a_banco;
 cifraBanco !== sumaAMano || sumaAMano === esperadoBanco
   ? bien('y no la suma de los movimientos')
   : falla('sigue enseñando la suma a mano', `${cifraBanco}`);
+
+/* ANTICIPOS: lo que se pagó hoy para una clase de otro día.
+ *
+ * El 24 de agosto esto fue justo lo que hizo parecer que faltaban
+ * $105.000 comparado contra AdminGym: dos personas pagaron ese día por
+ * clases del día siguiente. Esa plata sigue sumando al total de
+ * arriba —entró de verdad—, pero tiene que poder verse aparte de lo
+ * que un cliente disfrutó hoy mismo. */
+futurasCop = 45000; futurasN = 1;
+await recargar();
+
+const deHoy = pagina.locator('#caja-cierre .fila')
+  .filter({ hasText: 'De eso, de clientes de hoy' });
+(await deHoy.innerText()).includes((esperadoBanco - 45000).toLocaleString('es-CO'))
+  ? bien('separa lo de hoy de los anticipos',
+         (await deHoy.innerText()).replace(/\s+/g, ' ').trim())
+  : falla('lo de hoy', await deHoy.innerText());
+
+const paraOtroDia = pagina.locator('#caja-cierre .fila.control')
+  .filter({ hasText: 'De eso, para clases de otro día' });
+(await paraOtroDia.innerText()).includes('45.000') && (await paraOtroDia.innerText()).includes('1 reserva')
+  ? bien('y dice cuánto es anticipo y de cuántas reservas',
+         (await paraOtroDia.innerText()).replace(/\s+/g, ' ').trim())
+  : falla('el anticipo', await paraOtroDia.innerText());
+
+futurasCop = 0; futurasN = 0;
+await recargar();
 
 // La cola del banco (lo sin identificar, lo sin respaldo) ya no es una
 // tarjeta más con semáforos de color — el cierre solo tiene tres
