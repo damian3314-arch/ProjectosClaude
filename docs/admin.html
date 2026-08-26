@@ -2782,6 +2782,13 @@ const CONFIG = {
     el.className = 'pend-card';
 
     const espera = r.estado === 'verificando';
+    // sin_aviso: nunca dijo "ya pagué" —el aviso se rechazó o nunca se
+    // mandó— pero hay una plata real sin dueño cerca de cuándo reservó.
+    // Sin la etiqueta distinta, esta tarjeta se ve igual a la de alguien
+    // que sí avisó, y no lo es: aquí nadie declaró nada, el sistema solo
+    // encontró un candidato.
+    const etiqueta = r.sin_aviso ? 'sin aviso, plata cerca'
+      : espera ? 'esperando banco' : 'por validar';
 
     // La clase y la hora ya van en el encabezado del grupo; repetirlas
     // en cada tarjeta solo alarga la lista.
@@ -2789,9 +2796,12 @@ const CONFIG = {
       `<div class="top">` +
         `<span class="nom">${esc(r.nombre)}</span>` +
         `<span class="cod">${esc(r.codigo)}</span>` +
-        `<span class="etiqueta${espera ? ' espera' : ''}">${espera ? 'esperando banco' : 'por validar'}</span>` +
+        `<span class="etiqueta${(espera || r.sin_aviso) ? ' espera' : ''}">${etiqueta}</span>` +
         (r.tipo === 'miembro' ? `<span class="etiqueta">miembro</span>` : '') +
       `</div>` +
+      (r.sin_aviso
+        ? `<div class="declarado"><span>👀 Nunca dijo que pagó — esto salió solo por la plata de abajo.</span></div>`
+        : '') +
       `<div class="det">` +
         // Con varios cupos el precio es el del GRUPO, que es lo que hay
         // que buscar en el banco. Poner $15.000 al lado de un depósito
