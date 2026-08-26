@@ -937,6 +937,15 @@ createServer(async (req, res) => {
     const b = await leerCuerpo(req);
     const r = reservas.get(String(b.codigo || '').toUpperCase());
     if (!r) return json(res, 404, { ok: false, error: 'no_encontrada' });
+    // Gatillo de prueba: simula el rechazo real de registrar_aviso_pago
+    // cuando alguien reusa el comprobante de otra reserva. Sirve para
+    // probar que la página muestra la razón real, no un "reintenta" que
+    // nunca se va a arreglar solo.
+    if (b.referencia === 'YA_USADA') {
+      return json(res, 409, { ok: false, error: 'referencia_repetida',
+        mensaje: 'Ese comprobante ya se uso para otra reserva. ' +
+                 'Si crees que es un error escribenos por WhatsApp.' });
+    }
     // El grupo entero: la persona tiene UN codigo y con el dice que pago
     // por los seis. Si solo se moviera su fila, las otras cinco seguirian
     // esperando pago y se soltarian solas.

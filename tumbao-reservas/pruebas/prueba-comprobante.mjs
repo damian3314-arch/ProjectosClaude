@@ -201,6 +201,27 @@ const inesperados = errores.filter(e => !/40[0-9]|Conflict|Not Found/.test(e));
 ok('sin errores de JavaScript inesperados', inesperados.length === 0,
    inesperados.join(' | ') || 'ninguno');
 
+// ───────── comprobante ya usado en otra reserva ─────────
+// El backend rechaza reusar la misma referencia en dos reservas
+// distintas (alguien sube por error la captura vieja). La página tiene
+// que decir esa razón real, no un "inténtalo otra vez" que nunca se va
+// a arreglar solo porque la persona vuelva a intentarlo.
+if (!VACIA) {
+  await irAPago();
+  await p.fill('#hora-transf', '18:42');
+  await p.fill('#referencia', 'YA_USADA');
+  await p.locator('#ya-pague').click();
+  await p.waitForFunction(() => {
+    const a = document.querySelector('#err3');
+    return a && a.textContent.trim() !== '';
+  }, { timeout: 8000 });
+  const msg = await p.locator('#err3').innerText();
+  ok('dice la razón real, no un "inténtalo otra vez" genérico',
+     /ya se uso para otra reserva/i.test(msg), msg);
+  ok('no avanza a la pantalla de espera',
+     !(await p.locator('#s4').evaluate(e => e.classList.contains('on'))));
+}
+
 if (!VACIA && !OTRO) {
   const dir = process.env.CAPTURAS || '/tmp';
   await irAPago();

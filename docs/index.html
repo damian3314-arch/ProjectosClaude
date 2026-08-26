@@ -1301,6 +1301,7 @@ const CONFIG = {
     $('#ya-pague').disabled = true;
     $('#ya-pague').textContent = 'Un momento…';
     aviso('#err3','');
+    let data = null;
     try{
       const res = await fetch(`${CONFIG.API_BASE}/comprobante`, {
         method:'POST', headers:{ 'Content-Type':'application/json' },
@@ -1319,12 +1320,19 @@ const CONFIG = {
             ? ($('#pagador').value.trim() || null) : null
         })
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.mensaje || 'no_ok');
+      data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.mensaje || '');
       irA(4);
       arrancarEspera();
     }catch(err){
-      aviso('#err3','No pudimos registrar tu aviso. Inténtalo otra vez en unos segundos.');
+      // Si el servidor SÍ contestó pero rechazó el aviso —por ejemplo,
+      // ese comprobante ya se usó en otra reserva— se le dice a la
+      // persona la razón real: reintentar no va a arreglar eso, y
+      // decirle "inténtalo otra vez" es mentirle. Solo cuando ni
+      // siquiera hubo respuesta (sin internet, el Worker no contestó)
+      // tiene sentido invitarla a reintentar.
+      aviso('#err3', (data && err.message) ? err.message :
+        'No pudimos conectarnos. Revisa tu internet e inténtalo otra vez.');
       console.error('[tumbao] comprobante:', err);
     }finally{
       $('#ya-pague').disabled = false;
