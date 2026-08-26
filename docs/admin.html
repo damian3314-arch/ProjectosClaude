@@ -2787,7 +2787,12 @@ const CONFIG = {
     // Sin la etiqueta distinta, esta tarjeta se ve igual a la de alguien
     // que sí avisó, y no lo es: aquí nadie declaró nada, el sistema solo
     // encontró un candidato.
-    const etiqueta = r.sin_aviso ? 'sin aviso, plata cerca'
+    //
+    // vencida: además, ya perdió el cupo por vencimiento. Confirmarla
+    // retoma un puesto que puede que ya no exista —cupo_libre lo dice—
+    // así que la tarjeta avisa antes de que se pierda el clic en vano.
+    const etiqueta = r.vencida ? 'vencida, plata cerca'
+      : r.sin_aviso ? 'sin aviso, plata cerca'
       : espera ? 'esperando banco' : 'por validar';
 
     // La clase y la hora ya van en el encabezado del grupo; repetirlas
@@ -2799,7 +2804,12 @@ const CONFIG = {
         `<span class="etiqueta${(espera || r.sin_aviso) ? ' espera' : ''}">${etiqueta}</span>` +
         (r.tipo === 'miembro' ? `<span class="etiqueta">miembro</span>` : '') +
       `</div>` +
-      (r.sin_aviso
+      (r.vencida
+        ? `<div class="declarado"><span>${r.cupo_libre === false
+             ? '⚠️ Vencida y la clase ya está llena: confirmar puede rebotar. Toca ofrecer otro horario.'
+             : '👀 Vencida, nunca dijo que pagó — esto salió solo por la plata de abajo. Todavía hay cupo.'
+           }</span></div>`
+        : r.sin_aviso
         ? `<div class="declarado"><span>👀 Nunca dijo que pagó — esto salió solo por la plata de abajo.</span></div>`
         : '') +
       `<div class="det">` +
