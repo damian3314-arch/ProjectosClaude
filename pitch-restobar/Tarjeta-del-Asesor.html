@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Tarjeta de campo del asesor comercial — Loggro Restobar.">
+<style>*,*::before,*::after{box-sizing:border-box}img,svg,video{max-width:100%;height:auto}</style>
+<title>Tarjeta del Asesor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=Chivo+Mono:wght@400;500&family=Karla:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --bg:#F1F0EC; --surface:#FFFFFF; --surface-2:#E7E5DF;
+  --ink:#1A1917; --ink-2:#3D3B37; --muted:#6E6A62; --line:#DCD8D0;
+  --leak:#AE3418; --leak-soft:#F7E4DE;
+  --save:#0E6A52; --save-soft:#DCEDE7;
+  --coach:#7A5B12; --coach-soft:#F6EEDA;
+  --shadow:0 1px 2px rgba(26,25,23,.06), 0 10px 26px -18px rgba(26,25,23,.4);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#131211; --surface:#1C1B19; --surface-2:#262421;
+    --ink:#F0EEE9; --ink-2:#CDC9C1; --muted:#98938A; --line:#302E29;
+    --leak:#EC8862; --leak-soft:#33190F;
+    --save:#5DC5A4; --save-soft:#122C25;
+    --coach:#DDB65C; --coach-soft:#2B2314;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131211; --surface:#1C1B19; --surface-2:#262421;
+  --ink:#F0EEE9; --ink-2:#CDC9C1; --muted:#98938A; --line:#302E29;
+  --leak:#EC8862; --leak-soft:#33190F;
+  --save:#5DC5A4; --save-soft:#122C25;
+  --coach:#DDB65C; --coach-soft:#2B2314;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Karla","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:520px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:14px}
+p{margin:0}
+.lbl{font-family:"Chivo Mono",ui-monospace,monospace;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.display{font-family:"Chivo","Arial Black",Helvetica,sans-serif;font-weight:900;letter-spacing:-.03em}
+:focus-visible{outline:3px solid var(--leak);outline-offset:2px;border-radius:6px}
+
+.regla{
+  background:var(--leak);color:#FFF6F2;border-radius:16px;padding:20px 18px;
+  display:flex;flex-direction:column;gap:7px;
+}
+.regla .lbl{color:rgba(255,246,242,.7)}
+.regla p.big{font-family:"Chivo",sans-serif;font-weight:900;font-size:clamp(1.5rem,6.4vw,1.95rem);line-height:1.06;letter-spacing:-.025em}
+.regla p.pie{font-size:.9rem;color:rgba(255,246,242,.92)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow)}
+.card > .lbl{margin-bottom:-3px}
+
+.pasos{display:flex;flex-direction:column;gap:0}
+.paso{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.paso:last-child{border-bottom:0;padding-bottom:0}
+.paso:first-child{padding-top:0}
+.paso .n{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.15rem;color:var(--leak);flex:none;width:20px;line-height:1.25}
+.paso .t{display:flex;flex-direction:column;gap:2px}
+.paso b{font-size:1rem;font-weight:700;line-height:1.25}
+.paso span{font-size:.86rem;color:var(--muted);line-height:1.35}
+
+.preg{display:flex;flex-direction:column;gap:9px}
+.preg q{
+  display:block;background:var(--coach-soft);color:var(--coach);border-radius:10px;
+  padding:12px 13px;font-size:1.02rem;font-weight:700;line-height:1.3;
+}
+.preg .nota{font-size:.85rem;color:var(--muted)}
+
+.obj{display:flex;flex-direction:column;gap:0}
+.o{padding:11px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.o:last-child{border-bottom:0;padding-bottom:0}
+.o:first-child{padding-top:0}
+.o .q{font-size:.93rem;font-weight:700;color:var(--muted)}
+.o .a{font-size:.95rem;color:var(--ink);line-height:1.38}
+.o .a::before{content:"→ ";color:var(--leak);font-family:"Chivo Mono",monospace}
+
+.hora{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.h{border-radius:11px;padding:12px 13px;display:flex;flex-direction:column;gap:3px}
+.h.si{background:var(--save-soft)}
+.h.no{background:var(--leak-soft)}
+.h b{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.02rem;line-height:1.15}
+.h.si b{color:var(--save)} .h.no b{color:var(--leak)}
+.h span{font-size:.8rem;color:var(--ink-2);line-height:1.3}
+
+.cierre{background:var(--save-soft);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:7px}
+.cierre q{display:block;font-size:1.02rem;font-weight:700;color:var(--save);line-height:1.35}
+.cierre .lbl{color:var(--save);opacity:.8}
+
+.final{
+  border:1px dashed var(--line);border-radius:12px;padding:13px 15px;
+  font-size:.92rem;color:var(--ink-2);line-height:1.4;
+}
+.final b{color:var(--ink)}
+footer{color:var(--muted);font-size:.78rem;text-align:center;padding-top:4px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+  <div class="regla">
+    <p class="lbl">Restobar · La regla</p>
+    <p class="big">No pidas una reunión. Manda el diagnóstico.</p>
+    <p class="pie">Media hora del dueño cuesta más que tu software. La reunión no es el primer paso: es el premio.</p>
+  </div>
+
+  <div class="card">
+    <p class="lbl">Los 5 pasos, en orden</p>
+    <div class="pasos">
+      <div class="paso"><span class="n">1</span><div class="t"><b>Manda el link, no la propuesta</b><span>Él llena la calculadora en un minuto. El número que le duele lo saca él.</span></div></div>
+      <div class="paso"><span class="n">2</span><div class="t"><b>Pide foto de su carta</b><span>Cargas 10 platos. Le grabas 2 minutos vendiendo su plato estrella. Eso reemplaza la primera reunión.</span></div></div>
+      <div class="paso"><span class="n">3</span><div class="t"><b>15 minutos en su local</b><span>Martes a jueves, 3 a 5 de la tarde. Llegas con su carta ya cargada, sin presentación.</span></div></div>
+      <div class="paso"><span class="n">4</span><div class="t"><b>Vende una cosa, no la plataforma</b><span>“Esta semana montamos comandas a cocina” es una decisión. “Todo tu negocio” es un proyecto.</span></div></div>
+      <div class="paso"><span class="n">5</span><div class="t"><b>Cierra ahí mismo</b><span>Nada de “te mando la propuesta”. El correo es donde mueren estos negocios.</span></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="lbl">Abre con estas dos y cállate</p>
+    <div class="preg">
+      <q>¿Cómo cierras caja hoy?</q>
+      <q>¿Cuándo fue la última vez que te faltó producto y no supiste por qué?</q>
+      <p class="nota">El dolor real casi nunca es el que traías pensado. Deja que lo diga él.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="lbl">Objeciones · una línea cada una</p>
+    <div class="obj">
+      <div class="o"><p class="q">“Está muy caro”</p><p class="a">¿Comparado con qué? En tu propio diagnóstico salieron [cifra] al mes.</p></div>
+      <div class="o"><p class="q">“Ya tengo un POS”</p><p class="a">¿Y quién pasa esas ventas a la contabilidad? ¿Y quién descuenta el inventario?</p></div>
+      <div class="o"><p class="q">“Mi gente no se adapta”</p><p class="a">Tu mesero ya sabe usar WhatsApp. Y se lo muestras, no se lo explicas.</p></div>
+      <div class="o"><p class="q">“Déjame pensarlo”</p><p class="a">¿Qué hay que pensar: el precio, o si tu equipo lo va a usar? Nunca te vayas sin saber cuál de los dos.</p></div>
+      <div class="o"><p class="q">“Estoy en temporada”</p><p class="a">Por eso mismo: es cuando más se pierde y menos se mide.</p></div>
+    </div>
+  </div>
+
+  <div class="hora">
+    <div class="h si"><b>Mar a jue<br>3 a 5 pm</b><span>La hora muerta. Está en el local y puede hablar.</span></div>
+    <div class="h no"><b>Nunca<br>12–3 y 7–11</b><span>Compites con el servicio y pierdes.</span></div>
+  </div>
+
+  <div class="cierre">
+    <p class="lbl">La frase que cierra</p>
+    <q>Ese número lo armaste tú, no yo. Cargamos tus diez platos más vendidos y te muestro un turno real con tu propia carta. Son quince minutos. ¿El jueves a las tres?</q>
+  </div>
+
+  <div class="final">
+    <b>Una sola regla más:</b> nunca respondas una objeción con una función del software. Respóndela con una pregunta, o con el número que él mismo puso.
+  </div>
+
+  <footer>Loggro Restobar · Tarjeta de campo · Uso interno</footer>
+</div>
+</body>
+</html>

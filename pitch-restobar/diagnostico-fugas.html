@@ -5,455 +5,632 @@
 
 <style>
 :root{
-  --bg:#F1F0EC;
-  --surface:#FFFFFF;
-  --surface-2:#E7E5DF;
-  --ink:#1A1917;
-  --ink-2:#3D3B37;
-  --muted:#6E6A62;
-  --line:#DCD8D0;
-  --line-soft:#E8E5DE;
-  --leak:#AE3418;
-  --leak-soft:#F7E4DE;
-  --save:#0E6A52;
-  --save-soft:#DCEDE7;
-  --shadow:0 1px 2px rgba(26,25,23,.06), 0 10px 26px -18px rgba(26,25,23,.4);
+  --bg:#F1F0EC; --surface:#FFFFFF; --surface-2:#E7E5DF;
+  --ink:#1A1917; --ink-2:#3D3B37; --muted:#6E6A62;
+  --line:#DCD8D0; --leak:#AE3418; --leak-soft:#F7E4DE;
+  --save:#0E6A52; --save-soft:#DCEDE7;
+  --coach:#7A5B12; --coach-soft:#F6EEDA;
+  --shadow:0 1px 2px rgba(26,25,23,.06), 0 12px 30px -20px rgba(26,25,23,.45);
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#131211;
-    --surface:#1C1B19;
-    --surface-2:#252320;
-    --ink:#EFEDE8;
-    --ink-2:#CDC9C1;
-    --muted:#98938A;
-    --line:#2E2C28;
-    --line-soft:#242220;
-    --leak:#E8825F;
-    --leak-soft:#301A12;
-    --save:#5DC5A4;
-    --save-soft:#122C25;
-    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+    --bg:#131211; --surface:#1C1B19; --surface-2:#262421;
+    --ink:#F0EEE9; --ink-2:#CDC9C1; --muted:#98938A;
+    --line:#302E29; --leak:#EC8862; --leak-soft:#33190F;
+    --save:#5DC5A4; --save-soft:#122C25;
+    --coach:#DDB65C; --coach-soft:#2B2314;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 14px 34px -22px rgba(0,0,0,.95);
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#131211;
-  --surface:#1C1B19;
-  --surface-2:#252320;
-  --ink:#EFEDE8;
-  --ink-2:#CDC9C1;
-  --muted:#98938A;
-  --line:#2E2C28;
-  --line-soft:#242220;
-  --leak:#E8825F;
-  --leak-soft:#301A12;
-  --save:#5DC5A4;
-  --save-soft:#122C25;
-  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 30px -20px rgba(0,0,0,.9);
+  --bg:#131211; --surface:#1C1B19; --surface-2:#262421;
+  --ink:#F0EEE9; --ink-2:#CDC9C1; --muted:#98938A;
+  --line:#302E29; --leak:#EC8862; --leak-soft:#33190F;
+  --save:#5DC5A4; --save-soft:#122C25;
+  --coach:#DDB65C; --coach-soft:#2B2314;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 14px 34px -22px rgba(0,0,0,.95);
 }
 
 *{box-sizing:border-box}
 body{
   margin:0;background:var(--bg);color:var(--ink);
   font-family:"Karla","Segoe UI",system-ui,-apple-system,sans-serif;
-  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
 }
-.wrap{max-width:640px;margin:0 auto;padding:0 18px 200px}
-h1,h2,.big{font-family:"Chivo","Arial Black",Helvetica,sans-serif;font-weight:900;letter-spacing:-.025em;text-wrap:balance;margin:0}
-h1{font-size:clamp(2.1rem,8.5vw,3.2rem);line-height:.98;text-transform:uppercase}
-h2{font-size:clamp(1.25rem,4.6vw,1.6rem);line-height:1.1;text-transform:uppercase}
-h3{font-family:"Karla",sans-serif;font-weight:700;font-size:1rem;margin:0;line-height:1.3}
-p{margin:0}
+.app{min-height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
 .mono{font-family:"Chivo Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.lbl{font-family:"Chivo Mono",ui-monospace,monospace;font-size:.66rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
-:focus-visible{outline:2px solid var(--leak);outline-offset:3px;border-radius:4px}
+.display{font-family:"Chivo","Arial Black",Helvetica,sans-serif;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.lbl{font-family:"Chivo Mono",ui-monospace,monospace;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+:focus-visible{outline:3px solid var(--leak);outline-offset:2px;border-radius:6px}
+p{margin:0}
 
-header{padding:40px 0 22px;display:flex;flex-direction:column;gap:14px}
-header .kicker{display:flex;align-items:center;gap:8px}
-header .dot{width:8px;height:8px;border-radius:50%;background:var(--leak);flex:none}
-header .deck{color:var(--ink-2);font-size:1.02rem;max-width:46ch}
-hr{border:0;height:1px;background:var(--line);margin:0}
+/* ---------- barra superior ---------- */
+.top{
+  position:sticky;top:0;z-index:10;background:var(--bg);
+  padding:12px 18px 10px;display:flex;flex-direction:column;gap:9px;
+}
+.top .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dots{display:flex;gap:5px;flex:1}
+.dots i{height:4px;flex:1;border-radius:99px;background:var(--surface-2);transition:background .2s}
+.dots i.on{background:var(--leak)}
+.dots i.done{background:var(--ink-2)}
+.toggle{
+  font-family:"Chivo Mono",monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--line);color:var(--muted);
+  border-radius:99px;padding:5px 10px;cursor:pointer;white-space:nowrap;
+}
+.toggle.on{background:var(--coach-soft);border-color:transparent;color:var(--coach)}
 
-section{padding:34px 0 0;display:flex;flex-direction:column;gap:16px}
-.intro{font-size:.95rem;color:var(--muted);max-width:56ch}
+/* ---------- cuerpo ---------- */
+main{flex:1;padding:8px 18px 20px;display:flex;flex-direction:column;gap:20px;justify-content:center}
+.step{display:flex;flex-direction:column;gap:20px;animation:in .22s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-/* ----- form ----- */
-.q{
-  background:var(--surface);border:1px solid var(--line);border-radius:14px;
-  padding:15px 16px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow);
+.ask{font-size:clamp(1.55rem,6.4vw,2.15rem);line-height:1.12;font-weight:700;text-wrap:balance;letter-spacing:-.015em}
+.sub{font-size:.95rem;color:var(--muted);line-height:1.4}
+
+.coach{
+  background:var(--coach-soft);border-radius:10px;padding:11px 13px;
+  display:flex;flex-direction:column;gap:4px;
 }
-.q .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.q .hint{font-size:.8rem;color:var(--muted);line-height:1.4}
-.val{
-  font-family:"Chivo",sans-serif;font-weight:900;font-size:1.3rem;letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;
+.coach p{font-size:.87rem;color:var(--coach);line-height:1.4}
+.coach[hidden]{display:none}
+
+/* ---------- controles ---------- */
+.control{display:flex;flex-direction:column;gap:12px}
+.readout{
+  font-size:clamp(2.4rem,11vw,3.4rem);line-height:1;color:var(--ink);
 }
-input[type=range]{
-  -webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0;cursor:pointer;
-}
-input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:var(--surface-2)}
-input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--surface-2)}
+.readout small{font-family:"Karla",sans-serif;font-weight:700;font-size:1rem;letter-spacing:0;color:var(--muted);display:block;margin-top:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:99px;background:var(--surface-2)}
+input[type=range]::-moz-range-track{height:10px;border-radius:99px;background:var(--surface-2)}
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;
-  background:var(--leak);border:3px solid var(--surface);margin-top:-9px;
-  box-shadow:0 1px 6px rgba(0,0,0,.25);
+  -webkit-appearance:none;appearance:none;width:40px;height:40px;border-radius:50%;
+  background:var(--leak);border:5px solid var(--surface);margin-top:-15px;box-shadow:0 2px 10px rgba(0,0,0,.3);
 }
 input[type=range]::-moz-range-thumb{
-  width:24px;height:24px;border-radius:50%;background:var(--leak);border:3px solid var(--surface);
-  box-shadow:0 1px 6px rgba(0,0,0,.25);
+  width:40px;height:40px;border-radius:50%;background:var(--leak);border:5px solid var(--surface);
+  box-shadow:0 2px 10px rgba(0,0,0,.3);
 }
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{
+  font-family:"Karla",sans-serif;font-size:.95rem;font-weight:700;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+  border-radius:99px;padding:11px 16px;cursor:pointer;
+}
+.chips button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.second{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.second .lbl{margin-bottom:-4px}
 
-/* ----- results ----- */
-.breakdown{display:flex;flex-direction:column;gap:9px}
-.leakrow{
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
-  display:flex;flex-direction:column;gap:8px;
+.hit{
+  background:var(--leak-soft);border-radius:12px;padding:14px 15px;
+  display:flex;flex-direction:column;gap:4px;animation:in .25s ease;
 }
-.leakrow .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.leakrow .amt{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.15rem;color:var(--leak);font-variant-numeric:tabular-nums;white-space:nowrap}
-.leakrow p{font-size:.85rem;color:var(--muted);line-height:1.45}
-.bar{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden}
-.bar i{display:block;height:100%;background:var(--leak);border-radius:99px;transition:width .25s ease}
+.hit b{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.5rem;color:var(--leak);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hit p{font-size:.9rem;color:var(--ink-2);line-height:1.4}
+.hit[hidden]{display:none}
 
-.verdict{
-  background:var(--save-soft);border:1px solid color-mix(in srgb,var(--save) 34%,transparent);
-  border-radius:14px;padding:17px;display:flex;flex-direction:column;gap:12px;
+.nombre{
+  width:100%;font-family:"Karla",sans-serif;font-size:1.15rem;font-weight:700;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:15px 16px;color:var(--ink);
 }
-.verdict .big{font-size:clamp(1.9rem,7vw,2.6rem);color:var(--save);line-height:1;font-variant-numeric:tabular-nums}
-.verdict p{font-size:.9rem;color:var(--ink-2)}
-.vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.vcell{background:var(--surface);border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}
-.vcell b{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.2rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.vcell span{font-size:.76rem;color:var(--muted);line-height:1.3}
+.nombre::placeholder{color:var(--muted);font-weight:400}
 
-/* ----- sticky total ----- */
-.sticky{
-  position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:color-mix(in srgb,var(--surface) 94%,transparent);
-  backdrop-filter:blur(12px);border-top:1px solid var(--line);
-  padding:11px 18px calc(11px + env(safe-area-inset-bottom));
+/* ---------- resultado ---------- */
+.total{
+  background:var(--leak);border-radius:16px;padding:22px 20px;color:#FFF6F2;
+  display:flex;flex-direction:column;gap:5px;
 }
-.sticky .in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
-.sticky .amt{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.5rem;color:var(--leak);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.sticky .lbl{display:block;margin-bottom:2px}
+.total .big{font-size:clamp(2.6rem,13vw,4rem);line-height:.95;color:#FFF6F2}
+.total .lbl{color:rgba(255,246,242,.75)}
+.total .sub{color:rgba(255,246,242,.9);font-size:.95rem;margin-top:6px}
+.rows{display:flex;flex-direction:column;gap:8px}
+.rw{display:flex;flex-direction:column;gap:6px}
+.rw .h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.94rem;font-weight:700}
+.rw .h span:last-child{font-family:"Chivo",sans-serif;font-weight:900;color:var(--leak);font-variant-numeric:tabular-nums}
+.bar{height:9px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leak);border-radius:99px;transition:width .4s ease}
+.rw small{font-size:.8rem;color:var(--muted);line-height:1.4}
+
+.close{
+  background:var(--save-soft);border:1px solid color-mix(in srgb,var(--save) 32%,transparent);
+  border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;
+}
+.close .big{font-size:1.6rem;color:var(--save);line-height:1.1}
+.close p{font-size:.92rem;color:var(--ink-2)}
+.say{
+  background:var(--coach-soft);border-radius:12px;padding:14px 15px;display:flex;flex-direction:column;gap:6px;
+}
+.say q{font-size:1.02rem;color:var(--coach);font-style:normal;line-height:1.45;display:block;font-weight:700}
+.say[hidden]{display:none}
+
+details.how{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+details.how summary{cursor:pointer;padding:13px 15px;font-size:.88rem;font-weight:700;color:var(--ink-2);list-style:none;display:flex;justify-content:space-between}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary::after{content:"+";font-family:"Chivo Mono",monospace;color:var(--muted)}
+details.how[open] summary::after{content:"–"}
+details.how .in{padding:0 15px 14px;font-size:.85rem;color:var(--muted);line-height:1.5;display:flex;flex-direction:column;gap:9px}
+details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:var(--surface-2);padding:1px 5px;border-radius:4px;color:var(--ink-2)}
+
+/* ---------- pie fijo ---------- */
+.foot{
+  position:sticky;bottom:0;z-index:10;
+  background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;
+}
+.foot .run{flex:1;min-width:0}
+.foot .run .lbl{display:block;margin-bottom:1px}
+.foot .run b{font-family:"Chivo",sans-serif;font-weight:900;font-size:1.35rem;color:var(--leak);letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:block;line-height:1.1}
 .btn{
-  font-family:"Karla",sans-serif;font-weight:700;font-size:.88rem;
-  background:var(--ink);color:var(--bg);border:0;border-radius:99px;padding:11px 17px;cursor:pointer;
-  white-space:nowrap;text-decoration:none;display:inline-block;
+  font-family:"Karla",sans-serif;font-weight:700;font-size:1.02rem;
+  background:var(--ink);color:var(--bg);border:0;border-radius:99px;
+  padding:15px 26px;cursor:pointer;white-space:nowrap;min-height:52px;
 }
 .btn:hover{opacity:.88}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-
-/* ----- method ----- */
-.method{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.method summary{cursor:pointer;padding:14px 16px;font-weight:700;font-size:.92rem;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
-.method summary::-webkit-details-marker{display:none}
-.method summary::after{content:"+";font-family:"Chivo Mono",monospace;color:var(--muted)}
-.method[open] summary::after{content:"–"}
-.method .in{padding:0 16px 16px;display:flex;flex-direction:column;gap:11px;font-size:.86rem;color:var(--ink-2);border-top:1px solid var(--line-soft);padding-top:13px}
-.method .in b{font-weight:700;color:var(--ink)}
-.method .in code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:var(--surface-2);padding:1px 5px;border-radius:4px}
-
-.fine{font-size:.8rem;color:var(--muted);line-height:1.5;max-width:60ch}
-footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.78rem;display:flex;flex-direction:column;gap:6px}
-
-@media (min-width:680px){
-  .wrap{padding:0 28px 190px}
-  .vgrid{grid-template-columns:repeat(3,1fr)}
+.btn:active{transform:scale(.98)}
+.btn.wide{width:100%;text-align:center}
+.btn.alt{background:var(--leak)}
+.btn.ghost{background:transparent;color:var(--ink-2);border:1px solid var(--line);font-size:.92rem;padding:13px 18px;min-height:0}
+.back{
+  background:none;border:0;color:var(--muted);font-family:"Karla",sans-serif;font-size:.95rem;
+  cursor:pointer;padding:14px 4px;
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.acciones{display:flex;flex-direction:column;gap:9px}
+.dosbtn{display:flex;gap:9px}
+.dosbtn .btn{flex:1}
+.aviso{font-size:.82rem;color:var(--muted);text-align:center}
+.aviso[hidden]{display:none}
+
+@media (min-width:600px){
+  main{padding:20px 28px 28px}
+  .top{padding:16px 28px 10px}
+  .foot{padding:14px 28px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
-<div class="wrap">
-
-  <header>
-    <div class="kicker"><span class="dot"></span><span class="lbl">Loggro Restobar · Diagnóstico</span></div>
-    <h1>¿Cuánto se está fugando tu restaurante este mes?</h1>
-    <p class="deck">Mueve seis controles con los números de tu negocio. En un minuto sabes cuánto vale el desorden — con la cuenta a la vista para que la revises tú mismo.</p>
-  </header>
-
-  <hr>
-
-  <section>
-    <div>
-      <p class="lbl">Paso 1 — Tu operación</p>
-      <h2>Los números de tu negocio</h2>
+<div class="app">
+  <div class="top">
+    <div class="row">
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="toggle on" id="guia" aria-pressed="true">Guía asesor</button>
     </div>
-    <p class="intro">Si no sabes alguno exacto, deja el valor que viene: son promedios de restaurantes de servicio a la mesa en Colombia. Nada de esto se envía a ningún lado.</p>
+  </div>
 
-    <div class="q">
-      <div class="top"><h3>Ventas mensuales</h3><span class="val mono" id="v-ventas">$30.000.000</span></div>
-      <input type="range" id="ventas" min="5000000" max="150000000" step="1000000" value="30000000" aria-label="Ventas mensuales">
-      <p class="hint">Facturación total del mes, antes de descontar cualquier cosa.</p>
-    </div>
+  <main id="main"></main>
 
-    <div class="q">
-      <div class="top"><h3>Costo de insumos</h3><span class="val mono" id="v-food">33%</span></div>
-      <input type="range" id="food" min="20" max="50" step="1" value="33" aria-label="Costo de insumos sobre ventas">
-      <p class="hint">Cuánto de cada venta se va en comida y bebida. El rango sano de la industria va de 28% a 35%.</p>
-    </div>
-
-    <div class="q">
-      <div class="top"><h3>Cierre de caja al día</h3><span class="val mono" id="v-caja">40 min</span></div>
-      <input type="range" id="caja" min="0" max="120" step="5" value="40" aria-label="Minutos diarios de cierre de caja">
-      <p class="hint">Cuadrar la caja, revisar vouchers, cazar el descuadre.</p>
-    </div>
-
-    <div class="q">
-      <div class="top"><h3>Conteo de inventario al día</h3><span class="val mono" id="v-inv">30 min</span></div>
-      <input type="range" id="inv" min="0" max="120" step="5" value="30" aria-label="Minutos diarios de conteo de inventario">
-      <p class="hint">Contar neveras y bodega, anotar en la libreta, pasar al Excel.</p>
-    </div>
-
-    <div class="q">
-      <div class="top"><h3>Mesas que se van sin pagar</h3><span class="val mono" id="v-fuga">4 al mes</span></div>
-      <input type="range" id="fuga" min="0" max="30" step="1" value="4" aria-label="Mesas que se van sin pagar al mes">
-      <div class="pair">
-        <div>
-          <p class="lbl">Cuenta promedio</p>
-          <span class="val mono" id="v-cuenta">$45.000</span>
-        </div>
-        <input type="range" id="cuenta" min="15000" max="200000" step="5000" value="45000" aria-label="Cuenta promedio">
-      </div>
-    </div>
-
-    <div class="q">
-      <div class="top"><h3>Platos que se rehacen</h3><span class="val mono" id="v-repro">5 por semana</span></div>
-      <input type="range" id="repro" min="0" max="40" step="1" value="5" aria-label="Platos rehechos por semana">
-      <div class="pair">
-        <div>
-          <p class="lbl">Insumo por plato</p>
-          <span class="val mono" id="v-insumo">$12.000</span>
-        </div>
-        <input type="range" id="insumo" min="3000" max="60000" step="1000" value="12000" aria-label="Costo de insumo por plato">
-      </div>
-      <p class="hint">Comanda mal escrita, mal cantada o mal entendida. El insumo se pierde y la cocina cocina dos veces.</p>
-    </div>
-  </section>
-
-  <section>
-    <div>
-      <p class="lbl">Paso 2 — El resultado</p>
-      <h2>Por dónde se te va</h2>
-    </div>
-
-    <div class="breakdown">
-      <div class="leakrow">
-        <div class="head"><h3>Inventario sin control</h3><span class="amt mono" id="r-merma">—</span></div>
-        <div class="bar"><i id="b-merma" style="width:0%"></i></div>
-        <p id="p-merma">—</p>
-      </div>
-      <div class="leakrow">
-        <div class="head"><h3>Horas administrativas</h3><span class="amt mono" id="r-tiempo">—</span></div>
-        <div class="bar"><i id="b-tiempo" style="width:0%"></i></div>
-        <p id="p-tiempo">—</p>
-      </div>
-      <div class="leakrow">
-        <div class="head"><h3>Cuentas que no se cobran</h3><span class="amt mono" id="r-nopago">—</span></div>
-        <div class="bar"><i id="b-nopago" style="width:0%"></i></div>
-        <p id="p-nopago">—</p>
-      </div>
-      <div class="leakrow">
-        <div class="head"><h3>Platos rehechos</h3><span class="amt mono" id="r-repro">—</span></div>
-        <div class="bar"><i id="b-repro" style="width:0%"></i></div>
-        <p id="p-repro">—</p>
-      </div>
-    </div>
-
-    <div class="verdict">
-      <div>
-        <p class="lbl">Se queda en tu bolsillo al mes</p>
-        <p class="big mono" id="r-neto">—</p>
-      </div>
-      <div class="vgrid">
-        <div class="vcell"><b class="mono" id="r-total">—</b><span>Fuga mensual estimada</span></div>
-        <div class="vcell"><b class="mono">$200.000</b><span>Inversión en Loggro Restobar</span></div>
-        <div class="vcell"><b class="mono" id="r-roi">—</b><span>Veces que se paga solo</span></div>
-      </div>
-      <p id="r-frase">—</p>
-    </div>
-
-    <details class="method">
-      <summary>Cómo se calculó cada cifra</summary>
-      <div class="in">
-        <p><b>Inventario.</b> La merma se mide sobre lo que compras, no sobre lo que vendes. Tomamos tus insumos del mes <code>ventas × costo de insumos</code> y calculamos los puntos de merma recuperables: un restaurante con control se mantiene por debajo del 5% de sus insumos; sin control se va a 8–12%. La cifra que ves es el rango medio de esa diferencia — la parte que se recupera midiendo, no un porcentaje de tus ventas.</p>
-        <p><b>Horas administrativas.</b> Salario mínimo 2026 de <code>$1.750.905</code> ÷ 210 horas = <code>$8.338</code> la hora ordinaria. Multiplicado por un factor prestacional de 1,45 (cesantías, primas, vacaciones, pensión, ARL y caja de compensación) da <code>$12.090</code> por hora real. Se multiplica por los minutos que marcaste, 30 días al mes.</p>
-        <p><b>Cuentas que no se cobran y platos rehechos.</b> Son tus propios números, sin porcentajes de industria de por medio. En los platos rehechos se suma el insumo perdido más 12 minutos de cocina valorados a la misma hora real.</p>
-        <p><b>Lo que este cálculo no hace.</b> No promete que recuperas el 100%: promete que hoy nadie está midiendo esa plata. Tampoco cuenta la rotación de mesas ni las ventas que se pierden por demora, aunque también se muevan — preferimos dejarlas fuera antes que inflar el número.</p>
-      </div>
-    </details>
-
-    <p class="fine">La inversión de referencia son $200.000 al mes, dentro del rango publicado de los planes Loggro Restobar ($120.990 a $219.990 mensuales, IVA 0%). El plan exacto depende de mesas, cajas y usuarios.</p>
-  </section>
-
-  <section>
-    <div>
-      <p class="lbl">Paso 3 — Compruébalo</p>
-      <h2>No nos creas: míralo con tu carta</h2>
-    </div>
-    <p class="intro">Cargamos tus diez platos más vendidos en el sistema y te mostramos un turno real —comanda a cocina, descuento de inventario, cuenta cerrada— antes de que firmes nada. Toma quince minutos, en tu local, en la hora que menos te sirva.</p>
-    <div style="display:flex;gap:9px;flex-wrap:wrap">
-      <button class="btn" id="copiar">Copiar mi diagnóstico</button>
-      <a class="btn ghost" id="wa" href="#" hidden>Enviarlo por WhatsApp</a>
-    </div>
-    <p class="fine" id="copiado" hidden>Listo, quedó copiado. Pégalo en el chat con tu asesor.</p>
-  </section>
-
-  <footer>
-    <p>Loggro Restobar · Software 100% colombiano · Proveedor tecnológico autorizado por la DIAN.</p>
-    <p>Los cálculos se hacen en tu propio dispositivo. No se guarda ni se envía ninguno de estos datos.</p>
-  </footer>
+  <div class="foot" id="foot"></div>
 </div>
 
 <script>
 (function(){
   "use strict";
-  // Reemplazar por el WhatsApp del asesor en formato 57 + numero. Si queda vacio, el boton no aparece.
-  var ASESOR_WHATSAPP = "";
 
-  var HORA_REAL = 12090;      // $8.338 hora ordinaria SMLV 2026 x factor prestacional 1,45
-  var DIAS_MES = 30;
-  var SEMANAS_MES = 4.33;
-  var MIN_COCINA_REPROCESO = 12;
-  var PUNTOS_MERMA_BAJO = 3;  // recuperables sobre insumos
-  var PUNTOS_MERMA_ALTO = 7;
-  var INVERSION = 200000;
+  // ==== Configuración ====
+  var ASESOR_WHATSAPP = "";            // 57 + número, ej "573001234567". Vacío = botón oculto.
+  var INVERSION = 200000;              // plan de referencia Loggro Restobar
+  var HORA_REAL = 12090;               // SMLV 2026 $1.750.905 / 210 h × factor prestacional 1,45
+  var DIAS_MES = 30, SEMANAS_MES = 4.33, MIN_COCINA = 12;
+  var MERMA_BAJA = 3, MERMA_ALTA = 7;  // puntos recuperables sobre insumos
 
-  var cop = function(n){
-    return "$" + Math.round(n).toLocaleString("es-CO");
+  var S = {
+    nombre:"", ventas:30000000, food:33, caja:40, inv:30,
+    fuga:4, cuenta:45000, repro:5, insumo:12000
   };
-  var el = function(id){ return document.getElementById(id); };
 
-  var inputs = ["ventas","food","caja","inv","fuga","cuenta","repro","insumo"].map(el);
+  var paso = 0, guiaOn = true;
+  try{ guiaOn = localStorage.getItem("guia") !== "off"; }catch(e){}
+
+  var cop = function(n){ return "$" + Math.round(n).toLocaleString("es-CO"); };
+  var cortito = function(n){
+    if (n >= 1000000) return "$" + (n/1000000).toFixed(n >= 10000000 ? 0 : 1).replace(".",",") + "M";
+    return "$" + Math.round(n/1000) + "k";
+  };
 
   function calc(){
-    var ventas  = +el("ventas").value;
-    var food    = +el("food").value;
-    var caja    = +el("caja").value;
-    var inv     = +el("inv").value;
-    var fuga    = +el("fuga").value;
-    var cuenta  = +el("cuenta").value;
-    var repro   = +el("repro").value;
-    var insumo  = +el("insumo").value;
-
-    // Etiquetas en vivo
-    el("v-ventas").textContent = cop(ventas);
-    el("v-food").textContent   = food + "%";
-    el("v-caja").textContent   = caja + " min";
-    el("v-inv").textContent    = inv + " min";
-    el("v-fuga").textContent   = fuga === 1 ? "1 al mes" : fuga + " al mes";
-    el("v-cuenta").textContent = cop(cuenta);
-    el("v-insumo").textContent = cop(insumo);
-    el("v-repro").textContent  = repro === 1 ? "1 por semana" : repro + " por semana";
-
-    var insumos    = ventas * (food/100);
-    var mermaBajo  = insumos * (PUNTOS_MERMA_BAJO/100);
-    var mermaAlto  = insumos * (PUNTOS_MERMA_ALTO/100);
-    var merma      = (mermaBajo + mermaAlto) / 2;
-
-    var horas      = ((caja + inv) * DIAS_MES) / 60;
-    var tiempo     = horas * HORA_REAL;
-
-    var nopago     = fuga * cuenta;
-
-    var costoRepro = insumo + (MIN_COCINA_REPROCESO/60) * HORA_REAL;
-    var reproceso  = repro * SEMANAS_MES * costoRepro;
-
+    var insumos = S.ventas * (S.food/100);
+    var mermaBaja = insumos * (MERMA_BAJA/100);
+    var mermaAlta = insumos * (MERMA_ALTA/100);
+    var merma = (mermaBaja + mermaAlta)/2;
+    var horas = ((S.caja + S.inv) * DIAS_MES)/60;
+    var tiempo = horas * HORA_REAL;
+    var nopago = S.fuga * S.cuenta;
+    var costoRepro = S.insumo + (MIN_COCINA/60)*HORA_REAL;
+    var reproceso = S.repro * SEMANAS_MES * costoRepro;
     var total = merma + tiempo + nopago + reproceso;
-    var neto  = total - INVERSION;
-    var max   = Math.max(merma, tiempo, nopago, reproceso, 1);
+    return {
+      insumos:insumos, mermaBaja:mermaBaja, mermaAlta:mermaAlta, merma:merma,
+      horas:horas, tiempo:tiempo, nopago:nopago, costoRepro:costoRepro,
+      reproceso:reproceso, total:total, neto:total-INVERSION,
+      roi:total/INVERSION, dias:Math.max(1, Math.round(INVERSION/(total/30)))
+    };
+  }
 
-    function pinta(key, valor, texto){
-      el("r-"+key).textContent = cop(valor);
-      el("b-"+key).style.width = (valor/max*100).toFixed(1) + "%";
-      el("p-"+key).textContent = texto;
+  // ==== Pasos ====
+  var PASOS = [
+    { portada:true },
+    {
+      ask:"¿Cuánto vendiste el mes pasado, más o menos?",
+      coach:"Arranca por acá. Es la pregunta más fácil de contestar y le baja la guardia.",
+      campo:"ventas", tipo:"slider", destapa:null, min:5000000, max:150000000, step:1000000,
+      lee:function(){ return cop(S.ventas); }, sub:"Ventas del mes, antes de descontar nada",
+      golpe:function(c){ return null; }
+    },
+    {
+      ask:"De cada venta, ¿cuánto se te va en comida y bebida?",
+      coach:"Si no lo sabe, déjalo en 33% y dile: “ese es el promedio de la industria”. Nadie discute un promedio.",
+      campo:"food", tipo:"slider", destapa:"merma", min:20, max:50, step:1,
+      lee:function(){ return S.food + "%"; }, sub:"Costo de insumos sobre las ventas",
+      golpe:function(c){
+        return { monto:c.merma,
+          texto:"Compras " + cop(c.insumos) + " en insumos al mes. Entre " + cop(c.mermaBaja) + " y " + cop(c.mermaAlta) + " se van en porciones sin medir, producto vencido y salidas que nadie anotó." };
+      }
+    },
+    {
+      ask:"¿Cuánto te toma cerrar la caja cada noche?",
+      coach:"Deja que conteste solo. Casi siempre dice un número y después lo sube: “bueno… si hay descuadre, más”.",
+      campo:"caja", tipo:"chips", destapa:null, opciones:[[15,"15 min"],[30,"30 min"],[40,"40 min"],[60,"1 hora"],[90,"Más de 1 hora"]],
+      lee:function(){ return S.caja + " min"; }, sub:"Cuadrar caja, revisar vouchers, cazar el descuadre",
+      golpe:function(c){ return null; }
+    },
+    {
+      ask:"¿Y contar el inventario de neveras y bodega?",
+      coach:"Aquí sale la cifra que más los sorprende. No la anuncies: deja que la vean aparecer.",
+      campo:"inv", tipo:"chips", destapa:"tiempo", opciones:[[0,"No lo cuento"],[15,"15 min"],[30,"30 min"],[45,"45 min"],[60,"1 hora"]],
+      lee:function(){ return S.inv + " min"; }, sub:"Contar, anotar en la libreta, pasar al Excel",
+      golpe:function(c){
+        return { monto:c.tiempo,
+          texto:Math.round(c.horas) + " horas al mes cuadrando a mano, a " + cop(HORA_REAL) + " la hora real con prestaciones. Es un tercio de un sueldo que no produce un solo plato." };
+      }
+    },
+    {
+      ask:"¿Cuántas mesas se van sin pagar al mes?",
+      coach:"Si dice “ninguna”, pregunta: “¿ni una en todo el año?”. Casi siempre se acuerda de una.",
+      campo:"fuga", tipo:"chips", destapa:"nopago", opciones:[[0,"Ninguna"],[1,"1"],[2,"2"],[4,"4"],[8,"8 o más"]],
+      lee:function(){ return S.fuga === 1 ? "1 al mes" : S.fuga + " al mes"; }, sub:"Cuentas que salieron por la puerta",
+      segundo:{ campo:"cuenta", etiqueta:"Cuenta promedio", tipo:"slider", min:15000, max:200000, step:5000,
+                lee:function(){ return cop(S.cuenta); } },
+      golpe:function(c){
+        if (c.nopago <= 0) return null;
+        return { monto:c.nopago, texto:cop(c.nopago) + " al mes son " + cop(c.nopago*12) + " al año. Eso es una nevera nueva." };
+      }
+    },
+    {
+      ask:"¿Cuántos platos rehace la cocina por semana?",
+      coach:"Comanda mal escrita o mal cantada. Pregúntalo mirando a la cocina, no a él.",
+      campo:"repro", tipo:"chips", destapa:"reproceso", opciones:[[0,"Ninguno"],[2,"2"],[5,"5"],[10,"10"],[20,"20 o más"]],
+      lee:function(){ return S.repro === 1 ? "1 por semana" : S.repro + " por semana"; }, sub:"El insumo se pierde y la cocina cocina dos veces",
+      segundo:{ campo:"insumo", etiqueta:"Costo del insumo por plato", tipo:"slider", min:3000, max:60000, step:1000,
+                lee:function(){ return cop(S.insumo); } },
+      golpe:function(c){
+        if (c.reproceso <= 0) return null;
+        return { monto:c.reproceso,
+          texto:Math.round(S.repro*SEMANAS_MES) + " platos al mes a " + cop(c.costoRepro) + " cada uno: el insumo perdido más doce minutos de cocina que ya estaban pagados." };
+      }
+    },
+    { resultado:true }
+  ];
+
+  var main = document.getElementById("main");
+  var foot = document.getElementById("foot");
+  var dots = document.getElementById("dots");
+  var btnGuia = document.getElementById("guia");
+
+  function pintaGuia(){
+    btnGuia.classList.toggle("on", guiaOn);
+    btnGuia.setAttribute("aria-pressed", guiaOn ? "true" : "false");
+    btnGuia.textContent = guiaOn ? "Guía asesor" : "Guía oculta";
+    Array.prototype.forEach.call(document.querySelectorAll(".coach,.say"), function(n){ n.hidden = !guiaOn; });
+  }
+  btnGuia.addEventListener("click", function(){
+    guiaOn = !guiaOn;
+    try{ localStorage.setItem("guia", guiaOn ? "on" : "off"); }catch(e){}
+    pintaGuia();
+  });
+
+  function pintaDots(){
+    dots.innerHTML = "";
+    for (var i = 1; i < PASOS.length; i++){
+      var d = document.createElement("i");
+      if (i < paso) d.className = "done";
+      else if (i === paso) d.className = "on";
+      dots.appendChild(d);
+    }
+  }
+
+  function nodo(tag, clase, texto){
+    var n = document.createElement(tag);
+    if (clase) n.className = clase;
+    if (texto != null) n.textContent = texto;
+    return n;
+  }
+
+  function control(cfg, onChange){
+    var box = nodo("div","control");
+    var out = nodo("div","readout display");
+    out.textContent = cfg.lee();
+    if (cfg.sub){ var s = nodo("small", null, cfg.sub); out.appendChild(s); }
+    box.appendChild(out);
+
+    if (cfg.tipo === "slider"){
+      var r = document.createElement("input");
+      r.type = "range"; r.min = cfg.min; r.max = cfg.max; r.step = cfg.step; r.value = S[cfg.campo];
+      r.setAttribute("aria-label", cfg.ask || cfg.etiqueta || cfg.campo);
+      r.addEventListener("input", function(){
+        S[cfg.campo] = +r.value;
+        out.firstChild.nodeValue = cfg.lee();
+        onChange();
+      });
+      box.appendChild(r);
+    } else {
+      var chips = nodo("div","chips");
+      cfg.opciones.forEach(function(op){
+        var b = nodo("button", S[cfg.campo] === op[0] ? "on" : null, op[1]);
+        b.type = "button";
+        b.addEventListener("click", function(){
+          S[cfg.campo] = op[0];
+          Array.prototype.forEach.call(chips.children, function(c){ c.classList.remove("on"); });
+          b.classList.add("on");
+          out.firstChild.nodeValue = cfg.lee();
+          onChange();
+        });
+        chips.appendChild(b);
+      });
+      box.appendChild(chips);
+    }
+    return box;
+  }
+
+  function render(){
+    var P = PASOS[paso];
+    main.innerHTML = ""; foot.innerHTML = "";
+    pintaDots();
+    var step = nodo("div","step");
+
+    // ----- Portada -----
+    if (P.portada){
+      step.appendChild(nodo("p","lbl","Loggro Restobar"));
+      var h = nodo("p","ask","Vamos a ver cuánto se está fugando tu restaurante este mes.");
+      step.appendChild(h);
+      step.appendChild(nodo("p","sub","Seis preguntas. Tres minutos. Con tus números, no con los de nadie más."));
+
+      var inp = document.createElement("input");
+      inp.className = "nombre"; inp.type = "text"; inp.placeholder = "Nombre del restaurante (opcional)";
+      inp.value = S.nombre;
+      inp.addEventListener("input", function(){ S.nombre = inp.value; });
+      step.appendChild(inp);
+
+      var c = nodo("div","coach");
+      c.appendChild(nodo("p",null,"Gira la pantalla hacia el cliente. Tú lees la pregunta en voz alta, él mueve el control. No expliques el software todavía — solo pregunta."));
+      step.appendChild(c);
+
+      main.appendChild(step);
+      var b = nodo("button","btn wide alt","Empezar");
+      b.addEventListener("click", function(){ paso = 1; render(); });
+      foot.appendChild(b);
+      pintaGuia();
+      return;
     }
 
-    pinta("merma", merma,
-      "Compras " + cop(insumos) + " en insumos al mes. Entre " + cop(mermaBajo) + " y " + cop(mermaAlto) +
-      " se van en porciones sin medir, producto vencido y salidas que nadie registró.");
-    pinta("tiempo", tiempo,
-      horas.toFixed(0) + " horas al mes cuadrando a mano, a " + cop(HORA_REAL) + " la hora real con prestaciones. Es un tercio de un sueldo que no produce un solo plato.");
-    pinta("nopago", nopago,
-      fuga === 0 ? "No marcaste ninguna. Si aparece una sola al mes, ya son " + cop(cuenta) + "."
-                 : fuga + " cuentas de " + cop(cuenta) + " que salieron por la puerta.");
-    pinta("repro", reproceso,
-      Math.round(repro*SEMANAS_MES) + " platos al mes a " + cop(costoRepro) + " cada uno: el insumo perdido más doce minutos de cocina que ya estaban pagados.");
+    // ----- Resultado -----
+    if (P.resultado){
+      var c2 = calc();
+      var titulo = S.nombre ? S.nombre : "Tu restaurante";
 
-    el("r-total").textContent = cop(total);
-    el("r-neto").textContent  = cop(Math.max(neto, 0));
-    el("r-roi").textContent   = (total/INVERSION).toFixed(1) + "×";
+      var t = nodo("div","total");
+      t.appendChild(nodo("p","lbl", titulo + " está perdiendo"));
+      t.appendChild(nodo("p","big display", cop(c2.total)));
+      t.appendChild(nodo("p","sub","al mes, en cosas que hoy nadie mide"));
+      step.appendChild(t);
 
-    var dias = total > 0 ? Math.max(1, Math.round(INVERSION / (total/30))) : 30;
-    el("r-frase").textContent = total > INVERSION
-      ? "Con estos números, Loggro Restobar se paga solo en " + dias + (dias === 1 ? " día" : " días") + " de operación. El resto del mes es plata que hoy se está yendo."
-      : "Con estos números la fuga es menor que la inversión. Tu operación ya está bastante controlada — vale la pena revisar juntos si el ahorro está en otro lado antes de que compres nada.";
+      var rows = nodo("div","rows");
+      var max = Math.max(c2.merma, c2.tiempo, c2.nopago, c2.reproceso, 1);
+      [["Inventario sin control", c2.merma, "Se descuenta solo por receta cada vez que se vende el plato."],
+       ["Horas administrativas", c2.tiempo, "La caja cierra sola y el inventario ya está contado."],
+       ["Cuentas que no se cobran", c2.nopago, "La cuenta se cobra en la mesa, no en la caja."],
+       ["Platos rehechos", c2.reproceso, "La comanda sale de la mesa a la pantalla de cocina, tal cual se tomó."]
+      ].forEach(function(r){
+        if (r[1] <= 0) return;
+        var rw = nodo("div","rw");
+        var hd = nodo("div","h");
+        hd.appendChild(nodo("span",null,r[0]));
+        hd.appendChild(nodo("span",null,cop(r[1])));
+        rw.appendChild(hd);
+        var bar = nodo("div","bar"); var fill = nodo("i");
+        fill.style.width = (r[1]/max*100).toFixed(1) + "%";
+        bar.appendChild(fill); rw.appendChild(bar);
+        rw.appendChild(nodo("small",null,r[2]));
+        rows.appendChild(rw);
+      });
+      step.appendChild(rows);
 
-    return { ventas: ventas, total: total, merma: merma, tiempo: tiempo, nopago: nopago, reproceso: reproceso, neto: neto };
+      var cl = nodo("div","close");
+      cl.appendChild(nodo("p","lbl","Loggro Restobar cuesta " + cop(INVERSION) + " al mes"));
+      cl.appendChild(nodo("p","big display", c2.total > INVERSION ? "Se paga solo en " + c2.dias + (c2.dias===1?" día":" días") : "Tu operación ya está controlada"));
+      cl.appendChild(nodo("p",null, c2.total > INVERSION
+        ? "El resto del mes —" + cop(Math.max(c2.neto,0)) + "— es plata que hoy se está yendo."
+        : "Con estos números la fuga es menor que la inversión. Vale la pena revisar juntos dónde está el ahorro antes de que compres nada."));
+      step.appendChild(cl);
+
+      if (c2.total > INVERSION){
+        var say = nodo("div","say");
+        say.appendChild(nodo("p","lbl","Ahora dices esto, y te callas"));
+        var q = document.createElement("q");
+        q.textContent = "Ese número lo armaste tú, no yo. Yo no vine a que me creas: cargamos tus diez platos más vendidos y te muestro un turno real —comanda a cocina, inventario descontado, cuenta cerrada— con tu propia carta. Son quince minutos. ¿El jueves a las tres?";
+        say.appendChild(q);
+        step.appendChild(say);
+      }
+
+      var how = document.createElement("details");
+      how.className = "how";
+      var sm = document.createElement("summary"); sm.textContent = "Si te pregunta de dónde salen los números";
+      how.appendChild(sm);
+      var inn = nodo("div","in");
+      inn.innerHTML =
+        "<p><b>Inventario:</b> la merma se mide sobre lo que compras, no sobre lo que vendes. Insumos del mes <code>" +
+        cop(c2.insumos) + "</code>. Un restaurante con control se mantiene bajo el 5% de sus insumos; sin control se va a 8–12%. Lo que ves es la diferencia recuperable.</p>" +
+        "<p><b>Horas:</b> salario mínimo 2026 <code>$1.750.905</code> ÷ 210 horas = <code>$8.338</code> la hora, × 1,45 de prestaciones = <code>$12.090</code> la hora real.</p>" +
+        "<p><b>Cuentas perdidas y platos rehechos:</b> son tus propios números, sin porcentajes de industria de por medio.</p>" +
+        "<p>No prometemos recuperar el 100%. Lo que decimos es que hoy nadie está midiendo esa plata.</p>";
+      how.appendChild(inn);
+      step.appendChild(how);
+
+      main.appendChild(step);
+
+      var acc = nodo("div","acciones");
+      var dos = nodo("div","dosbtn");
+      var bc = nodo("button","btn","Copiar resumen");
+      bc.addEventListener("click", function(){ copiar(resumen(c2), bc); });
+      dos.appendChild(bc);
+      if (ASESOR_WHATSAPP){
+        var bw = nodo("button","btn alt","WhatsApp");
+        bw.addEventListener("click", function(){
+          window.open("https://wa.me/" + ASESOR_WHATSAPP + "?text=" + encodeURIComponent(resumen(c2)), "_blank", "noopener");
+        });
+        dos.appendChild(bw);
+      }
+      acc.appendChild(dos);
+      var bn = nodo("button","btn ghost","Nuevo cliente");
+      bn.addEventListener("click", function(){
+        S = { nombre:"", ventas:30000000, food:33, caja:40, inv:30, fuga:4, cuenta:45000, repro:5, insumo:12000 };
+        paso = 0; render();
+      });
+      acc.appendChild(bn);
+      var av = nodo("p","aviso","Listo, quedó copiado."); av.hidden = true; av.id = "aviso";
+      acc.appendChild(av);
+      foot.style.display = "block";
+      foot.appendChild(acc);
+      pintaGuia();
+      return;
+    }
+
+    // ----- Preguntas -----
+    step.appendChild(nodo("p","ask", P.ask));
+
+    var golpe = nodo("div","hit"); golpe.hidden = true;
+    var montoEl = document.createElement("b");
+    var textoEl = document.createElement("p");
+    golpe.appendChild(montoEl); golpe.appendChild(textoEl);
+
+    var corre = nodo("div","run");
+
+    function actualiza(){
+      var c = calc();
+      var g = P.golpe ? P.golpe(c) : null;
+      if (g){
+        golpe.hidden = false;
+        montoEl.textContent = cop(g.monto) + " al mes";
+        textoEl.textContent = g.texto;
+      } else {
+        golpe.hidden = true;
+      }
+      var b = document.getElementById("acum");
+      if (b) b.textContent = cop(parcial(c, paso));
+    }
+
+    P.ask && (function(){})();
+    step.appendChild(control({
+      tipo:P.tipo, campo:P.campo, min:P.min, max:P.max, step:P.step,
+      opciones:P.opciones, lee:P.lee, sub:P.sub, ask:P.ask
+    }, actualiza));
+
+    if (P.segundo){
+      var seg = nodo("div","second");
+      seg.appendChild(nodo("p","lbl", P.segundo.etiqueta));
+      seg.appendChild(control({
+        tipo:P.segundo.tipo, campo:P.segundo.campo, min:P.segundo.min, max:P.segundo.max,
+        step:P.segundo.step, opciones:P.segundo.opciones, lee:P.segundo.lee, etiqueta:P.segundo.etiqueta
+      }, actualiza));
+      step.appendChild(seg);
+    }
+
+    step.appendChild(golpe);
+
+    if (P.coach){
+      var co = nodo("div","coach");
+      co.appendChild(nodo("p",null,P.coach));
+      step.appendChild(co);
+    }
+
+    main.appendChild(step);
+
+    var atras = nodo("button","back","Atrás");
+    atras.addEventListener("click", function(){ paso--; render(); });
+    foot.appendChild(atras);
+
+    if (parcial(calc(), paso) > 0){
+      var run = nodo("div","run");
+      run.appendChild(nodo("span","lbl","Va sumando"));
+      var acum = document.createElement("b");
+      acum.id = "acum";
+      run.appendChild(acum);
+      foot.appendChild(run);
+    }
+
+    var next = nodo("button","btn", paso === PASOS.length - 2 ? "Ver el total" : "Siguiente");
+    next.addEventListener("click", function(){ paso++; render(); });
+    foot.appendChild(next);
+
+    actualiza();
+    pintaGuia();
   }
 
-  inputs.forEach(function(i){ i.addEventListener("input", function(){ var r = calc(); pintaSticky(r); }); });
-
-  function pintaSticky(r){
-    el("s-total").textContent = cop(r.total);
+  function parcial(c, hasta){
+    var suma = 0;
+    for (var i = 1; i <= hasta && i < PASOS.length; i++){
+      var d = PASOS[i].destapa;
+      if (d) suma += c[d];
+    }
+    return suma;
   }
 
-  function resumen(r){
+  function resumen(c){
+    var quien = S.nombre ? S.nombre : "El restaurante";
     return [
-      "Diagnóstico de fugas · Loggro Restobar",
-      "Ventas mensuales: " + cop(r.ventas),
-      "— Inventario sin control: " + cop(r.merma),
-      "— Horas administrativas: " + cop(r.tiempo),
-      "— Cuentas no cobradas: " + cop(r.nopago),
-      "— Platos rehechos: " + cop(r.reproceso),
-      "FUGA TOTAL: " + cop(r.total) + " al mes",
-      "Neto tras invertir $200.000: " + cop(Math.max(r.neto,0)),
-      "Quiero ver un turno real con mi propia carta."
+      "DIAGNÓSTICO DE FUGAS — " + quien,
+      "",
+      "Inventario sin control: " + cop(c.merma),
+      "Horas administrativas: " + cop(c.tiempo),
+      "Cuentas no cobradas: " + cop(c.nopago),
+      "Platos rehechos: " + cop(c.reproceso),
+      "",
+      "TOTAL: " + cop(c.total) + " al mes",
+      "Loggro Restobar: " + cop(INVERSION) + " al mes",
+      "Se paga solo en " + c.dias + " días.",
+      "",
+      "Siguiente paso: cargamos tus 10 platos más vendidos y te mostramos un turno real con tu propia carta. 15 minutos."
     ].join("\n");
   }
 
-  el("copiar").addEventListener("click", function(){
-    var texto = resumen(calc());
-    var ok = function(){ el("copiado").hidden = false; };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+  function copiar(texto, btn){
+    var ok = function(){
+      var a = document.getElementById("aviso");
+      if (a) a.hidden = false;
+      var antes = btn.textContent;
+      btn.textContent = "Copiado";
+      setTimeout(function(){ btn.textContent = antes; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(texto).then(ok, function(){ fallback(texto, ok); });
     } else { fallback(texto, ok); }
-  });
-
+  }
   function fallback(texto, ok){
     try{
       var ta = document.createElement("textarea");
       ta.value = texto; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
       document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
       ok();
-    }catch(e){ /* sin portapapeles disponible */ }
+    }catch(e){}
   }
 
-  if (ASESOR_WHATSAPP) {
-    var wa = el("wa");
-    wa.hidden = false;
-    wa.addEventListener("click", function(ev){
-      ev.preventDefault();
-      window.open("https://wa.me/" + ASESOR_WHATSAPP + "?text=" + encodeURIComponent(resumen(calc())), "_blank", "noopener");
-    });
-  }
-
-  // Barra fija con el total
-  var bar = document.createElement("div");
-  bar.className = "sticky";
-  bar.innerHTML = '<div class="in"><div><span class="lbl">Fuga mensual estimada</span>' +
-                  '<span class="amt mono" id="s-total">—</span></div>' +
-                  '<a class="btn" href="#" id="s-cta">Ver el desglose</a></div>';
-  document.body.appendChild(bar);
-  document.getElementById("s-cta").addEventListener("click", function(ev){
-    ev.preventDefault();
-    document.getElementById("r-total").scrollIntoView({behavior:"smooth", block:"center"});
-  });
-
-  pintaSticky(calc());
+  render();
 })();
 </script>
