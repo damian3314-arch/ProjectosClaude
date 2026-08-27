@@ -87,6 +87,20 @@ const dia = () => ({
   // error que iba a inflar el cierre del 10 de agosto en $30.000.
   reservas_a_mano_cop: 30000,
   reservas_a_mano_n: 2,
+  // Entradas de clase suelta de hoy (0051). El efectivo sí sale del
+  // mismo movimientos que ya simula la caja —el botón genérico y la
+  // apuntada a mano pasan igual por ahí—, así que se deriva en vivo,
+  // igual que ingreso_efectivo. La transferencia por recepción/página
+  // no tiene de dónde salir en este simulacro (no modela `reservas`),
+  // así que va fija, como reservas_dictadas_cop.
+  entradas: {
+    efectivo_cop: suma('ingreso', 'efectivo', 'clase_suelta'),
+    efectivo_n: cuenta('ingreso', 'efectivo', 'clase_suelta'),
+    recepcion_transferencia_cop: 15000,
+    recepcion_transferencia_n: 1,
+    pagina_transferencia_cop: 30000,
+    pagina_transferencia_n: 2,
+  },
   total_ingresos: suma('ingreso', 'efectivo') + suma('ingreso', 'transferencia') + 15000,
   total_egresos: suma('egreso', 'efectivo') + suma('egreso', 'transferencia'),
   contra_admingym: {
@@ -162,8 +176,11 @@ const banco = () => {
     corte: '19:42',
   };
 };
-const suma = (s, m) => movimientos.filter((x) => x.sentido === s && x.medio === m)
+const suma = (s, m, cpt) => movimientos.filter((x) => x.sentido === s && x.medio === m
+                                              && (!cpt || x.concepto === cpt))
                                   .reduce((a, b) => a + b.valor_cop, 0);
+const cuenta = (s, m, cpt) => movimientos.filter((x) => x.sentido === s && x.medio === m
+                                              && (!cpt || x.concepto === cpt)).length;
 
 await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
   const url = route.request().url();
@@ -896,17 +913,19 @@ const t = tirilla.replace(/\s+/g, ' ');
   ? bien('la tirilla lleva encabezado')
   : falla('el encabezado de la tirilla', t.slice(0, 80));
 
-// Tiene que decir de QUÉ fue la plata. Una tirilla con solo totales
-// obliga a volver a la pantalla, y entonces no reemplaza a la pantalla.
-/ENTRÓ/.test(t) && /SALIÓ/.test(t) && /Clase suelta/.test(t)
-  ? bien('desglosa por concepto, no solo totales')
-  : falla('el desglose', t.slice(0, 220));
+// Tiene que responder lo que la dueña cruza contra su cuaderno de la
+// puerta: cuánta gente de clase suelta entró hoy, por dónde y en qué
+// pagó — no solo un total de entradas y salidas.
+/ENTRADAS/.test(t) && /SALIDAS/.test(t) && /Transferencia, recepción/.test(t)
+ && /Transferencia, página/.test(t)
+  ? bien('desglosa entradas por recepción y por página, no solo un total')
+  : falla('el desglose de entradas', t.slice(0, 260));
 
-// Y agrupa: veinte líneas iguales no caben en un rollo de 80mm.
-/Clase suelta x\d/.test(t)
-  ? bien('agrupa los repetidos con su cantidad',
-         (t.match(/Clase suelta x\d/) || [])[0])
-  : falla('no agrupó los repetidos', t.slice(0, 220));
+// El efectivo de clase suelta se ve aparte, con cuántos cobros son.
+/Efectivo3 · \$45\.000/.test(t)
+  ? bien('agrupa el efectivo de clase suelta con su cantidad',
+         (t.match(/Efectivo\d+ · \$[\d.]+/) || [])[0])
+  : falla('no agrupó el efectivo de clase suelta', t.slice(0, 260));
 
 // El signo, delante del peso. "$-5.000" en papel se lee mal.
 !/\$-/.test(t)

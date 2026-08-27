@@ -3347,60 +3347,99 @@ const CONFIG = {
           `<div class="peq">Nadie contó el cajón al empezar. Se usó lo que quedó ayer.</div>` +
           linea('Base', pesos(d.base_cop))) +
 
-      // Solo tres preguntas, en el mismo orden que en pantalla: cuánto
-      // entró, cuánto salió, y si cuadra. El listado por concepto queda
-      // DENTRO de cada una, como el detalle que sustenta el total — no
-      // como secciones aparte que hay que sumar a mano para saber algo.
+      // Cuatro preguntas, cada una la suya: cuánta gente entró hoy a una
+      // clase suelta (y por dónde), cuánto salió, si el cajón cuadra, y
+      // qué dijo el banco. Antes "entró" mezclaba dos preguntas
+      // distintas —todo el efectivo de caja (mensualidad, cumpleaños,
+      // clase suelta, todo junto) y todo lo que confirmó el banco ese
+      // día (incluidos anticipos de otro día)— así que nunca daba lo
+      // mismo que el cuaderno de la puerta, que solo cuenta personas de
+      // clase suelta entrando HOY. Ahora esa cuenta tiene su propia
+      // sección, con la misma pregunta que hace el cuaderno: ¿por dónde
+      // entró esta persona, y en qué pagó?
       (() => {
-        const transferencia = b.recibido_cop != null
-          ? b.recibido_cop : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
-        const efectivo = Number(d.ingreso_efectivo || 0);
-        const totalEntro = efectivo + transferencia;
         const gastos = Number(d.total_egresos || 0);
         const retirado = Number(c.retirado_cop || 0);
         const totalSalio = gastos + retirado;
-        // Anticipos: pagado hoy para una clase de otro día. Sigue
-        // sumando al total de arriba —esa plata sí entró—, pero se
-        // separa de lo que un cliente disfrutó hoy, que es lo que hay
-        // que cuadrar contra el cierre de AdminGym.
+        const efectivoCaja = Number(d.ingreso_efectivo || 0);
+        const transferenciaBanco = b.recibido_cop != null ? b.recibido_cop
+          : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
+
+        // Tres números, cada uno con una sola fuente confiable. No son
+        // cuatro celdas cruzadas por origen × medio porque en Caja hay
+        // un botón genérico de "Clase suelta" que cobra en efectivo SIN
+        // dejar reserva — ese cobro no tiene de dónde leer si vino de
+        // recepción o de la página, así que el efectivo va como un solo
+        // número. La transferencia sí distingue: siempre deja una fila
+        // en reservas, que es lo que la cruza con el depósito.
+        const ent = d.entradas || {};
+        const efectivo = Number(ent.efectivo_cop || 0);
+        const efectivoN = Number(ent.efectivo_n || 0);
+        const transfRecep = Number(ent.recepcion_transferencia_cop || 0);
+        const transfRecepN = Number(ent.recepcion_transferencia_n || 0);
+        const transfPagina = Number(ent.pagina_transferencia_cop || 0);
+        const transfPaginaN = Number(ent.pagina_transferencia_n || 0);
+        const totalEntradasN = efectivoN + transfRecepN + transfPaginaN;
+        const totalEntradasCop = efectivo + transfRecep + transfPagina;
+
+        // El efectivo del arqueo (abajo) es TODO lo que entró a caja hoy
+        // —también mensualidad y cumpleaños, si hubo—. Si es más que el
+        // efectivo de clase suelta de arriba, se dice de qué es la
+        // diferencia para que las dos cifras de "efectivo" no parezcan
+        // contradecirse.
+        const efectivoOtros = efectivoCaja - efectivo;
+
+        // Anticipos: pagado hoy para una clase de OTRO día. No es de
+        // "Entradas" —esa persona no entra hoy— pero sí es plata que el
+        // banco confirmó hoy, así que es la sección de Banco la que
+        // explica por qué su total no tiene que dar igual a las
+        // transferencias de Entradas.
         const futuras = Number(d.reservas_futuras_cop || 0);
         const futurasN = Number(d.reservas_futuras_n || 0);
 
         return (
-        `<hr>` + titulo('LO QUE ENTRÓ HOY') +
-        linea('Efectivo', pesos(efectivo)) +
-        linea('+ Transferencias', pesos(transferencia)) +
-        linea('= Total entró', pesos(totalEntro), 'g grande') +
+        `<hr>` + titulo('ENTRADAS · clase suelta de hoy') +
+        `<div class="peq">Cuenta a quien entra hoy a una clase, no cuándo pagó.</div>` +
+        linea('Efectivo', efectivoN ? `${efectivoN} · ${pesos(efectivo)}` : '—') +
+        linea('Transferencia, recepción', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
+        linea('Transferencia, página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
+        linea('= Total entradas', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
 
-        (futuras > 0
-          ? `<div class="ojo">De esto, <b>${pesos(futuras)}</b> es de ` +
-            `${futurasN} ${futurasN === 1 ? 'cliente' : 'clientes'} que pagaron hoy una clase ` +
-            `de OTRO día. Todavía no se la toman — ya quedó cobrada, nada más.</div>`
-          : '') +
-        // El 10 de agosto una reserva confirmada a mano se sumó dos
-        // veces: una como movimiento de caja y otra como reserva. Esta
-        // línea es la comprobación de que esa plata ya está contada
-        // arriba y no hay que sumarla de nuevo.
-        (Number(d.reservas_a_mano_n || 0) > 0
-          ? `<div class="peq">Ya se cobraron en el mostrador: ${d.reservas_a_mano_n} ` +
-            `(${pesos(d.reservas_a_mano_cop)}). No los vuelvas a sumar.</div>`
-          : '') +
-        detalle('ingreso') +
-
-        `<hr>` + titulo('LO QUE SALIÓ HOY') +
+        `<hr>` + titulo('SALIDAS') +
         linea('Gastos', pesos(gastos)) +
         (retirado ? linea('+ Se sacó del cajón', pesos(retirado)) : '') +
         linea('= Total salió', pesos(totalSalio), 'g grande') +
         detalle('egreso') +
 
         `<hr>` + titulo('¿CUADRA LA CAJA?') +
+        linea('Efectivo que entró hoy (todo)', pesos(efectivoCaja)) +
+        (efectivoOtros !== 0
+          ? `<div class="peq">De eso, ${pesos(efectivo)} es clase suelta (arriba) ` +
+            `y ${pesos(Math.abs(efectivoOtros))} es de ${efectivoOtros > 0 ? 'otros ingresos '
+              + '(mensualidad, cumpleaños u otro)' : 'ajustes'}.</div>`
+          : '') +
         linea('Debía haber', pesos(d.esperado_efectivo)) +
         linea('Se contó', pesos(c.contado_cop || 0)) +
         (dif === 0
           ? `<div class="veredicto">SÍ CUADRA ✓</div>`
           : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
         linea('Se deja para mañana', pesos(c.dejado_cop || 0)) +
-        (retirado ? linea('Se retira hoy', pesos(retirado)) : '')
+        (retirado ? linea('Se retira hoy', pesos(retirado)) : '') +
+
+        `<hr>` + titulo('BANCO') +
+        linea('Recibió hoy', pesos(transferenciaBanco)) +
+        `<div class="peq">Puede no ser igual a las transferencias de Entradas: ` +
+          `aquí puede haber plata de clases de otro día, o de mensualidades y ` +
+          `otros cobros que también entran por transferencia.</div>` +
+        (futuras > 0
+          ? `<div class="ojo">De esto, <b>${pesos(futuras)}</b> es de ` +
+            `${futurasN} ${futurasN === 1 ? 'cliente' : 'clientes'} que pagaron hoy una clase ` +
+            `de OTRO día. Todavía no se la toman — ya quedó cobrada, nada más.</div>`
+          : '') +
+        (b.recibido_cop != null && Number(b.libre_hoy_cop || 0) > 0
+          ? `<div class="peq">Ojo: además, el banco tiene ${pesos(b.libre_hoy_cop)} ` +
+            `de hoy que nadie ha reclamado todavía. No es de este cierre.</div>`
+          : '')
         );
       })() +
 
@@ -3414,14 +3453,6 @@ const CONFIG = {
       linea('Ingresos a Banco', pesos(a.ingresos_a_banco)) +
       linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
       linea('DINERO EN CAJA', pesos(a.dinero_en_caja), 'g') +
-
-      // Informativo: lo que el banco reportó y todavía no quedó aplicado
-      // a ningún día. No es del cierre de hoy, así que va aparte y sin
-      // pretender que sea parte del cuadre de arriba.
-      (b.recibido_cop != null && Number(b.libre_hoy_cop || 0) > 0
-        ? `<div class="peq" style="margin-top:1mm">Ojo: además, el banco tiene ${pesos(b.libre_hoy_cop)} ` +
-          `de hoy que nadie ha reclamado todavía. No es de este cierre.</div>`
-        : '') +
 
       `<hr>` +
       `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
