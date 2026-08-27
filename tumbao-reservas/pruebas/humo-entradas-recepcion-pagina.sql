@@ -3,10 +3,16 @@
 -- por página — prueba de humo (0051)
 --
 -- El caso real: Tania cuenta en su cuaderno cuántas personas de clase
--- suelta entraron hoy. El efectivo no distingue recepción de un botón
--- genérico —los dos pasan por caja_movimientos igual—, así que va como
--- un solo número. La transferencia sí distingue, porque siempre queda
--- una fila en reservas con su origen.
+-- suelta entraron hoy, y por dónde entraron.
+--
+-- Lo que recepción cobra en el momento pasa por caja_movimientos, en
+-- cualquiera de los dos medios, y no deja reserva. Lo que se paga por la
+-- página sí deja reserva: esa fila es la que cruza el depósito con la
+-- clase. Por eso recepción se lee de caja y página de reservas.
+--
+-- (La versión 0051 de esta prueba daba por hecho que toda transferencia
+-- dejaba fila en reservas. No es así, y por eso la casilla de recepción
+-- salía siempre en cero en producción. Corregido en 0052.)
 -- ---------------------------------------------------------------------
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
@@ -63,15 +69,16 @@ select chk('se registra una mensualidad en efectivo',
   (caja_registrar(tk(), 'ingreso', 'mensualidad', 125000, 'efectivo', 'Mensualidad Marzo')->>'ok')::boolean, true);
 
 \echo ''
-\echo '-- Transferencia por recepción -----------------------------------------'
-insert into pagos (id, banco, valor_cop, fecha_pago, remitente, referencia, hoja_fila)
-values ('63333333-0000-4000-8000-000000000001', 'Bancolombia', 15000,
-        now(), 'Recep Transf', 'RT1', 'gg1');
-insert into reservas (id, codigo, clase_id, nombre, telefono, estado, tipo,
-                      origen, pago_id, created_at)
-values ('62222222-0000-4000-8000-000000000002', 'ENT-002',
-        '61111111-0000-4000-8000-000000000001', 'Recep Transf', '3000000002',
-        'confirmada', 'suelta', 'recepcion', '63333333-0000-4000-8000-000000000001', now());
+\echo '-- Transferencia por recepción (0052) ----------------------------------'
+-- Corregido en 0052. Antes esto insertaba una reserva con origen
+-- 'recepcion' Y pago_id, y daba la prueba por buena. Ese caso no existe:
+-- en toda la base hay 25 reservas de recepción y las 25 con pago_id
+-- nulo. Cuando alguien llega y paga en el momento por transferencia,
+-- recepción lo registra como movimiento de caja y no crea reserva —la
+-- persona ya está adentro, no hay cupo que apartar—. Es el mismo camino
+-- del efectivo, solo que con otro medio.
+select chk('se registra la transferencia que cobró recepción',
+  (caja_registrar(tk(), 'ingreso', 'clase_suelta', 15000, 'transferencia', 'cobro en el mostrador')->>'ok')::boolean, true);
 
 \echo ''
 \echo '-- Transferencia por página, y un grupo de 2 (cada quien aparte) ------'

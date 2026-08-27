@@ -3365,13 +3365,23 @@ const CONFIG = {
         const transferenciaBanco = b.recibido_cop != null ? b.recibido_cop
           : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
 
-        // Tres números, cada uno con una sola fuente confiable. No son
-        // cuatro celdas cruzadas por origen × medio porque en Caja hay
-        // un botón genérico de "Clase suelta" que cobra en efectivo SIN
-        // dejar reserva — ese cobro no tiene de dónde leer si vino de
-        // recepción o de la página, así que el efectivo va como un solo
-        // número. La transferencia sí distingue: siempre deja una fila
-        // en reservas, que es lo que la cruza con el depósito.
+        // Tres números, cada uno leído de donde su plata vive de verdad.
+        //
+        // Lo que recepción cobra en el momento —efectivo o transferencia—
+        // se registra como movimiento de caja y NO deja reserva: la
+        // persona ya está adentro, no hay cupo que apartar. La página sí
+        // deja reserva: esa fila es lo que cruza el depósito con la clase.
+        //
+        // Por eso no son cuatro celdas cruzadas origen × medio. Recepción
+        // se lee de caja y va en dos líneas por medio de pago; página se
+        // lee de reservas y solo tiene transferencia, porque cobrar en
+        // efectivo no es una opción del formulario.
+        //
+        // Los tres conjuntos son ajenos —ningún movimiento de caja de
+        // clase suelta corresponde a una reserva, se cruzó por pago_id—
+        // así que sumarlos no repite un peso. Ver migración 0052: antes
+        // esto daba por hecho que toda transferencia dejaba reserva, y la
+        // línea de recepción salía siempre en cero por eso.
         const ent = d.entradas || {};
         const efectivo = Number(ent.efectivo_cop || 0);
         const efectivoN = Number(ent.efectivo_n || 0);
