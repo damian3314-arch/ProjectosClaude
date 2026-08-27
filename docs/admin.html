@@ -3357,6 +3357,13 @@ const CONFIG = {
         const efectivoCaja = Number(d.ingreso_efectivo || 0);
         const gastoEfectivo = Number(d.egreso_efectivo || 0);
         const hayGastos = (d.resumen_conceptos || []).some(x => x.sentido === 'egreso');
+        // Lo que registró recepción, de cualquier concepto. Sale entero de
+        // caja_movimientos, y ahí NO cae nada de la página: comprobado sobre
+        // la base entera —82 ingresos en Caja, ninguno creado por una reserva
+        // web o de formulario—. Así que "lo que hay en Caja" y "lo que cobró
+        // recepción" son la misma cosa, sin tener que filtrar por origen.
+        const transferenciaCaja = Number(d.ingreso_transferencia || 0);
+        const cobroRecepcion = efectivoCaja + transferenciaCaja;
         const transferenciaBanco = b.recibido_cop != null ? b.recibido_cop
           : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
 
@@ -3409,6 +3416,22 @@ const CONFIG = {
         linea('Transf. recepción', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
         linea('Transf. página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
         linea('= Entraron', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
+
+        // Entradas responde "quién entró hoy" y solo mira clase suelta. Esta
+        // responde "cuánto cobró recepción" y mira TODO: mensualidad,
+        // cumpleaños y otros ingresos incluidos. Sin ella, de cada $100 que
+        // pasan por el mostrador la tirilla solo desglosaba $7.
+        //
+        // El subtítulo no es adorno: sin él, "por transferencia" aquí y
+        // "Recibió hoy" en Banco parecen contradecirse. Son cosas distintas
+        // —esto es lo que registró recepción; aquello es todo lo que confirmó
+        // el banco, con los pagos de la página dentro— y decirlo en una línea
+        // evita que alguien intente cuadrarlas.
+        `<hr>` + titulo('COBRÓ RECEPCIÓN') +
+        `<div class="peq">Cualquier concepto, registrado en Caja.</div>` +
+        linea('En efectivo', pesos(efectivoCaja)) +
+        linea('Por transferencia', pesos(transferenciaCaja)) +
+        linea('= Total cobró', pesos(cobroRecepcion), 'g grande') +
 
         `<hr>` + titulo('GASTOS DEL DÍA') +
         // Sin gastos no se pinta la lista: un "—" suelto encima de un
