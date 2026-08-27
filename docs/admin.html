@@ -3319,12 +3319,6 @@ const CONFIG = {
     // puede decir en voz alta, y el veredicto de "¿cuadra?" se ve sin
     // tener que leer nada más: es grande y dice SÍ o NO, no un número
     // pelado que hay que interpretar.
-    const detalle = (sentido) => {
-      const filas = (d.resumen_conceptos || []).filter(x => x.sentido === sentido);
-      if (!filas.length) return '';
-      return `<div class="peq" style="margin-top:1.5mm">Detalle:</div>` + conceptos(sentido);
-    };
-
     $('#tirilla').innerHTML =
       `<h1>TUMBAO</h1>` +
       `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
@@ -3360,8 +3354,9 @@ const CONFIG = {
       (() => {
         const gastos = Number(d.total_egresos || 0);
         const retirado = Number(c.retirado_cop || 0);
-        const totalSalio = gastos + retirado;
         const efectivoCaja = Number(d.ingreso_efectivo || 0);
+        const gastoEfectivo = Number(d.egreso_efectivo || 0);
+        const hayGastos = (d.resumen_conceptos || []).some(x => x.sentido === 'egreso');
         const transferenciaBanco = b.recibido_cop != null ? b.recibido_cop
           : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
 
@@ -3409,46 +3404,60 @@ const CONFIG = {
 
         return (
         `<hr>` + titulo('ENTRADAS · clase suelta de hoy') +
-        `<div class="peq">Cuenta a quien entra hoy a una clase, no cuándo pagó.</div>` +
+        `<div class="peq">Quién entró hoy, no cuándo pagó.</div>` +
         linea('Efectivo', efectivoN ? `${efectivoN} · ${pesos(efectivo)}` : '—') +
-        linea('Transferencia, recepción', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
-        linea('Transferencia, página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
-        linea('= Total entradas', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
+        linea('Transf. recepción', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
+        linea('Transf. página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
+        linea('= Entraron', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
 
-        `<hr>` + titulo('SALIDAS') +
-        linea('Gastos', pesos(gastos)) +
-        (retirado ? linea('+ Se sacó del cajón', pesos(retirado)) : '') +
-        linea('= Total salió', pesos(totalSalio), 'g grande') +
-        detalle('egreso') +
+        `<hr>` + titulo('GASTOS DEL DÍA') +
+        // Sin gastos no se pinta la lista: un "—" suelto encima de un
+        // total en cero no dice nada que el cero no diga ya.
+        (hayGastos ? conceptos('egreso') : '') +
+        linea(hayGastos ? '= Total gastos' : 'Total gastos', pesos(gastos), 'g grande') +
 
-        `<hr>` + titulo('¿CUADRA LA CAJA?') +
-        linea('Efectivo que entró hoy (todo)', pesos(efectivoCaja)) +
+        // Una sola columna que baja: se parte de la base, se suma lo que
+        // entró, se resta lo que salió, y ahí queda lo que DEBÍA haber.
+        // Enfrente, lo que se contó. El veredicto cierra la cuenta.
+        //
+        // Antes esta parte empezaba de cero con "Efectivo que entró hoy"
+        // —un número distinto al total de Entradas, sin decir por qué— y
+        // "Debía haber" aparecía sin la resta que lo produce. Con la
+        // aritmética a la vista, un descuadre se persigue línea por línea
+        // en vez de tener que reconstruirla de memoria.
+        `<hr>` + titulo('EL CAJÓN · solo efectivo') +
+        linea('Base al abrir', pesos(d.base_cop)) +
+        linea('+ Entró en efectivo', pesos(efectivoCaja)) +
         (efectivoOtros !== 0
-          ? `<div class="peq">De eso, ${pesos(efectivo)} es clase suelta (arriba) ` +
-            `y ${pesos(Math.abs(efectivoOtros))} es de ${efectivoOtros > 0 ? 'otros ingresos '
-              + '(mensualidad, cumpleaños u otro)' : 'ajustes'}.</div>`
+          ? `<div class="peq">${pesos(efectivo)} de clase suelta · ` +
+            `${pesos(Math.abs(efectivoOtros))} de ` +
+            `${efectivoOtros > 0 ? 'otros cobros' : 'ajustes'}</div>`
           : '') +
-        linea('Debía haber', pesos(d.esperado_efectivo)) +
+        linea('− Gastos en efectivo', pesos(gastoEfectivo)) +
+        linea('= Debía haber', pesos(d.esperado_efectivo), 'g') +
         linea('Se contó', pesos(c.contado_cop || 0)) +
         (dif === 0
           ? `<div class="veredicto">SÍ CUADRA ✓</div>`
           : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
-        linea('Se deja para mañana', pesos(c.dejado_cop || 0)) +
+
+        // El retiro va DESPUÉS del veredicto porque ocurre después: se
+        // cuenta el cajón, se ve si cuadra, y solo entonces se saca la
+        // plata. Estaba arriba, sumando dentro de "Salidas" como si fuera
+        // un gasto, y otra vez aquí abajo. Aparecía dos veces y en el
+        // sitio equivocado: sacar plata del cajón no es gastarla.
         (retirado ? linea('Se retira hoy', pesos(retirado)) : '') +
+        linea('Queda para mañana', pesos(c.dejado_cop || 0)) +
 
         `<hr>` + titulo('BANCO') +
         linea('Recibió hoy', pesos(transferenciaBanco)) +
-        `<div class="peq">Puede no ser igual a las transferencias de Entradas: ` +
-          `aquí puede haber plata de clases de otro día, o de mensualidades y ` +
-          `otros cobros que también entran por transferencia.</div>` +
+        `<div class="peq">No da igual que las transferencias de arriba: ` +
+          `incluye otros cobros y clases de otro día.</div>` +
         (futuras > 0
-          ? `<div class="ojo">De esto, <b>${pesos(futuras)}</b> es de ` +
-            `${futurasN} ${futurasN === 1 ? 'cliente' : 'clientes'} que pagaron hoy una clase ` +
-            `de OTRO día. Todavía no se la toman — ya quedó cobrada, nada más.</div>`
+          ? `<div class="ojo">De eso, <b>${pesos(futuras)}</b>: ` +
+            `${futurasN} ${futurasN === 1 ? 'pagó' : 'pagaron'} hoy una clase de otro día.</div>`
           : '') +
         (b.recibido_cop != null && Number(b.libre_hoy_cop || 0) > 0
-          ? `<div class="peq">Ojo: además, el banco tiene ${pesos(b.libre_hoy_cop)} ` +
-            `de hoy que nadie ha reclamado todavía. No es de este cierre.</div>`
+          ? `<div class="peq">Sin reclamar: ${pesos(b.libre_hoy_cop)} (no es de este cierre).</div>`
           : '')
         );
       })() +
