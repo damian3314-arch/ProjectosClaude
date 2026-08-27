@@ -58,12 +58,6 @@ p{margin:0}
 .dots i{height:4px;flex:1;border-radius:99px;background:var(--surface-2);transition:background .2s}
 .dots i.on{background:var(--leak)}
 .dots i.done{background:var(--ink-2)}
-.toggle{
-  font-family:"Chivo Mono",monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
-  background:transparent;border:1px solid var(--line);color:var(--muted);
-  border-radius:99px;padding:5px 10px;cursor:pointer;white-space:nowrap;
-}
-.toggle.on{background:var(--coach-soft);border-color:transparent;color:var(--coach)}
 
 /* ---------- cuerpo ---------- */
 main{flex:1;padding:8px 18px 20px;display:flex;flex-direction:column;gap:20px;justify-content:center}
@@ -145,9 +139,11 @@ input[type=range]::-moz-range-thumb{
 .close .big{font-size:1.6rem;color:var(--save);line-height:1.1}
 .close p{font-size:.92rem;color:var(--ink-2)}
 .say{
-  background:var(--coach-soft);border-radius:12px;padding:14px 15px;display:flex;flex-direction:column;gap:6px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:15px 16px;display:flex;flex-direction:column;gap:7px;
 }
-.say q{font-size:1.02rem;color:var(--coach);font-style:normal;line-height:1.45;display:block;font-weight:700}
+.say q{font-size:1.02rem;color:var(--ink);font-style:normal;line-height:1.45;display:block;font-weight:700}
+.say q::before,.say q::after{content:""}
 .say[hidden]{display:none}
 
 details.how{background:var(--surface);border:1px solid var(--line);border-radius:12px}
@@ -201,7 +197,6 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
   <div class="top">
     <div class="row">
       <div class="dots" id="dots" aria-hidden="true"></div>
-      <button class="toggle on" id="guia" aria-pressed="true">Guía asesor</button>
     </div>
   </div>
 
@@ -226,8 +221,7 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
     fuga:4, cuenta:45000, repro:5, insumo:12000
   };
 
-  var paso = 0, guiaOn = true;
-  try{ guiaOn = localStorage.getItem("guia") !== "off"; }catch(e){}
+  var paso = 0;
 
   var cop = function(n){ return "$" + Math.round(n).toLocaleString("es-CO"); };
   var cortito = function(n){
@@ -258,62 +252,59 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
   var PASOS = [
     { portada:true },
     {
-      ask:"¿Cuánto vendiste el mes pasado, más o menos?",
-      coach:"Arranca por acá. Es la pregunta más fácil de contestar y le baja la guardia.",
+      ask:"¿Cuánto vendió tu restaurante el mes pasado?",
       campo:"ventas", tipo:"slider", destapa:null, min:5000000, max:150000000, step:1000000,
-      lee:function(){ return cop(S.ventas); }, sub:"Ventas del mes, antes de descontar nada",
+      lee:function(){ return cop(S.ventas); }, sub:"Ventas totales del mes, antes de descontar gastos",
       golpe:function(c){ return null; }
     },
     {
-      ask:"De cada venta, ¿cuánto se te va en comida y bebida?",
-      coach:"Si no lo sabe, déjalo en 33% y dile: “ese es el promedio de la industria”. Nadie discute un promedio.",
+      ask:"De cada venta, ¿cuánto se va en comida y bebida?",
+      ayuda:"Si no lo tienes claro, déjalo en 33%: es el promedio de un restaurante de servicio a la mesa.",
       campo:"food", tipo:"slider", destapa:"merma", min:20, max:50, step:1,
-      lee:function(){ return S.food + "%"; }, sub:"Costo de insumos sobre las ventas",
+      lee:function(){ return S.food + "%"; }, sub:"Lo que cuestan los insumos, sobre el total de las ventas",
       golpe:function(c){
         return { monto:c.merma,
-          texto:"Compras " + cop(c.insumos) + " en insumos al mes. Entre " + cop(c.mermaBaja) + " y " + cop(c.mermaAlta) + " se van en porciones sin medir, producto vencido y salidas que nadie anotó." };
+          texto:"Compras " + cop(c.insumos) + " en insumos cada mes. Entre " + cop(c.mermaBaja) + " y " + cop(c.mermaAlta) + " se pierden en porciones sin medir, producto vencido y salidas que nadie alcanzó a registrar." };
       }
     },
     {
-      ask:"¿Cuánto te toma cerrar la caja cada noche?",
-      coach:"Deja que conteste solo. Casi siempre dice un número y después lo sube: “bueno… si hay descuadre, más”.",
+      ask:"¿Cuánto tiempo toma cerrar la caja cada noche?",
       campo:"caja", tipo:"chips", destapa:null, opciones:[[15,"15 min"],[30,"30 min"],[40,"40 min"],[60,"1 hora"],[90,"Más de 1 hora"]],
-      lee:function(){ return S.caja + " min"; }, sub:"Cuadrar caja, revisar vouchers, cazar el descuadre",
+      lee:function(){ return S.caja + " min"; }, sub:"Cuadrar la caja, revisar los vouchers y buscar el descuadre",
       golpe:function(c){ return null; }
     },
     {
-      ask:"¿Y contar el inventario de neveras y bodega?",
-      coach:"Aquí sale la cifra que más los sorprende. No la anuncies: deja que la vean aparecer.",
+      ask:"¿Y cuánto toma contar el inventario de neveras y bodega?",
       campo:"inv", tipo:"chips", destapa:"tiempo", opciones:[[0,"No lo cuento"],[15,"15 min"],[30,"30 min"],[45,"45 min"],[60,"1 hora"]],
-      lee:function(){ return S.inv + " min"; }, sub:"Contar, anotar en la libreta, pasar al Excel",
+      lee:function(){ return S.inv + " min"; }, sub:"Contar el producto, anotarlo y pasarlo al Excel",
       golpe:function(c){
         return { monto:c.tiempo,
-          texto:Math.round(c.horas) + " horas al mes cuadrando a mano, a " + cop(HORA_REAL) + " la hora real con prestaciones. Es un tercio de un sueldo que no produce un solo plato." };
+          texto:"Son " + Math.round(c.horas) + " horas al mes haciendo cuentas a mano, a " + cop(HORA_REAL) + " la hora con prestaciones incluidas. Equivale a un tercio de un sueldo que no produce un solo plato." };
       }
     },
     {
-      ask:"¿Cuántas mesas se van sin pagar al mes?",
-      coach:"Si dice “ninguna”, pregunta: “¿ni una en todo el año?”. Casi siempre se acuerda de una.",
+      ask:"¿Cuántas mesas se van sin pagar cada mes?",
+      ayuda:"Cuenta también las que se fueron sin pagar aunque haya sido hace meses.",
       campo:"fuga", tipo:"chips", destapa:"nopago", opciones:[[0,"Ninguna"],[1,"1"],[2,"2"],[4,"4"],[8,"8 o más"]],
-      lee:function(){ return S.fuga === 1 ? "1 al mes" : S.fuga + " al mes"; }, sub:"Cuentas que salieron por la puerta",
+      lee:function(){ return S.fuga === 1 ? "1 al mes" : S.fuga + " al mes"; }, sub:"Cuentas que se fueron sin cobrarse",
       segundo:{ campo:"cuenta", etiqueta:"Cuenta promedio", tipo:"slider", min:15000, max:200000, step:5000,
                 lee:function(){ return cop(S.cuenta); } },
       golpe:function(c){
         if (c.nopago <= 0) return null;
-        return { monto:c.nopago, texto:cop(c.nopago) + " al mes son " + cop(c.nopago*12) + " al año. Eso es una nevera nueva." };
+        return { monto:c.nopago, texto:cop(c.nopago) + " al mes son " + cop(c.nopago*12) + " al año. Con eso se compra una nevera nueva." };
       }
     },
     {
-      ask:"¿Cuántos platos rehace la cocina por semana?",
-      coach:"Comanda mal escrita o mal cantada. Pregúntalo mirando a la cocina, no a él.",
+      ask:"¿Cuántos platos tiene que rehacer la cocina cada semana?",
+      ayuda:"Son los platos que hay que volver a preparar porque el pedido llegó mal a la cocina.",
       campo:"repro", tipo:"chips", destapa:"reproceso", opciones:[[0,"Ninguno"],[2,"2"],[5,"5"],[10,"10"],[20,"20 o más"]],
-      lee:function(){ return S.repro === 1 ? "1 por semana" : S.repro + " por semana"; }, sub:"El insumo se pierde y la cocina cocina dos veces",
-      segundo:{ campo:"insumo", etiqueta:"Costo del insumo por plato", tipo:"slider", min:3000, max:60000, step:1000,
+      lee:function(){ return S.repro === 1 ? "1 por semana" : S.repro + " por semana"; }, sub:"El insumo se pierde y la cocina trabaja dos veces",
+      segundo:{ campo:"insumo", etiqueta:"Cuánto cuesta el insumo de ese plato", tipo:"slider", min:3000, max:60000, step:1000,
                 lee:function(){ return cop(S.insumo); } },
       golpe:function(c){
         if (c.reproceso <= 0) return null;
         return { monto:c.reproceso,
-          texto:Math.round(S.repro*SEMANAS_MES) + " platos al mes a " + cop(c.costoRepro) + " cada uno: el insumo perdido más doce minutos de cocina que ya estaban pagados." };
+          texto:"Son " + Math.round(S.repro*SEMANAS_MES) + " platos al mes, a " + cop(c.costoRepro) + " cada uno: el insumo que se pierde más doce minutos de cocina que ya estaban pagados." };
       }
     },
     { resultado:true }
@@ -322,20 +313,6 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
   var main = document.getElementById("main");
   var foot = document.getElementById("foot");
   var dots = document.getElementById("dots");
-  var btnGuia = document.getElementById("guia");
-
-  function pintaGuia(){
-    btnGuia.classList.toggle("on", guiaOn);
-    btnGuia.setAttribute("aria-pressed", guiaOn ? "true" : "false");
-    btnGuia.textContent = guiaOn ? "Guía asesor" : "Guía oculta";
-    Array.prototype.forEach.call(document.querySelectorAll(".coach,.say"), function(n){ n.hidden = !guiaOn; });
-  }
-  btnGuia.addEventListener("click", function(){
-    guiaOn = !guiaOn;
-    try{ localStorage.setItem("guia", guiaOn ? "on" : "off"); }catch(e){}
-    pintaGuia();
-  });
-
   function pintaDots(){
     dots.innerHTML = "";
     for (var i = 1; i < PASOS.length; i++){
@@ -398,25 +375,24 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
     // ----- Portada -----
     if (P.portada){
       step.appendChild(nodo("p","lbl","Loggro Restobar"));
-      var h = nodo("p","ask","Vamos a ver cuánto se está fugando tu restaurante este mes.");
+      var h = nodo("p","ask","Veamos cuánto dinero se está fugando de tu restaurante cada mes.");
       step.appendChild(h);
-      step.appendChild(nodo("p","sub","Seis preguntas. Tres minutos. Con tus números, no con los de nadie más."));
+      step.appendChild(nodo("p","sub","Son seis preguntas y toma tres minutos. El cálculo se hace con tus propios números, no con promedios ajenos."));
 
       var inp = document.createElement("input");
-      inp.className = "nombre"; inp.type = "text"; inp.placeholder = "Nombre del restaurante (opcional)";
+      inp.className = "nombre"; inp.type = "text"; inp.placeholder = "Nombre de tu restaurante (opcional)";
       inp.value = S.nombre;
       inp.addEventListener("input", function(){ S.nombre = inp.value; });
       step.appendChild(inp);
 
       var c = nodo("div","coach");
-      c.appendChild(nodo("p",null,"Gira la pantalla hacia el cliente. Tú lees la pregunta en voz alta, él mueve el control. No expliques el software todavía — solo pregunta."));
+      c.appendChild(nodo("p",null,"Todo se calcula en tu propio dispositivo. No guardamos ni enviamos ninguno de estos datos."));
       step.appendChild(c);
 
       main.appendChild(step);
       var b = nodo("button","btn wide alt","Empezar");
       b.addEventListener("click", function(){ paso = 1; render(); });
       foot.appendChild(b);
-      pintaGuia();
       return;
     }
 
@@ -428,15 +404,15 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
       var t = nodo("div","total");
       t.appendChild(nodo("p","lbl", titulo + " está perdiendo"));
       t.appendChild(nodo("p","big display", cop(c2.total)));
-      t.appendChild(nodo("p","sub","al mes, en cosas que hoy nadie mide"));
+      t.appendChild(nodo("p","sub","cada mes, en fugas que hoy nadie está midiendo"));
       step.appendChild(t);
 
       var rows = nodo("div","rows");
       var max = Math.max(c2.merma, c2.tiempo, c2.nopago, c2.reproceso, 1);
-      [["Inventario sin control", c2.merma, "Se descuenta solo por receta cada vez que se vende el plato."],
-       ["Horas administrativas", c2.tiempo, "La caja cierra sola y el inventario ya está contado."],
-       ["Cuentas que no se cobran", c2.nopago, "La cuenta se cobra en la mesa, no en la caja."],
-       ["Platos rehechos", c2.reproceso, "La comanda sale de la mesa a la pantalla de cocina, tal cual se tomó."]
+      [["Inventario sin control", c2.merma, "Con Loggro el inventario se descuenta solo, por receta, cada vez que vendes el plato."],
+       ["Horas administrativas", c2.tiempo, "La caja cierra sola y el inventario queda contado al día."],
+       ["Cuentas que no se cobran", c2.nopago, "El cliente paga en la mesa, sin que nadie tenga que ir y volver."],
+       ["Platos rehechos", c2.reproceso, "El pedido va de la mesa a la pantalla de cocina, tal como se tomó."]
       ].forEach(function(r){
         if (r[1] <= 0) return;
         var rw = nodo("div","rw");
@@ -453,33 +429,33 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
       step.appendChild(rows);
 
       var cl = nodo("div","close");
-      cl.appendChild(nodo("p","lbl","Loggro Restobar cuesta " + cop(INVERSION) + " al mes"));
+      cl.appendChild(nodo("p","lbl","Loggro Restobar desde " + cop(INVERSION) + " al mes"));
       cl.appendChild(nodo("p","big display", c2.total > INVERSION ? "Se paga solo en " + c2.dias + (c2.dias===1?" día":" días") : "Tu operación ya está controlada"));
       cl.appendChild(nodo("p",null, c2.total > INVERSION
-        ? "El resto del mes —" + cop(Math.max(c2.neto,0)) + "— es plata que hoy se está yendo."
-        : "Con estos números la fuga es menor que la inversión. Vale la pena revisar juntos dónde está el ahorro antes de que compres nada."));
+        ? "Los otros " + cop(Math.max(c2.neto,0)) + " del mes son dinero que hoy se está yendo."
+        : "Con estos números tu fuga es menor que la inversión. Antes de que compres nada, vale la pena revisar juntos si el ahorro está en otro lado."));
       step.appendChild(cl);
 
       if (c2.total > INVERSION){
         var say = nodo("div","say");
-        say.appendChild(nodo("p","lbl","Ahora dices esto, y te callas"));
+        say.appendChild(nodo("p","lbl","El siguiente paso"));
         var q = document.createElement("q");
-        q.textContent = "Ese número lo armaste tú, no yo. Yo no vine a que me creas: cargamos tus diez platos más vendidos y te muestro un turno real —comanda a cocina, inventario descontado, cuenta cerrada— con tu propia carta. Son quince minutos. ¿El jueves a las tres?";
+        q.textContent = "No tienes que creernos. Cargamos tus diez platos más vendidos y te mostramos un turno real con tu propia carta: el pedido saliendo a cocina, el inventario descontándose y la cuenta cerrando. Son quince minutos, en tu restaurante y sin compromiso.";
         say.appendChild(q);
         step.appendChild(say);
       }
 
       var how = document.createElement("details");
       how.className = "how";
-      var sm = document.createElement("summary"); sm.textContent = "Si te pregunta de dónde salen los números";
+      var sm = document.createElement("summary"); sm.textContent = "¿De dónde salen estos números?";
       how.appendChild(sm);
       var inn = nodo("div","in");
       inn.innerHTML =
-        "<p><b>Inventario:</b> la merma se mide sobre lo que compras, no sobre lo que vendes. Insumos del mes <code>" +
-        cop(c2.insumos) + "</code>. Un restaurante con control se mantiene bajo el 5% de sus insumos; sin control se va a 8–12%. Lo que ves es la diferencia recuperable.</p>" +
-        "<p><b>Horas:</b> salario mínimo 2026 <code>$1.750.905</code> ÷ 210 horas = <code>$8.338</code> la hora, × 1,45 de prestaciones = <code>$12.090</code> la hora real.</p>" +
-        "<p><b>Cuentas perdidas y platos rehechos:</b> son tus propios números, sin porcentajes de industria de por medio.</p>" +
-        "<p>No prometemos recuperar el 100%. Lo que decimos es que hoy nadie está midiendo esa plata.</p>";
+        "<p><b>Inventario.</b> La merma se mide sobre lo que compras, no sobre lo que vendes. Según tus respuestas, compras <code>" +
+        cop(c2.insumos) + "</code> en insumos al mes. Un restaurante con control se mantiene por debajo del 5% de esa cifra; uno sin control llega al 8% o 12%. Lo que aparece arriba es esa diferencia, que es la parte recuperable.</p>" +
+        "<p><b>Horas administrativas.</b> El salario mínimo de 2026 es de <code>$1.750.905</code>. Dividido entre 210 horas da <code>$8.338</code> la hora, y multiplicado por 1,45 de prestaciones sociales da <code>$12.090</code> la hora real.</p>" +
+        "<p><b>Cuentas sin cobrar y platos rehechos.</b> Salen de los números que tú mismo ingresaste, sin porcentajes de industria de por medio.</p>" +
+        "<p>No prometemos que recuperes el 100% de esa cifra. Lo que sí sabemos es que hoy nadie la está midiendo.</p>";
       how.appendChild(inn);
       step.appendChild(how);
 
@@ -498,17 +474,16 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
         dos.appendChild(bw);
       }
       acc.appendChild(dos);
-      var bn = nodo("button","btn ghost","Nuevo cliente");
+      var bn = nodo("button","btn ghost","Empezar de nuevo");
       bn.addEventListener("click", function(){
         S = { nombre:"", ventas:30000000, food:33, caja:40, inv:30, fuga:4, cuenta:45000, repro:5, insumo:12000 };
         paso = 0; render();
       });
       acc.appendChild(bn);
-      var av = nodo("p","aviso","Listo, quedó copiado."); av.hidden = true; av.id = "aviso";
+      var av = nodo("p","aviso","Listo, el resumen quedó copiado."); av.hidden = true; av.id = "aviso";
       acc.appendChild(av);
       foot.style.display = "block";
       foot.appendChild(acc);
-      pintaGuia();
       return;
     }
 
@@ -554,9 +529,9 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
 
     step.appendChild(golpe);
 
-    if (P.coach){
+    if (P.ayuda){
       var co = nodo("div","coach");
-      co.appendChild(nodo("p",null,P.coach));
+      co.appendChild(nodo("p",null,P.ayuda));
       step.appendChild(co);
     }
 
@@ -580,7 +555,6 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
     foot.appendChild(next);
 
     actualiza();
-    pintaGuia();
   }
 
   function parcial(c, hasta){
@@ -604,9 +578,9 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
       "",
       "TOTAL: " + cop(c.total) + " al mes",
       "Loggro Restobar: " + cop(INVERSION) + " al mes",
-      "Se paga solo en " + c.dias + " días.",
+      "Se paga solo en " + c.dias + " días de operación.",
       "",
-      "Siguiente paso: cargamos tus 10 platos más vendidos y te mostramos un turno real con tu propia carta. 15 minutos."
+      "Siguiente paso: cargar mis 10 platos más vendidos y ver un turno real con mi propia carta. 15 minutos."
     ].join("\n");
   }
 
