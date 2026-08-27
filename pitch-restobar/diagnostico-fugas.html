@@ -135,6 +135,11 @@ input[type=range]::-moz-range-thumb{
 .say q{font-size:1.02rem;color:var(--ink);font-style:normal;line-height:1.45;display:block;font-weight:700}
 .say q::before,.say q::after{content:""}
 .say .dice{font-size:.93rem;color:var(--ink-2);line-height:1.5}
+.say .tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+.say .tags span{
+  font-family:"Chivo Mono",monospace;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--save-soft);color:var(--save);border-radius:99px;padding:6px 10px;
+}
 .say[hidden]{display:none}
 
 details.how{background:var(--surface);border:1px solid var(--line);border-radius:12px}
@@ -432,10 +437,15 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
         var say = nodo("div","say");
         say.appendChild(nodo("p","lbl","Te invitamos a verlo con tus propios datos"));
         var q = document.createElement("q");
-        q.textContent = "Agenda una demostración y la hacemos con la información de tu restaurante.";
+        q.textContent = "Agendemos veinte o treinta minutos por videollamada y la hacemos con la información de tu restaurante.";
         say.appendChild(q);
-        say.appendChild(nodo("p","dice","Cargar tu carta es muy sencillo y lo hacemos juntos: puedes traerla el día de la reunión —una foto es suficiente— y creamos tus productos ahí mismo a partir de la imagen. Desde ese momento ves el proceso completo en vivo: cómo se toma el pedido, cómo entra la comanda a la cocina, cómo se descuenta el inventario y cómo sale tu factura electrónica."));
+        say.appendChild(nodo("p","dice","Cargar tu carta es muy sencillo y lo hacemos juntos: con una foto basta para que tus productos se creen a partir de la imagen. Desde ahí ves el proceso completo en vivo: cómo se toma el pedido, cómo entra la comanda a la cocina, cómo se descuenta el inventario y cómo sale tu factura electrónica."));
         say.appendChild(nodo("p","dice","Con mucho gusto te acompañamos en todo el proceso."));
+        var tags = nodo("div","tags");
+        ["Virtual","20 a 30 minutos","Con tus datos","Sin compromiso"].forEach(function(t){
+          tags.appendChild(nodo("span",null,t));
+        });
+        say.appendChild(tags);
         step.appendChild(say);
       }
 
@@ -579,7 +589,7 @@ details.how code{font-family:"Chivo Mono",monospace;font-size:.82rem;background:
       "Loggro Restobar: " + cop(INVERSION) + " al mes",
       "Se paga solo en " + c.dias + " días de operación.",
       "",
-      "Quiero agendar la demostración con los datos de mi restaurante."
+      "Quiero agendar la demostración por videollamada con los datos de mi restaurante."
     ].join("\n");
   }
 
