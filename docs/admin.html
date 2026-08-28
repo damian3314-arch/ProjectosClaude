@@ -3321,8 +3321,28 @@ const CONFIG = {
     const cajaN = Number(ent.efectivo_n || 0)
                 + Number(ent.recepcion_transferencia_n || 0);
 
-    const entroN   = pagN + manoN + cajaN;
-    const entroCop = pag + mano + cajaSuelta;
+    const sueltaN   = pagN + manoN + cajaN;
+    const sueltaCop = pag + mano + cajaSuelta;
+
+    // Lo demás que registra Caja: mensualidad, cumpleaños, otro ingreso.
+    // Va sin conteo de personas a propósito —una mensualidad no es
+    // alguien que entró hoy— pero su plata sí es del día, y es la
+    // mayoría: en el histórico son $4.725.000 contra $435.000 de clase
+    // suelta. Mientras no estuvo, la tirilla decía "Entró hoy" y mostraba
+    // el 8% del dinero.
+    //
+    // Se suman los dos medios por concepto: resumen_conceptos trae una
+    // fila por (concepto, medio), y en el papel "Mensualidades" es una
+    // sola línea, no una por efectivo y otra por transferencia.
+    const otros = {};
+    for (const x of (d.resumen_conceptos || [])) {
+      if (x.sentido !== 'ingreso' || x.concepto === 'clase_suelta') continue;
+      otros[x.concepto] = (otros[x.concepto] || 0) + Number(x.valor_cop || 0);
+    }
+    const otrosLista = Object.entries(otros).sort((a, b) => b[1] - a[1]);
+    const otrosCop = otrosLista.reduce((n, [, v]) => n + v, 0);
+
+    const entroCop = sueltaCop + otrosCop;
 
     const salio = Number(d.total_egresos || 0);
     // Lo que el banco confirmo hoy, de cualquier dia de clase. Si el
@@ -3352,7 +3372,14 @@ const CONFIG = {
       linea('Página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
       linea('Apuntados a mano', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
       linea('Cobrados en Caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
-      linea('= Entró', `${entroN} · ${pesos(entroCop)}`, 'g grande') +
+      // El número de personas va aquí y no en el total, porque es lo que
+      // se cruza contra el cuaderno de la puerta. Abajo se suman
+      // mensualidades, que no son gente entrando.
+      `<div class="peq">${sueltaN} ${sueltaN === 1 ? 'persona' : 'personas'} ` +
+        `a clase suelta · ${pesos(sueltaCop)}</div>` +
+      otrosLista.map(([concepto, cop]) =>
+        linea(nombreConcepto(concepto), pesos(cop))).join('') +
+      linea('= Entró', pesos(entroCop), 'g grande') +
 
       `<hr>` + titulo('SALIÓ') +
       ((d.resumen_conceptos || []).filter(x => x.sentido === 'egreso')
