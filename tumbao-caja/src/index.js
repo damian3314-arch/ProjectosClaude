@@ -1156,6 +1156,29 @@ export default {
             ? String(b.medio).toLowerCase() : null,
         });
 
+      } else if (ruta === '/api/juntar-pagos') {
+        // Varios depósitos que en realidad son un solo pago: alguien
+        // consignó 85.000 y después 40.000 para completar la
+        // mensualidad. Postgres valida que estén libres y que ninguno
+        // venga ya de otro grupo; aquí solo se limpia la lista.
+        const ids = Array.isArray(b.ids) ? b.ids.map(String) : [];
+        if (ids.some(x => !/^[0-9a-f-]{36}$/i.test(x))) {
+          return json({ ok: false, error: 'PAGO_INVALIDO',
+            mensaje: 'No se reconoce alguno de esos depósitos. Recarga la lista.' }, 400, origen);
+        }
+        if (ids.length < 2) {
+          return json({ ok: false, error: 'FALTAN_DEPOSITOS',
+            mensaje: 'Escoge al menos dos depósitos para juntarlos.' }, 400, origen);
+        }
+        r = await rpc(env, 'caja_fusionar_pagos', { p_token: token, p_ids: ids });
+
+      } else if (ruta === '/api/separar-pago') {
+        const id = String(b.id || '');
+        if (!/^[0-9a-f-]{36}$/i.test(id)) {
+          return json({ ok: false, error: 'ID_INVALIDO' }, 400, origen);
+        }
+        r = await rpc(env, 'caja_separar_pago', { p_token: token, p_id: id });
+
       } else if (ruta === '/api/anular') {
         const id = String(b.id || '');
         if (!/^[0-9a-f-]{36}$/i.test(id)) {

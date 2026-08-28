@@ -249,6 +249,29 @@ const CONFIG = {
   #sin-dueno .cbt:hover{border-color:var(--ok);color:var(--ok)}
   #sin-dueno .cbt:disabled{opacity:.4;cursor:default}
 
+  /* Modo juntar: la barra con el contador y el confirmar. */
+  #sin-dueno .juntar-barra{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:0 0 .6rem;
+  }
+  #sin-dueno .juntar-barra .cuenta{
+    font-size:.76rem;color:var(--tx-2);font-variant-numeric:tabular-nums;
+  }
+  #sin-dueno .cbt.ok{border-color:rgba(74,222,128,.45);color:var(--ok)}
+  /* El escogido se marca con borde y no solo con el tic: en una pantalla
+     al sol el tic de 12px no se ve. */
+  #sin-dueno .pago.marcado{border-color:var(--ok);background:var(--bg-3)}
+  #sin-dueno .pago .tic{
+    display:inline-block;width:1.1rem;color:var(--ok);font-weight:700;
+  }
+  /* Las transferencias que forman un grupo, debajo de su fila. */
+  #sin-dueno .partes{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+    font-size:.72rem;color:var(--tx-3);
+    padding:.15rem 0 .5rem .6rem;margin-top:-.15rem;
+    border-left:2px solid var(--line-2);margin-left:.5rem;
+  }
+  #sin-dueno .partes .separar{font-size:.7rem;min-height:1.8rem;padding:.2rem .55rem}
+
   /* ---------- buscador y grupos de la cola ---------- */
   .buscar{flex:1;min-width:11rem;max-width:24rem;position:relative}
   .buscar input{padding-left:2rem}
@@ -2780,17 +2803,58 @@ const CONFIG = {
   // Aquí se pasa el depósito ENTERO: es lo que llegó al banco. Si hay que
   // partirlo (uno de $30.000 que paga dos clases) eso se sigue haciendo
   // en la Caja, que es donde se escribe el valor a mano.
+  // Modo "juntar": varios depósitos que en realidad son un solo pago.
+  // El caso que lo pidió: el bot de WhatsApp le dijo a una clienta que
+  // había media mensualidad, consignó $85.000, recepción le explicó que
+  // no existe y consignó $40.000 más. Son dos transferencias y una sola
+  // mensualidad.
+  //
+  // Es un modo aparte y no el comportamiento por defecto porque tocar un
+  // depósito para cobrarlo es lo que se hace veinte veces al día, y
+  // juntar dos es raro. Si tocar seleccionara siempre, habría que dar
+  // dos pasos para lo normal por culpa de lo excepcional.
+  let juntando = false;
+  const escogidos = new Set();
+
   function pintarSinDueno() {
     const caja = $('#sin-dueno');
-    if (!pagosLibres.length) { caja.hidden = true; caja.innerHTML = ''; return; }
-    const total = pagosLibres.reduce((s, p) => s + Number(p.valor_cop || 0), 0);
+    if (!pagosLibres.length) {
+      caja.hidden = true; caja.innerHTML = '';
+      juntando = false; escogidos.clear();
+      return;
+    }
+    // El saldo del grupo, cuando son varios juntos. Para uno solo es su
+    // propio valor, así que sirve para los dos casos.
+    const monto = p => Number(p.saldo_cop != null ? p.saldo_cop : (p.valor_cop || 0));
+    const total = pagosLibres.reduce((s, p) => s + monto(p), 0);
+    const sumaEscogida = pagosLibres
+      .filter(p => escogidos.has(p.pago_id || p.id))
+      .reduce((s, p) => s + monto(p), 0);
+
     caja.hidden = false;
     caja.innerHTML =
       `<h3>Llegó al banco y nadie lo ha reclamado</h3>` +
       `<p class="pista">${pagosLibres.length === 1 ? 'Un depósito' :
          pagosLibres.length + ' depósitos'} · ` +
         `$${total.toLocaleString('es-CO')} en total. ` +
-        `Toca uno para cobrarlo en la caja.</p>` +
+        (juntando
+          ? `Escoge los que sean un mismo pago.`
+          : `Toca uno para cobrarlo en la caja.`) +
+        `</p>` +
+      (pagosLibres.length > 1
+        ? `<div class="juntar-barra">` +
+            `<button type="button" class="cbt" id="modo-juntar">` +
+              `${juntando ? '✕ Cancelar' : '⧉ Juntar varios'}</button>` +
+            (juntando
+              ? `<span class="cuenta">${escogidos.size} escogido${
+                   escogidos.size === 1 ? '' : 's'}` +
+                 (escogidos.size ? ` · $${sumaEscogida.toLocaleString('es-CO')}` : '') +
+                 `</span>` +
+                `<button type="button" class="cbt ok" id="hacer-juntar"` +
+                  `${escogidos.size < 2 ? ' disabled' : ''}>Juntar en uno</button>`
+              : '') +
+          `</div>`
+        : '') +
       `<div class="libres">` +
       // OJO: aquí el campo se llama pago_id, no id. La lista del tablero
       // sale de admin_pendientes y la de la Caja de caja_del_dia, y cada
@@ -2798,15 +2862,33 @@ const CONFIG = {
       // depósito vacío: el ingreso se registraba igual pero sin enlazar,
       // así que el depósito no se descontaba y seguía en esta lista.
       pagosLibres.map(p => {
-        const valor = Number(p.valor_cop || 0);
-        return `<button type="button" class="pago" ` +
-          `data-pago="${esc(p.pago_id || p.id || '')}" data-valor="${esc(valor)}" ` +
+        const id = p.pago_id || p.id || '';
+        const valor = monto(p);
+        const partes = Array.isArray(p.partes) ? p.partes : [];
+        const esGrupo = p.es_grupo === true && partes.length > 1;
+        const marcado = escogidos.has(id);
+        return `<button type="button" class="pago${marcado ? ' marcado' : ''}" ` +
+          `data-pago="${esc(id)}" data-valor="${esc(valor)}" ` +
           `data-rem="${esc(p.remitente || 'sin nombre')}">` +
+          (juntando ? `<span class="tic">${marcado ? '✓' : ''}</span>` : '') +
           `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
           `<span class="sp"></span>` +
           `<span>$${valor.toLocaleString('es-CO')} · ` +
-            `${esc(p.cuando || '')} <span class="ir">→ cobrar</span></span>` +
-        `</button>`;
+            `${esc(p.cuando || '')}` +
+            (juntando ? '' : ` <span class="ir">→ cobrar</span>`) +
+          `</span>` +
+        `</button>` +
+        // Un grupo dice de qué transferencias se compone. Sin esto, la
+        // fila afirma que llegaron $125.000 de una y el extracto dice
+        // otra cosa: quien concilie va a creer que el panel miente.
+        (esGrupo
+          ? `<div class="partes">` +
+              partes.map(t => `<span>${esc(t.cuando || '')} · ` +
+                `$${Number(t.valor_cop || 0).toLocaleString('es-CO')}</span>`).join('') +
+              `<button type="button" class="cbt separar" data-separar="${esc(id)}">` +
+                `Separar</button>` +
+            `</div>`
+          : '');
       }).join('') +
       `</div>`;
   }
@@ -3723,9 +3805,66 @@ const CONFIG = {
       `<button class="btn chico" type="button" id="dep-soltar">Soltar</button>`;
   }
 
-  $('#sin-dueno').addEventListener('click', ev => {
+  $('#sin-dueno').addEventListener('click', async ev => {
+    // Entrar y salir del modo juntar.
+    if (ev.target.closest('#modo-juntar')) {
+      juntando = !juntando;
+      escogidos.clear();
+      pintarSinDueno();
+      return;
+    }
+
+    // Deshacer un grupo mal armado. Se pregunta porque desde la lista no
+    // se ve si a ese grupo ya se le registró el ingreso; si se le
+    // registró, el servidor lo rechaza y aquí se cuenta por qué.
+    const sep = ev.target.closest('[data-separar]');
+    if (sep) {
+      if (!confirm('¿Separar ese grupo? Los depósitos vuelven a quedar sueltos.')) return;
+      sep.disabled = true;
+      try {
+        await alWorker('separar-pago', { id: sep.dataset.separar });
+        nota('Separados', 'bien', 'Vuelven a estar sueltos en la lista.');
+        await cargarPendientes(true);
+      } catch (e) {
+        nota('No se pudo separar', 'mal', e.message);
+        sep.disabled = false;
+      }
+      return;
+    }
+
+    // Confirmar la unión.
+    if (ev.target.closest('#hacer-juntar')) {
+      const ids = [...escogidos];
+      if (ids.length < 2) return;
+      const btn = ev.target.closest('#hacer-juntar');
+      btn.disabled = true;
+      try {
+        const r = await alWorker('juntar-pagos', { ids });
+        juntando = false;
+        escogidos.clear();
+        nota('Quedaron como uno solo', 'bien',
+             `${r.partes} depósitos · $${Number(r.total_cop || 0).toLocaleString('es-CO')}. ` +
+             `Ya se puede cobrar de una.`);
+        await cargarPendientes(true);
+      } catch (e) {
+        nota('No se pudieron juntar', 'mal', e.message);
+        btn.disabled = false;
+      }
+      return;
+    }
+
     const b = ev.target.closest('.pago');
     if (!b || !b.dataset.pago) return;
+
+    // En modo juntar, tocar escoge; fuera de él, tocar cobra. Es la
+    // misma fila haciendo dos cosas, pero nunca a la vez.
+    if (juntando) {
+      const id = b.dataset.pago;
+      if (escogidos.has(id)) escogidos.delete(id); else escogidos.add(id);
+      pintarSinDueno();
+      return;
+    }
+
     depPendiente = { id: b.dataset.pago, valor: Number(b.dataset.valor), rem: b.dataset.rem };
     pintarDepPendiente();
     verPanel('caja');
