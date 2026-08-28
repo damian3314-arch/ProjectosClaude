@@ -207,6 +207,20 @@ const CONFIG = {
   #sin-dueno h3{font-size:.9rem;margin:0 0 .15rem}
   #sin-dueno .pista{font-size:.78rem;color:var(--tx-3);margin:0 0 .6rem}
   #sin-dueno .libres{display:grid;gap:.4rem}
+  /* Toda la fila del depósito es el botón: en el móvil de recepción un
+     objetivo grande se acierta sin mirar. */
+  #sin-dueno .pago{
+    width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  }
+  #sin-dueno .pago:hover{border-color:var(--ok)}
+  #sin-dueno .pago .ir{font-size:.72rem;color:var(--tx-3)}
+  #dep-pendiente{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+    background:var(--bg-2);border:1px solid var(--ok);border-radius:var(--r);
+    padding:.6rem .8rem;margin-bottom:.8rem;font-size:.82rem;
+  }
+  #dep-pendiente b{font-variant-numeric:tabular-nums}
+  #dep-pendiente .btn{margin-left:auto}
   /* Los conceptos van debajo de su depósito y en el mismo bloque: con
      dos o tres depósitos en pantalla, un botón suelto se lee como si
      fuera del de arriba. */
@@ -972,6 +986,12 @@ const CONFIG = {
         <span class="sp"></span>
         <button class="btn chico" id="caja-recargar">Recargar</button>
       </div>
+
+      <!-- Sale cuando se llega aquí tocando un depósito del tablero. Es
+           persistente y no un aviso que se va solo: si se pierde de
+           vista, la cajera elegiría un concepto sin saber que el
+           depósito viene enganchado. -->
+      <div id="dep-pendiente" hidden></div>
 
       <div class="caja-seccion" id="sec-entra">
         <h4><span class="pin"></span>Entra plata</h4>
@@ -2759,22 +2779,23 @@ const CONFIG = {
       `<p class="pista">${pagosLibres.length === 1 ? 'Un depósito' :
          pagosLibres.length + ' depósitos'} · ` +
         `$${total.toLocaleString('es-CO')} en total. ` +
-        `Dile qué fue y entra a la caja de una vez.</p>` +
+        `Toca uno para cobrarlo en la caja.</p>` +
       `<div class="libres">` +
+      // OJO: aquí el campo se llama pago_id, no id. La lista del tablero
+      // sale de admin_pendientes y la de la Caja de caja_del_dia, y cada
+      // una nombra distinto la misma columna. Usar `p.id` mandaba el
+      // depósito vacío: el ingreso se registraba igual pero sin enlazar,
+      // así que el depósito no se descontaba y seguía en esta lista.
       pagosLibres.map(p => {
         const valor = Number(p.valor_cop || 0);
-        return `<div class="pago">` +
+        return `<button type="button" class="pago" ` +
+          `data-pago="${esc(p.pago_id || p.id || '')}" data-valor="${esc(valor)}" ` +
+          `data-rem="${esc(p.remitente || 'sin nombre')}">` +
           `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
           `<span class="sp"></span>` +
           `<span>$${valor.toLocaleString('es-CO')} · ` +
-            `${esc(p.cuando || '')}</span>` +
-        `</div>` +
-        `<div class="clasif">` +
-        CONCEPTOS.filter(x => x.s === 'ingreso').map(x =>
-          `<button type="button" class="cbt" data-pago="${esc(p.id)}" ` +
-            `data-concepto="${esc(x.c)}" data-valor="${esc(valor)}" ` +
-            `data-nombre="${esc(x.n)}">${esc(x.n)}</button>`).join('') +
-        `</div>`;
+            `${esc(p.cuando || '')} <span class="ir">→ cobrar</span></span>` +
+        `</button>`;
       }).join('') +
       `</div>`;
   }
@@ -3652,35 +3673,36 @@ const CONFIG = {
               `Mejor cuento el cajón y abro la caja</a></p>` : ''));
   }
 
-  // Clasificar un depósito sin dueño y pasarlo a la caja de una vez.
+  // Tocar un depósito del tablero lo deja reservado y lleva a la Caja.
   //
-  // Se pide confirmación porque esto mueve plata de verdad y los botones
-  // están pegados unos a otros: un toque de más en el móvil registraría
-  // un ingreso que después toca anular.
-  //
-  // El depósito va entero y como transferencia, que es lo que es. El
-  // valor no se puede escribir aquí a propósito: si hay que partirlo, se
-  // hace en la Caja, donde ya existe ese campo y sus avisos.
-  $('#sin-dueno').addEventListener('click', async ev => {
-    const b = ev.target.closest('.cbt');
-    if (!b) return;
-    const valor = Number(b.dataset.valor);
-    if (!confirm(`¿Pasar ${pesos(valor)} a la caja como ${b.dataset.nombre}?`)) return;
+  // No registra nada por su cuenta: se apoya en el modal de Caja, que ya
+  // sabe cobrar contra un depósito y lleva meses haciéndolo. Un camino
+  // nuevo que moviera plata sería un segundo sitio donde equivocarse.
+  let depPendiente = null;
 
-    const hermanos = b.parentElement.querySelectorAll('.cbt');
-    hermanos.forEach(x => { x.disabled = true; });
-    try {
-      await alWorker('registrar', {
-        sentido: 'ingreso', concepto: b.dataset.concepto, valor,
-        medio: 'transferencia', pago_id: b.dataset.pago,
-        nota: 'Depósito sin reclamar',
-      });
-      nota('Pasó a la caja', 'bien', `${b.dataset.nombre} · ${pesos(valor)}`);
-      await cargarTablero(true);
-    } catch (e) {
-      hermanos.forEach(x => { x.disabled = false; });
-      fallo(e, 'No se pudo pasar a la caja');
-    }
+  function pintarDepPendiente() {
+    const caja = $('#dep-pendiente');
+    if (!depPendiente) { caja.hidden = true; caja.innerHTML = ''; return; }
+    caja.hidden = false;
+    caja.innerHTML =
+      `<span>Cobrando el depósito de <b>${esc(pesos(depPendiente.valor))}</b> ` +
+        `de ${esc(depPendiente.rem)} · escoge el concepto</span>` +
+      `<button class="btn chico" type="button" id="dep-soltar">Soltar</button>`;
+  }
+
+  $('#sin-dueno').addEventListener('click', ev => {
+    const b = ev.target.closest('.pago');
+    if (!b || !b.dataset.pago) return;
+    depPendiente = { id: b.dataset.pago, valor: Number(b.dataset.valor), rem: b.dataset.rem };
+    pintarDepPendiente();
+    verPanel('caja');
+    cargarCaja();
+  });
+
+  $('#dep-pendiente').addEventListener('click', ev => {
+    if (ev.target.id !== 'dep-soltar') return;
+    depPendiente = null;
+    pintarDepPendiente();
   });
 
   // Un solo escuchador para todo el panel: las tarjetas y los botones de
@@ -3688,7 +3710,16 @@ const CONFIG = {
   // duplicaría en cada refresco.
   $('#p-caja').addEventListener('click', async ev => {
     const btn = ev.target.closest('.caja-btn');
-    if (btn) return abrirModal(CONCEPTOS[+btn.dataset.i]);
+    if (btn) {
+      // El depósito reservado se consume al abrir el modal. Si se cierra
+      // sin guardar, se pierde la reserva a propósito: dejarla puesta
+      // haría que el siguiente concepto que se toque —quizá una salida en
+      // efectivo— arrastrara un depósito que ya nadie recuerda.
+      const pago = depPendiente;
+      depPendiente = null;
+      pintarDepPendiente();
+      return abrirModal(CONCEPTOS[+btn.dataset.i], pago);
+    }
 
     const an = ev.target.closest('[data-anular]');
     if (an) {
@@ -3819,19 +3850,26 @@ const CONFIG = {
   // El depósito del banco que la cajera escogió, si escogió alguno.
   let cajaPago = null;
 
-  function abrirModal(x) {
+  // `pago` llega cuando se vino tocando un depósito del tablero: entonces
+  // el modal abre con ese depósito ya escogido, en transferencia y con su
+  // valor puesto. Sigue siendo el mismo modal de siempre —se puede
+  // cambiar el valor o soltar el depósito— solo que con el trabajo hecho.
+  function abrirModal(x, pago) {
     cajaElegido = x;
-    cajaMedio = 'efectivo';
+    cajaMedio = pago ? 'transferencia' : 'efectivo';
     $('#modal-pista-medio').hidden = true;
-    cajaPago = null;
+    cajaPago = pago ? pago.id : null;
     $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
-    $('#modal-valor').value = x.v ? String(x.v) : '';
+    // El valor del depósito manda sobre el precio del concepto: es lo que
+    // de verdad llegó al banco.
+    const valor = pago ? pago.valor : (x.v || 0);
+    $('#modal-valor').value = valor ? String(valor) : '';
     $('#modal-nota').value = '';
-    for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === 'efectivo');
+    for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === cajaMedio);
     // Arranca filtrando por el precio del concepto: para una mensualidad
     // de 125.000 la lista baja de setenta y pico a uno o dos.
-    $('#modal-dep-buscar').value = x.v ? String(x.v) : '';
+    $('#modal-dep-buscar').value = valor ? String(valor) : '';
     pintarDepositos();
     $('#modal-caja').hidden = false;
     setTimeout(() => $('#modal-valor').focus(), 60);
