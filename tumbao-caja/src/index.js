@@ -294,9 +294,14 @@ const ADMIN = {
                 args: (b) => ({ p_codigo: TXT(b.codigo, 40) }) },
   // pago_id opcional: es el que enlaza la reserva con el depósito del
   // banco cuando se resuelve desde la cola con el botón "Es este".
+  // La referencia del comprobante la teclea la cajera antes de poder
+  // confirmar: es el freno para que no se confirme a ojo. Va opcional
+  // aquí porque cruzar con "Es este" enlaza un depósito REAL del banco,
+  // que prueba más que cualquier referencia y no debe pedir nada.
   confirmar:  { fn: 'admin_confirmar',
                 args: (b) => ({ p_codigo: TXT(b.codigo, 40),
-                                p_pago_id: UUID(b.pago_id) }) },
+                                p_pago_id: UUID(b.pago_id),
+                                p_referencia: TXT(b.referencia, 60) || null }) },
   // El panel manda pago_id también aquí, pero rechazar no lo usa: no hay
   // nada que enlazar cuando se descarta.
   rechazar:   { fn: 'admin_rechazar',

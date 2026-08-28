@@ -165,6 +165,17 @@ const CONFIG = {
   .pend-card .cod{font-family:var(--mono);color:var(--gold);font-size:.85rem}
   .pend-card .det{font-size:.83rem;color:var(--tx-2);margin:.25rem 0 .8rem}
   .pend-card .acciones{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+  /* La referencia del comprobante: sin ella el boton de confirmar no se
+     enciende. Ocupa toda la fila para que se lea completa. */
+  .pend-card .ref-comp{
+    flex:1 1 100%;font:inherit;font-size:.85rem;
+    background:var(--bg-3);color:var(--tx);
+    border:1px solid var(--line);border-radius:var(--r);
+    padding:.5rem .7rem;min-height:2.4rem;
+  }
+  .pend-card .ref-comp::placeholder{color:var(--tx-3)}
+  .pend-card .ref-comp:focus{outline:none;border-color:var(--ok)}
+  .btn.ok:disabled{opacity:.35;cursor:not-allowed}
   .declarado{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.8rem;color:var(--tx-2);
     background:var(--bg-3);border-radius:8px;padding:.45rem .7rem;margin:0 0 .8rem}
   .declarado b{color:var(--tx)}
@@ -2955,10 +2966,31 @@ const CONFIG = {
     const acc = document.createElement('div');
     acc.className = 'acciones';
 
+    // Sin comprobante no se confirma. El botón nace apagado y solo se
+    // enciende cuando hay una referencia escrita: para copiarla hay que
+    // tener el comprobante delante, que es justo el freno que se quiere.
+    //
+    // No se pide una foto porque hoy no hay dónde subirla, y porque una
+    // foto no se puede comprobar después. Una referencia sí: se busca en
+    // el extracto, y sale en la línea "Por revisar" de la tirilla.
+    const ref = document.createElement('input');
+    ref.type = 'text';
+    ref.className = 'ref-comp';
+    ref.placeholder = 'Referencia del comprobante';
+    ref.autocomplete = 'off';
+    ref.maxLength = 60;
+
     const bOk = document.createElement('button');
     bOk.className = 'btn ok';
     bOk.textContent = '✓ Confirmar igual';
-    bOk.addEventListener('click', () => resolver(el, r, 'confirmar', null));
+    bOk.disabled = true;
+    // Cuatro caracteres: las referencias reales son largas, y con menos
+    // lo que se está escribiendo no es una referencia.
+    const MIN_REF = 4;
+    ref.addEventListener('input', () => {
+      bOk.disabled = ref.value.trim().length < MIN_REF;
+    });
+    bOk.addEventListener('click', () => resolver(el, r, 'confirmar', null, ref.value.trim()));
 
     const bNo = document.createElement('button');
     bNo.className = 'btn mal';
@@ -2968,7 +3000,7 @@ const CONFIG = {
       resolver(el, r, 'rechazar', null);
     });
 
-    acc.append(bOk, bNo);
+    acc.append(ref, bOk, bNo);
     el.appendChild(acc);
     return el;
   }
@@ -3027,10 +3059,11 @@ const CONFIG = {
     tic();
   }
 
-  async function resolver(tarjeta, r, accion, pagoId) {
+  async function resolver(tarjeta, r, accion, pagoId, referencia) {
     tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
     try {
-      const res = await api(accion, { codigo: r.codigo, pago_id: pagoId });
+      const res = await api(accion, { codigo: r.codigo, pago_id: pagoId,
+                                      referencia: referencia || null });
       // Se guarda en la reserva, no solo en el DOM: así el resultado y su
       // enlace de WhatsApp sobreviven a que alguien use el buscador.
       r._resuelto = {
