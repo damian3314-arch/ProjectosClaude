@@ -207,6 +207,22 @@ const CONFIG = {
   #sin-dueno h3{font-size:.9rem;margin:0 0 .15rem}
   #sin-dueno .pista{font-size:.78rem;color:var(--tx-3);margin:0 0 .6rem}
   #sin-dueno .libres{display:grid;gap:.4rem}
+  /* Los conceptos van debajo de su depósito y en el mismo bloque: con
+     dos o tres depósitos en pantalla, un botón suelto se lee como si
+     fuera del de arriba. */
+  #sin-dueno .clasif{
+    display:flex;flex-wrap:wrap;gap:.35rem;margin:-.15rem 0 .55rem;
+  }
+  #sin-dueno .cbt{
+    font:inherit;font-size:.74rem;color:var(--tx-2);
+    background:var(--bg-3);border:1px solid var(--line);
+    border-radius:999px;padding:.3rem .65rem;cursor:pointer;
+    /* Alto de dedo: esto se usa en el móvil de recepción, con gente
+       esperando. */
+    min-height:2.1rem;
+  }
+  #sin-dueno .cbt:hover{border-color:var(--ok);color:var(--ok)}
+  #sin-dueno .cbt:disabled{opacity:.4;cursor:default}
 
   /* ---------- buscador y grupos de la cola ---------- */
   .buscar{flex:1;min-width:11rem;max-width:24rem;position:relative}
@@ -2723,10 +2739,16 @@ const CONFIG = {
   // justo el caso que se perdía: "Nada por validar ✓" con $60.000 de
   // alguien esperando a que se den cuenta.
   //
-  // No lleva botones. Enlazar un depósito se hace desde la reserva que
-  // lo reclama (con "Es este") o cobrándolo en la Caja; un botón aquí
-  // sería una tercera forma de mover plata, y las tres tendrían que
-  // ponerse de acuerdo. Esto es una alerta, no un mostrador.
+  // Ahora sí lleva botones, y no chocan con las otras dos formas de
+  // enlazar un depósito ("Es este" desde la reserva, o cobrarlo en la
+  // Caja). Las tres pasan por caja_registrar con el pago_id, que bloquea
+  // la fila, descuenta de usado_cop y marca el depósito como consumido —
+  // que es lo que lo saca del cruce automático de reservas. La misma
+  // plata no se puede usar dos veces aunque se intente por dos caminos.
+  //
+  // Aquí se pasa el depósito ENTERO: es lo que llegó al banco. Si hay que
+  // partirlo (uno de $30.000 que paga dos clases) eso se sigue haciendo
+  // en la Caja, que es donde se escribe el valor a mano.
   function pintarSinDueno() {
     const caja = $('#sin-dueno');
     if (!pagosLibres.length) { caja.hidden = true; caja.innerHTML = ''; return; }
@@ -2737,15 +2759,23 @@ const CONFIG = {
       `<p class="pista">${pagosLibres.length === 1 ? 'Un depósito' :
          pagosLibres.length + ' depósitos'} · ` +
         `$${total.toLocaleString('es-CO')} en total. ` +
-        `Se cobra desde la reserva que lo reclame, o en la pestaña Caja.</p>` +
+        `Dile qué fue y entra a la caja de una vez.</p>` +
       `<div class="libres">` +
-      pagosLibres.map(p =>
-        `<div class="pago">` +
+      pagosLibres.map(p => {
+        const valor = Number(p.valor_cop || 0);
+        return `<div class="pago">` +
           `<span class="rem">${esc(p.remitente || 'sin nombre')}</span>` +
           `<span class="sp"></span>` +
-          `<span>$${Number(p.valor_cop || 0).toLocaleString('es-CO')} · ` +
+          `<span>$${valor.toLocaleString('es-CO')} · ` +
             `${esc(p.cuando || '')}</span>` +
-        `</div>`).join('') +
+        `</div>` +
+        `<div class="clasif">` +
+        CONCEPTOS.filter(x => x.s === 'ingreso').map(x =>
+          `<button type="button" class="cbt" data-pago="${esc(p.id)}" ` +
+            `data-concepto="${esc(x.c)}" data-valor="${esc(valor)}" ` +
+            `data-nombre="${esc(x.n)}">${esc(x.n)}</button>`).join('') +
+        `</div>`;
+      }).join('') +
       `</div>`;
   }
 
@@ -3050,10 +3080,12 @@ const CONFIG = {
      el mismo del panel — quien pueda entrar aquí puede vender. */
 
   const CONCEPTOS = [
-    { s:'ingreso', c:'clase_suelta',  n:'Clase suelta',  v:15000  },
-    { s:'ingreso', c:'mensualidad',   n:'Mensualidad',   v:125000 },
-    { s:'ingreso', c:'cumpleanos',    n:'Cumpleaños',    v:250000 },
-    { s:'ingreso', c:'otro_ingreso',  n:'Otro ingreso',  v:null   },
+    { s:'ingreso', c:'clase_suelta',      n:'Clase suelta',      v:15000  },
+    { s:'ingreso', c:'media_mensualidad', n:'Media mensualidad', v:null   },
+    { s:'ingreso', c:'mensualidad',       n:'Mensualidad',       v:125000 },
+    { s:'ingreso', c:'cumpleanos',        n:'Cumpleaños',        v:250000 },
+    { s:'ingreso', c:'camiseta',          n:'Camiseta',          v:null   },
+    { s:'ingreso', c:'otro_ingreso',      n:'Otro ingreso',      v:null   },
     { s:'egreso',  c:'profesores',    n:'Profesores',    v:null   },
     { s:'egreso',  c:'cafeteria',     n:'Cafetería',     v:null   },
     { s:'egreso',  c:'aseo',          n:'Aseo',          v:null   },
@@ -3619,6 +3651,37 @@ const CONFIG = {
             ? `<p class="suave"><a href="#" id="volver-apertura">` +
               `Mejor cuento el cajón y abro la caja</a></p>` : ''));
   }
+
+  // Clasificar un depósito sin dueño y pasarlo a la caja de una vez.
+  //
+  // Se pide confirmación porque esto mueve plata de verdad y los botones
+  // están pegados unos a otros: un toque de más en el móvil registraría
+  // un ingreso que después toca anular.
+  //
+  // El depósito va entero y como transferencia, que es lo que es. El
+  // valor no se puede escribir aquí a propósito: si hay que partirlo, se
+  // hace en la Caja, donde ya existe ese campo y sus avisos.
+  $('#sin-dueno').addEventListener('click', async ev => {
+    const b = ev.target.closest('.cbt');
+    if (!b) return;
+    const valor = Number(b.dataset.valor);
+    if (!confirm(`¿Pasar ${pesos(valor)} a la caja como ${b.dataset.nombre}?`)) return;
+
+    const hermanos = b.parentElement.querySelectorAll('.cbt');
+    hermanos.forEach(x => { x.disabled = true; });
+    try {
+      await alWorker('registrar', {
+        sentido: 'ingreso', concepto: b.dataset.concepto, valor,
+        medio: 'transferencia', pago_id: b.dataset.pago,
+        nota: 'Depósito sin reclamar',
+      });
+      nota('Pasó a la caja', 'bien', `${b.dataset.nombre} · ${pesos(valor)}`);
+      await cargarTablero(true);
+    } catch (e) {
+      hermanos.forEach(x => { x.disabled = false; });
+      fallo(e, 'No se pudo pasar a la caja');
+    }
+  });
 
   // Un solo escuchador para todo el panel: las tarjetas y los botones de
   // anular se repintan a cada rato, y colgarles uno a cada uno los

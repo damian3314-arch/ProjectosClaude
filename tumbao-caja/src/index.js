@@ -247,7 +247,8 @@ async function salud(env, origen) {
 // hay que agregar uno, se agrega aquí a propósito: es lo que impide que
 // un error de tecleo invente una categoría nueva y ensucie el cierre.
 const CONCEPTOS = {
-  ingreso: new Set(['clase_suelta', 'mensualidad', 'cumpleanos', 'otro_ingreso']),
+  ingreso: new Set(['clase_suelta', 'media_mensualidad', 'mensualidad',
+                    'cumpleanos', 'camiseta', 'otro_ingreso']),
   egreso:  new Set(['profesores', 'cafeteria', 'aseo', 'papeleria', 'otro_egreso']),
 };
 
