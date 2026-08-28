@@ -3289,276 +3289,100 @@ const CONFIG = {
      Va agrupada por concepto y no movimiento por movimiento: veinte
      líneas de "Clase suelta $15.000" no dicen más que "Clase suelta ×20
      $300.000", y la tirilla tiene que caber en una mano. */
-  // En papel, "$-5.000" se lee mal y "-$5.000" se lee bien. El signo va
-  // delante del peso, no entre el peso y el número.
-  const conSigno = (n) => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
-
   function pintarTirilla() {
     const d = cajaDatos; if (!d) return;
     const c = d.cierre || {};
-    const a = d.contra_admingym || {};
     const b = d.banco || {};
+    const ent = d.entradas || {};
 
     const linea = (t, v, cl) =>
       `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
     const titulo = t => `<div class="t">${esc(t)}</div>`;
 
-    const conceptos = (sentido) => (d.resumen_conceptos || [])
-      .filter(x => x.sentido === sentido)
-      .map(x => linea(
-        `${nombreConcepto(x.concepto)}${x.n > 1 ? ' x' + x.n : ''}` +
-        (x.medio === 'transferencia' ? ' (transf.)' : ''),
-        pesos(x.valor_cop)))
-      .join('') || `<div class="l peq"><span>—</span><span></span></div>`;
+    // Las tres puertas por las que alguien entra a una clase suelta.
+    // Son conjuntos ajenos y por eso se pueden sumar sin repetir a
+    // nadie:
+    //
+    //   pagina    reservas web/formulario ya cruzadas con un deposito
+    //   a mano    apuntadas en recepcion cuyo cobro no quedo en Caja
+    //             (exige cobro_mov_id nulo: si el cobro si se registro,
+    //             ya cuenta abajo)
+    //   caja      movimientos de Caja con concepto 'clase_suelta', en
+    //             efectivo o por transferencia
+    //
+    // Comprobado cruzando por pago_id y por cobro_mov_id: ningun
+    // movimiento de clase suelta corresponde a una reserva.
+    const pag  = Number(ent.pagina_transferencia_cop || 0);
+    const pagN = Number(ent.pagina_transferencia_n || 0);
+    const mano  = Number(ent.a_mano_cop || 0);
+    const manoN = Number(ent.a_mano_n || 0);
+    const cajaSuelta = Number(ent.efectivo_cop || 0)
+                     + Number(ent.recepcion_transferencia_cop || 0);
+    const cajaN = Number(ent.efectivo_n || 0)
+                + Number(ent.recepcion_transferencia_n || 0);
 
-    // "26-ago". La fecha llega como AAAA-MM-DD desde el jsonb; se parte a
-    // mano en vez de pasarla por Date() porque `new Date('2026-08-26')` la
-    // lee como UTC y en Bogotá retrocede un día.
-    const MES_CORTO = ['ene','feb','mar','abr','may','jun',
-                       'jul','ago','sep','oct','nov','dic'];
-    const diaCorto = (iso) => {
-      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
-      return m ? `${Number(m[3])}-${MES_CORTO[Number(m[2]) - 1]}` : String(iso || '');
-    };
+    const entroN   = pagN + manoN + cajaN;
+    const entroCop = pag + mano + cajaSuelta;
 
-    const dif = Number(c.diferencia_cop || 0);
+    const salio = Number(d.total_egresos || 0);
+    // Lo que el banco confirmo hoy, de cualquier dia de clase. Si el
+    // corte todavia no llego, se arma con lo que hay.
+    const bancoHoy = b.recibido_cop != null ? b.recibido_cop
+      : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
 
-    // La tirilla la tiene que entender cualquiera, no solo quien ya
-    // conoce la historia de este panel. Por eso cada número que suma va
-    // con su signo (+ / = ), cada sección responde UNA pregunta que se
-    // puede decir en voz alta, y el veredicto de "¿cuadra?" se ve sin
-    // tener que leer nada más: es grande y dice SÍ o NO, no un número
-    // pelado que hay que interpretar.
+    // Lo confirmado a mano, ya agrupado por referencia de deposito.
+    const pv = d.por_verificar || {};
+    const verificar = Array.isArray(pv.lista) ? pv.lista : [];
+
+    // La tirilla contesta cuatro preguntas y nada mas: cuanta gente
+    // entro, cuanto salio, cuanto reporto el banco, y que hay que
+    // revisar. Todo lo demas se quito a proposito — cada seccion extra
+    // era una cifra mas que interpretar en el unico momento del dia en
+    // que hay prisa.
     $('#tirilla').innerHTML =
       `<h1>TUMBAO</h1>` +
       `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
         { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
-      `<hr>` +
 
-      (d.apertura
-        ? titulo('AL ABRIR') +
-          linea('Hora', `${d.apertura.hora} · ${d.apertura.quien || 'sin nombre'}`) +
-          linea('Había en el cajón', pesos(d.apertura.contado_cop)) +
-          (Number(d.apertura.diferencia_cop || 0) !== 0
-            ? `<div class="ojo">` +
-              linea('No cuadró con anoche', conSigno(d.apertura.diferencia_cop)) +
-              `</div>`
-            : '') +
-          (d.apertura.nota ? `<div class="peq">${esc(d.apertura.nota)}</div>` : '')
-        // Si nadie abrió, la tirilla lo dice. Callarlo haría parecer que
-        // la base salió de un conteo que no existió.
-        : titulo('AL ABRIR') +
-          `<div class="peq">Nadie contó el cajón al empezar. Se usó lo que quedó ayer.</div>` +
-          linea('Base', pesos(d.base_cop))) +
+      // Entro = gente que entro hoy a clase suelta, venga por donde
+      // venga. Las tres puertas son ajenas entre si —comprobado
+      // cruzando por pago_id y por cobro_mov_id— asi que sumarlas no
+      // repite a nadie.
+      `<hr>` + titulo('ENTRÓ HOY') +
+      linea('Página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
+      linea('Apuntados a mano', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
+      linea('Cobrados en Caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
+      linea('= Entró', `${entroN} · ${pesos(entroCop)}`, 'g grande') +
 
-      // Cuatro preguntas, cada una la suya: cuánta gente entró hoy a una
-      // clase suelta (y por dónde), cuánto salió, si el cajón cuadra, y
-      // qué dijo el banco. Antes "entró" mezclaba dos preguntas
-      // distintas —todo el efectivo de caja (mensualidad, cumpleaños,
-      // clase suelta, todo junto) y todo lo que confirmó el banco ese
-      // día (incluidos anticipos de otro día)— así que nunca daba lo
-      // mismo que el cuaderno de la puerta, que solo cuenta personas de
-      // clase suelta entrando HOY. Ahora esa cuenta tiene su propia
-      // sección, con la misma pregunta que hace el cuaderno: ¿por dónde
-      // entró esta persona, y en qué pagó?
-      (() => {
-        const gastos = Number(d.total_egresos || 0);
-        const retirado = Number(c.retirado_cop || 0);
-        const efectivoCaja = Number(d.ingreso_efectivo || 0);
-        const gastoEfectivo = Number(d.egreso_efectivo || 0);
-        const hayGastos = (d.resumen_conceptos || []).some(x => x.sentido === 'egreso');
-        // Lo que registró recepción, de cualquier concepto. Sale entero de
-        // caja_movimientos, y ahí NO cae nada de la página: comprobado sobre
-        // la base entera —82 ingresos en Caja, ninguno creado por una reserva
-        // web o de formulario—. Así que "lo que hay en Caja" y "lo que cobró
-        // recepción" son la misma cosa, sin tener que filtrar por origen.
-        const transferenciaCaja = Number(d.ingreso_transferencia || 0);
-        const cobroRecepcion = efectivoCaja + transferenciaCaja;
+      `<hr>` + titulo('SALIÓ') +
+      ((d.resumen_conceptos || []).filter(x => x.sentido === 'egreso')
+        .map(x => linea(nombreConcepto(x.concepto) + (x.n > 1 ? ' x' + x.n : ''),
+                        pesos(x.valor_cop))).join('') || linea('Nada', '—')) +
+      linea('= Salió', pesos(salio), 'g grande') +
 
-        // De la plata de quienes entraron hoy, qué día la recibió el
-        // banco. Viene de 0053, agrupado por día del pago.
-        const cuando = Array.isArray(d.cuando_entro) ? d.cuando_entro : [];
-        const cuandoN = cuando.reduce((n, x) => n + Number(x.personas || 0), 0);
-        const cuandoCop = cuando.reduce((n, x) => n + Number(x.cop || 0), 0);
+      `<hr>` + titulo('BANCOLOMBIA REPORTÓ HOY') +
+      linea('Entró al banco', pesos(bancoHoy), 'g grande') +
 
-        // Lo confirmado a mano, ya agrupado por referencia de depósito.
-        // `depositos` cuenta solo los que traen plata: una reprogramada
-        // ocupa una línea pero no hay nada que buscar por ella, y decir
-        // "2 depósitos" mandaría a buscar uno que no existe.
-        const pv = d.por_verificar || {};
-        const verificar = Array.isArray(pv.lista) ? pv.lista : [];
-        const verificarCop = Number(pv.cop || 0);
-        const depositos = verificar.filter(x => !x.sin_plata).length;
-        const transferenciaBanco = b.recibido_cop != null ? b.recibido_cop
-          : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
-
-        // Tres números, cada uno leído de donde su plata vive de verdad.
-        //
-        // Lo que recepción cobra en el momento —efectivo o transferencia—
-        // se registra como movimiento de caja y NO deja reserva: la
-        // persona ya está adentro, no hay cupo que apartar. La página sí
-        // deja reserva: esa fila es lo que cruza el depósito con la clase.
-        //
-        // Por eso no son cuatro celdas cruzadas origen × medio. Recepción
-        // se lee de caja y va en dos líneas por medio de pago; página se
-        // lee de reservas y solo tiene transferencia, porque cobrar en
-        // efectivo no es una opción del formulario.
-        //
-        // Los tres conjuntos son ajenos —ningún movimiento de caja de
-        // clase suelta corresponde a una reserva, se cruzó por pago_id—
-        // así que sumarlos no repite un peso. Ver migración 0052: antes
-        // esto daba por hecho que toda transferencia dejaba reserva, y la
-        // línea de recepción salía siempre en cero por eso.
-        const ent = d.entradas || {};
-        const efectivo = Number(ent.efectivo_cop || 0);
-        const efectivoN = Number(ent.efectivo_n || 0);
-        const transfRecep = Number(ent.recepcion_transferencia_cop || 0);
-        const transfRecepN = Number(ent.recepcion_transferencia_n || 0);
-        const transfPagina = Number(ent.pagina_transferencia_cop || 0);
-        const transfPaginaN = Number(ent.pagina_transferencia_n || 0);
-        // Quien se apuntó a mano en recepción sin que el cobro quedara en
-        // Caja. Entró igual, así que cuenta: al cuaderno de la puerta esa
-        // persona sí entró, y sin esta casilla el conteo nunca cuadraba.
-        // Su plata NO está en el cajón ni en el banco —es plata que se
-        // debió registrar y no se registró— por eso va en su propia línea
-        // y no se mezcla con las otras tres.
-        const aMano = Number(ent.a_mano_cop || 0);
-        const aManoN = Number(ent.a_mano_n || 0);
-        const totalEntradasN = efectivoN + transfRecepN + transfPaginaN + aManoN;
-        const totalEntradasCop = efectivo + transfRecep + transfPagina + aMano;
-
-        // El efectivo del arqueo (abajo) es TODO lo que entró a caja hoy
-        // —también mensualidad y cumpleaños, si hubo—. Si es más que el
-        // efectivo de clase suelta de arriba, se dice de qué es la
-        // diferencia para que las dos cifras de "efectivo" no parezcan
-        // contradecirse.
-        const efectivoOtros = efectivoCaja - efectivo;
-
-        // Anticipos: pagado hoy para una clase de OTRO día. No es de
-        // "Entradas" —esa persona no entra hoy— pero sí es plata que el
-        // banco confirmó hoy, así que es la sección de Banco la que
-        // explica por qué su total no tiene que dar igual a las
-        // transferencias de Entradas.
-        const futuras = Number(d.reservas_futuras_cop || 0);
-        const futurasN = Number(d.reservas_futuras_n || 0);
-
-        return (
-        // El cierre es un procedimiento, no un informe: seis pasos
-        // numerados que se siguen de arriba abajo. Los dos ultimos son
-        // los que quitan el trabajo de verdad —el 5 dice donde mirar en
-        // el extracto y el 6 dice que es lo unico que hay que mirar—
-        // asi que van al final, que es cuando Tania se sienta con el
-        // extracto en la mano.
-        `<hr>` + titulo('1 · ENTRARON HOY · clase suelta') +
-        `<div class="peq">Quién entró hoy, sin importar cuándo pagó.</div>` +
-        linea('Página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
-        linea('Recepción, efectivo', efectivoN ? `${efectivoN} · ${pesos(efectivo)}` : '—') +
-        linea('Recepción, transf.', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
-        (aManoN ? linea('A mano, sin cobro', `${aManoN} · ${pesos(aMano)}`) : '') +
-        linea('= Entraron', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
-        (aManoN
-          ? `<div class="ojo peq">Faltan ${pesos(aMano)} por registrar en Caja: ` +
-            `${aManoN} ${aManoN === 1 ? 'entró' : 'entraron'} sin cobro.</div>`
-          : '') +
-
-        `<hr>` + titulo('2 · COBRÓ RECEPCIÓN') +
-        `<div class="peq">Cualquier concepto, registrado en Caja.</div>` +
-        linea('En efectivo', pesos(efectivoCaja)) +
-        linea('Por transferencia', pesos(transferenciaCaja)) +
-
-        `<hr>` + titulo('3 · EL CAJÓN · solo efectivo') +
-        linea('Base al abrir', pesos(d.base_cop)) +
-        linea('+ Entró en efectivo', pesos(efectivoCaja)) +
-        linea('− Gastos en efectivo', pesos(gastoEfectivo)) +
-        linea('= Debía haber', pesos(d.esperado_efectivo), 'g') +
-        linea('Se contó', pesos(c.contado_cop || 0)) +
-        (dif === 0
-          ? `<div class="veredicto">SÍ CUADRA ✓</div>`
-          : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
-        (retirado ? linea('Se retira hoy', pesos(retirado)) : '') +
-        linea('Queda para mañana', pesos(c.dejado_cop || 0)) +
-        (hayGastos ? `<div class="peq">Gastos: ` +
-          (d.resumen_conceptos || []).filter(x => x.sentido === 'egreso')
-            .map(x => `${esc(nombreConcepto(x.concepto))} ${pesos(x.valor_cop)}`).join(' · ') +
-          `</div>` : '') +
-
-        `<hr>` + titulo('4 · BANCO · lo que reportó hoy') +
-        linea('Bancolombia', pesos(transferenciaBanco), 'g grande') +
-        `<div class="peq">De cualquier día de clase.</div>` +
-
-        // Contesta "vino hoy pero pagó el lunes, ¿sí entró la plata?" sin
-        // abrir el sistema, y de paso dice en que parte del extracto
-        // mirar. Solo cubre la pagina: lo de recepcion se cobra en el
-        // momento, asi que su plata entro hoy por definicion.
-        `<hr>` + titulo('5 · ¿CUÁNDO ENTRÓ ESA PLATA?') +
-        (cuando.length
-          ? `<div class="peq">Para buscarla en el extracto.</div>` +
-            cuando.map(x => linea(
-              x.dias_antes === 0 ? `Hoy ${diaCorto(x.dia)}`
-                : x.dias_antes === 1 ? `Ayer ${diaCorto(x.dia)}`
-                : `Hace ${x.dias_antes} días ${diaCorto(x.dia)}`,
-              `${x.personas} · ${pesos(x.cop)}`)).join('') +
-            ''
-          : `<div class="peq">Nadie entró hoy con pago de la página.</div>`) +
-
-        // La razon de ser del cierre nuevo. Una reserva de la pagina que
-        // se confirmo SOLA ya esta cruzada con un deposito: el cruce es
-        // la prueba de que la plata entro, y revisarla es tiempo tirado.
-        // Aqui va solo lo que confirmo alguien a mano.
-        //
-        // Agrupado por referencia y no por persona porque un grupo que
-        // paga junto es UNA linea del extracto: el 27 de agosto tres
-        // personas distintas eran un solo deposito de $45.000.
-        `<hr>` + titulo('6 · POR VERIFICAR EN EL EXTRACTO') +
-        (verificar.length
-          ? `<div class="peq">Solo lo confirmado a mano. El resto lo cruzó el banco solo.</div>` +
-            verificar.map(x => linea(
-              x.sin_plata ? 'Reprogramada' : `Ref ${x.referencia}`,
-              x.sin_plata ? `${x.personas} · ya pagó antes`
-                          : `${x.personas} · ${pesos(x.cop)}`)).join('') +
-            (verificarCop > 0
-              ? `<div class="peq">A buscar: ${depositos} ${depositos === 1 ? 'depósito' : 'depósitos'}, ${pesos(verificarCop)}.</div>`
-              : `<div class="peq">Nada que buscar: ninguna trae plata nueva.</div>`)
-          : `<div class="veredicto">NADA POR VERIFICAR ✓</div>`) +
-
-        // La única suma general del papel, y por eso va al final. Las
-        // secciones de arriba son listas: un total por sección hacía que
-        // el ojo tropezara con cuatro cifras grandes que no se hablan
-        // entre sí.
-        //
-        // "Entró" es lo que de verdad llegó hoy —efectivo y transferencia
-        // de Caja, más los depósitos que el banco confirmó hoy—, así que
-        // NO incluye lo apuntado a mano sin cobro: esa plata no está en
-        // ninguna parte todavía, y sumarla aquí haría cuadrar un total
-        // con dinero que nadie ha visto.
-        `<hr>` + titulo('7 · TOTAL DEL DÍA') +
-        linea('Entró', pesos(d.total_ingresos), 'g grande') +
-        linea('Salió', pesos(d.total_egresos), 'g grande') +
-        (aManoN
-          ? `<div class="peq">Sin contar ${pesos(aMano)} apuntado a mano, que aún no está registrado.</div>`
-          : '')
-        );
-      })() +
-
-      // Sin la promesa de que estos cuatro coinciden con AdminGym: no
-      // coinciden cuando hay anticipos para otro día, porque AdminGym
-      // no los registra —y no tiene por qué—. Van aquí solo como
-      // referencia para pasarlos a la otra pantalla, no como algo que
-      // tenga que dar igual.
-      `<hr>` + titulo('PARA COMPARAR CON ADMINGYM') +
-      linea('Venta Membresías', pesos(a.venta_membresias)) +
-      linea('Ingresos a Banco', pesos(a.ingresos_a_banco)) +
-      linea('Retirar Dinero', pesos(a.retirar_dinero_de_caja)) +
-      linea('DINERO EN CAJA', pesos(a.dinero_en_caja), 'g') +
+      // La razon de ser del cierre. Una reserva de la pagina que se
+      // confirmo SOLA ya esta cruzada con un deposito: ese cruce es la
+      // prueba de que la plata entro, y buscarla en el extracto es
+      // tiempo perdido. Aqui va solo lo que confirmo alguien a mano.
+      //
+      // Agrupado por referencia y no por persona: un grupo que paga
+      // junto es UNA linea del extracto. El 27 de agosto tres personas
+      // eran un solo deposito de $45.000.
+      `<hr>` + titulo('POR REVISAR') +
+      (verificar.length
+        ? `<div class="peq">Lo que no pasó solo en la página.</div>` +
+          verificar.map(x => linea(
+            x.sin_plata ? 'Reprogramada' : `Ref ${x.referencia}`,
+            x.sin_plata ? `${x.personas} · ya pagó antes`
+                        : `${x.personas} · ${pesos(x.cop)}`)).join('')
+        : `<div class="veredicto">NADA POR REVISAR ✓</div>`) +
 
       `<hr>` +
       `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
       (c.nota ? `<div class="peq">${esc(c.nota)}</div>` : '') +
-      (Number(c.rehecho_n || 0) > 0
-        ? `<div class="ojo peq">Este cierre se rehizo ${c.rehecho_n} ` +
-          `${Number(c.rehecho_n) === 1 ? 'vez' : 'veces'}` +
-          (c.rehecho_motivo ? `: ${esc(c.rehecho_motivo)}` : '') + `</div>`
-        : '') +
       `<div class="firma">Firma</div>`;
   }
 
