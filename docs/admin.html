@@ -3416,8 +3416,16 @@ const CONFIG = {
         const transfRecepN = Number(ent.recepcion_transferencia_n || 0);
         const transfPagina = Number(ent.pagina_transferencia_cop || 0);
         const transfPaginaN = Number(ent.pagina_transferencia_n || 0);
-        const totalEntradasN = efectivoN + transfRecepN + transfPaginaN;
-        const totalEntradasCop = efectivo + transfRecep + transfPagina;
+        // Quien se apuntó a mano en recepción sin que el cobro quedara en
+        // Caja. Entró igual, así que cuenta: al cuaderno de la puerta esa
+        // persona sí entró, y sin esta casilla el conteo nunca cuadraba.
+        // Su plata NO está en el cajón ni en el banco —es plata que se
+        // debió registrar y no se registró— por eso va en su propia línea
+        // y no se mezcla con las otras tres.
+        const aMano = Number(ent.a_mano_cop || 0);
+        const aManoN = Number(ent.a_mano_n || 0);
+        const totalEntradasN = efectivoN + transfRecepN + transfPaginaN + aManoN;
+        const totalEntradasCop = efectivo + transfRecep + transfPagina + aMano;
 
         // El efectivo del arqueo (abajo) es TODO lo que entró a caja hoy
         // —también mensualidad y cumpleaños, si hubo—. Si es más que el
@@ -3446,13 +3454,17 @@ const CONFIG = {
         linea('Página', transfPaginaN ? `${transfPaginaN} · ${pesos(transfPagina)}` : '—') +
         linea('Recepción, efectivo', efectivoN ? `${efectivoN} · ${pesos(efectivo)}` : '—') +
         linea('Recepción, transf.', transfRecepN ? `${transfRecepN} · ${pesos(transfRecep)}` : '—') +
+        (aManoN ? linea('A mano, sin cobro', `${aManoN} · ${pesos(aMano)}`) : '') +
         linea('= Entraron', `${totalEntradasN} · ${pesos(totalEntradasCop)}`, 'g grande') +
+        (aManoN
+          ? `<div class="ojo peq">Faltan ${pesos(aMano)} por registrar en Caja: ` +
+            `${aManoN} ${aManoN === 1 ? 'entró' : 'entraron'} sin cobro.</div>`
+          : '') +
 
         `<hr>` + titulo('2 · COBRÓ RECEPCIÓN') +
         `<div class="peq">Cualquier concepto, registrado en Caja.</div>` +
         linea('En efectivo', pesos(efectivoCaja)) +
         linea('Por transferencia', pesos(transferenciaCaja)) +
-        linea('= Total cobró', pesos(cobroRecepcion), 'g grande') +
 
         `<hr>` + titulo('3 · EL CAJÓN · solo efectivo') +
         linea('Base al abrir', pesos(d.base_cop)) +
@@ -3486,7 +3498,7 @@ const CONFIG = {
                 : x.dias_antes === 1 ? `Ayer ${diaCorto(x.dia)}`
                 : `Hace ${x.dias_antes} días ${diaCorto(x.dia)}`,
               `${x.personas} · ${pesos(x.cop)}`)).join('') +
-            linea('= Total', `${cuandoN} · ${pesos(cuandoCop)}`, 'g')
+            ''
           : `<div class="peq">Nadie entró hoy con pago de la página.</div>`) +
 
         // La razon de ser del cierre nuevo. Una reserva de la pagina que
@@ -3505,9 +3517,26 @@ const CONFIG = {
               x.sin_plata ? `${x.personas} · ya pagó antes`
                           : `${x.personas} · ${pesos(x.cop)}`)).join('') +
             (verificarCop > 0
-              ? linea('= A buscar', `${depositos} · ${pesos(verificarCop)}`, 'g grande')
+              ? `<div class="peq">A buscar: ${depositos} ${depositos === 1 ? 'depósito' : 'depósitos'}, ${pesos(verificarCop)}.</div>`
               : `<div class="peq">Nada que buscar: ninguna trae plata nueva.</div>`)
-          : `<div class="veredicto">NADA POR VERIFICAR ✓</div>`)
+          : `<div class="veredicto">NADA POR VERIFICAR ✓</div>`) +
+
+        // La única suma general del papel, y por eso va al final. Las
+        // secciones de arriba son listas: un total por sección hacía que
+        // el ojo tropezara con cuatro cifras grandes que no se hablan
+        // entre sí.
+        //
+        // "Entró" es lo que de verdad llegó hoy —efectivo y transferencia
+        // de Caja, más los depósitos que el banco confirmó hoy—, así que
+        // NO incluye lo apuntado a mano sin cobro: esa plata no está en
+        // ninguna parte todavía, y sumarla aquí haría cuadrar un total
+        // con dinero que nadie ha visto.
+        `<hr>` + titulo('7 · TOTAL DEL DÍA') +
+        linea('Entró', pesos(d.total_ingresos), 'g grande') +
+        linea('Salió', pesos(d.total_egresos), 'g grande') +
+        (aManoN
+          ? `<div class="peq">Sin contar ${pesos(aMano)} apuntado a mano, que aún no está registrado.</div>`
+          : '')
         );
       })() +
 
