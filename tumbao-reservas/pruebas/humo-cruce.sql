@@ -89,13 +89,19 @@ select chk('la reserva arranca en pendiente_pago',
 
 -- 15:49 — transfiere. El correo entra un minuto después, cuando la
 -- persona todavía está escribiendo la referencia en el celular.
-select chk('el correo no encuentra a nadie (así era, y está bien)',
+--
+-- Hasta 0055 esto daba 'sin_reserva_que_casar' y la prueba lo daba por
+-- bueno: la reserva estaba en pendiente_pago y la conciliación solo
+-- miraba las que ya habían avisado. Se cambió con datos delante — en 21
+-- días, 25 grupos tenían su depósito dentro de la ventana y nadie los
+-- miraba— y ahora se cruza aquí mismo, sin esperar el "ya pagué".
+select chk('el correo la cruza sin esperar el aviso (0055)',
   registrar_pago_y_conciliar('bancolombia', 15000, now() - interval '4 minutes',
     'LLAVE', 'YIRAUDIS MILENA DIAZ VARGAS', null, 1.0, null, 'correo-1')->>'accion',
-  'sin_reserva_que_casar');
+  'reserva_confirmada');
 
--- 15:5x — da "ya pagué". ANTES: se quedaba en "verificando" para siempre.
-select chk('al declarar el pago, se cruza sola',
+-- Y si además da "ya pagué", no rompe nada: ya está confirmada.
+select chk('el aviso posterior la encuentra confirmada',
   registrar_aviso_pago((select cod from cods where k = 't1'), now() - interval '4 minutes',
                        'M14153097', null, null)->>'estado',
   'confirmada');
