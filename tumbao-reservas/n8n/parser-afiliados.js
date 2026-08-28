@@ -1,6 +1,13 @@
-// El archivo trae el titulo en la fila 1 y los encabezados en la 2, asi
-// que no se puede confiar en la primera fila. Se busca la cabecera por
-// contenido; asi tampoco importa si reordenan columnas.
+// La cabecera no esta siempre en la misma fila. Lo normal es que la 1
+// sea el titulo fusionado y la 2 los encabezados, pero llegan archivos
+// con filas de filtros, un logo o lineas en blanco encima, y entonces la
+// cabecera baja. Por eso no se confia en NINGUNA posicion fija: se busca
+// por contenido y se elige la fila que mas columnas conocidas trae.
+//
+// Se puntua en vez de tomar la primera que diga "Afiliado" porque el
+// titulo fusionado a veces repite esa palabra en una celda suelta. Esa
+// fila tiene una sola columna conocida; la cabecera de verdad tiene
+// seis o siete, y gana.
 const MESES = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7,
                 ago:8, sep:9, sept:9, oct:10, nov:11, dic:12 };
 
@@ -19,23 +26,54 @@ const filas = $input.all().map(i => {
   return celdas.map(v => v == null ? "" : String(v));
 });
 
-let iCab = -1;
-for (let i = 0; i < filas.length && i < 10; i++) {
-  if (filas[i].some(c => norm(c) === "afiliado")) { iCab = i; break; }
-}
-if (iCab === -1) {
-  return [{ json: { ok: false, error: "sin_cabecera",
-    mensaje: "No se encontro la fila de encabezados (se buscaba la columna 'Afiliado')." } }];
-}
+// Hasta donde se busca. Cincuenta filas cubre de sobra cualquier
+// encabezado corrido; mas abajo ya solo hay datos, y una celda de datos
+// que dijera "Afiliado" seria un falso positivo.
+const MAX_FILAS_CABECERA = 50;
+// Minimo de columnas conocidas para creerse que una fila es la cabecera.
+// Con "Afiliado" a secas no basta: eso lo cumple un titulo.
+const MIN_COLUMNAS = 3;
 
-const cab = filas[iCab].map(norm);
-const col = (...nombres) => {
+const ETIQUETAS = [
+  ["afiliado"], ["membresia"], ["# documento", "documento"], ["celular"],
+  ["correo"], ["inicio membresia", "inicio"], ["final membresia", "final"],
+];
+
+const buscarCol = (cab, nombres) => {
   for (const n of nombres) {
     const i = cab.findIndex(c => c === norm(n) || c.startsWith(norm(n)));
     if (i >= 0) return i;
   }
   return -1;
 };
+
+// "afiliado" tiene que estar EXACTO. Los reportes de un solo horario
+// traen "Afiliado Titular" y unas pocas filas: importarlos borraria a
+// casi todos los afiliados, asi que se dejan fuera a proposito.
+let iCab = -1, mejorPuntaje = 0;
+for (let i = 0; i < filas.length && i < MAX_FILAS_CABECERA; i++) {
+  const fila = filas[i].map(norm);
+  if (!fila.some(c => c === "afiliado")) continue;
+  const puntaje = ETIQUETAS.reduce((n, a) => n + (buscarCol(fila, a) >= 0 ? 1 : 0), 0);
+  if (puntaje > mejorPuntaje) { mejorPuntaje = puntaje; iCab = i; }
+}
+
+if (iCab === -1 || mejorPuntaje < MIN_COLUMNAS) {
+  const vistas = Math.min(filas.length, MAX_FILAS_CABECERA);
+  return [{ json: { ok: false, error: "sin_cabecera",
+    columnas_reconocidas: mejorPuntaje,
+    mensaje: (iCab === -1
+      ? "No se encontro la fila de encabezados: ninguna de las primeras " +
+        vistas + " filas trae una columna llamada exactamente 'Afiliado'."
+      : "Se encontro una fila con 'Afiliado' pero solo " + mejorPuntaje +
+        " columnas reconocidas, y hacen falta " + MIN_COLUMNAS +
+        ". Parece un titulo, no la cabecera.") +
+      " Suele pasar cuando el archivo es la exportacion de un solo horario " +
+      "—esas traen 'Afiliado Titular'— y no el listado completo." } }];
+}
+
+const cab = filas[iCab].map(norm);
+const col = (...nombres) => buscarCol(cab, nombres);
 const cAfil = col("afiliado");
 const cMemb = col("membresia");
 const cDoc  = col("# documento", "documento");
@@ -104,14 +142,20 @@ return [{ json: { ok: true, total: salida.length, por_hora: porHora,
  * workflow "Tumbao · Importar afiliados y recalcular cupos".
  * Si se cambia aquí, se cambia allá.
  *
- * El reporte real trae:
+ * El reporte real suele traer:
  *   fila 1  título fusionado "Reporte Afiliados con Membresía Activa"
  *   fila 2  encabezados
  *   fila 3+ los afiliados
  *
- * Por eso NO se puede usar la primera fila como cabecera. Se busca la
- * fila que contenga "Afiliado" y se mapean las columnas por nombre, así
- * que reordenarlas tampoco rompe nada.
+ * Pero "suele" no es "siempre": llegan archivos con filas de filtros, un
+ * logo o líneas en blanco encima, y la cabecera baja. Por eso no se usa
+ * ninguna posición fija. Se recorren hasta 50 filas, se puntúa cada una
+ * por cuántas columnas conocidas trae, y gana la mejor. Reordenar las
+ * columnas tampoco rompe nada, porque se mapean por nombre.
+ *
+ * "Afiliado" se exige EXACTO. Los reportes de un solo horario traen
+ * "Afiliado Titular" y unas pocas filas; se rechazan a propósito, porque
+ * importarlos borraría a casi todos los afiliados.
  *
  * La hora sale del texto de la membresía:
  *   "PLAN MENSUALIDAD 7:00AM"   -> 07:00:00, tipo plan

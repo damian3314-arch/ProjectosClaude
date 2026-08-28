@@ -142,5 +142,97 @@ const REPORTE = [
   ok('12:00 AM es medianoche', r.filas[1].hora === '00:00:00', r.filas[1].hora);
 }
 
+// ---------------------------------------------------------------------
+// LA CABECERA NO SIEMPRE ESTA EN LA FILA 2
+//
+// Antes se buscaba solo en las 10 primeras filas y se tomaba la PRIMERA
+// que dijera "Afiliado". Las dos cosas fallaban: con filas de filtros o
+// un logo encima la cabecera se sale de las 10, y un titulo que repita
+// la palabra "Afiliado" secuestra la deteccion.
+// ---------------------------------------------------------------------
+{
+  // Un logo, filtros y filas en blanco empujan la cabecera a la 12. El
+  // limite viejo era 10, asi que este es justo el caso que se perdia: el
+  // archivo era correcto y el flujo decia "no se encontro la cabecera".
+  const corrida = [
+    ['LOGO TUMBAO', '', '', '', '', '', '', ''],
+    ['Reporte Afiliados con Membresia Activa', '', '', '', '', '', '', ''],
+    ['Generado por: admin', '', '', '', '', '', '', ''],
+    ['Fecha de corte: 28/ago./2026', '', '', '', '', '', '', ''],
+    ['Filtro: Membresia activa = Si', '', '', '', '', '', '', ''],
+    ['Filtro: Sede = Principal', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    REPORTE[1], REPORTE[2], REPORTE[3], REPORTE[4],
+  ];
+  const r = correr(enFilas(corrida))[0].json;
+  ok('encuentra la cabecera aunque este en la fila 12',
+     r.ok === true && r.total === 3, `total=${r.total}`);
+}
+{
+  // Una celda del titulo que dice EXACTAMENTE "Afiliado". El parser
+  // viejo tomaba la primera fila que la tuviera, asi que se quedaba con
+  // esta: leia la cabecera de verdad como si fuera un afiliado y perdia
+  // todas las columnas. Ahora gana la fila con mas columnas conocidas.
+  const secuestro = [
+    ['Afiliado', '', '', '', '', '', '', ''],
+    REPORTE[1], REPORTE[2], REPORTE[3], REPORTE[4],
+  ];
+  const r = correr(enFilas(secuestro))[0].json;
+  ok('una celda de titulo que dice justo "Afiliado" no secuestra la cabecera',
+     r.ok === true && r.total === 3, `total=${r.total}`);
+}
+{
+  // Sin fila de titulo: la cabecera es la primera.
+  const r = correr(enFilas([REPORTE[1], REPORTE[2], REPORTE[3], REPORTE[4]]))[0].json;
+  ok('tambien si la cabecera es la fila 1', r.ok === true && r.total === 3, `total=${r.total}`);
+}
+{
+  // El titulo dice "Afiliado" en una celda suelta. Antes ganaba por ser
+  // la primera, y el parser leia como datos la cabecera de verdad.
+  const trampa = [
+    ['Reporte de Afiliado', '', '', '', '', '', '', ''],
+    REPORTE[1], REPORTE[2], REPORTE[3], REPORTE[4],
+  ];
+  const r = correr(enFilas(trampa))[0].json;
+  ok('un titulo que dice "Afiliado" no secuestra la cabecera',
+     r.ok === true && r.total === 3, `total=${r.total}`);
+}
+{
+  // Muy abajo: 60 filas de basura. Se rechaza a proposito, no se
+  // adivina — un archivo asi no es el reporte.
+  const lejos = [...Array(60).fill(['', '', '', '', '', '', '', '']),
+                 REPORTE[1], REPORTE[2]];
+  const r = correr(enFilas(lejos))[0].json;
+  ok('mas alla de 50 filas se rinde y lo dice',
+     r.ok === false && r.error === 'sin_cabecera', r.error);
+}
+{
+  // El reporte de UN SOLO horario trae "Afiliado Titular". Importarlo
+  // borraria a casi todos, asi que tiene que seguir rechazandose.
+  const unHorario = [
+    ['Afiliados del horario 7:00AM', '', '', ''],
+    ['Afiliado Titular', 'Membresia', 'Inicio Membresia', 'Final Membresia'],
+    ['ANA MARIA PEREZ', 'PLAN MENSUALIDAD 7:00AM', '30/jun./2026', '29/jul./2026'],
+  ];
+  const r = correr(enFilas(unHorario))[0].json;
+  ok('sigue rechazando el reporte de un solo horario',
+     r.ok === false && r.error === 'sin_cabecera', r.error);
+}
+{
+  // Una fila con "Afiliado" pero sin las demas columnas: es un titulo.
+  const pobre = [
+    ['Afiliado', '', '', ''],
+    ['ANA MARIA PEREZ', '', '', ''],
+  ];
+  const r = correr(enFilas(pobre))[0].json;
+  ok('una fila con solo "Afiliado" no basta para ser cabecera',
+     r.ok === false && r.error === 'sin_cabecera',
+     `columnas_reconocidas=${r.columnas_reconocidas}`);
+}
+
 console.log(`\n${fallos === 0 ? 'TODO EN VERDE' : fallos + ' FALLOS'}`);
 process.exit(fallos ? 1 : 0);

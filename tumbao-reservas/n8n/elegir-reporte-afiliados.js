@@ -118,19 +118,26 @@ return [{ json: {
 // ---------------------------------------------------------------------
 // CÓMO BUSCA EL ARCHIVO EL NODO DE DRIVE
 //
-// No por carpeta. Los reportes se guardan en una carpeta por mes, así
-// que un folderId fijo se rompe el día 1 de cada mes — y se rompió: el
-// workflow miraba la de julio mientras el archivo de agosto estaba en la
-// suya, y el error decía "el más nuevo es de hace 9 días" sin mencionar
-// que existía uno nuevo en otra parte.
+// En Miembros Activos / AAAA / MM_Mes. La consulta la arma
+// `carpeta-del-mes.js` y llega hecha en $json.query.
 //
-// La consulta que usa el nodo:
+// La carpeta del mes se resuelve en CADA corrida, nunca con un id fijo.
+// Un id fijo se rompe el día 1 de cada mes — y se rompió: el workflow
+// miraba la de julio mientras el archivo de agosto estaba en la suya, y
+// el error decía "el más nuevo es de hace 9 días" sin mencionar que
+// existía uno nuevo en otra parte. Se miran el mes en curso y el
+// anterior, porque el día 1 la carpeta nueva puede no existir todavía.
+//
+// Si no aparece ninguna carpeta se vuelve a la consulta global de antes:
 //
 //   (name contains 'afiliados' or name contains 'miembros')
 //     and trashed = false
 //     and mimeType != 'application/vnd.google-apps.folder'
 //
-// Lo que protege contra importar cualquier cosa no es la carpeta, es lo
-// de aquí abajo: exigir AAAA-MM-DD en el nombre y menos de 7 días de
-// atraso. La carpeta nunca fue una garantía.
+// Eso funciona pero puede traer archivos de cualquier rincón del Drive,
+// así que el resumen lo dice con un OJO para que se note y se arregle.
+//
+// En todo caso, la carpeta nunca fue la garantía: lo que protege contra
+// importar cualquier cosa es lo de aquí abajo — exigir AAAA-MM-DD en el
+// nombre y menos de 7 días de atraso.
 // ---------------------------------------------------------------------
