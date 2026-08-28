@@ -3298,6 +3298,9 @@ const CONFIG = {
     const linea = (t, v, cl) =>
       `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
     const titulo = t => `<div class="t">${esc(t)}</div>`;
+    // En papel "$-5.000" se lee mal y "-$5.000" se lee bien: el signo va
+    // delante del peso, no entre el peso y el número.
+    const conSigno = (n) => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
 
     // Las tres puertas por las que alguien entra a una clase suelta.
     // Son conjuntos ajenos y por eso se pueden sumar sin repetir a
@@ -3344,6 +3347,7 @@ const CONFIG = {
 
     const entroCop = sueltaCop + otrosCop;
 
+    const dif = Number(c.diferencia_cop || 0);
     const salio = Number(d.total_egresos || 0);
     // Lo que el banco confirmo hoy, de cualquier dia de clase. Si el
     // corte todavia no llego, se arma con lo que hay.
@@ -3386,6 +3390,21 @@ const CONFIG = {
         .map(x => linea(nombreConcepto(x.concepto) + (x.n > 1 ? ' x' + x.n : ''),
                         pesos(x.valor_cop))).join('') || linea('Nada', '—')) +
       linea('= Salió', pesos(salio), 'g grande') +
+
+      // El arqueo del efectivo. Va después de SALIÓ porque lo que debía
+      // haber en el cajón depende de lo que entró y salió en efectivo,
+      // no de lo que cobró la página ni de lo que reportó el banco.
+      //
+      // "Debía haber" no es adorno: sin él, el veredicto sería una
+      // palabra sin contra qué comprobarla. Es base + efectivo que
+      // entró − efectivo que salió, y enfrente lo que se contó.
+      `<hr>` + titulo('EL CAJÓN · efectivo') +
+      linea('Base al abrir', pesos(d.base_cop)) +
+      linea('Debía haber', pesos(d.esperado_efectivo)) +
+      linea('Se contó', pesos(c.contado_cop || 0)) +
+      (dif === 0
+        ? `<div class="veredicto">SÍ CUADRA ✓</div>`
+        : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
 
       `<hr>` + titulo('BANCOLOMBIA REPORTÓ HOY') +
       linea('Entró al banco', pesos(bancoHoy), 'g grande') +
