@@ -3660,6 +3660,95 @@ const CONFIG = {
       `<div class="firma">Firma</div>`;
   }
 
+  /* ---------- la segunda tirilla: cuándo pagaron ----------
+     Va aparte de la del cierre a propósito. La del cierre se archiva
+     junto al efectivo y contesta "¿cuadró el día?"; esta se lleva al
+     lado del extracto y contesta otra cosa: "¿de la gente que entró
+     hoy, qué línea del banco es cada una?".
+
+     Meterla dentro de la otra habría sido volver a lo que ya se pidió
+     quitar: más cifras que interpretar en el momento del día en que hay
+     prisa. Cuadrar contra el banco no se hace con prisa. */
+  function pintarTirillaPagos() {
+    const d = cajaDatos; if (!d) return;
+    const k = d.conciliacion || {};
+    const banco = Array.isArray(k.banco) ? k.banco : [];
+    const efec  = Array.isArray(k.efectivo) ? k.efectivo : [];
+    const sinP  = Array.isArray(k.sin_pago) ? k.sin_pago : [];
+
+    const linea = (t, v, cl) =>
+      `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
+    const titulo = t => `<div class="t">${esc(t)}</div>`;
+
+    // El extracto del banco va por días, así que el papel también. Sin
+    // esto habría que ir saltando de página en el extracto por cada
+    // línea; agrupado, se abre una página y se tachan todas las de ese
+    // día de una sentada.
+    const porDia = new Map();
+    for (const x of banco) {
+      const dia = x.dia || '';
+      if (!porDia.has(dia)) porDia.set(dia, { dias: Number(x.dias_antes || 0), filas: [] });
+      porDia.get(dia).filas.push(x);
+    }
+    const cuandoFue = n => n === 0 ? 'HOY' : n === 1 ? 'AYER' : `HACE ${n} DÍAS`;
+
+    $('#tirilla').innerHTML =
+      `<h1>TUMBAO</h1>` +
+      `<div class="sub">CUÁNDO PAGARON<br>${esc(conFecha(d.dia,
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
+      `<div class="peq">De la gente que entró a clase suelta este día, ` +
+        `con qué movimiento del banco entró cada una.</div>` +
+
+      `<hr>` + titulo('BUSCAR EN EL EXTRACTO') +
+      (banco.length
+        ? [...porDia.entries()].map(([dia, g]) =>
+            `<div class="peq" style="margin-top:1.5mm"><b>${esc(cuandoFue(g.dias))}` +
+              ` · ${esc(conFecha(dia, { day: 'numeric', month: 'short' }))}</b></div>` +
+            g.filas.map(x =>
+              linea(x.hora, pesos(x.valor_cop)) +
+              `<div class="peq">${esc(x.remitente || 'sin nombre en el banco')}` +
+                (x.referencia ? ` · ref ${esc(x.referencia)}` : '') + `</div>` +
+              // Los nombres van debajo del depósito y no como líneas
+              // sueltas: dos que pagan juntas son UNA línea del extracto,
+              // y listarlas aparte haría que el papel sumara el doble.
+              (Array.isArray(x.para) && x.para.length
+                ? `<div class="peq">→ ${esc(x.para.join(', '))}</div>`
+                // Sin nombres es un cobro en la puerta. Se dice cuántos
+                // porque un depósito de $30.000 puede haber pagado dos
+                // clases de $15.000: la línea del banco es una y la
+                // gente son dos, y quien cuente cabezas sobre el papel
+                // tiene que llegar al mismo número que la otra tirilla.
+                : `<div class="peq">→ cobrado en la puerta` +
+                  (Number(x.cobros) > 1 ? ` · ${Number(x.cobros)} personas` : '') +
+                  `</div>`)
+            ).join('')
+          ).join('') +
+          linea('= Buscar en el banco', pesos(k.banco_cop || 0), 'g grande')
+        : `<div class="peq">Nadie de los que entró hoy pagó por el banco.</div>`) +
+
+      (efec.length
+        ? `<hr>` + titulo('EN EFECTIVO · no va al banco') +
+          efec.map(x => linea(x.hora, pesos(x.valor_cop))).join('') +
+          linea('= En el cajón', pesos(k.efectivo_cop || 0), 'g')
+        : '') +
+
+      // Esto no se cuadra: se averigua. Va al final y con recuadro
+      // porque es lo único de este papel sobre lo que hay que hacer
+      // algo, no solo tacharlo.
+      (sinP.length
+        ? `<hr>` + titulo('ENTRÓ SIN DEPÓSITO') +
+          sinP.map(x =>
+            `<div class="ojo">${esc(x.nombre)}<div class="peq" ` +
+            `style="font-weight:400">${esc(x.motivo)}</div></div>`).join('')
+        : '') +
+
+      `<hr>` +
+      `<div class="peq">El banco reportó ${esc(pesos((d.banco || {}).recibido_cop || 0))} ` +
+        `en total este día, mensualidades y todo lo demás incluido. ` +
+        `Aquí solo está lo de clase suelta.</div>` +
+      `<div class="firma">Revisado</div>`;
+  }
+
   function pintarCierre() {
     const d = cajaDatos;
     const a = d.contra_admingym || {};
@@ -3812,6 +3901,10 @@ const CONFIG = {
 
       (d.cerrado
         ? `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
+          // Botón aparte y no una sección más de la tirilla del cierre:
+          // son dos papeles con dos trabajos distintos, y este solo se
+          // imprime el día que se va a cuadrar contra el extracto.
+          `<button class="btn" id="btn-tirilla-pagos">Imprimir cuándo pagaron</button>` +
           `<button class="btn" id="btn-rehacer">Corregir el cierre</button>`
         : `<div class="grupo"><div class="et">Cerrar el día</div>` +
             // LOS GASTOS SE PREGUNTAN, NO SE ESPERAN.
@@ -4012,6 +4105,14 @@ const CONFIG = {
 
     if (ev.target.id === 'btn-tirilla') {
       pintarTirilla();
+      window.print();
+      return;
+    }
+
+    // Las dos escriben en el mismo #tirilla y se imprimen igual: el
+    // rollo es uno solo y el CSS de impresión ya esconde todo lo demás.
+    if (ev.target.id === 'btn-tirilla-pagos') {
+      pintarTirillaPagos();
       window.print();
       return;
     }
