@@ -3675,6 +3675,7 @@ const CONFIG = {
     const banco = Array.isArray(k.banco) ? k.banco : [];
     const efec  = Array.isArray(k.efectivo) ? k.efectivo : [];
     const sinP  = Array.isArray(k.sin_pago) ? k.sin_pago : [];
+    const sinE  = Array.isArray(k.sin_enlazar) ? k.sin_enlazar : [];
 
     const linea = (t, v, cl) =>
       `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
@@ -3692,44 +3693,84 @@ const CONFIG = {
     }
     const cuandoFue = n => n === 0 ? 'HOY' : n === 1 ? 'AYER' : `HACE ${n} DÍAS`;
 
+    // Lo que el banco vio hoy contra lo que de eso queda identificado
+    // aquí. `banco_hoy_cop` son solo los renglones de hoy: los de días
+    // anteriores no se pueden restar de lo de hoy.
+    const bancoHoy = Number((d.banco || {}).recibido_cop || 0);
+    const idHoy    = Number(k.banco_hoy_cop || 0);
+    const falta    = Math.max(bancoHoy - idHoy, 0);
+
     $('#tirilla').innerHTML =
       `<h1>TUMBAO</h1>` +
       `<div class="sub">CUÁNDO PAGARON<br>${esc(conFecha(d.dia,
         { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
-      `<div class="peq">De la gente que entró a clase suelta este día, ` +
-        `con qué movimiento del banco entró cada una.</div>` +
+      `<div class="peq">Cada renglón es un movimiento del extracto. ` +
+        `Debajo, qué pagó.</div>` +
 
       `<hr>` + titulo('BUSCAR EN EL EXTRACTO') +
       (banco.length
         ? [...porDia.entries()].map(([dia, g]) =>
             `<div class="peq" style="margin-top:1.5mm"><b>${esc(cuandoFue(g.dias))}` +
               ` · ${esc(conFecha(dia, { day: 'numeric', month: 'short' }))}</b></div>` +
-            g.filas.map(x =>
-              linea(x.hora, pesos(x.valor_cop)) +
+            g.filas.map(x => {
+              const nombres = Array.isArray(x.para) ? x.para : [];
+              const conc = (Array.isArray(x.conceptos) ? x.conceptos : [])
+                .map(nombreConcepto).join(', ');
+              return linea(x.hora, pesos(x.valor_cop)) +
               `<div class="peq">${esc(x.remitente || 'sin nombre en el banco')}` +
                 (x.referencia ? ` · ref ${esc(x.referencia)}` : '') + `</div>` +
-              // Los nombres van debajo del depósito y no como líneas
-              // sueltas: dos que pagan juntas son UNA línea del extracto,
-              // y listarlas aparte haría que el papel sumara el doble.
-              (Array.isArray(x.para) && x.para.length
-                ? `<div class="peq">→ ${esc(x.para.join(', '))}</div>`
-                // Sin nombres es un cobro en la puerta. Se dice cuántos
-                // porque un depósito de $30.000 puede haber pagado dos
-                // clases de $15.000: la línea del banco es una y la
-                // gente son dos, y quien cuente cabezas sobre el papel
-                // tiene que llegar al mismo número que la otra tirilla.
-                : `<div class="peq">→ cobrado en la puerta` +
-                  (Number(x.cobros) > 1 ? ` · ${Number(x.cobros)} personas` : '') +
-                  `</div>`)
-            ).join('')
+              // Un pago que llegó en dos transferencias son DOS renglones
+              // del extracto. Se marca el segundo: sin esto, quien lo lea
+              // ve dos veces el mismo nombre y cree que le sobra plata.
+              (x.es_parte ? `<div class="peq">↳ segunda parte del mismo pago</div>` : '') +
+              // Qué pagó ese renglón: los nombres si fue clase suelta, el
+              // concepto si fue una mensualidad o una camiseta. Van debajo
+              // del movimiento y no como líneas sueltas, porque dos que
+              // pagan juntas son UN renglón del extracto y listarlas
+              // aparte haría que el papel sumara el doble.
+              (nombres.length
+                ? `<div class="peq">→ ${esc(nombres.join(', '))}` +
+                  (conc ? ` · ${esc(conc)}` : '') + `</div>`
+                : conc
+                  ? `<div class="peq">→ ${esc(conc)}` +
+                    // Sin nombre de reserva es alguien que llegó y pagó en
+                    // recepción. Decirlo importa: es la diferencia entre
+                    // "esta plata tiene dueño en el sistema" y "esta plata
+                    // se cobró en la puerta y no hay a quién buscar".
+                    (Number(x.cobros) > 0
+                      // Un depósito de $30.000 puede haber pagado dos
+                      // clases de $15.000: el renglón del banco es uno y
+                      // la gente son dos, y quien cuente cabezas sobre el
+                      // papel tiene que llegar al mismo número que la otra
+                      // tirilla.
+                      ? ` · en la puerta` +
+                        (Number(x.cobros) > 1 ? `, ${Number(x.cobros)} personas` : '')
+                      : ` · en recepción`) +
+                    `</div>`
+                  : `<div class="peq">→ cobrado en la puerta</div>`);
+            }).join('')
           ).join('') +
           linea('= Buscar en el banco', pesos(k.banco_cop || 0), 'g grande')
-        : `<div class="peq">Nadie de los que entró hoy pagó por el banco.</div>`) +
+        : `<div class="peq">Nada de lo de hoy entró por el banco.</div>`) +
 
       (efec.length
         ? `<hr>` + titulo('EN EFECTIVO · no va al banco') +
-          efec.map(x => linea(x.hora, pesos(x.valor_cop))).join('') +
+          efec.map(x => linea(`${x.hora} · ${nombreConcepto(x.concepto)}`,
+                              pesos(x.valor_cop))).join('') +
           linea('= En el cajón', pesos(k.efectivo_cop || 0), 'g')
+        : '') +
+
+      // Se registró como transferencia pero sin escoger el depósito. Esa
+      // plata está en el extracto y no se sabe en qué renglón: hay que
+      // buscarla a mano. Antes ni se nombraba, así que al cuadrar
+      // aparecía como un descuadre sin explicación.
+      (sinE.length
+        ? `<hr>` + titulo('POR TRANSFERENCIA, SIN DEPÓSITO ESCOGIDO') +
+          `<div class="peq">Está en el extracto, pero no se sabe en qué ` +
+            `renglón. Hay que buscarla por el valor.</div>` +
+          sinE.map(x => linea(`${x.hora} · ${nombreConcepto(x.concepto)}`,
+                              pesos(x.valor_cop))).join('') +
+          linea('= Buscar a mano', pesos(k.sin_enlazar_cop || 0), 'g')
         : '') +
 
       // Esto no se cuadra: se averigua. Va al final y con recuadro
@@ -3742,10 +3783,21 @@ const CONFIG = {
             `style="font-weight:400">${esc(x.motivo)}</div></div>`).join('')
         : '') +
 
-      `<hr>` +
-      `<div class="peq">El banco reportó ${esc(pesos((d.banco || {}).recibido_cop || 0))} ` +
-        `en total este día, mensualidades y todo lo demás incluido. ` +
-        `Aquí solo está lo de clase suelta.</div>` +
+      // El cuadre de verdad. De lo que el banco vio HOY, cuánto queda
+      // identificado arriba y cuánto no. Lo de arriba incluye renglones
+      // de días anteriores —quien pagó el martes para la clase de hoy—,
+      // así que restar el total sin más daría un número falso: se
+      // compara solo contra los renglones de hoy.
+      `<hr>` + titulo('CONTRA EL EXTRACTO DE HOY') +
+      linea('El banco recibió hoy', pesos(bancoHoy)) +
+      linea('Identificado aquí', pesos(idHoy)) +
+      (falta > 0
+        ? linea('Todavía sin dueño', pesos(falta), 'g')
+        : `<div class="veredicto">TODO IDENTIFICADO ✓</div>`) +
+      (falta > 0
+        ? `<div class="peq">Puede ser de una clase de otro día o plata que ` +
+          `nadie ha reclamado. Sale en la lista de sin dueño del panel.</div>`
+        : '') +
       `<div class="firma">Revisado</div>`;
   }
 

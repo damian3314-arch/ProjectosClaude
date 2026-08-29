@@ -167,9 +167,13 @@ begin
   -- Cada linea del banco cubre a los que nombra MAS los cobros en
   -- puerta que salieron de ese deposito. Sumado al efectivo y a los que
   -- entraron sin deposito tiene que dar exactamente personas_n.
+  -- Del efectivo solo cuentan las clases sueltas: desde la 0062 esa
+  -- seccion tambien trae mensualidades, y una mensualidad no es alguien
+  -- entrando a una clase. Contarlas daba 12 contra 11.
   select (select coalesce(sum(jsonb_array_length(b->'para') + (b->>'cobros')::int), 0)
             from jsonb_array_elements(v_k->'banco') b)
-       + (select count(*) from jsonb_array_elements(v_k->'efectivo'))
+       + (select count(*) from jsonb_array_elements(v_k->'efectivo') e
+           where e->>'concepto' = 'clase_suelta')
        + (select count(*) from jsonb_array_elements(v_k->'sin_pago'))
     into v_n;
   if v_n <> (v_d->'entradas'->>'personas_n')::int then
@@ -184,6 +188,161 @@ begin
       (v_k->>'banco_cop')::int + (v_k->>'efectivo_cop')::int;
   end if;
   raise notice '  v banco + efectivo = lo que entro de clase suelta';
+
+  raise notice ' ';
+  raise notice 'clase suelta: todo en verde';
+end $$;
+
+-- =====================================================================
+-- 0062: lo que se registra a mano en la Caja también hay que tacharlo
+--
+-- De los $580.000 que reportó el banco el 28 de agosto, $445.000 eran
+-- mensualidades apuntadas a mano. La tirilla los dejaba fuera y lo
+-- decía al pie, o sea que dejaba fuera la mayor parte del trabajo.
+-- =====================================================================
+do $$
+declare
+  v_tok  text := tk();
+  v_hoy  date := (now() at time zone 'America/Bogota')::date;
+  v_c    uuid;
+  v_d    jsonb;
+  v_k    jsonb;
+  v_cab  uuid;
+  v_part uuid;
+  v_solo uuid;
+  v_n    int;
+begin
+  delete from asistencias where true;
+  delete from caja_movimientos where true;
+  delete from reservas where true;
+  delete from pagos where true;
+  delete from clases where true;
+
+  insert into clases (id, nombre, profesor, fecha_hora, duracion_min,
+                      cupo_total, precio_cop, lugar, activa, aforo)
+  values (gen_random_uuid(), 'Clase 6:00 pm', 'Kevin',
+          (v_hoy + time '18:00') at time zone 'America/Bogota',
+          60, 30, 15000, 'Sede Tumbao', true, 30)
+  returning id into v_c;
+
+  -- ── Una mensualidad normal, por transferencia ─────────────────────
+  insert into pagos (id, banco, valor_cop, fecha_pago, remitente, referencia, consumido)
+  values (gen_random_uuid(), 'bancolombia', 125000,
+          (v_hoy + time '17:12') at time zone 'America/Bogota',
+          'MARTHA LUCIA NUNEZ MARIN', 'M55554444', false)
+  returning id into v_solo;
+  perform caja_registrar(v_tok, 'ingreso', 'mensualidad', 125000, 'transferencia', null, v_solo);
+
+  -- ── EL CASO DIFÍCIL: una mensualidad pagada en DOS transferencias ─
+  -- $85.000 y $40.000 juntados con la 0057. En la caja es UN ingreso de
+  -- $125.000; en el extracto son DOS renglones. Si el papel enseñara
+  -- solo la cabeza diria 85.000 donde la caja dice 125.000, y los
+  -- 40.000 pareceria que nadie los reclamo.
+  insert into pagos (id, banco, valor_cop, fecha_pago, remitente, referencia, consumido)
+  values (gen_random_uuid(), 'bancolombia', 85000,
+          (v_hoy + time '09:39') at time zone 'America/Bogota',
+          'GENNY PAOLA GONZALEZ VEGA', 'M11110000', false)
+  returning id into v_cab;
+  insert into pagos (id, banco, valor_cop, fecha_pago, remitente, referencia, consumido)
+  values (gen_random_uuid(), 'bancolombia', 40000,
+          (v_hoy + time '17:45') at time zone 'America/Bogota',
+          'GENNY PAOLA GONZALEZ VEGA', 'M11110001', false)
+  returning id into v_part;
+  perform caja_fusionar_pagos(v_tok, array[v_cab, v_part]);
+  perform caja_registrar(v_tok, 'ingreso', 'mensualidad', 125000, 'transferencia', null, v_cab);
+
+  -- ── Una mensualidad en efectivo: no va al banco ───────────────────
+  perform caja_registrar(v_tok, 'ingreso', 'mensualidad', 125000, 'efectivo', null, null);
+
+  -- ── Una camiseta por transferencia SIN enlazar depósito ───────────
+  -- Hay que buscarla a mano en el extracto: no se sabe qué renglón es.
+  perform caja_registrar(v_tok, 'ingreso', 'camiseta', 50000, 'transferencia', null, null);
+
+  v_d := caja_del_dia(v_tok, v_hoy);
+  v_k := v_d->'conciliacion';
+
+  -- ── 1. las mensualidades ya salen ─────────────────────────────────
+  select count(*) into v_n
+    from jsonb_array_elements(v_k->'banco') b,
+         jsonb_array_elements_text(b->'conceptos') q
+   where q = 'mensualidad';
+  if v_n < 1 then
+    raise exception 'las mensualidades registradas a mano no salen en la tirilla';
+  end if;
+  raise notice '  v lo que se registra a mano en la Caja tambien sale';
+
+  -- ── 2. EL QUE IMPORTA: el pago en dos partes son DOS renglones ────
+  select count(*) into v_n from jsonb_array_elements(v_k->'banco') b
+   where b->>'remitente' = 'GENNY PAOLA GONZALEZ VEGA';
+  if v_n <> 2 then
+    raise exception 'el pago en dos transferencias deberia dar 2 renglones, da %', v_n;
+  end if;
+  raise notice '  v un pago que llego en dos transferencias son DOS renglones';
+
+  -- ── 3. y suman lo que de verdad dice el banco ─────────────────────
+  select sum((b->>'valor_cop')::int) into v_n
+    from jsonb_array_elements(v_k->'banco') b
+   where b->>'remitente' = 'GENNY PAOLA GONZALEZ VEGA';
+  if v_n <> 125000 then
+    raise exception 'los dos renglones deberian sumar 125.000, suman %', v_n;
+  end if;
+  raise notice '  v y los dos juntos suman los 125.000 del ingreso';
+
+  -- ── 4. la parte se marca, para que no parezca plata de mas ────────
+  select count(*) into v_n from jsonb_array_elements(v_k->'banco') b
+   where b->>'remitente' = 'GENNY PAOLA GONZALEZ VEGA' and (b->>'es_parte')::boolean;
+  if v_n <> 1 then
+    raise exception 'deberia haber 1 renglon marcado como parte, hay %', v_n;
+  end if;
+  raise notice '  v el segundo renglon se marca como parte del mismo pago';
+
+  -- ── 5. el total a buscar es el del extracto ───────────────────────
+  -- 125.000 (Martha) + 85.000 + 40.000 (Genny) = 250.000.
+  if (v_k->>'banco_cop')::int <> 250000 then
+    raise exception 'a buscar en el banco deberian ser 250.000, son %',
+      v_k->>'banco_cop';
+  end if;
+  raise notice '  v el total a buscar en el extracto es 250.000';
+
+  -- ── 6. el efectivo va aparte, con su concepto ─────────────────────
+  if (v_k->>'efectivo_cop')::int <> 125000 then
+    raise exception 'el efectivo deberia ser 125.000, es %', v_k->>'efectivo_cop';
+  end if;
+  select count(*) into v_n from jsonb_array_elements(v_k->'efectivo') x
+   where x->>'concepto' = 'mensualidad';
+  if v_n <> 1 then raise exception 'el efectivo no dice de que fue'; end if;
+  raise notice '  v la mensualidad en efectivo va aparte y dice que es';
+
+  -- ── 7. lo registrado sin enlazar se nombra ────────────────────────
+  if (v_k->>'sin_enlazar_cop')::int <> 50000 then
+    raise exception 'la camiseta sin enlazar deberia salir por 50.000, sale por %',
+      v_k->>'sin_enlazar_cop';
+  end if;
+  raise notice '  v una transferencia sin deposito enlazado se nombra, para buscarla';
+
+  -- ── 8. y NO se cuela en lo que se puede tachar ────────────────────
+  select count(*) into v_n from jsonb_array_elements(v_k->'banco') b
+   where (b->>'valor_cop')::int = 50000;
+  if v_n <> 0 then
+    raise exception 'la camiseta sin enlazar se colo en los renglones del banco';
+  end if;
+  raise notice '  v y no se cuela entre los renglones que si se pueden tachar';
+
+  -- ── 9. una mensualidad NO cuenta como alguien que entro ───────────
+  -- Aqui no entro nadie a clase: solo mensualidades y una camiseta. Si
+  -- la conciliacion contara cada fila de efectivo como una persona,
+  -- diria 1 donde el cierre dice 0.
+  select (select coalesce(sum(jsonb_array_length(b->'para') + (b->>'cobros')::int), 0)
+            from jsonb_array_elements(v_k->'banco') b)
+       + (select count(*) from jsonb_array_elements(v_k->'efectivo') e
+           where e->>'concepto' = 'clase_suelta')
+       + (select count(*) from jsonb_array_elements(v_k->'sin_pago'))
+    into v_n;
+  if v_n <> (v_d->'entradas'->>'personas_n')::int then
+    raise exception 'la conciliacion lista % personas y el cierre cuenta %',
+      v_n, v_d->'entradas'->>'personas_n';
+  end if;
+  raise notice '  v una mensualidad no se cuenta como alguien que entro (%)', v_n;
 
   raise notice ' ';
   raise notice 'TODO EN VERDE';

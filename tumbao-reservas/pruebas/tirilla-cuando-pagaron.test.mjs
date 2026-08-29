@@ -31,16 +31,30 @@ const DIA = {
   conciliacion: {
     banco: [
       { dia: '2026-08-26', dias_antes: 2, hora: '09:10', valor_cop: 15000,
-        remitente: 'CAMILA LOPEZ', referencia: 'M11112222', para: ['Camila Lopez'] },
+        remitente: 'CAMILA LOPEZ', referencia: 'M11112222',
+        para: ['Camila Lopez'], conceptos: [], cobros: 0, es_parte: false },
+      // El caso difícil: una mensualidad que llegó en dos transferencias.
+      { dia: '2026-08-28', dias_antes: 0, hora: '09:39', valor_cop: 85000,
+        remitente: 'GENNY PAOLA GONZALEZ VEGA', referencia: 'M11110000',
+        para: [], conceptos: ['mensualidad'], cobros: 0, es_parte: false },
       { dia: '2026-08-28', dias_antes: 0, hora: '11:29', valor_cop: 30000,
         remitente: 'ISABEL FLOREZ MARTINEZ', referencia: 'M07471046',
-        para: ['Isabel Florez', 'Lizet Gutierrez'] },
+        para: ['Isabel Florez', 'Lizet Gutierrez'], conceptos: [], cobros: 0,
+        es_parte: false },
+      { dia: '2026-08-28', dias_antes: 0, hora: '17:45', valor_cop: 40000,
+        remitente: 'GENNY PAOLA GONZALEZ VEGA', referencia: 'M11110001',
+        para: [], conceptos: ['mensualidad'], cobros: 0, es_parte: true },
       { dia: '2026-08-28', dias_antes: 0, hora: '17:58', valor_cop: 15000,
-        remitente: 'JUAN GABRIEL OSPINA BADILLO', referencia: null, para: [] },
+        remitente: 'JUAN GABRIEL OSPINA BADILLO', referencia: null,
+        para: [], conceptos: ['clase_suelta'], cobros: 1, es_parte: false },
     ],
-    banco_cop: 60000,
-    efectivo: [{ hora: '18:25', valor_cop: 15000 }],
-    efectivo_cop: 15000,
+    banco_cop: 185000,
+    banco_hoy_cop: 170000,
+    efectivo: [{ hora: '18:25', concepto: 'clase_suelta', valor_cop: 15000 },
+               { hora: '18:52', concepto: 'mensualidad', valor_cop: 125000 }],
+    efectivo_cop: 140000,
+    sin_enlazar: [{ hora: '19:10', concepto: 'camiseta', valor_cop: 50000 }],
+    sin_enlazar_cop: 50000,
     sin_pago: [{ nombre: 'Julieth Herrera', motivo: 'reprogramada, pago otro dia' }],
   },
 };
@@ -52,14 +66,25 @@ const ok = (n, c, extra='') => { if (!c) fallos++;
 const t = await p.evaluate(d => window.__e2e.tirillaPagos(d), DIA);
 
 // ── lo que no puede fallar ───────────────────────────────────────
-ok('el total a buscar es el del banco, no el de las personas',
-   /60\.000/.test(t.texto) && !/\$60\.000[\s\S]*\$60\.000/.test(t.texto.replace(/Buscar en el banco[\s\S]*/, '')),
-   'suma 60.000');
+ok('el total a buscar es el del banco', /185\.000/.test(t.texto));
 ok('el depósito compartido aparece UNA sola vez',
    (t.texto.match(/30\.000/g) || []).length === 1,
    `${(t.texto.match(/30\.000/g) || []).length} veces`);
 ok('y nombra a las dos personas debajo',
    /Isabel Florez, Lizet Gutierrez/.test(t.texto));
+
+// ── lo que se registra a mano en la Caja ─────────────────────────
+ok('las mensualidades salen', /Mensualidad/i.test(t.texto));
+ok('el pago en dos transferencias sale como dos renglones',
+   /85\.000/.test(t.texto) && /40\.000/.test(t.texto));
+ok('y el segundo se marca como parte del mismo pago',
+   /segunda parte del mismo pago/.test(t.texto));
+ok('la camiseta sin depósito escogido se nombra aparte',
+   /SIN DEPÓSITO ESCOGIDO/.test(t.texto) && /Camiseta/i.test(t.texto));
+ok('y dice que hay que buscarla por el valor',
+   /buscarla por el valor/.test(t.texto));
+ok('el efectivo dice de qué fue cada uno',
+   /18:25 · Clase suelta/.test(t.texto) && /18:52 · Mensualidad/.test(t.texto));
 
 // ── agrupado por día, que es como está el extracto ───────────────
 ok('el pago de hace dos días se agrupa aparte', /HACE 2 DÍAS/.test(t.texto));
@@ -69,7 +94,17 @@ ok('el de hace dos días va primero, como en el extracto',
 
 // ── el efectivo no se busca en el banco ──────────────────────────
 ok('el efectivo va en su propia sección', /no va al banco/.test(t.texto));
-ok('y no se suma al total del banco', !/=\s*Buscar en el banco[^$]*75\.000/.test(t.texto));
+ok('y no se suma al total del banco',
+   !/= Buscar en el banco\$?325\.000/.test(t.texto.replace(/\s/g, '')));
+
+// ── el cuadre contra el extracto de hoy ──────────────────────────
+ok('dice cuánto recibió el banco hoy', /580\.000/.test(t.texto));
+ok('y cuánto de eso queda identificado', /170\.000/.test(t.texto));
+ok('y nombra la diferencia como lo que falta por reclamar',
+   /410\.000/.test(t.texto) && /sin dueño/i.test(t.texto),
+   'el hueco es 580.000 − 170.000');
+ok('ya no dice que solo trae clase suelta',
+   !/solo está lo de clase suelta/.test(t.texto));
 
 // ── lo que hay que averiguar ─────────────────────────────────────
 ok('quien entró sin depósito sale en recuadro', t.recuadros >= 1, String(t.recuadros));
@@ -77,11 +112,11 @@ ok('con su nombre y el motivo',
    /Julieth Herrera/.test(t.texto) && /reprogramada/.test(t.texto));
 
 // ── el cobro en la puerta no finge tener dueño ───────────────────
-ok('el cobrado en la puerta lo dice', /cobrado en la puerta/.test(t.texto));
-
-// ── que se entienda contra qué se compara ────────────────────────
-ok('avisa que el banco reportó más, por las mensualidades',
-   /580\.000/.test(t.texto) && /mensualidades/.test(t.texto));
+// Es la diferencia entre "esta plata tiene dueño en el sistema" y "se
+// cobró en la puerta y no hay a quién buscar".
+ok('el cobrado en la puerta lo dice', /en la puerta/.test(t.texto));
+ok('y lo distingue de la mensualidad cobrada en recepción',
+   /en recepción/.test(t.texto));
 
 // ── y que sea una tirilla, no la del cierre ──────────────────────
 ok('se titula CUÁNDO PAGARON', /CUÁNDO PAGARON/.test(t.texto));
