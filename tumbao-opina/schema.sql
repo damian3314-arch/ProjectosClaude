@@ -9,10 +9,18 @@ create table if not exists conversaciones (
   id            text primary key,          -- uuid que genera el navegador
   nombre        text,
   telefono      text,
-  -- 'queja' | 'sugerencia' | 'elogio' | 'mixto'. Lo decide el LLM al
-  -- cerrar, no la persona: nadie se autoclasifica bien.
+  -- 'queja' | 'sugerencia' | 'elogio' | 'mixto'. Lo decide el LLM, no la
+  -- persona: nadie se autoclasifica bien.
+  --
+  -- NULL quiere decir "todavía no tiene ficha", y eso lo usa el barrido
+  -- de conversaciones abandonadas para saber cuáles le faltan. Lo llenan
+  -- el cierre y ese barrido; nadie más.
   tipo          text,
-  resumen       text,                      -- lo que dijo, condensado
+  -- Lo que dijo, condensado. Mientras no haya ficha son sus propias
+  -- frases, escritas turno a turno: quien contesta y cierra la pestaña
+  -- tiene que salir en el reporte del lunes con algo legible, no con
+  -- "(sin resumen)". Pasó el 21 de agosto y por eso está así.
+  resumen       text,
   urgente       integer not null default 0, -- 1 = mirar hoy, no el lunes
   motivo_urgente text,
   transcripcion text,                      -- la conversación completa, en crudo

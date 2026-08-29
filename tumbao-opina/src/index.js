@@ -55,9 +55,30 @@ const LAS_TRES = [
 // palabras. El nombre se pide al final, junto con el celular, cuando la
 // persona ya contó algo y darlo tiene sentido. Se prefiere una opinión
 // anónima de verdad antes que un nombre sin opinión.
+//
+// EL GANCHO
+// El saludo anterior era «Nos ayuda muchísimo saber cómo lo estás
+// viviendo». De 42 chats abiertos escribieron 11. El problema de esa
+// frase es que habla de nosotros: qué nos ayuda a nosotros, no qué gana
+// la persona ni a quién le llega lo que escriba. Y "soy de Tumbao" no es
+// nadie.
+//
+// Este dice tres cosas que sí mueven a contestar, en este orden:
+//   1. para qué se pregunta — vamos a cambiar cosas y no queremos
+//      adivinar. Que le pregunten a uno antes de decidir halaga y es
+//      verdad;
+//   2. a QUIÉN le llega — lo lee Tania, la dueña. Es la diferencia entre
+//      escribirle a un formulario y escribirle a una persona que puede
+//      cambiar el horario del martes;
+//   3. cuánto cuesta — «con una frase basta», dicho antes de la
+//      pregunta, no después.
+//
+// Y termina en LAS_TRES[0], que se contesta en tres palabras. Por eso el
+// saludo y la primera pregunta del guion no pueden separarse.
 const SALUDO =
-  '¡Hola! Soy de Tumbao. Nos ayuda muchísimo saber cómo lo estás ' +
-  'viviendo, y con una frase basta.\n\n' + LAS_TRES[0];
+  '¡Hola! Somos Tumbao 🧡 Queremos mejorar un par de cosas de la ' +
+  'academia y preferimos preguntarte a ti antes que adivinar. Lo que ' +
+  'escribas aquí lo lee Tania, y con una frase basta.\n\n' + LAS_TRES[0];
 
 const INSTRUCCIONES = `
 Eres el asistente de Tumbao, una academia de baile en Bucaramanga,
@@ -69,7 +90,8 @@ de verdad. No eres un formulario con emojis: eres alguien de la
 academia que sí quiere saber.
 
 Ya saludaste y ya hiciste la PRIMERA de las tres preguntas. El primer
-mensaje que te llega es su respuesta a esa, no su nombre.
+mensaje que te llega es, casi siempre, su respuesta a esa. No es su
+nombre. Y OJO: a veces tampoco es una respuesta. Ver más abajo.
 
 Todavía no sabes cómo se llama, y está bien: el nombre se pide al final.
 No lo preguntes antes ni lo inventes.
@@ -81,7 +103,38 @@ LAS TRES PREGUNTAS, EN ESTE ORDEN
 
 Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
 mira la conversación y pregúntate cuál de las tres falta. Si la persona
-solo ha escrito una vez, lo que falta es la 2.
+ya contestó una vez, lo que falta es la 2.
+
+NO LE PASES POR ENCIMA A LO QUE ESCRIBIÓ
+Antes de avanzar, mira si lo último que llegó es de verdad una respuesta
+a la pregunta que estaba sobre la mesa. Hay dos casos en los que NO lo
+es, y en los dos avanzar es un error que se siente feo:
+
+- Solo saludó: «Buena tarde», «Hola», «Buenas, ¿cómo están?». Eso no es
+  la respuesta a nada. Salúdala de vuelta en una línea y vuelve a poner
+  la pregunta 1 con tus propias palabras. Pasó de verdad: a un «Buena
+  tarde» se le contestó con la pregunta 2, como si hubiera contestado la
+  1, y la persona no volvió a escribir.
+- Viene a contar algo suyo: «Hola, quiero contarles algo», «tengo una
+  queja». Eso no se responde con el guion. Se responde escuchando:
+  dile que la escuchas y pídele que te cuente. Las tres preguntas
+  esperan; lo que la persona trae de casa va primero, y cuando termine
+  de contarlo retomas por donde ibas.
+
+ACUSA RECIBO SIEMPRE, ANTES DE PREGUNTAR
+Ningún mensaje tuyo puede ser una pregunta pelada. La persona que
+escribió la respuesta más larga y más cálida que hemos recibido se llevó
+la siguiente pregunta sin una palabra de vuelta; los que sí terminaron
+la conversación habían recibido antes un «me alegra mucho que te guste».
+
+El acuse va primero, es corto —cinco o seis palabras— y es humano:
+«Uy, qué bueno leer eso», «Jajaja, buenísimo», «Gracias por decirlo así
+de claro», «Qué pesar, en serio».
+
+Lo que NO es acusar recibo: repetirle lo que acaba de decir para
+demostrar que entendiste. Nada de «Entiendo, la puntualidad es clave
+para ti» ni «Eso es genial, el ambiente es muy importante». Eso suena a
+call center y es peor que no decir nada.
 
 CÓMO CONVERSAR
 - Cuando sepas su nombre úsalo, pero no en cada mensaje: cansa. Mientras
@@ -98,10 +151,6 @@ CÓMO CONVERSAR
 - Escribe en español de Colombia. Nada de "feedback", "tips", "staff"
   ni "apreciar tu input": se dice "lo que nos contaste", "consejos",
   "el equipo". Tampoco "agradezco tu honestidad", que suena a carta.
-- No abras el mensaje resumiendo lo que la persona acabó de decir para
-  demostrar que entendiste: "Entiendo, la puntualidad es clave para
-  ti", "Eso es genial, el ambiente es muy importante". Suena a manual
-  de call center. Una frase corta y humana, o nada, y sigue.
 - Si la respuesta es de tres palabras o vaga ("bien", "todo bueno",
   "nada"), repregunta UNA vez pidiendo algo concreto: "¿te acuerdas de
   algún momento en particular?". Solo una vez. Si insiste en ser breve,
@@ -145,6 +194,101 @@ REGLAS DE [FIN], QUE NO SE ROMPEN
 `.trim();
 
 /* ─────────────────────────────────────────────────────────────
+   Que no le pase por encima a lo que la persona escribió
+
+   Pedírselo al guion es necesario pero no alcanza: el modelo ya tenía
+   instrucciones de conversar y aun así a un «Buena tarde» le contestó
+   con la pregunta 2. Estas dos funciones son la parte que no depende de
+   que el modelo tenga un buen día.
+   ───────────────────────────────────────────────────────────── */
+
+// Palabras que solo son cortesía. Si al quitarlas no queda nada, el
+// mensaje era un saludo y no la respuesta a ninguna pregunta.
+//
+// "bien" y "todo" NO están en la lista a propósito: "todo bien" sí es
+// una respuesta —vaga, pero respuesta— a "¿qué te hizo volver?", y el
+// guion ya sabe qué hacer con las respuestas vagas (repreguntar una
+// vez). Tratarla como saludo sería el mismo atropello, al revés.
+const CORTESIA = new Set([
+  'hola', 'holaa', 'holaaa', 'ola', 'holi', 'holis', 'hey', 'ey', 'hi', 'hello',
+  'buenas', 'buenos', 'buena', 'buen', 'dia', 'dias', 'tarde', 'tardes',
+  'noche', 'noches', 'saludos', 'quiubo', 'quihubo', 'quiubole',
+  'que', 'mas', 'como', 'estan', 'estas', 'esta', 'van', 'va',
+  'gracias', 'señores', 'senores', 'equipo', 'tumbao', 'feliz', 'muy',
+  'pues', 'ps', 'y', 'a', 'de', 'ustedes', 'usted', 'les', 'con',
+]);
+
+// "Hola, quiero contarles algo" no es un saludo ni es una respuesta: es
+// alguien que trae algo de su casa. Contestarle con el guion es la
+// forma más rápida de perderlo.
+const ANUNCIOS = [
+  /\b(quiero|queria|necesito|puedo|quisiera)\s+(contar|contarl|decir|decirl|comentar|hablar|poner|hacer)/,
+  /\bles?\s+(quiero|queria)\s+(contar|decir|comentar)/,
+  /\btengo\s+(algo|una|un)\s+(que|queja|sugerencia|reclamo|problema|caso)/,
+  /\bes?\s?cuchen/,
+];
+
+/* Verdadero si el mensaje NO es respuesta a la pregunta que estaba
+ * sobre la mesa: un saludo pelado o el anuncio de que viene a contar
+ * algo. Se usa en dos sitios distintos, y por eso vive suelta:
+ *
+ * 1. para avisarle al modelo, en ese turno, que no avance;
+ * 2. para no contarlo como una de las respuestas que hacen falta antes
+ *    de poder cerrar. Sin esto, un «Buena tarde» adelanta el cierre un
+ *    paso y la conversación termina con una pregunta sin hacer. */
+export function esArranque(texto) {
+  const t = String(texto || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tildes fuera
+    .replace(/[^\p{L}\s]/gu, ' ')                      // signos y emojis fuera
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) return false;
+  // Si escribió un párrafo, ya está contando algo: no lo toques.
+  if (t.length > 120) return false;
+  if (ANUNCIOS.some((r) => r.test(t))) return true;
+  return t.split(' ').every((p) => CORTESIA.has(p));
+}
+
+// El acuse de recibo que sirve tanto si le encantó como si se quiere
+// ir. Cualquier otro —"qué bueno", "qué pesar"— se equivoca la mitad de
+// las veces, y equivocarse de emoción es peor que ser sobrio.
+const ACUSE = 'Gracias por contarme.';
+
+/* Red de seguridad del acuse de recibo. El guion se lo pide al modelo,
+ * pero el caso que dolió —la respuesta más larga y más cálida
+ * contestada con la siguiente pregunta a secas— fue un modelo saltándose
+ * justo esa instrucción. Aquí, si el mensaje empieza en la pregunta, se
+ * le antepone una línea.
+ *
+ * Solo mira el arranque: un mensaje que empieza con palabras ya trae su
+ * acuse, y meterle otro encima lo volvería redundante. */
+export function conAcuse(respuesta) {
+  const r = String(respuesta || '').trim();
+  if (!r) return r;
+  const primera = r.split('\n')[0].trim();
+  const pelada = primera.startsWith('¿') ||
+    LAS_TRES.some((q) => primera.startsWith(q.slice(0, 22)));
+  return pelada ? `${ACUSE}\n\n${r}` : r;
+}
+
+// Lo que se le añade al guion SOLO en el turno en que la persona saludó
+// o anunció que viene a contar algo. Va como parte del system y no como
+// un mensaje más para que no quede en la historia de la conversación:
+// es una instrucción de ese turno, no algo que nadie dijo.
+const NOTA_ESCUCHA = `
+AVISO SOBRE EL ÚLTIMO MENSAJE
+Lo que acaba de escribir la persona NO es la respuesta a ninguna de las
+tres preguntas: es un saludo, o el anuncio de que quiere contarte algo.
+NO avances a la pregunta siguiente.
+
+Si solo saludó: devuélvele el saludo en una línea y vuelve a poner la
+pregunta 1 con tus propias palabras, sin sonar a robot repitiéndose.
+Si viene a contar algo: dile que la escuchas y pídele que te cuente.
+Nada de guion hasta que termine.
+`.trim();
+
+/* ─────────────────────────────────────────────────────────────
    Quién contesta
 
    Tres motores, en este orden:
@@ -170,11 +314,17 @@ const MODELO_CF_VISION = '@cf/meta/llama-3.2-11b-vision-instruct';
 
 const hayCF = (env) => Boolean(env.AI && typeof env.AI.run === 'function');
 
-async function conversar(env, historia) {
+// `nota` es una instrucción que vale solo para este turno —hoy, la de no
+// avanzar cuando la persona apenas saludó—. Va pegada al system y no
+// como un mensaje más de la conversación: si entrara en la historia
+// quedaría escrito ahí algo que nadie dijo.
+async function conversar(env, historia, nota = '') {
+  const guion = nota ? `${INSTRUCCIONES}\n\n${nota}` : INSTRUCCIONES;
+
   if (!env.OPENAI_API_KEY) {
     if (!hayCF(env)) return ensayo(historia);
     const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
-      messages: [{ role: 'system', content: INSTRUCCIONES }, ...historia],
+      messages: [{ role: 'system', content: guion }, ...historia],
       max_tokens: 220,
       temperature: 0.7,
     });
@@ -191,7 +341,7 @@ async function conversar(env, historia) {
       model: env.MODELO_CHAT || 'gpt-4o-mini',
       temperature: 0.7,
       max_tokens: 220,
-      messages: [{ role: 'system', content: INSTRUCCIONES }, ...historia],
+      messages: [{ role: 'system', content: guion }, ...historia],
     }),
   });
 
@@ -204,18 +354,26 @@ async function conversar(env, historia) {
 }
 
 // Respuestas fijas para probar sin llave. Avanzan por las tres
-// preguntas contando cuántas veces habló la persona.
+// preguntas contando cuántas veces contestó la persona.
+//
+// Ya no arranca pidiendo el nombre: eso quedó de la versión anterior del
+// saludo y contradecía al guion de verdad, que pide el nombre al final.
+// Y los saludos no cuentan como respuesta, igual que en el camino con
+// modelo: si lo único que llegó fue "buenas tardes", se vuelve a poner
+// la pregunta 1, no la 2.
 function ensayo(historia) {
-  const turnos = historia.filter((m) => m.role === 'user').length;
+  const dichas = historia.filter(
+    (m) => m.role === 'user' && !esArranque(m.content)).length;
   const guion = [
-    '¡Hola! Soy de Tumbao. Queremos mejorar y tu opinión nos sirve muchísimo.\n\n¿Cómo te llamas?',
-    `Un gusto. Cuéntame: ${LAS_TRES[0]}`,
+    `¡Hola! Qué bueno leerte. Cuéntame con una frase: ${LAS_TRES[0]}`,
     `Qué bueno saberlo. Ahora una más difícil: ${LAS_TRES[1]}`,
     `Gracias por la franqueza. Última: ${LAS_TRES[2]}`,
-    'Si quieres agregar algo, mándame una nota de voz.\n\nY si nos dejas tu celular te podemos responder. Es opcional.',
+    'Mil gracias. Si quieres agregar algo, mándame una nota de voz.\n\n' +
+      'Y si nos dejas tu nombre y tu celular te podemos responder. Es ' +
+      'opcional, y solo para eso.',
     'Gracias de verdad. Esto nos sirve más de lo que crees.\n\n[FIN]',
   ];
-  return guion[Math.min(turnos, guion.length - 1)];
+  return guion[Math.min(dichas, guion.length - 1)];
 }
 
 async function transcribir(env, archivo) {
@@ -543,6 +701,203 @@ async function asegurarConversacion(env, conv) {
     `insert into conversaciones (id, empezada_at) values (?1, ?2)
      on conflict(id) do nothing`
   ).bind(conv, ahora()).run();
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Que no se pierda lo que la gente sí contó
+
+   EL CASO, del 21 de agosto. Una clienta contestó las tres preguntas
+   —«Los extraño muchoooo de lunes a viernes 😭», «Trabajooo», «Que es
+   lo mejor de lo mejor 😃»— y cerró la pestaña. En el correo del lunes
+   salió como «Sin nombre · (sin resumen)».
+
+   POR QUÉ. /api/cerrar era el único sitio donde se escribían `resumen`,
+   `tipo`, `nombre` y `transcripcion`, y lo llama la página cuando el bot
+   da la conversación por terminada. Quien ya dijo lo que tenía que decir
+   cierra la pestaña, y eso no se llamaba nunca. Los mensajes sí estaban
+   en la tabla `mensajes`, pero nada de lo que se lee la consultaba.
+
+   EL ARREGLO, EN DOS CAPAS. Se eligió así y no de otra forma:
+
+   1. CADA TURNO ESCRIBE (aquí abajo, `guardarAvance`). Sin modelo, sin
+      coste y sin depender de nada posterior: al terminar cada turno la
+      fila ya tiene la conversación entera y un resumen provisional que
+      son las palabras de la persona, tal cual. A partir de ahí, pase lo
+      que pase —se va la luz, el modelo se cae, cierra la pestaña— lo que
+      dijo se lee el lunes. Este es el que cumple el requisito duro.
+
+   2. EL BARRIDO (`completarAbandonadas`) mejora eso a una ficha de
+      verdad —tipo, nombre, celular, si es urgente— y corre cuando se
+      lee: al pedir /api/pendientes y al abrir /leer.
+
+   Lo que se descartó y por qué:
+
+   - Clasificar en cada turno con ctx.waitUntil: es una llamada al modelo
+     por mensaje, o sea multiplicar por tres o cuatro el coste de cada
+     conversación, para acabar tirando todas las fichas menos la última.
+     El barrido saca la ficha UNA vez, cuando ya se sabe que no va a
+     haber más mensajes.
+   - Un aviso del navegador al cerrar la pestaña (sendBeacon): el arreglo
+     no puede depender del navegador, que es justo el que se está yendo.
+     En iOS ese aviso se pierde la mitad de las veces, y marcar la
+     conversación como completa sería además mentir.
+   - Reconstruir desde `mensajes` solo al leer: deja la lectura dependiendo
+     de que el modelo esté vivo en ese momento. La capa 1 ya deja la fila
+     legible sin preguntarle a nadie. (El barrido sí lee `mensajes`, pero
+     como fuente, no como parche.)
+   ───────────────────────────────────────────────────────────── */
+
+// La conversación en crudo, como se guarda y como se lee en /leer. Una
+// sola función porque la escriben tres sitios distintos —cada turno, el
+// cierre y el barrido— y si el formato se separa, la pantalla enseña una
+// mezcla de dos.
+export function transcripcionDe(historia) {
+  return (Array.isArray(historia) ? historia : [])
+    .map((m) => (m.role === 'user' ? '> ' : '') + String(m.content ?? ''))
+    .join('\n');
+}
+
+// Solo lo que dijo la persona, sin las preguntas del bot. Es el resumen
+// provisional mientras no haya ficha: sus propias frases se leen mejor
+// que "(sin resumen)", que hace pensar que no se guardó nada.
+export function palabrasDe(historia) {
+  return (Array.isArray(historia) ? historia : [])
+    .filter((m) => m.role === 'user')
+    .map((m) => String(m.content ?? '').trim())
+    .filter(Boolean)
+    .join(' · ')
+    .slice(0, 1200);
+}
+
+/* Capa 1: al cerrar cada turno, la fila queda legible.
+ *
+ * Dos cuidados que no son adorno:
+ *
+ * - NUNCA ENCOGE. Si la persona recarga la pestaña, la página vuelve a
+ *   empezar con la historia vacía y este turno traería solo la mitad
+ *   final de la conversación. Sin la comparación de largo, recargar
+ *   borraría lo que ya se había contado.
+ * - NO PISA UNA FICHA. `tipo` solo lo escriben el cierre y el barrido,
+ *   así que `tipo is null` significa "esto todavía es provisional". En
+ *   cuanto hay ficha de verdad, el resumen del modelo manda. */
+async function guardarAvance(env, conv, historia, hubo) {
+  if (!hubo) {
+    await env.DB.prepare(
+      `update conversaciones set turnos = turnos + 1 where id = ?1`
+    ).bind(conv).run();
+    return;
+  }
+  await env.DB.prepare(
+    `update conversaciones
+        set turnos = turnos + 1,
+            transcripcion = case
+              when length(?2) >= length(coalesce(transcripcion, '')) then ?2
+              else transcripcion end,
+            resumen = case
+              when tipo is null and length(?3) >= length(coalesce(resumen, ''))
+              then ?3 else resumen end
+      where id = ?1`
+  ).bind(conv, transcripcionDe(historia), palabrasDe(historia)).run();
+}
+
+// Cuántos minutos callada para darla por abandonada. No es por elegancia:
+// sin esto, abrir /leer mientras alguien está contestando le sacaría la
+// ficha a media conversación y la dejaría congelada ahí.
+const QUIETA_MIN = 30;
+
+/* Capa 2: la ficha de las que nadie cerró.
+ *
+ * Corre al leer —/api/pendientes una vez por semana, /leer cuando Tania
+ * la abre— y no en un cron: un cron es un despliegue más y una cosa más
+ * que se puede quedar sin secreto y fallar en silencio, que es
+ * exactamente lo que pasó con el reporte del lunes 17. Aquí, si algo
+ * falla, falla delante de quien está mirando.
+ *
+ * Deja `completa = 0` a propósito: la conversación NO se completó, y en
+ * /leer eso se ve como «se cortó». Marcarla como completa sería tapar el
+ * dato de cuánta gente se va a mitad de camino.
+ *
+ * Nunca puede tumbar a quien la llama: si el barrido revienta, la lectura
+ * sigue con lo que la capa 1 ya dejó escrito. */
+export async function completarAbandonadas(env, limite = 8) {
+  // Sin modelo no hay ficha que sacar, y el resumen provisional de la
+  // capa 1 ya es mejor que lo que saldría de aquí.
+  if (!env.OPENAI_API_KEY && !hayCF(env)) return 0;
+
+  try {
+    const corte = new Date(Date.now() - QUIETA_MIN * 60000).toISOString();
+    const { results } = await env.DB.prepare(
+      `select c.id as id
+         from conversaciones c
+         join (select conversacion, max(creado_at) as ultimo
+                 from mensajes group by conversacion) m
+           on m.conversacion = c.id
+        -- tipo is null = nadie le ha sacado ficha todavía, ni el cierre
+        -- ni un barrido anterior.
+        where c.completa = 0 and c.tipo is null and c.turnos > 1
+          and m.ultimo < ?1
+        order by c.empezada_at desc
+        limit ?2`
+    ).bind(corte, limite).all();
+
+    const ids = (results || []).map((r) => r.id);
+    if (!ids.length) return 0;
+
+    // `mensajes` es la fuente y no `transcripcion`: se escribe mensaje a
+    // mensaje desde el primer día, así que también sirve para las
+    // conversaciones viejas, las que quedaron con todo en NULL antes de
+    // que existiera la capa 1. Ahí está la clienta del 21 de agosto.
+    const huecos = ids.map((_, i) => `?${i + 1}`).join(',');
+    const { results: sueltos } = await env.DB.prepare(
+      `select conversacion, de, texto from mensajes
+        where conversacion in (${huecos})
+        order by conversacion, id`
+    ).bind(...ids).all();
+
+    const porConversacion = new Map(ids.map((id) => [id, []]));
+    for (const m of sueltos || []) {
+      const h = porConversacion.get(m.conversacion);
+      if (h) h.push({ role: m.de === 'persona' ? 'user' : 'assistant',
+                      content: m.texto });
+    }
+
+    const ficha = async (id) => {
+      const historia = porConversacion.get(id) || [];
+      // Solo el saludo del bot: eso no es una opinión, es una pestaña
+      // que alguien abrió y cerró.
+      if (!historia.some((m) => m.role === 'user')) return false;
+
+      const f = await extraerFicha(env, historia);
+      await env.DB.prepare(
+        `update conversaciones
+            set nombre = ?2, telefono = ?3, tipo = ?4, resumen = ?5,
+                urgente = ?6, motivo_urgente = ?7, transcripcion = ?8,
+                cerrada_at = ?9
+          where id = ?1 and completa = 0`
+      ).bind(id, f.nombre, f.telefono, f.tipo, f.resumen,
+             f.urgente ? 1 : 0, f.motivo, transcripcionDe(historia), ahora()).run();
+      return true;
+    };
+
+    // De a cuatro. En fila, una docena de conversaciones serían una
+    // docena de esperas al modelo con n8n aguantando al otro lado; todas
+    // de golpe es la forma de que Workers AI empiece a rechazar por
+    // ritmo. Y con allSettled, la que falle no se lleva a las demás: se
+    // queda sin ficha, con las palabras de la persona, y le toca en el
+    // siguiente barrido.
+    let hechas = 0;
+    for (let i = 0; i < ids.length; i += 4) {
+      const tanda = await Promise.allSettled(ids.slice(i, i + 4).map(ficha));
+      hechas += tanda.filter((r) => r.status === 'fulfilled' && r.value).length;
+      for (const r of tanda) {
+        if (r.status === 'rejected') console.log('ficha:', String(r.reason).slice(0, 120));
+      }
+    }
+    return hechas;
+  } catch (e) {
+    console.log('barrido:', e && e.message);
+    return 0;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -898,7 +1253,10 @@ export function arriba(a) {
 }
 
 export default {
-  async fetch(request, env) {
+  // `ctx` es por waitUntil: en /leer, las conversaciones abandonadas que
+  // no caben en la carga de la página se terminan de completar después
+  // de haberla devuelto.
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const ruta = url.pathname;
 
@@ -911,21 +1269,32 @@ export default {
         const conv = String(b.conversacion || '').slice(0, 40);
         if (!/^[a-f0-9-]{16,40}$/i.test(conv)) return json({ error: 'conversacion_invalida' }, 400);
 
-        const historia = Array.isArray(b.historia) ? b.historia.slice(-24) : [];
+        // La historia entera se guarda; al modelo solo se le mandan los
+        // últimos 24 mensajes. Antes se recortaba primero y se guardaba
+        // el recorte, o sea que una conversación larga se habría
+        // guardado a medias.
+        const entera = Array.isArray(b.historia) ? b.historia.slice(0, 200) : [];
         await asegurarConversacion(env, conv);
 
         const suyo = String(b.texto || '').slice(0, 4000);
         if (suyo) {
-          historia.push({ role: 'user', content: suyo });
+          entera.push({ role: 'user', content: suyo });
           await guardarMensaje(env, conv, 'persona', suyo, b.medio);
         }
+
+        // Un saludo pelado o un "quiero contarles algo" no son la
+        // respuesta a ninguna pregunta. Cuando lo son, este turno lleva
+        // una instrucción extra para que el bot escuche en vez de
+        // disparar la siguiente pregunta: a un «Buena tarde» le contestó
+        // con la pregunta 2 y la persona no volvió a escribir.
+        const arranque = Boolean(suyo) && esArranque(suyo);
 
         // El saludo es siempre el mismo y no se le pide a ningún modelo:
         // así la persona que abre el enlace sabe de una quién le habla y
         // para qué, en vez de recibir un "Hola, ¿cómo te llamas?" pelado.
-        const cruda = historia.length === 0 && !suyo
+        const cruda = entera.length === 0
           ? SALUDO
-          : await conversar(env, historia);
+          : await conversar(env, entera.slice(-24), arranque ? NOTA_ESCUCHA : '');
 
         // Red de seguridad contra el cierre prematuro. Un modelo puede
         // querer despedirse justo cuando la persona acaba de contar algo
@@ -934,14 +1303,26 @@ export default {
         // Hacen falta cuatro cosas suyas: las tres respuestas y lo que
         // conteste al cierre —el nombre y el celular, o que no—. Si aún
         // no están, [FIN] se ignora y el bot sigue.
-        const suyas = historia.filter((m) => m.role === 'user').length;
+        //
+        // Los saludos no cuentan: si no, un «Buenas tardes» al principio
+        // adelanta el cierre un paso y la conversación termina con una
+        // de las tres preguntas sin hacer.
+        const suyas = entera.filter(
+          (m) => m.role === 'user' && !esArranque(m.content)).length;
         const listo = cruda.includes('[FIN]') && suyas >= 4;
-        const respuesta = cruda.replace('[FIN]', '').trim();
+
+        // El acuse solo se fuerza cuando la persona dijo algo de verdad:
+        // meterle un "gracias por contarme" a quien apenas escribió
+        // "hola" suena a máquina, que es lo contrario de lo que busca.
+        const respuesta = arranque || !suyo
+          ? cruda.replace('[FIN]', '').trim()
+          : conAcuse(cruda.replace('[FIN]', '').trim());
 
         await guardarMensaje(env, conv, 'bot', respuesta, 'texto');
-        await env.DB.prepare(
-          `update conversaciones set turnos = turnos + 1 where id = ?1`
-        ).bind(conv).run();
+        entera.push({ role: 'assistant', content: respuesta });
+        // Aquí es donde la opinión deja de depender de que la persona
+        // juegue el guion hasta el final.
+        await guardarAvance(env, conv, entera, Boolean(suyo));
 
         return json({ respuesta, listo });
       }
@@ -979,15 +1360,22 @@ export default {
         const f = await extraerFicha(env, historia);
 
         await env.DB.prepare(
+          // La transcripción no encoge, por lo mismo que en guardarAvance:
+          // la página manda la historia que tiene en memoria, y si la
+          // persona recargó a mitad de camino esa historia empieza en la
+          // recarga. La ficha sí manda siempre: es la buena.
           `update conversaciones
               set nombre = ?2, telefono = ?3, tipo = ?4, resumen = ?5,
-                  urgente = ?6, motivo_urgente = ?7, transcripcion = ?8,
+                  urgente = ?6, motivo_urgente = ?7,
+                  transcripcion = case
+                    when length(?8) >= length(coalesce(transcripcion, '')) then ?8
+                    else transcripcion end,
                   cerrada_at = ?9, completa = 1
             where id = ?1`
         ).bind(
           conv, f.nombre, f.telefono, f.tipo, f.resumen,
           f.urgente ? 1 : 0, f.motivo,
-          historia.map((m) => (m.role === 'user' ? '> ' : '') + m.content).join('\n'),
+          transcripcionDe(historia),
           ahora()
         ).run();
 
@@ -1000,6 +1388,15 @@ export default {
         if (!env.TOKEN_REPORTE || b.token !== env.TOKEN_REPORTE) {
           return json({ ok: false, error: 'NO_AUTORIZADO' }, 401);
         }
+
+        // Antes de armar el reporte, sacarle ficha a las que nadie cerró.
+        // Es el sitio exacto donde se perdía la opinión del 21 de agosto:
+        // la conversación estaba entera en D1 y salía en el correo como
+        // "Sin nombre · (sin resumen)". Va antes del select a propósito,
+        // para que lo que se acaba de rescatar entre en ESTE reporte y no
+        // en el de la semana que viene.
+        await completarAbandonadas(env, 12);
+
         const { results } = await env.DB.prepare(
           `select id, nombre, telefono, tipo, resumen, urgente, motivo_urgente,
                   empezada_at, cerrada_at, turnos, completa
@@ -1057,6 +1454,17 @@ export default {
             status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
         }
+        // Lo mismo que en /api/pendientes: las que nadie cerró se
+        // completan antes de pintar. Se hacen pocas aquí y el resto en
+        // segundo plano —con waitUntil la página no espera— porque esto
+        // es una pantalla que se abre a mirar, no un lote que corre solo:
+        // media docena de llamadas al modelo ya se notan al cargar, y las
+        // que queden estarán listas la próxima vez que se abra.
+        await completarAbandonadas(env, 6);
+        if (ctx && typeof ctx.waitUntil === 'function') {
+          ctx.waitUntil(completarAbandonadas(env, 24));
+        }
+
         const { results } = await env.DB.prepare(
           `select id, nombre, telefono, tipo, resumen, urgente, motivo_urgente,
                   transcripcion, turnos, completa, empezada_at, cerrada_at

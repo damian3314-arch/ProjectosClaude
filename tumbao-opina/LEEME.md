@@ -55,7 +55,8 @@ hipotética. Preguntar "¿qué no te gustó?" de frente produce "todo bien".
 ## Qué se guarda y qué no
 
 - **Se guarda** en D1: la conversación completa, el resumen, el tipo y
-  el contacto si lo dio.
+  el contacto si lo dio. Turno a turno, no al final: cerrar la pestaña
+  ya no pierde nada (ver «29 de agosto»).
 - **No se guarda** el audio de las notas de voz. Se transcribe con
   Whisper y se suelta, igual que las capturas de comprobantes.
 
@@ -178,14 +179,19 @@ haber dicho nada.
 ### Lo que sí conviene mirar, por orden
 
 1. **Guardar aunque no se cierre.** Es el único que recupera opiniones
-   que hoy se tiran.
+   que hoy se tiran. — *hecho el 29, ver abajo.*
 2. **El bot pisa lo que la persona dice.** A un «Buena tarde» lo trató
    como respuesta a la primera pregunta y disparó la segunda. A un «Hola,
    quiero contarles algo» le respondió con el guion en vez de escuchar.
+   — *hecho el 29.*
 3. **Acusar recibo siempre.** Quien escribió la respuesta más larga y más
    cálida recibió la siguiente pregunta sin una palabra de vuelta; los que
    terminaron sí recibieron un «Me alegra mucho que te guste» antes.
+   — *hecho el 29.*
 4. **Distinguir la burbuja del enlace**, para que el embudo se pueda leer.
+   — **pendiente.** Sin esto no se puede saber si el saludo nuevo sirvió:
+   los 42 chats de la medición mezclan enlaces de WhatsApp con toques
+   curiosos a la burbuja de tumbaobaila.com.
 
 ### Cuidado con el tamaño de la muestra
 
@@ -194,6 +200,87 @@ unas 25 aperturas reales en dos semanas y un puñado de personas que
 escribieron. Es poquísimo para concluir nada sobre las preguntas. Sobre
 lo que sí alcanza es para el punto 1, que no es estadística: es una
 opinión concreta que llegó y se perdió.
+
+## 29 de agosto: se guarda aunque cierren la pestaña
+
+Ahora hay dos capas, y la primera es la que cumple la promesa.
+
+**1. Cada turno escribe.** Al terminar cada turno, `guardarAvance` deja
+en la fila la conversación entera y un resumen provisional que son las
+palabras de la persona, tal cual las escribió. Sin modelo, sin coste y
+sin depender de nada posterior. A partir de ahí da igual si cierra la
+pestaña, si se cae el modelo o si se va la luz: **quien contesta aunque
+sea una sola pregunta sale en el reporte del lunes con lo que dijo.**
+
+**2. El barrido.** `completarAbandonadas` convierte eso en una ficha de
+verdad —tipo, nombre, celular, si es urgente— y corre cuando alguien
+lee: al pedir `/api/pendientes` y al abrir `/leer`. Lee de `mensajes`,
+que es la tabla que nunca se dejó de escribir, así que también rescata
+las conversaciones viejas que quedaron con todo en NULL. La del 21 de
+agosto entre ellas.
+
+Solo toca conversaciones calladas hace más de 30 minutos: si Tania abre
+`/leer` mientras alguien está contestando, no puede darle esa
+conversación por terminada. Y **no las marca como completas**, porque no
+lo están: en `/leer` siguen saliendo con la etiqueta «se cortó». Marcarlas
+taparía el dato de cuánta gente se va a mitad de camino.
+
+### Lo que se descartó, y por qué
+
+- **Clasificar en cada turno** (con `ctx.waitUntil`): una llamada al
+  modelo por mensaje, o sea multiplicar por tres o cuatro el coste de
+  cada conversación, para acabar tirando todas las fichas menos la
+  última. El barrido la saca una vez, cuando ya se sabe que no va a
+  haber más mensajes.
+- **Un aviso del navegador al cerrar** (`sendBeacon`): el arreglo no
+  puede depender del navegador, que es justo el que se está yendo. En
+  iOS ese aviso se pierde la mitad de las veces.
+- **Un cron que barra solo**: un despliegue más y una cosa más que se
+  puede quedar sin secreto y fallar en silencio, que es exactamente lo
+  que pasó con el reporte del lunes 17. Colgado de la lectura, si falla
+  falla delante de quien está mirando.
+
+### El detalle que muerde: la transcripción no encoge
+
+La página guarda la conversación en memoria y se la manda entera en cada
+turno. Si la persona **recarga**, esa memoria arranca de cero y el turno
+siguiente traería solo la mitad final. Por eso tanto `guardarAvance`
+como `/api/cerrar` solo escriben la transcripción **si es más larga que
+la guardada**. Sin esa comparación, recargar borraría lo ya contado.
+
+## El saludo, y que el bot no atropelle
+
+El saludo anterior era «Nos ayuda muchísimo saber cómo lo estás
+viviendo». Habla de nosotros: qué nos ayuda a nosotros, no qué gana la
+persona ni a quién le llega lo que escriba. Y «soy de Tumbao» no es
+nadie.
+
+El de ahora dice tres cosas, en este orden: **para qué** se pregunta
+(vamos a cambiar cosas y preferimos preguntar antes que adivinar), **a
+quién** le llega (lo lee Tania) y **cuánto cuesta** (con una frase
+basta), y termina en la primera pregunta. Que le pregunten a uno antes
+de decidir halaga, y es verdad.
+
+Lo mismo va en la vista previa de WhatsApp —`<title>`, `description` y
+las `og:`—, que es lo primero que se ve, antes que el saludo. Decía «Dos
+minutos para contarnos cómo te ha ido»: anunciaba trabajo y encima
+contradecía al saludo, que promete que con una frase basta.
+
+**Que no atropelle.** Pedírselo al guion no alcanza: ya tenía
+instrucciones de conversar y aun así a un «Buena tarde» le contestó con
+la pregunta 2. `esArranque()` reconoce los saludos pelados y los «quiero
+contarles algo», y con eso hace dos cosas que no dependen del modelo:
+le mete al guion, solo en ese turno, un aviso de que no avance; y no los
+cuenta como una de las cuatro respuestas que hacen falta para poder
+cerrar —si contaran, un «Buenas tardes» adelantaría el cierre un paso y
+la conversación terminaría con una pregunta sin hacer—.
+
+**Que siempre acuse recibo.** `conAcuse()` mira si el mensaje del bot
+empieza directamente en la pregunta y, si es así, le antepone una línea.
+El acuse fijo es sobrio a propósito («Gracias por contarme»): cualquier
+otro —«qué bueno», «qué pesar»— se equivoca la mitad de las veces, y
+equivocarse de emoción es peor que ser sobrio. No se le pone a quien
+apenas saludó: detrás de un «hola» suena a máquina.
 
 ## Por qué el saludo arranca con la pregunta
 
@@ -346,8 +433,18 @@ minuto de audio. Una campaña de 40 personas, menos de un dólar.
 
 ## Comprobar que sigue en pie
 
+    node pruebas/no-se-pierde.test.mjs           # la opinión que cierra la pestaña
+    node pruebas/saludo.test.mjs                 # el gancho y que no atropelle
     node pruebas/ficha.test.mjs                  # 38, la ficha del lunes
     node pruebas/limpiar-transcripcion.test.mjs  # 14, alucinaciones de Whisper
+    node pruebas/semana.test.mjs                 # las tres cosas de la semana
+
+Las dos primeras corren el Worker entero contra una SQLite de verdad
+—`node:sqlite`, viene con Node— cargada con este mismo `schema.sql`.
+`pruebas/entorno-falso.mjs` es el andamio, no una prueba. Se hizo así
+porque lo que se rompió el 21 de agosto no fue ninguna función: fue que
+`/api/cerrar` nunca se llamó. Para probar eso hay que hacer lo que hizo
+la clienta —abrir, contestar, irse— y pedir después el reporte.
 
 ## Desplegar
 
