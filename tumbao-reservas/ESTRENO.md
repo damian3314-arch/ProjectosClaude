@@ -568,9 +568,24 @@ En orden de lo que más se nota en el mostrador:
 2. **Default branch a `main`** en Settings del repo. Hoy es
    `claude/aprende-esto-khjryq`, que solo tiene el CLAUDE.md, y ya tumbó
    una vez el despliegue de Cloudflare Pages.
-3. **Las tablas `cheo_*` de Supabase nunca existieron.** El bot de
-   opiniones se rehizo en Cloudflare Workers con D1. No hay nada que
-   borrar; queda anotado para que nadie las busque.
+3. ~~**Las tablas `cheo_*` de Supabase nunca existieron.**~~ **Esta nota
+   era falsa y costó caro.** Sí existían: tres tablas y ocho funciones,
+   creadas directo contra la base y nunca en el repositorio. Y las ocho
+   funciones eran ejecutables con la llave `anon` —la pública, la del
+   navegador—, a diferencia de todas las demás del esquema: cualquiera
+   con esa llave podía abrir conversaciones y guardar contactos.
+   Estuvieron vivas y sin mirar desde el 9 de agosto.
+
+   Se borraron el 28 de agosto, al cancelarse el proyecto, con una copia
+   previa en JSON. No se perdió nada: las cinco conversaciones salían del
+   webhook de pruebas, sin nombre ni teléfono, y los cinco mensajes eran
+   saludos del propio bot.
+
+   La lección no es sobre Cheo. Es que **una nota que dice "no hay nada
+   que revisar" apaga la revisión**: mientras estuvo escrita, nadie
+   volvió a mirar. Si no se comprobó contra la base, la nota dice "sin
+   comprobar", no "no existe". El bot de opiniones que sí funciona es
+   `tumbao-opina`, en Workers con D1.
 4. **El cierre de AdminGym se sube a mano** y nadie avisa si un día no
    se sube. Los de julio dejaron de subirse el día 30.
 

@@ -129,6 +129,72 @@ El workflow viejo hacía además una pasada de clasificación **cada media
 hora**: 1.440 ejecuciones al mes contra un plan de 2.500. Se quitó — el
 Worker ya clasifica al cerrar cada conversación.
 
+## 28 de agosto: la opinión que sí llegó y se tiró a la basura
+
+Se midió el embudo real. De 42 chats abiertos, 11 personas escribieron
+algo, 7 contestaron una segunda pregunta y **5 contestaron las tres**.
+Pero solo 3 quedaron marcadas como completas.
+
+Esa diferencia no es de redondeo: es una opinión de verdad que se perdió.
+El 21 de agosto alguien contestó las tres preguntas —«Los extraño
+muchoooo de lunes a viernes 😭», «Trabajooo», «Que es lo mejor de lo
+mejor 😃»— y en la base quedó con `resumen`, `tipo`, `nombre` y
+`transcripcion` en NULL. En el correo del lunes 24 salió como
+**«Sin nombre · (sin resumen)»**. La dueña vio una fila vacía donde había
+una clienta contenta. (Las otras dos sin marcar, del 12 de agosto, sí
+eran pruebas de desarrollo.)
+
+### Por qué pasa
+
+`/api/cerrar` es el ÚNICO sitio donde se escriben `resumen`, `tipo`,
+`nombre`, `telefono`, `transcripcion` y `completa = 1`. Lo llama la
+página cuando el bot da la conversación por terminada. Si la persona
+cierra la pestaña antes —que es lo que hace la gente cuando ya dijo lo
+que tenía que decir— no se llama nunca.
+
+Los mensajes NO se pierden: `guardarMensaje` los va guardando turno a
+turno en `mensajes`. Lo que pasa es que **nada de lo que se lee consulta
+esa tabla**. `/api/pendientes` y `/leer` leen de `conversaciones`
+(`resumen`, `transcripcion`), y ahí no hay nada. La opinión está en D1,
+entera, y no la ve nadie.
+
+Dicho de otra forma: el sistema solo se queda con lo que la gente cuenta
+si además juega el guion hasta el final, incluida la pregunta del
+celular. Contestar las tres preguntas y cerrar la pestaña cuenta como no
+haber dicho nada.
+
+### Lo que NO es el problema
+
+- **No es que la gente no escriba.** Los 30 chats con `turnos = 1` son
+  casi todos ruido de medición: la fila de `conversaciones` se crea en la
+  primera llamada a `/api/mensaje`, que la página hace sola para pedir el
+  saludo. `turnos = 1` significa «existe el saludo del bot», no «alguien
+  abrió y se fue». Y como no se guarda de dónde viene la visita, un toque
+  curioso a la burbuja de tumbaobaila.com es indistinguible de alguien que
+  recibió el enlace por WhatsApp. Ese número no se puede leer.
+- **No es la segunda pregunta.** Los que llegan a ella la contestan sin
+  problema: «Trabajooo», «El clima», «Viajar a la ciudad donde resido».
+
+### Lo que sí conviene mirar, por orden
+
+1. **Guardar aunque no se cierre.** Es el único que recupera opiniones
+   que hoy se tiran.
+2. **El bot pisa lo que la persona dice.** A un «Buena tarde» lo trató
+   como respuesta a la primera pregunta y disparó la segunda. A un «Hola,
+   quiero contarles algo» le respondió con el guion en vez de escuchar.
+3. **Acusar recibo siempre.** Quien escribió la respuesta más larga y más
+   cálida recibió la siguiente pregunta sin una palabra de vuelta; los que
+   terminaron sí recibieron un «Me alegra mucho que te guste» antes.
+4. **Distinguir la burbuja del enlace**, para que el embudo se pueda leer.
+
+### Cuidado con el tamaño de la muestra
+
+Descontando el 3 y el 12 de agosto, que son días de desarrollo, quedan
+unas 25 aperturas reales en dos semanas y un puñado de personas que
+escribieron. Es poquísimo para concluir nada sobre las preguntas. Sobre
+lo que sí alcanza es para el punto 1, que no es estadística: es una
+opinión concreta que llegó y se perdió.
+
 ## Por qué el saludo arranca con la pregunta
 
 Hasta el 17 de agosto lo primero que pedía el bot era el nombre. En dos
