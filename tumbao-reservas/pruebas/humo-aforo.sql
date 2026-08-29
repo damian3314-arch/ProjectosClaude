@@ -95,7 +95,10 @@ begin
   if v_activos <> 0 then
     raise exception 'el sabado nadie tiene plan, pero salen % activos', v_activos;
   end if;
-  if v_cupo <> 30 then raise exception 'el sabado deberian ser 30 cupos, son %', v_cupo; end if;
+  -- 0058: el sabado dejo de heredar el aforo de entre semana. Su techo
+  -- es la suma de sus dos lados, 15 afiliados + 20 sueltas = 35, y por
+  -- eso nace con aforo y cupo_total propios.
+  if v_cupo <> 35 then raise exception 'el sabado deberian ser 35 cupos, son %', v_cupo; end if;
 
   -- Una socia del plan de 6pm: entre semana no reserva, el sabado si.
   select tomar_cupo(v_csab, 'Socia 1', '3000000001', null, 'web', 'miembro') into v_r;
@@ -104,15 +107,17 @@ begin
   end if;
   select cupo_tomado into v_tomado from clases where id = v_csab;
   if v_tomado <> 1 then raise exception 'el miembro del sabado no descontro cupo'; end if;
-  raise notice '4. sabado: 30 cupos, y la reserva del miembro descuenta igual';
+  raise notice '4. sabado: 35 cupos, y la reserva del miembro descuenta igual';
 
   -- Y su reserva de sabado sale del mismo pozo que las sueltas.
   select tomar_cupo(v_csab, 'Suelta Sabado', '3000000009', null, 'web', 'suelta') into v_r;
-  if (v_r->>'cupos_restantes')::int <> 28 then
+  -- 0058: 35 menos los dos que acaban de entrar. Antes eran 28 porque
+  -- el techo del sabado era el aforo de entre semana.
+  if (v_r->>'cupos_restantes')::int <> 33 then
     raise exception 'miembro y suelta deberian compartir el aforo, quedan %',
       v_r->>'cupos_restantes';
   end if;
-  raise notice '   miembro y clase suelta comparten los mismos 30';
+  raise notice '   miembro y clase suelta comparten los mismos 35';
 
   -- ── 5. si crecen los planes, no se cancela a quien ya reservo ──
   -- Se agregan 2 socias mas de 6pm: el ideal seria 30-29=1, pero ya hay

@@ -187,8 +187,10 @@ begin
   if (v_c->>'con_plan')::int <> 0 then
     raise exception 'el sabado nadie tiene plan, dice %', v_c->>'con_plan';
   end if;
-  if (v_c->>'a_la_venta')::int <> 30 then
-    raise exception 'el sabado salen los 30, dice %', v_c->>'a_la_venta';
+  -- 0058: el sabado ya no vende el aforo de entre semana sino la suma
+  -- de sus dos lados: 15 afiliados + 20 sueltas.
+  if (v_c->>'a_la_venta')::int <> 35 then
+    raise exception 'el sabado salen los 35, dice %', v_c->>'a_la_venta';
   end if;
   -- El miembro del sabado reserva sin pagar: entra confirmado de una.
   if (v_c->>'confirmadas')::int <> 1 then

@@ -359,6 +359,15 @@ const CONFIG = {
   .quedan.lleno{border-color:rgba(255,107,129,.45);color:var(--bad)}
 
   .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin:.9rem 0 .7rem}
+  /* El sábado las dos primeras cifras son las que se pueden vender.
+     Van destacadas porque son las que deciden si se le abre la puerta a
+     alguien más; el aforo y las reservadas quedan de contexto. */
+  .mini.partido > div:nth-child(1) .v{color:var(--ok)}
+  .mini.partido > div:nth-child(2) .v{color:var(--gold)}
+  .mini.partido > div:nth-child(1) .e,
+  .mini.partido > div:nth-child(2) .e{color:var(--tx-2)}
+  .mini.partido > div:nth-child(3),
+  .mini.partido > div:nth-child(4){opacity:.62}
   .mini > div{text-align:center}
   .mini .v{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums}
   .mini .e{font-size:.65rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.03em;
@@ -1776,9 +1785,20 @@ const CONFIG = {
     const res     = Number(c.reservadas || 0);
     const vencen  = Number(c.vencen || 0);
 
-    const estadoCupo = libres === 0 ? 'lleno' : libres <= 3 ? 'poco' : '';
-    const textoCupo  = libres === 0 ? 'Sin cupo'
-                     : libres === 1 ? '1 libre' : `${libres} libres`;
+    // El sábado la clase va partida y "N libres" es una cifra que no se
+    // puede usar: mezcla los dos lados. Llegó a decir "22 libres"
+    // mientras del lado de sueltas quedaban 7 — quien lee el número
+    // grande y le abre la puerta a alguien más vende un puesto que no
+    // existe. En una clase partida el número que decide es el de
+    // sueltas, que es lo que se le puede vender a quien llega.
+    const rep = c.reparto || null;
+    const libresVenta = rep ? Number(rep.sueltas_libres || 0) : libres;
+    const estadoCupo = libresVenta === 0 ? 'lleno' : libresVenta <= 3 ? 'poco' : '';
+    const textoCupo  = rep
+      ? (libresVenta === 0 ? 'Sin sueltas'
+         : `${libresVenta} suelta${libresVenta === 1 ? '' : 's'}`)
+      : (libres === 0 ? 'Sin cupo'
+         : libres === 1 ? '1 libre' : `${libres} libres`);
 
     // La barra es la sala vista de lado: primero los que ya tienen su
     // puesto por el plan, encima los que compraron suelta. Lo que queda
@@ -1793,19 +1813,44 @@ const CONFIG = {
         `<span class="sp"></span>` +
         `<span class="quedan${estadoCupo ? ' ' + estadoCupo : ''}">${esc(textoCupo)}</span>` +
       `</div>` +
-      `<div class="mini">` +
-        `<div><div class="v">${aforo}</div><div class="e">aforo</div></div>` +
-        `<div><div class="v">${conPlan}</div><div class="e">con plan</div></div>` +
-        `<div><div class="v">${Number(c.a_la_venta || 0)}</div><div class="e">a la venta</div></div>` +
-        `<div><div class="v">${res}</div><div class="e">reservadas</div></div>` +
+      // El sábado se enseñan las dos cuentas que se pueden vender, no el
+      // aforo y el "con plan", que ahí valen cero: los afiliados del
+      // sábado reservan en vez de venir descontados del aforo, así que
+      // "con plan 0" se leía como que no había ninguno.
+      (rep
+        ? `<div class="mini partido">` +
+            `<div><div class="v">${Number(rep.sueltas_libres)}</div>` +
+              `<div class="e">sueltas libres</div></div>` +
+            `<div><div class="v">${Number(rep.miembros_libres)}</div>` +
+              `<div class="e">afiliados libres</div></div>` +
+            `<div><div class="v">${aforo}</div><div class="e">caben</div></div>` +
+            `<div><div class="v">${res}</div><div class="e">reservadas</div></div>` +
+          `</div>`
+        : `<div class="mini">` +
+            `<div><div class="v">${aforo}</div><div class="e">aforo</div></div>` +
+            `<div><div class="v">${conPlan}</div><div class="e">con plan</div></div>` +
+            `<div><div class="v">${Number(c.a_la_venta || 0)}</div><div class="e">a la venta</div></div>` +
+            `<div><div class="v">${res}</div><div class="e">reservadas</div></div>` +
+          `</div>`) +
+      `<div class="sala">Entran <b>${rep ? Number(rep.miembros_tomados) + Number(rep.sueltas_tomadas) : enSala}</b> de ${aforo}` +
+        // El sábado el "cupo a mano" es como está montado el día, no una
+        // excepción de alguien: enseñarlo ahí hacía dudar de la cifra.
+        (c.cupo_manual != null && !rep
+          ? ' <span class="etiqueta">cupo a mano</span>' : '') +
       `</div>` +
-      `<div class="sala">Entran <b>${enSala}</b> de ${aforo}` +
-        (c.cupo_manual != null ? ' <span class="etiqueta">cupo a mano</span>' : '') +
-      `</div>` +
-      `<div class="barra" role="img" aria-label="${enSala} de ${aforo} puestos ocupados">` +
-        `<i class="plan" style="width:${pct(conPlan)}%"></i>` +
-        `<i class="res" style="width:${pct(res)}%"></i>` +
-      `</div>` +
+      // El sábado la barra enseña los dos lados, que es como se llena de
+      // verdad: primero los afiliados, encima las sueltas. Entre semana
+      // sigue siendo plan + reservas, que ahí sí es lo que pasa.
+      (rep
+        ? `<div class="barra" role="img" aria-label="${Number(rep.miembros_tomados)} ` +
+            `afiliados y ${Number(rep.sueltas_tomadas)} sueltas de ${aforo}">` +
+            `<i class="plan" style="width:${pct(Number(rep.miembros_tomados))}%"></i>` +
+            `<i class="res" style="width:${pct(Number(rep.miembros_tomados) + Number(rep.sueltas_tomadas))}%"></i>` +
+          `</div>`
+        : `<div class="barra" role="img" aria-label="${enSala} de ${aforo} puestos ocupados">` +
+            `<i class="plan" style="width:${pct(conPlan)}%"></i>` +
+            `<i class="res" style="width:${pct(res)}%"></i>` +
+          `</div>`) +
       // Los que ocupan puesto pero se les acaba el plan ese mismo día.
       // No se suman al cupo: se muestran para poder decidir si vale la
       // pena arriesgar sueltas de más.
@@ -1850,15 +1895,19 @@ const CONFIG = {
       // cosas, con la palabra delante, y el número que se puede vender
       // va destacado — que es el que decide si se le abre la puerta a
       // alguien más.
-      (c.reparto
-        ? `<div class="reparto" title="El sábado el aforo va partido en dos mitades. ` +
-            `El cliente no lo ve: a cada quien se le muestran los cupos de su lado.">` +
+      // Los "quedan" ya van arriba en grande; aquí queda el detalle de
+      // cuántos han entrado de cada lado. Antes esta línea repetía las
+      // dos cosas y era donde se veía la contradicción con el número
+      // grande del encabezado.
+      (rep
+        ? `<div class="reparto" title="El sábado los puestos van partidos: ` +
+            `${rep.miembros_tope} para afiliados y ${rep.sueltas_tope} para clase suelta. ` +
+            `Son independientes: que se llene uno no cierra el otro. ` +
+            `El cliente no lo ve — a cada quien se le muestran los cupos de su lado.">` +
             `<span>Afiliados</span>` +
-            `<span><b>${c.reparto.miembros_tomados}</b>/${c.reparto.miembros_tope}` +
-              `<span class="quedan"> · quedan ${c.reparto.miembros_libres}</span></span>` +
+            `<span><b>${rep.miembros_tomados}</b> de ${rep.miembros_tope}</span>` +
             `<span>Sueltas</span>` +
-            `<span><b>${c.reparto.sueltas_tomadas}</b>/${c.reparto.sueltas_tope}` +
-              `<span class="quedan"> · quedan ${c.reparto.sueltas_libres}</span></span>` +
+            `<span><b>${rep.sueltas_tomadas}</b> de ${rep.sueltas_tope}</span>` +
           `</div>`
         : '') +
       `<div class="ver-lista">Ver quién entra →</div>` +
@@ -3492,7 +3541,18 @@ const CONFIG = {
     const cajaN = Number(ent.efectivo_n || 0)
                 + Number(ent.recepcion_transferencia_n || 0);
 
-    const sueltaN   = pagN + manoN + cajaN;
+    // 0059: la cuenta de personas viene del servidor con su propia
+    // regla, y NO de sumar las casillas de dinero. Sumarlas dejaba
+    // fuera a quien entró con una clase reprogramada (su plata entró
+    // otro día), a quien se le anuló el cobro y se rehizo, y a quien se
+    // confirmó a mano sin depósito enlazado. El 28 de agosto decía 10
+    // cuando en la puerta habían entrado 11.
+    //
+    // El coalesce deja el panel funcionando contra un servidor sin la
+    // 0059 todavía: la cuenta vieja es peor, pero no rompe el cierre.
+    const sueltaN   = ent.personas_n != null
+                    ? Number(ent.personas_n)
+                    : pagN + manoN + cajaN;
     const sueltaCop = pag + mano + cajaSuelta;
 
     // Lo demás que registra Caja: mensualidad, cumpleaños, otro ingreso.

@@ -1,11 +1,11 @@
--- El sábado: 15 para afiliados, 15 para clase suelta, y sin que se note.
+-- El sábado: 15 para afiliados, 20 para clase suelta, y sin que se note.
 --
 -- Tres cosas que no pueden fallar:
 --
 --   1. Los dos cupos son independientes. Llenar el de afiliados NO
 --      puede cerrarle la puerta a las sueltas, ni al revés. Si se
 --      cerraran entre sí, se dejaría de vender la mitad del sábado.
---   2. El techo de la sala sigue mandando. 15 + 15 caben en 30; si
+--   2. El techo de la sala sigue mandando. 15 + 20 caben en 35; si
 --      alguien baja el aforo a mano, ninguno de los dos lados puede
 --      pasarse de lo que queda de verdad.
 --   3. El cliente no se entera. La respuesta del horario no puede traer
@@ -46,8 +46,12 @@ begin
 
   -- ── 1. el sábado nace partido, entre semana no ─────────────
   select cupo_miembros, cupo_sueltas into v_fila from clases where id = v_c;
-  if v_fila.cupo_miembros <> 15 or v_fila.cupo_sueltas <> 15 then
-    raise exception 'el sabado deberia nacer 15/15, nacio %/%',
+  -- 0058: pasa de 15/15 a 15/20. La 0020 ya avisaba que este numero
+  -- iba a cambiar sin avisar; lo que cambio ademas es que ahora es un
+  -- literal y no `aforo / 2`, para que se pueda cambiar sin reescribir
+  -- una formula.
+  if v_fila.cupo_miembros <> 15 or v_fila.cupo_sueltas <> 20 then
+    raise exception 'el sabado deberia nacer 15/20, nacio %/%',
       v_fila.cupo_miembros, v_fila.cupo_sueltas;
   end if;
   select (fecha_hora at time zone 'America/Bogota')::date into v_lun
@@ -62,7 +66,7 @@ begin
   if v_n is not null then
     raise exception 'entre semana no debe haber reparto, hay %', v_n;
   end if;
-  raise notice '1. sabado 15/15; entre semana sin reparto';
+  raise notice '1. sabado 15/20; entre semana sin reparto';
 
   -- 20 afiliadas con plan de 6pm — el sábado su plan no las cubre, así
   -- que reservan como todo el mundo.
@@ -101,25 +105,31 @@ begin
   -- ── 4. pero las sueltas SIGUEN entrando ────────────────────
   -- Esta es la que de verdad importa: si los dos cupos se cerraran
   -- entre si, se dejaria de vender media clase.
-  for v_n in 1..15 loop
+  for v_n in 1..20 loop
     select tomar_cupo(v_c, 'Suelta ' || v_n, '311' || lpad(v_n::text, 7, '0'),
                       null, 'web', 'suelta') into v_r;
     if (v_r->>'ok')::boolean is not true then
       raise exception 'la suelta % no pudo entrar con los afiliados llenos: %', v_n, v_r;
     end if;
   end loop;
-  raise notice '4. con afiliados lleno, las 15 sueltas entran igual';
+  raise notice '4. con afiliados lleno, las 20 sueltas entran igual';
 
   -- ── 5. y la 16 suelta tampoco ──────────────────────────────
-  select tomar_cupo(v_c, 'Suelta 16', '3110000016', null, 'web', 'suelta') into v_r;
+  select tomar_cupo(v_c, 'Suelta 21', '3110000021', null, 'web', 'suelta') into v_r;
   if (v_r->>'error') <> 'SIN_CUPO' then
     raise exception 'entro una suelta de mas: %', v_r;
   end if;
   select cupo_tomado, cupo_total into v_fila from clases where id = v_c;
-  if v_fila.cupo_tomado <> 30 then
-    raise exception 'deberian haber entrado 30, entraron %', v_fila.cupo_tomado;
+  if v_fila.cupo_tomado <> 35 then
+    raise exception 'deberian haber entrado 35, entraron %', v_fila.cupo_tomado;
   end if;
-  raise notice '5. la clase queda en 30 exactos: 15 y 15';
+  -- Que la suma de los dos lados sea EXACTAMENTE el techo es lo que se
+  -- rompio antes de la 0058: los lados sumaban 30 contra un techo de 35
+  -- y cinco puestos no se podian vender por ningun lado.
+  if v_fila.cupo_total <> 35 then
+    raise exception 'el techo del sabado deberia ser 35, es %', v_fila.cupo_total;
+  end if;
+  raise notice '5. la clase queda en 35 exactos: 15 y 20, y el techo es la suma';
 
   -- ── 6. rechazar una libera SU lado, no el otro ─────────────
   declare v_tok text; v_cod text;
@@ -173,16 +183,16 @@ begin
   -- ── 8. el horario no delata el reparto ─────────────────────
   -- Ni un numero del otro lado puede salir del servidor.
   delete from reservas where clase_id = v_c;
-  update clases set cupo_tomado = 0, cupo_total = 30 where id = v_c;
+  update clases set cupo_tomado = 0, cupo_total = 35 where id = v_c;
   select tomar_cupo(v_c, 'Una Socia', '3000000001', null, 'web', 'miembro') into v_r;
 
   select cupo_total, cupo_tomado into v_fila
     from clases_para('suelta') where id = v_c;
-  if v_fila.cupo_total <> 15 then
-    raise exception 'a una suelta deberian ofrecersele 15, se le ofrecen %',
+  if v_fila.cupo_total <> 20 then
+    raise exception 'a una suelta deberian ofrecersele 20, se le ofrecen %',
       v_fila.cupo_total;
   end if;
-  if v_fila.cupo_total - v_fila.cupo_tomado <> 15 then
+  if v_fila.cupo_total - v_fila.cupo_tomado <> 20 then
     raise exception 'la reserva de una afiliada le quito cupo a las sueltas: quedan %',
       v_fila.cupo_total - v_fila.cupo_tomado;
   end if;
@@ -193,7 +203,7 @@ begin
     raise exception 'a un miembro deberian quedarle 14, le quedan %',
       v_fila.cupo_total - v_fila.cupo_tomado;
   end if;
-  raise notice '8. cada quien ve solo su lado: suelta 15, miembro 14';
+  raise notice '8. cada quien ve solo su lado: suelta 20, miembro 14';
 
   -- ── 9. entre semana clases_para no cambia nada ─────────────
   select cupo_total, cupo_tomado into v_fila
