@@ -76,7 +76,11 @@ console.log('\n-- 4. El saludo, en el Worker de verdad ---------------------');
   const c = chat(worker, env);
   const d = await c.abrir();
   ok('dice para qué se pregunta', /adivinar/.test(d.respuesta));
-  ok('dice a quién le llega', /Tania/.test(d.respuesta));
+  // No se comprueba un nombre propio: quien lea el chat puede cambiar.
+  // Lo que no puede faltar es la promesa de que hay alguien detrás, que
+  // es lo que separa esto de un formulario.
+  ok('promete que lo lee una persona',
+     /lo leemos nosotras|no un robot/i.test(d.respuesta));
   ok('dice lo poco que cuesta', /una frase basta/.test(d.respuesta));
   ok('y termina en la pregunta de verdad',
      d.respuesta.trim().endsWith('¿Qué te hizo volver la segunda vez?'));

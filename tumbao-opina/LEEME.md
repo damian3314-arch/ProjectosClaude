@@ -257,7 +257,7 @@ nadie.
 
 El de ahora dice tres cosas, en este orden: **para qué** se pregunta
 (vamos a cambiar cosas y preferimos preguntar antes que adivinar), **a
-quién** le llega (lo lee Tania) y **cuánto cuesta** (con una frase
+quién** le llega (lo leemos nosotras, no un robot) y **cuánto cuesta** (con una frase
 basta), y termina en la primera pregunta. Que le pregunten a uno antes
 de decidir halaga, y es verdad.
 

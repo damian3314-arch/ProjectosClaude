@@ -67,9 +67,12 @@ const LAS_TRES = [
 //   1. para qué se pregunta — vamos a cambiar cosas y no queremos
 //      adivinar. Que le pregunten a uno antes de decidir halaga y es
 //      verdad;
-//   2. a QUIÉN le llega — lo lee Tania, la dueña. Es la diferencia entre
-//      escribirle a un formulario y escribirle a una persona que puede
-//      cambiar el horario del martes;
+//   2. a QUIÉN le llega — «lo leemos nosotras, no un robot». Es la
+//      diferencia entre escribirle a un formulario y escribirle a
+//      alguien que puede cambiar el horario del martes. Se dijo sin
+//      nombre propio a propósito: quien lea el chat puede cambiar, y un
+//      saludo que nombra a alguien envejece el día que esa persona ya
+//      no está;
 //   3. cuánto cuesta — «con una frase basta», dicho antes de la
 //      pregunta, no después.
 //
@@ -78,7 +81,8 @@ const LAS_TRES = [
 const SALUDO =
   '¡Hola! Somos Tumbao 🧡 Queremos mejorar un par de cosas de la ' +
   'academia y preferimos preguntarte a ti antes que adivinar. Lo que ' +
-  'escribas aquí lo lee Tania, y con una frase basta.\n\n' + LAS_TRES[0];
+  'escribas aquí lo leemos nosotras, no un robot, y con una frase ' +
+  'basta.\n\n' + LAS_TRES[0];
 
 const INSTRUCCIONES = `
 Eres el asistente de Tumbao, una academia de baile en Bucaramanga,
