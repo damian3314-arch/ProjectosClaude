@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-correo",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+
+  // Aquí se guarda lo que llega, 7 días y se borra solo. Caduca a
+  // propósito: son alertas del banco con nombres y montos de clientes.
+  "kv_namespaces": [
+    {
+      "binding": "BUZON",
+      "id": "b070e9cfb606420db51c7bfdaaa151ac"
+    }
+  ],
+
+  // La llave para leer /ultimos va como secreto, no aquí:
+  //   npx wrangler secret put LLAVE_BUZON
+  //
+  // Sin ella el endpoint contesta 401 y no enseña nada. No se deja
+  // abierto ni "porque es una URL que nadie sabe": ahí dentro hay
+  // nombres de clientes y cuánto pagó cada uno.
+
+  "observability": { "enabled": true }
+}
