@@ -576,7 +576,24 @@ async function leerComprobante(env, imagen) {
 // fondo. Nunca bloquea la respuesta al cliente ni la revienta: si el
 // token no está puesto, si n8n está caído o si la llamada tarda, el
 // sondeo de fondo igual va a cruzar el pago — esto solo lo adelanta.
+//
+// APAGADO EL 30 DE AGOSTO POR LA CUOTA DE n8n
+// El plan son 2.500 ejecuciones al mes y se llegó a 2.494 faltando un
+// día. Este aviso gastaba UNA ejecución por cada persona que dice "ya
+// pagué", y el sondeo de Gmail gastaba otra por el correo del banco: dos
+// por pago, cuando con una basta. Adelantar el cruce medio minuto no
+// vale la mitad del plan.
+//
+// Lo que se pierde: el cruce automático tarda lo que tarde el sondeo de
+// fondo en vez de ser inmediato. La barra de espera de la página ya
+// aguanta eso —está hecha para el aviso del banco, que tarda de 1 a 2
+// minutos— así que la persona no nota nada.
+//
+// Para volver a encenderlo basta con quitar el `return` de abajo. Se
+// deja la función entera en vez de borrarla porque el día que el plan
+// suba, esto se vuelve a querer.
 function avisarRevisionInmediata(env, ctx) {
+  if (!env.AVISAR_A_N8N) return;
   if (!env.N8N_REVISAR_URL || !env.N8N_REVISAR_TOKEN) return;
   const aviso = fetch(env.N8N_REVISAR_URL, {
     method: 'POST',
