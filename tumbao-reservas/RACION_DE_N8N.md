@@ -1,5 +1,27 @@
 # Racionamiento de n8n — 31 de agosto de 2026
 
+> **LEVANTADO el 31 de agosto a las 18:50 (Bogotá).** Duró cinco horas y
+> costó caro: tres pagos reales esperaron 76, 53 y 9 minutos porque el
+> siguiente barrido era a las 20:00, con una persona en la puerta
+> esperando entrar a la clase de las 19:00. El sondeo volvió a ser de
+> cada minuto.
+>
+> Dos cosas que solo se supieron probándolo:
+>
+> · **n8n no corta en seco al llegar al tope.** El 31 de agosto se
+>   ejecutaron 7 veces con el contador ya en el límite y todas
+>   terminaron bien. El racionamiento se montó sobre el supuesto de
+>   que a las 2.500 se paraba todo, y ese supuesto no se comprobó.
+>
+> · **Tres horas de latencia no son aceptables aunque no se pierda
+>   nada.** El razonamiento de que "la reserva queda en la cola y se
+>   confirma a mano" es cierto y aun así es un mal negocio: alguien
+>   pagó y se quedó en la puerta. Si vuelve a hacer falta racionar, el
+>   tope debería ser 30 minutos, no 3 horas.
+>
+> Lo de abajo se deja como está porque el análisis del gasto sigue
+> valiendo.
+
 ## Qué pasó
 
 El plan de n8n son 2.500 ejecuciones al mes. El 30 de agosto iban
