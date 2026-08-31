@@ -2,14 +2,13 @@
  * tumbao-correo — el buzón de pagos@tumbaobaila.com
  *
  * POR QUÉ EXISTE
- * n8n cobra por ejecución. El plan son 2.500 al mes y el 30 de agosto se
- * llegó a 2.494 faltando un día. La ingesta de pagos —leer las alertas
- * de Bancolombia del correo— se lleva el 56% de ese gasto ella sola:
+ * n8n cobra por ejecución y la ingesta de pagos —leer las alertas de
+ * Bancolombia del correo— se llevaba más de la mitad del plan ella sola:
  * n8n sondea Gmail y cada correo que encuentra es una ejecución.
  *
- * La idea es darle la vuelta: en vez de que alguien vaya a buscar el
- * correo, que el correo llegue solo. Gmail reenvía las alertas del banco
- * a pagos@tumbaobaila.com, Cloudflare las entrega aquí, y aquí se
+ * La idea es darle la vuelta: en vez de ir a buscar el correo, que el
+ * correo llegue solo. Gmail reenvía las alertas del banco a
+ * pagos@tumbaobaila.com, Cloudflare las entrega aquí, y aquí se
  * procesan. Cloudflare Email Routing no cobra por correo recibido.
  *
  * POR QUÉ UN WORKER APARTE Y NO DENTRO DE tumbao-caja
@@ -18,44 +17,107 @@
  * arriesga lo único que no se puede caer. Cuando esto esté rodado se
  * puede juntar; hoy no.
  *
- * EN QUÉ VA
- * Paso 1 (hecho): recibir. Guarda lo que llegue para poder leer el
- * código con el que Gmail confirma la dirección de reenvío — sin eso no
- * se puede terminar de configurar el reenvío del otro lado.
+ * EN QUÉ VA — MODO ESPEJO
+ * Hoy este Worker LEE Y ENTIENDE los correos pero NO escribe nada en
+ * Supabase. Guarda lo que HABRÍA registrado, para poder compararlo con
+ * lo que registró n8n sobre los mismos correos.
  *
- * Paso 2 (pendiente, para el 1 de septiembre): parsear la alerta del
- * banco y llamar a registrar_pago_y_conciliar() en Supabase, que es lo
- * que hoy hace el nodo "Registrar y conciliar" de n8n. El parser ya
- * existe y está probado —vive en el nodo "Parsear correo" del workflow
- * "Tumbao · Ingesta de pagos"— y es JavaScript puro, sin nada de n8n
- * dentro, así que se mueve tal cual.
+ * No es prudencia de adorno, son dos razones concretas:
+ *
+ *   1. Mientras n8n también ingiere, escribir aquí duplicaría pagos. El
+ *      índice único que protege la tabla es sobre `hoja_fila`, y ahí
+ *      n8n guarda el id de la API de Gmail mientras que aquí solo se
+ *      tiene el Message-ID del correo: son distintos, así que el índice
+ *      NO los cruzaría. Los dos caminos no pueden estar vivos a la vez;
+ *      el cambio tiene que ser un relevo, no una convivencia.
+ *
+ *   2. Falta cerrar quién puede escribir aquí. Esta dirección es
+ *      adivinable y el parser solo mira el texto: cualquiera que mande
+ *      un correo imitando una alerta del banco podría registrar un pago
+ *      que no existe y confirmar una reserva que nadie pagó. El filtro
+ *      de remitente hay que escribirlo contra las cabeceras REALES de un
+ *      correo reenviado por el filtro de Gmail, no contra las que uno
+ *      se imagina. Ver `remitenteDeFiar()`.
+ *
+ * Para el relevo (cuando ya se haya visto una alerta real llegar por el
+ * filtro y esté cerrado el punto 2):
+ *   1. escribir el filtro de remitente de verdad
+ *   2. `npx wrangler secret put SUPABASE_SERVICE_KEY`
+ *   3. poner la variable REGISTRAR = "1"
+ *   4. apagar el disparador de Gmail del workflow "Tumbao · Ingesta de
+ *      pagos" en n8n, en el mismo momento
  *
  * LO QUE SE GUARDA, Y POR QUÉ CADUCA
- * Aquí van a caer alertas del banco: montos, nombres de quien paga y los
+ * Aquí caen alertas del banco: montos, nombres de quien paga y los
  * últimos cuatro dígitos de la cuenta. Eso no puede quedarse en un KV
  * para siempre. Se guarda 7 días, que es de sobra para depurar, y se
  * borra solo.
  * ------------------------------------------------------------------- */
 
+import { textoDelCorreo, remitenteReal, cabecera } from './mime.js';
+// OJO: se importa el parser que ya vive en el repo, no una copia.
+// Ese archivo es la fuente de verdad y lo cubren las 16 pruebas de
+// tumbao-reservas/pruebas/parser.test.js. Copiarlo aquí sería garantizar
+// que un día los dos digan cosas distintas.
+import { parsearCorreoBancolombia } from '../../tumbao-reservas/n8n/parser-bancolombia.js';
+
 const DIAS_QUE_SE_GUARDA = 7;
 
-// El código de confirmación de Gmail. Cuando se añade una dirección de
-// reenvío, Google manda un correo con un número de 9 dígitos y un
-// enlace; con cualquiera de los dos se confirma.
-function codigoDeGmail(texto) {
-  const m = /Confirmation code:?\s*([0-9]{6,12})/i.exec(texto)
-         || /c[oó]digo de confirmaci[oó]n:?\s*([0-9]{6,12})/i.exec(texto);
-  const enlace = /(https:\/\/mail\.google\.com\/[^\s"'<>\]]+)/i.exec(texto);
-  if (!m && !enlace) return null;
-  return { codigo: m ? m[1] : null, enlace: enlace ? enlace[1] : null };
+// De dónde salen de verdad las alertas. Bancolombia usa las dos según
+// el tipo de aviso; con una sola se perdería la mitad.
+const REMITENTES_DEL_BANCO = [
+  'alertasynotificaciones@an.notificacionesbancolombia.com',
+  'alertasynotificaciones@bancolombia.com.co',
+];
+
+/**
+ * ¿Este correo se puede creer?
+ *
+ * TODAVÍA NO ESTÁ TERMINADA. Devuelve el veredicto y en qué se basó,
+ * pero mientras REGISTRAR esté apagado no decide nada: solo se anota
+ * para poder revisarlo.
+ *
+ * Lo que falta es comprobar contra un correo reenviado POR EL FILTRO de
+ * Gmail (no uno reenviado a mano, que Gmail envuelve y le cambia el
+ * From) cuál de estas señales aguanta:
+ *   · la cabecera From: ¿sigue siendo la del banco?
+ *   · Authentication-Results / Received-SPF: los pone Cloudflare al
+ *     recibir y no los puede falsificar quien manda
+ *   · X-Forwarded-For: lo pone Gmail, pero cualquiera puede escribirlo
+ *     en un correo suyo, así que por sí solo no vale
+ *
+ * La que de verdad sirve como ancla es la de Cloudflare, porque es la
+ * única que no viene de quien manda el correo.
+ */
+export function remitenteDeFiar(crudo, deSobre) {
+  const from = remitenteReal(crudo, deSobre);
+  const autor = String(cabecera(crudo, 'Authentication-Results') || '');
+  const reenviadoPor = String(cabecera(crudo, 'X-Forwarded-For') || '');
+
+  return {
+    from,
+    del_banco: REMITENTES_DEL_BANCO.includes(from),
+    spf: /spf=pass/i.test(autor),
+    dkim: /dkim=pass/i.test(autor),
+    reenviado_por: reenviadoPor || null,
+    // Conservador a propósito: hoy nada pasa el corte, porque el corte
+    // todavía no está escrito.
+    veredicto: 'sin_decidir',
+  };
 }
 
 function json(datos, estado = 200) {
   return new Response(JSON.stringify(datos, null, 2), {
     status: estado,
-    headers: { 'Content-Type': 'application/json; charset=utf-8',
-               'Cache-Control': 'no-store' },
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
   });
+}
+
+function conLlave(url, env) {
+  return Boolean(env.LLAVE_BUZON) && url.searchParams.get('llave') === env.LLAVE_BUZON;
 }
 
 export default {
@@ -63,31 +125,50 @@ export default {
    * No se rechaza nada ni se responde: un rebote a Bancolombia no
    * sirve de nada y un rebote a Gmail podría hacer que Google apague
    * el reenvío. Lo que no se entienda se guarda igual y ya se mirará.
+   *
+   * Todo va dentro de un try: si el parser se cae con un correo raro,
+   * lo que NO puede pasar es perder el correo. Se guarda el fallo y se
+   * sigue.
    */
   async email(message, env, ctx) {
     let crudo = '';
     try {
       crudo = await new Response(message.raw).text();
     } catch (_) {
-      crudo = '(no se pudo leer el cuerpo)';
+      crudo = '';
     }
 
-    const asunto = message.headers.get('subject') || '';
-    // El Message-ID es lo que va a evitar registrar dos veces el mismo
-    // pago cuando esto procese de verdad: si el correo se entrega dos
-    // veces, el identificador es el mismo. Hoy solo se guarda.
+    // El Message-ID es lo que evitará registrar dos veces el mismo pago:
+    // si el correo se entrega dos veces, el identificador es el mismo.
     const idMensaje = message.headers.get('message-id') || null;
+
+    let texto = '';
+    let analisis = null;
+    let procedencia = null;
+    let fallo = null;
+    try {
+      texto = textoDelCorreo(crudo);
+      analisis = parsearCorreoBancolombia(texto);
+      procedencia = remitenteDeFiar(crudo, message.from);
+    } catch (e) {
+      fallo = String(e && e.message ? e.message : e).slice(0, 300);
+    }
 
     const registro = {
       de: message.from,
       para: message.to,
-      asunto,
+      asunto: message.headers.get('subject') || '',
       message_id: idMensaje,
       recibido_at: new Date().toISOString(),
       // Recortado: una alerta del banco cabe de sobra, y así un correo
       // con adjuntos raros no llena el almacén.
       texto: crudo.slice(0, 60000),
-      gmail: codigoDeGmail(crudo),
+      texto_limpio: texto.slice(0, 4000),
+      procedencia,
+      analisis,
+      fallo,
+      // Mientras esto diga "espejo", en Supabase no se tocó nada.
+      modo: env.REGISTRAR === '1' ? 'registrando' : 'espejo',
     };
 
     await env.BUZON.put(
@@ -95,6 +176,10 @@ export default {
       JSON.stringify(registro),
       { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA }
     );
+
+    // El relevo todavía no está dado. Cuando lo esté, aquí va la llamada
+    // a registrar_pago_y_conciliar() — y no antes, por lo que dice la
+    // cabecera de este archivo.
   },
 
   /* ── leer lo que llegó ───────────────────────────────────────────
@@ -104,13 +189,16 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/salud') {
-      return json({ ok: true, buzon: 'pagos@tumbaobaila.com' });
+      return json({
+        ok: true,
+        buzon: 'pagos@tumbaobaila.com',
+        modo: env.REGISTRAR === '1' ? 'registrando' : 'espejo',
+      });
     }
 
-    if (url.pathname === '/ultimos') {
-      if (!env.LLAVE_BUZON || url.searchParams.get('llave') !== env.LLAVE_BUZON) {
-        return json({ ok: false, error: 'no_autorizado' }, 401);
-      }
+    if (url.pathname === '/ultimos' || url.pathname === '/parseos') {
+      if (!conLlave(url, env)) return json({ ok: false, error: 'no_autorizado' }, 401);
+
       const lista = await env.BUZON.list({ prefix: 'correo:' });
       const claves = lista.keys.map((k) => k.name).sort().reverse().slice(0, 20);
       const correos = [];
@@ -118,15 +206,25 @@ export default {
         const v = await env.BUZON.get(c, 'json');
         if (v) correos.push({ clave: c, ...v });
       }
-      // Solo lo del código de Gmail si se pide así: es lo que se
-      // necesita para terminar de configurar el reenvío, y evita
-      // andar paseando cuerpos de correos por pantalla.
-      if (url.searchParams.get('solo') === 'codigo') {
-        return json({ ok: true, correos: correos
-          .filter((c) => c.gmail)
-          .map((c) => ({ de: c.de, asunto: c.asunto,
-                         recibido_at: c.recibido_at, gmail: c.gmail })) });
+
+      // Lo que el Worker HABRÍA registrado, sin los cuerpos de los
+      // correos. Es la vista para comparar contra lo que hizo n8n.
+      if (url.pathname === '/parseos') {
+        return json({
+          ok: true,
+          modo: env.REGISTRAR === '1' ? 'registrando' : 'espejo',
+          correos: correos.map((c) => ({
+            recibido_at: c.recibido_at,
+            de: c.de,
+            asunto: c.asunto,
+            message_id: c.message_id,
+            procedencia: c.procedencia,
+            analisis: c.analisis,
+            fallo: c.fallo,
+          })),
+        });
       }
+
       return json({ ok: true, cuantos: correos.length, correos });
     }
 
