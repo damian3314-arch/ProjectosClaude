@@ -831,6 +831,11 @@ const CONFIG = {
     /* El total de cada sección, más grande que el resto: es el único
        número que alguien necesita ver si no lee nada más de esa parte. */
     #tirilla .l.grande{font-size:11pt}
+    /* Los renglones que desglosan al de arriba van sangrados: así se
+       leen como parte de ese renglón y no como cifras más que sumar.
+       "ya habían pagado antes 16" debajo de "entraron 21" es la misma
+       gente contada por dentro, no dieciséis personas más. */
+    #tirilla .l.sangria span:first-child{padding-left:3.5mm}
     #tirilla .peq{font-size:7.5pt}
     #tirilla .firma{margin-top:8mm;border-top:1px solid #000;padding-top:1mm;
       text-align:center;font-size:7.5pt}
@@ -3518,7 +3523,11 @@ const CONFIG = {
 
     return `<div class="tile banco ${cl}">` +
       `<div class="n">${esc(pesos(b.recibido_cop || 0))}</div>` +
-      `<div class="k">recibido en banco hoy</div>` +
+      // Decía "recibido en banco hoy" y es la misma media verdad que se
+      // quitó de las dos tirillas: `recibido_cop` es la suma de los
+      // depósitos que el sistema alcanzó a registrar, no lo que recibió
+      // Bancolombia. La pantalla y el papel tienen que llamarlo igual.
+      `<div class="k">depósitos registrados hoy</div>` +
       `<div class="pista">${esc(pista)}</div>` +
       `<div class="corte">${esc(pie)}</div>` +
     `</div>`;
@@ -3702,8 +3711,20 @@ const CONFIG = {
         ? `<div class="veredicto">SÍ CUADRA ✓</div>`
         : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
 
-      `<hr>` + titulo('BANCOLOMBIA REPORTÓ HOY') +
-      linea('Entró al banco', pesos(bancoHoy), 'g grande') +
+      // ESTE RÓTULO DECÍA "BANCOLOMBIA REPORTÓ HOY / Entró al banco" Y
+      // ERA MENTIRA. NO LO DEVUELVAS. `banco.recibido_cop` sale de
+      //
+      //   select coalesce(sum(valor_cop),0) from pagos
+      //    where fecha_pago >= v_desde and fecha_pago < v_hasta;
+      //
+      // o sea: la suma de los depósitos que el sistema alcanzó a
+      // REGISTRAR hoy, no lo que dice el extracto de Bancolombia. Son
+      // dos cifras distintas siempre que un correo del banco no se
+      // ingiera, y con el nombre viejo el papel juraba que el banco
+      // había reportado menos de lo que reportó — justo el error que se
+      // resuelve mirando el extracto, que es el único que sí sabe.
+      `<hr>` + titulo('DEPÓSITOS REGISTRADOS HOY') +
+      linea('Total registrado', pesos(bancoHoy), 'g grande') +
 
       // La razon de ser del cierre. Una reserva de la pagina que se
       // confirmo SOLA ya esta cruzada con un deposito: ese cruce es la
@@ -3761,17 +3782,94 @@ const CONFIG = {
     }
     const cuandoFue = n => n === 0 ? 'HOY' : n === 1 ? 'AYER' : `HACE ${n} DÍAS`;
 
-    // Lo que el banco vio hoy contra lo que de eso queda identificado
+    // Lo que se registró hoy contra lo que de eso queda identificado
     // aquí. `banco_hoy_cop` son solo los renglones de hoy: los de días
     // anteriores no se pueden restar de lo de hoy.
     const bancoHoy = Number((d.banco || {}).recibido_cop || 0);
     const idHoy    = Number(k.banco_hoy_cop || 0);
     const falta    = Math.max(bancoHoy - idHoy, 0);
 
+    /* ── el puente entre las dos cifras que nunca se parecen (0064) ──
+       La tirilla del sábado 29 de agosto decía "Entradas del día
+       $360.000" y debajo "Bancolombia reportó hoy $195.000", y la dueña
+       restaba a mano en el margen del papel. Las dos cifras estaban
+       bien: de las 21 personas que entraron ese día, 16 habían pagado
+       días antes y su plata está en el extracto de otro día. Restarlas
+       da una diferencia que no significa nada.
+
+       Este bloque es el puente, y por eso va ARRIBA del todo: primero
+       se entiende por qué las dos cifras no tienen por qué parecerse, y
+       después se buscan los renglones. Por un lado quién cruzó la
+       puerta y con qué plata; por otro, qué era cada depósito que se
+       registró hoy.
+
+       `cuadre` puede no venir: un cierre viejo servido por un servidor
+       sin la 0064 no lo trae. Entonces no se pinta el bloque y el resto
+       del papel sale igual que siempre. */
+    const cuadre  = d.cuadre;
+    const quien   = (cuadre || {}).quien_entro   || {};
+    const alBanco = (cuadre || {}).entro_al_banco || {};
+    const cuenta  = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+    // Cupos Y depósitos, en ese orden. Tres amigas que reservan el
+    // sábado que viene con un solo pago son 3 cupos y 1 renglón del
+    // extracto: si esto dijera solo "3", habría que buscar tres
+    // renglones que no existen.
+    const futCupos = Number(alBanco.futuras_cupos || 0);
+    const futDep   = Number(alBanco.futuras_depositos || 0);
+    // Con cero cupos la línea se imprime igual, con raya. Que nadie
+    // pagara por adelantado ese día también es información, y esconder
+    // la línea obliga a preguntarse si faltó o si no hubo.
+    const futuras = futCupos > 0
+      ? `${cuenta(futCupos, 'cupo', 'cupos')} · ` +
+        `${cuenta(futDep, 'depósito', 'depósitos')} · ${pesos(alBanco.futuras_cop)}`
+      : '—';
+    const clasesHoyN = Number(alBanco.clases_hoy_n || 0);
+
+    const bloqueCuadre = !cuadre ? '' :
+      `<hr>` + titulo('QUIÉN ENTRÓ HOY') +
+      linea('Entraron a clase',
+            cuenta(Number(quien.personas || 0), 'persona', 'personas')) +
+      // Los tres renglones de debajo son la MISMA gente contada por
+      // dentro: suman el de arriba, no se le añaden. De ahí la sangría.
+      linea('ya habían pagado antes',
+            String(Number(quien.pagaron_antes || 0)), 'sangria peq') +
+      linea('pagaron hoy',
+            `${Number(quien.pagaron_hoy || 0)} · ${pesos(quien.pagaron_hoy_cop)}`,
+            'sangria peq') +
+      // Solo si los hay: en un día normal es cero, y un renglón que
+      // siempre dice cero enseña a no leer el papel.
+      (Number(quien.sin_deposito || 0) > 0
+        ? linea('sin depósito', String(Number(quien.sin_deposito)), 'sangria peq')
+        : '') +
+
+      `<hr>` + titulo('QUÉ SE REGISTRÓ HOY') +
+      linea('Clases de hoy',
+            clasesHoyN ? `${clasesHoyN} · ${pesos(alBanco.clases_hoy_cop)}` : '—') +
+      linea('Clases futuras', futuras) +
+      // Mensualidades, camisetas, cumpleaños: pagan cosas que no tienen
+      // cupo ni fecha que buscar. Con el mismo nombre legible que usa
+      // el resto del panel, para que el papel y la pantalla se llamen
+      // igual.
+      (Array.isArray(alBanco.otros) ? alBanco.otros : [])
+        .map(x => linea(nombreConcepto(x.concepto) +
+                        (Number(x.n || 0) > 1 ? ' x' + Number(x.n) : ''),
+                        pesos(x.cop))).join('') +
+      // El total es lo IDENTIFICADO, que es exactamente lo que suman
+      // los renglones de encima. `sin_identificar_cop` no se imprime a
+      // propósito: `reporto_banco_cop` no es lo que reportó Bancolombia
+      // sino lo que el sistema ingirió, así que esa resta da cero casi
+      // siempre, y un renglón que siempre dice $0 enseña a ignorar el
+      // papel. Lo que de verdad quedó sin dueño se persigue en el panel.
+      linea('= Depósitos registrados hoy',
+            pesos(alBanco.identificado_cop), 'g grande');
+
     $('#tirilla').innerHTML =
       `<h1>TUMBAO</h1>` +
       `<div class="sub">CUÁNDO PAGARON<br>${esc(conFecha(d.dia,
         { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
+      bloqueCuadre +
+
       `<div class="peq">Cada renglón es un movimiento del extracto. ` +
         `Debajo, qué pagó.</div>` +
 
@@ -3857,7 +3955,18 @@ const CONFIG = {
       // así que restar el total sin más daría un número falso: se
       // compara solo contra los renglones de hoy.
       `<hr>` + titulo('CONTRA EL EXTRACTO DE HOY') +
-      linea('El banco recibió hoy', pesos(bancoHoy)) +
+      // Mismo caso que arriba en la tirilla del cierre: esto decía "El
+      // banco recibió hoy" y no lo es. Es la suma de los depósitos que
+      // el sistema registró hoy (`sum(valor_cop) from pagos` del día).
+      // Lo que recibió Bancolombia lo dice el extracto que se tiene al
+      // lado, y es justo lo que se está comparando: el papel no puede
+      // llamarse a sí mismo el extracto.
+      // "Total registrado hoy" y no "Depósitos registrados hoy" para no
+      // repetir palabra por palabra el total de arriba: son parecidos
+      // pero no el mismo número —arriba es lo identificado renglón por
+      // renglón— y dos rótulos iguales con cifras distintas en el mismo
+      // papel es justo lo que hace desconfiar de él.
+      linea('Total registrado hoy', pesos(bancoHoy)) +
       linea('Identificado aquí', pesos(idHoy)) +
       (falta > 0
         ? linea('Todavía sin dueño', pesos(falta), 'g')
