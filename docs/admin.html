@@ -2783,6 +2783,67 @@ const CONFIG = {
     if (e.key === 'Escape') { $('#buscar-pend').value = ''; pintarPendientes(); }
   });
 
+  /* ---------- ¿sigue viva la ingesta de pagos? ----------
+   *
+   * Si la ingesta se muere —Gmail deja de reenviar, se cae el Worker,
+   * se rompe una credencial— no falla nada de forma visible: la página
+   * sigue tomando reservas y la gente sigue pagando. Simplemente nadie
+   * se confirma, y eso solo se nota cuando alguien reclama en la puerta.
+   *
+   * POR QUÉ NO SE MIDE "HACE X SIN PAGOS DEL BANCO"
+   * Era la idea inicial y los datos la tumbaron. Sobre 178 huecos entre
+   * pagos en horario de operación (21 días): la mediana son 32 minutos,
+   * pero el p90 son 3 HORAS y el p99 son 25. Los domingos y los lunes
+   * flojos hay huecos larguísimos que son perfectamente normales. Un
+   * aviso montado sobre eso saltaría en falso casi a diario, y una
+   * alarma que grita en falso se aprende a ignorar — que es peor que no
+   * tenerla.
+   *
+   * LO QUE SÍ DISTINGUE
+   * Cuánto lleva esperando alguien que YA DIJO QUE PAGÓ. Sobre las 178
+   * confirmaciones del mismo periodo: la mediana son 3 minutos y el p90
+   * son 24. Media hora esperando ya es anómalo, y de madrugada no salta
+   * porque no hay nadie esperando.
+   *
+   * Se calcula aquí con lo que la cola ya trae (pagado_en). No hace
+   * falta ni tocar el Worker ni la base.
+   */
+  const ESPERA_RARA_MIN = 30;
+
+  function pintarPulso() {
+    let caja = $('#pulso-ingesta');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'pulso-ingesta';
+      caja.className = 'aviso mal';
+      caja.style.cssText = 'margin:0 0 12px';
+      const lista = $('#lista-pend');
+      lista.parentNode.insertBefore(caja, lista);
+    }
+
+    const ahora = Date.now();
+    const varadas = pendientes.filter((r) => {
+      if (r._resuelto || !r.pagado_en) return false;
+      const t = new Date(r.pagado_en).getTime();
+      if (!Number.isFinite(t)) return false;
+      return (ahora - t) / 60000 > ESPERA_RARA_MIN;
+    });
+
+    if (!varadas.length) { caja.hidden = true; return; }
+
+    const masVieja = Math.max(...varadas.map(
+      (r) => Math.floor((ahora - new Date(r.pagado_en).getTime()) / 60000)));
+    const cuantos = varadas.length;
+
+    caja.hidden = false;
+    caja.textContent =
+      `⚠ ${cuantos === 1 ? 'Una persona lleva' : cuantos + ' personas llevan'} ` +
+      `más de ${ESPERA_RARA_MIN} minutos esperando confirmación ` +
+      `(la que más, ${masVieja}). Lo normal son 3. ` +
+      `Puede que la conciliación de pagos esté caída: confírmalas a mano ` +
+      `y avisa, porque si está caída no se va a arreglar sola.`;
+  }
+
   function pintarPendientes() {
     const cont  = $('#lista-pend');
     const globo = $('#globo-pend');
@@ -2802,6 +2863,7 @@ const CONFIG = {
       : `${lista.length} de ${pendientes.length}`;
 
     pintarSinDueno();
+    pintarPulso();
     cont.innerHTML = '';
 
     if (!pendientes.length) {
