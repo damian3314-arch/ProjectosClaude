@@ -181,21 +181,39 @@ export default {
       fallo = String(e && e.message ? e.message : e).slice(0, 300);
     }
 
+    // SOLO SE GUARDA EL CUERPO DE LO QUE VIENE DEL BANCO.
+    //
+    // De lo demás se deja una ficha sin cuerpo: de quién, qué asunto y
+    // por qué se descartó. Suficiente para saber si el reenvío está
+    // funcionando, sin quedarse con el correo de nadie.
+    //
+    // Esto es lo que hace viable reenviar TODO el correo de Tumbao aquí
+    // en vez de depender de un filtro de Gmail. El filtro es un punto de
+    // fallo silencioso —si se desconfigura no avisa, simplemente deja de
+    // reenviar, que es exactamente lo que pasó el 31 de agosto—, y
+    // ademas ya hay un filtro mejor de este lado: remitenteDeFiar()
+    // exige que el From sea del banco Y que Cloudflare diera spf=pass.
+    const delBanco = Boolean(procedencia && procedencia.se_puede_creer);
+
     const registro = {
       de: message.from,
       para: message.to,
       asunto: message.headers.get('subject') || '',
       message_id: idMensaje,
       recibido_at: new Date().toISOString(),
-      // Recortado: una alerta del banco cabe de sobra, y así un correo
-      // con adjuntos raros no llena el almacén.
-      texto: crudo.slice(0, 60000),
-      texto_limpio: texto.slice(0, 4000),
       procedencia,
-      analisis,
       fallo,
       // Mientras esto diga "espejo", en Supabase no se tocó nada.
       modo: env.REGISTRAR === '1' ? 'registrando' : 'espejo',
+      ...(delBanco
+        ? {
+            // Recortado: una alerta del banco cabe de sobra, y así un
+            // correo con adjuntos raros no llena el almacén.
+            texto: crudo.slice(0, 60000),
+            texto_limpio: texto.slice(0, 4000),
+            analisis,
+          }
+        : { descartado: true }),
     };
 
     await env.BUZON.put(
