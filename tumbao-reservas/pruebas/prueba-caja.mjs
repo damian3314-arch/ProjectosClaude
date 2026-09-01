@@ -57,6 +57,33 @@ pagina.on('console', (m) => {
 });
 pagina.on('pageerror', (e) => errores.push('JS: ' + e.message));
 
+/* Un botón de la caja, buscado por su rótulo EXACTO.
+ *
+ * POR QUÉ NO `hasText`. `.locator('.caja-btn', { hasText: 'Mensualidad' })`
+ * quiere decir "contiene", y "Media mensualidad" también contiene
+ * "Mensualidad". Playwright encuentra dos botones y revienta con
+ * "strict mode violation" — y como revienta, mata el proceso entero y
+ * todo lo que venga después deja de comprobarse. Así estuvo esta prueba
+ * desde que la Caja ganó los conceptos de media mensualidad y camiseta
+ * (d6dc548): sin red, y sin que se notara.
+ *
+ * El fallo se repite con cualquier par de botones donde el rótulo de uno
+ * esté contenido en el del otro, así que la defensa no puede ser
+ * arreglar la línea 537 y ya: tiene que ser cómo se busca CUALQUIER
+ * botón.
+ *
+ * Se descartó `hasText` con expresión regular anclada —`/^Mensualidad$/`
+ * sobre el botón— porque el texto del botón no es solo el rótulo: lleva
+ * pegado el precio ("Mensualidad $125.000") o "monto libre", así que el
+ * ancla `$` obligaría a escribir el precio en la prueba y ésta se caería
+ * el día que suba una tarifa, que no es lo que aquí se comprueba.
+ *
+ * `getByText(rotulo, { exact: true })` empareja contra el <span class="q">,
+ * que lleva el rótulo y nada más: exacto sobre lo único que identifica
+ * al botón, e indiferente al precio. */
+const botonCaja = (rotulo) => pagina.locator('.caja-btn')
+  .filter({ has: pagina.getByText(rotulo, { exact: true }) });
+
 // ---- se finge el backend ----
 let movimientos = [];
 let idSeq = 0;
@@ -100,6 +127,20 @@ const dia = () => ({
     recepcion_transferencia_n: 1,
     pagina_transferencia_cop: 30000,
     pagina_transferencia_n: 2,
+    // Apuntados en recepción cuyo cobro no quedó en Caja (0054). Iban
+    // en cero porque el simulacro no los mandaba, así que la línea
+    // "Reservas manuales" de la tirilla se imprimía siempre con raya y
+    // nadie comprobaba nunca que supiera enseñar un número.
+    a_mano_cop: 15000,
+    a_mano_n: 1,
+    // La cuenta de personas la manda el servidor con su propia regla
+    // (0059) y NO es la suma de las casillas de dinero: quien entró con
+    // una clase reprogramada pagó otro día, y aun así cruzó la puerta.
+    // Va a propósito uno POR ENCIMA de la suma (2 + 1 + 4 = 7) para que
+    // la prueba distinga las dos cifras. Si el panel volviera a sumar
+    // las casillas imprimiría 7, que es exactamente el error del 28 de
+    // agosto: el papel decía 10 y por la puerta habían entrado 11.
+    personas_n: 8,
   },
   total_ingresos: suma('ingreso', 'efectivo') + suma('ingreso', 'transferencia') + 15000,
   total_egresos: suma('egreso', 'efectivo') + suma('egreso', 'transferencia'),
@@ -113,6 +154,39 @@ const dia = () => ({
   banco: banco(),
   pagos_libres: libres,
   resumen_conceptos: resumen(),
+  // Lo que necesita la SEGUNDA tirilla ("Imprimir cuándo pagaron"), que
+  // hasta ahora esta prueba no pulsaba nunca: sin `cuadre` ni
+  // `conciliacion` el papel sale vacío y un error de JS al pintarlo no
+  // lo veía nadie. Los números son los del sábado 29 de agosto, que es
+  // el día que motivó ese papel: entraron 21 personas pero al banco
+  // entraron solo $105.000 porque 16 habían pagado días antes.
+  cuadre: {
+    quien_entro: { personas: 21, pagaron_antes: 16, pagaron_hoy: 5,
+                   pagaron_hoy_cop: 75000, sin_deposito: 0 },
+    entro_al_banco: {
+      clases_hoy_n: 5, clases_hoy_cop: 75000,
+      // Tres amigas que reservan el sábado siguiente con UN solo pago:
+      // 3 cupos y 1 renglón del extracto. Si el papel dijera solo "3"
+      // habría que buscar tres renglones que no existen.
+      futuras_cupos: 3, futuras_depositos: 1, futuras_cop: 45000,
+      otros: [{ concepto: 'mensualidad', n: 1, cop: 125000 }],
+      otros_cop: 125000,
+      identificado_cop: 245000,
+      reporto_banco_cop: 245000, sin_identificar_cop: 0,
+    },
+  },
+  conciliacion: {
+    banco: [
+      { dia: '2026-08-05', dias_antes: 0, hora: '10:12', valor_cop: 30000,
+        remitente: 'MARIA CAMILA RUIZ', referencia: 'M22223333',
+        para: ['Maria Ruiz', 'Sara Ruiz'], conceptos: [], cobros: 0,
+        es_parte: false },
+    ],
+    banco_cop: 30000, banco_hoy_cop: 30000,
+    efectivo: [], efectivo_cop: 0,
+    sin_enlazar: [], sin_enlazar_cop: 0,
+    sin_pago: [],
+  },
   abierta: sinAbrirSoportado ? undefined : apertura !== null,
   apertura: sinAbrirSoportado ? undefined : apertura,
   cerrado: cierre !== null,
@@ -260,8 +334,24 @@ await pagina.waitForTimeout(700);
 const visible = await pagina.locator('#p-caja').evaluate((e) => e.classList.contains('on'));
 visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el panel no quedó visible');
 
-const nTarjetas = await pagina.locator('.caja-btn').count();
-nTarjetas === 9 ? bien('salen las 9 tarjetas') : falla('salen las 9 tarjetas', `salieron ${nTarjetas}`);
+/* Los botones con los que se registra la plata, uno por concepto.
+ *
+ * ERAN 9 Y AHORA SON 11, Y ESTÁ BIEN: d6dc548 añadió "Media mensualidad"
+ * y "Camiseta" a CONCEPTOS a propósito, sin valor sugerido porque
+ * todavía no tienen tarifa. No sobra ninguno ni se duplicó nada.
+ *
+ * Se comprueba la LISTA y no el número. Un contador solo dice "son
+ * once" y se lo cree igual si un concepto desaparece y otro se
+ * duplica — que en una pantalla donde cada botón mueve dinero real es
+ * justo el error que hay que ver. Con los rótulos, además, el fallo
+ * dice qué cambió en vez de dejar dos números que no explican nada. */
+const ROTULOS = ['Clase suelta', 'Media mensualidad', 'Mensualidad',
+                 'Cumpleaños', 'Camiseta', 'Otro ingreso',
+                 'Profesores', 'Cafetería', 'Aseo', 'Papelería', 'Otra salida'];
+const rotulos = (await pagina.locator('.caja-btn .q').allInnerTexts()).map(t => t.trim());
+rotulos.join('|') === ROTULOS.join('|')
+  ? bien(`salen las ${ROTULOS.length} tarjetas, y son las que son`)
+  : falla(`salen las ${ROTULOS.length} tarjetas`, `salieron ${rotulos.length}: ${rotulos.join(', ')}`);
 
 // ═══════════════ sin la migración 0031 ═══════════════
 // El estado real entre que se despliega la página y se pega el SQL: el
@@ -375,7 +465,7 @@ await pagina.evaluate(() => {
 
 
 // Registrar una clase suelta
-await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
+await botonCaja('Clase suelta').click();
 await pagina.waitForTimeout(300);
 const valorPrecargado = await pagina.inputValue('#modal-valor');
 valorPrecargado === '15000'
@@ -435,7 +525,7 @@ renglones.every(d => d === 'block')
   : falla('título y detalle pegados', renglones.join('/'));
 
 // Un egreso con monto libre
-await pagina.locator('.caja-btn', { hasText: 'Profesores' }).click();
+await botonCaja('Profesores').click();
 await pagina.waitForTimeout(300);
 await pagina.fill('#modal-valor', '80.000');           // con punto, como teclea la cajera
 await pagina.click('#modal-guardar');
@@ -534,7 +624,7 @@ const pieTarjeta = (await tarjeta.locator('.corte').innerText()).replace(/\s+/g,
 
 // Con 75 depósitos la lista es un muro: sin filtro la cajera escoge el
 // primero que le cuadre de valor, que es justo lo que hay que evitar.
-await pagina.locator('.caja-btn', { hasText: 'Mensualidad' }).click();
+await botonCaja('Mensualidad').click();
 await pagina.waitForTimeout(250);
 await pagina.locator('.medio[data-medio="transferencia"]').click();
 await pagina.waitForTimeout(250);
@@ -581,7 +671,7 @@ await pagina.click('#modal-cancelar');
 await pagina.waitForTimeout(200);
 
 // La lista solo aparece para una transferencia que entra.
-await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).click();
+await botonCaja('Clase suelta').click();
 await pagina.waitForTimeout(250);
 !(await pagina.locator('#modal-banco').isVisible())
   ? bien('en efectivo no pide depósito')
@@ -636,7 +726,7 @@ await pagina.waitForTimeout(800);
 
 // Registrar sin enlazar: Nequi, otra cuenta, o el aviso que no llegó.
 // Se permite, se cuenta aparte, y no se acusa a nadie.
-await pagina.locator('.caja-btn', { hasText: 'Mensualidad' }).click();
+await botonCaja('Mensualidad').click();
 await pagina.waitForTimeout(250);
 await pagina.locator('.medio[data-medio="transferencia"]').click();
 await pagina.waitForTimeout(200);
@@ -852,11 +942,11 @@ for (let i = 0; i < 4; i++) {
   await pagina.evaluate(() => document.querySelector('#caja-recargar').click());
   await pagina.waitForTimeout(120);
 }
-await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).first().click();
+await botonCaja('Clase suelta').click();
 await pagina.waitForTimeout(250);
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(400);
-await pagina.locator('.caja-btn', { hasText: 'Cumpleaños' }).first().click();
+await botonCaja('Cumpleaños').click();
 await pagina.waitForTimeout(250);
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(500);
@@ -889,7 +979,7 @@ await pagina.waitForTimeout(700);
 // LO QUE GARANTIZA EL CIERRE: con el día cerrado no entra nada más. Sin
 // esto se podía cerrar a las 9, vender a las 9:05, y el papel impreso
 // quedaba mintiendo.
-await pagina.locator('.caja-btn', { hasText: 'Clase suelta' }).first().click();
+await botonCaja('Clase suelta').click();
 await pagina.waitForTimeout(250);
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(600);
@@ -913,32 +1003,93 @@ const t = tirilla.replace(/\s+/g, ' ');
   ? bien('la tirilla lleva encabezado')
   : falla('el encabezado de la tirilla', t.slice(0, 80));
 
-// Tiene que responder lo que la dueña cruza contra su cuaderno de la
-// puerta: cuánta gente de clase suelta entró hoy, por dónde y en qué
-// pagó — no solo un total de entradas y salidas.
-/ENTRADAS/.test(t) && /SALIDAS/.test(t) && /Transferencia, recepción/.test(t)
- && /Transferencia, página/.test(t)
-  ? bien('desglosa entradas por recepción y por página, no solo un total')
-  : falla('el desglose de entradas', t.slice(0, 260));
+/* Tiene que responder lo que la dueña cruza contra su cuaderno de la
+ * puerta: cuánta gente de clase suelta entró hoy y por cuál de las tres
+ * puertas — no solo un total de entradas y salidas.
+ *
+ * LOS RÓTULOS CAMBIARON (eac3860, 507046b). Antes las tres puertas se
+ * llamaban "Efectivo", "Transferencia, recepción" y "Transferencia,
+ * página": nombraban el MEDIO de pago, que a quien cuadra el papel no
+ * le dice nada. Ahora se llaman por de dónde vino la persona
+ * —"Reservas página", "Reservas manuales", "Pagos en caja"—, y las dos
+ * de mostrador van juntas en una sola línea porque en el mostrador se
+ * cobra igual en efectivo que por transferencia.
+ *
+ * Se comprueban los tres rótulos y no uno: si volvieran a partirse por
+ * medio de pago, o desapareciera una de las tres puertas, el papel
+ * seguiría cuadrando y estaría escondiendo gente. */
+/INGRESOS DEL DÍA/.test(t) && /Reservas página/.test(t)
+ && /Reservas manuales/.test(t) && /Pagos en caja/.test(t)
+ && /= Entradas/.test(t) && /SALIDAS/.test(t) && /= Salidas/.test(t)
+  ? bien('desglosa las tres puertas por las que entró alguien, no solo un total')
+  : falla('el desglose de entradas', t.slice(0, 300));
 
-// El efectivo de clase suelta se ve aparte, con cuántos cobros son.
-/Efectivo3 · \$45\.000/.test(t)
-  ? bien('agrupa el efectivo de clase suelta con su cantidad',
-         (t.match(/Efectivo\d+ · \$[\d.]+/) || [])[0])
-  : falla('no agrupó el efectivo de clase suelta', t.slice(0, 260));
+// Cada puerta con su cantidad de gente y su plata. El texto sale pegado
+// (`#tirilla` está oculto, así que se lee textContent y no hay saltos de
+// línea), de ahí el "manuales1" sin espacio.
+/Reservas página2 · \$30\.000/.test(t) && /Reservas manuales1 · \$15\.000/.test(t)
+ && /Pagos en caja4 · \$60\.000/.test(t)
+  ? bien('cada puerta dice cuánta gente y cuánta plata',
+         (t.match(/Reservas página[^C]*/) || [])[0])
+  : falla('las cifras de cada puerta', t.slice(0, 300));
+
+/* LA CUENTA DE PERSONAS LA MANDA EL SERVIDOR, NO LA SUMA DEL PAPEL.
+ *
+ * El simulacro manda personas_n = 8 con unas casillas que suman 7: es
+ * el caso de la 0059 —quien entró con una clase reprogramada pagó otro
+ * día y no está en ninguna casilla de dinero de hoy—. Si el panel
+ * volviera a sumar las casillas imprimiría 7, que es el error del 28 de
+ * agosto: el papel decía 10 y por la puerta habían entrado 11. */
+/8 personas a clase suelta/.test(t) && !/7 personas a clase suelta/.test(t)
+  ? bien('la gente que entró la cuenta el servidor, no la suma de las casillas')
+  : falla('la cuenta de personas', t.slice(0, 300));
 
 // El signo, delante del peso. "$-5.000" en papel se lee mal.
 !/\$-/.test(t)
   ? bien('los negativos salen como −$5.000, no $-5.000')
   : falla('el signo del negativo', (t.match(/\$-[\d.]+/) || [])[0]);
 
-/AL ABRIR/.test(t) && /95\.000/.test(t)
-  ? bien('deja constancia de la apertura y su conteo')
-  : falla('la apertura en la tirilla', t.slice(0, 200));
+/* El arqueo del efectivo, que antes se titulaba "AL ABRIR" y ahora es
+ * la sección "CAJA 1". Se dejó de comprobar solo el conteo de la
+ * apertura y se comprueban los tres números que hacen falta para que el
+ * veredicto de abajo signifique algo: con cuánto se abrió, cuánto
+ * debería haber y cuánto se contó. Sin "Debía haber" el "NO CUADRA" es
+ * una palabra sin nada contra qué comprobarla. */
+/CAJA 1/.test(t) && /Base al abrir\$95\.000/.test(t)
+ && /Debía haber/.test(t) && /Se contó/.test(t)
+  ? bien('el arqueo trae con cuánto se abrió, cuánto debía haber y cuánto se contó',
+         (t.match(/CAJA 1.*?Se contó\$[\d.]+/) || [])[0])
+  : falla('el arqueo en la tirilla', t.slice(0, 300));
 
-/COMPARAR CON ADMINGYM/.test(t) && /DINERO EN CAJA/.test(t)
-  ? bien('trae los cuatro números de AdminGym')
-  : falla('AdminGym en la tirilla', t.slice(0, 200));
+/* SE BORRÓ: "trae los cuatro números de AdminGym".
+ *
+ * Comprobaba "COMPARAR CON ADMINGYM" y "DINERO EN CAJA" en la tirilla.
+ * Esa sección ya no existe en `pintarTirilla`: se quitó a propósito
+ * —el comentario del código lo dice, "cada seccion extra era una cifra
+ * mas que interpretar en el unico momento del dia en que hay prisa"— y
+ * los cuatro números de AdminGym viven ahora solo en la pantalla del
+ * cierre, que es donde se copian. No se relajó la aserción: se borró,
+ * porque lo que comprobaba ya no debe estar. Lo que sí sigue
+ * comprobándose, unas líneas más arriba, es que la PANTALLA del cierre
+ * siga nombrando AdminGym ("el cierre muestra los nombres de AdminGym").
+ *
+ * En su lugar va lo que sí ocupa ese sitio en el papel de hoy, y con el
+ * rótulo importa cuál: el código lleva un aviso en mayúsculas de no
+ * devolver "BANCOLOMBIA REPORTÓ HOY", porque esa cifra no es lo que
+ * dice el extracto sino lo que el sistema alcanzó a registrar, y con el
+ * nombre viejo el papel juraba que el banco había reportado de menos.
+ * Por eso se comprueba también que el rótulo viejo NO esté. */
+/DEPÓSITOS REGISTRADOS HOY/.test(t) && /Total registrado\$330\.000/.test(t)
+ && !/BANCOLOMBIA REPORTÓ/i.test(t) && !/Entró al banco/i.test(t)
+  ? bien('los depósitos del día se llaman registrados, no reportados por el banco')
+  : falla('los depósitos registrados en la tirilla', t.slice(0, 300));
+
+// La razón de ser del cierre: lo que hay que buscar en el extracto a
+// mano. Sin depósitos por verificar tiene que decirlo, no dejar el
+// hueco en blanco — un espacio vacío se lee como "se me olvidó".
+/POR REVISAR/.test(t) && /NADA POR REVISAR/.test(t)
+  ? bien('si no hay nada que revisar, lo dice')
+  : falla('la sección de por revisar', t.slice(0, 300));
 
 // El veredicto tiene que verse solo, sin tener que restar nada.
 /SÍ CUADRA|NO CUADRA/.test(t)
@@ -953,6 +1104,45 @@ const t = tirilla.replace(/\s+/g, ' ');
 (await pagina.locator('#tirilla').isHidden())
   ? bien('en pantalla la tirilla no estorba')
   : falla('la tirilla se ve en pantalla');
+
+/* ---- la segunda tirilla: "cuándo pagaron" ----
+ * Es otro papel con otro trabajo: la del cierre se archiva con el
+ * efectivo y contesta "¿cuadró el día?"; ésta se lleva al lado del
+ * extracto y contesta "¿de la gente que entró hoy, qué renglón del
+ * banco es cada una?".
+ *
+ * Esta prueba no la pulsaba nunca. Las dos escriben en el MISMO
+ * #tirilla, así que un error al pintar la segunda dejaría el rollo con
+ * lo que quedó de la primera y saldría por la impresora un papel con el
+ * título equivocado. */
+await pagina.evaluate(() => document.querySelector('#btn-tirilla-pagos').click());
+await pagina.waitForTimeout(400);
+const p2 = (await pagina.locator('#tirilla').evaluate(e => e.textContent))
+  .replace(/\s+/g, ' ');
+
+/CUÁNDO PAGARON/.test(p2) && !/CIERRE DE CAJA/.test(p2)
+  ? bien('el segundo papel se imprime y es otro papel, no el del cierre')
+  : falla('la segunda tirilla', p2.slice(0, 200));
+
+/* EL PUENTE ENTRE LAS DOS CIFRAS QUE NUNCA SE PARECEN (0064).
+ *
+ * El papel del 29 de agosto decía "Entradas del día $360.000" y debajo
+ * una cifra del banco mucho menor, y la dueña restaba a mano en el
+ * margen. Las dos estaban bien: de las 21 que entraron, 16 habían
+ * pagado días antes y su plata está en el extracto de otro día. Estas
+ * dos secciones son la explicación, y por eso van arriba del todo. */
+/QUIÉN ENTRÓ HOY/.test(p2) && /Entraron a clase21 personas/.test(p2)
+ && /ya habían pagado antes16/.test(p2) && /pagaron hoy5 · \$75\.000/.test(p2)
+  ? bien('separa a quien entró hoy de quien ya había pagado antes')
+  : falla('quién entró hoy', p2.slice(0, 300));
+
+// Cupos Y depósitos, en ese orden: tres amigas con un solo pago son 3
+// cupos y 1 renglón del extracto. Si dijera solo "3" habría que buscar
+// tres renglones que no existen.
+/QUÉ SE REGISTRÓ HOY/.test(p2) && /Clases futuras3 cupos · 1 depósito · \$45\.000/.test(p2)
+ && /= Depósitos registrados hoy\$245\.000/.test(p2)
+  ? bien('lo pagado por adelantado va en cupos Y en renglones del extracto')
+  : falla('qué se registró hoy', p2.slice(0, 400));
 
 // El ancho es de rollo, no de folio: a 210mm la impresora del mostrador
 // la parte en dos. Se lee el texto del <style>, no el CSSOM: las reglas
