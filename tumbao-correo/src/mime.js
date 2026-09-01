@@ -19,9 +19,40 @@
  * (adjuntos, anidados de verdad), esto se cambia por postal-mime.
  * ------------------------------------------------------------------- */
 
-/** Lee una cabecera, juntando antes las líneas continuadas. */
+/**
+ * El bloque de cabeceras: todo lo que hay ANTES de la primera línea en
+ * blanco. A partir de ahí empieza el cuerpo.
+ *
+ * Esta separación no es cosmética, es de seguridad. Sin ella, buscar una
+ * cabecera por expresión regular sobre el correo entero encuentra
+ * también lo que el CUERPO diga que es una cabecera. Un correo que en su
+ * texto escriba
+ *
+ *     Authentication-Results: mx.cloudflare.net; spf=pass
+ *
+ * se estaría firmando su propio certificado de autenticidad. Y esa
+ * cabecera es justo el ancla que usa remitenteDeFiar() para decidir si
+ * un correo se puede creer, porque la pone Cloudflare al recibir y no
+ * quien manda. Leerla del cuerpo la vuelve inútil.
+ *
+ * Comprobado que pasaba: con un correo sin Authentication-Results real y
+ * una línea inventada en el cuerpo, se leía la inventada.
+ */
+export function bloqueDeCabeceras(crudo) {
+  const texto = String(crudo || '');
+  const corte = /\r?\n\r?\n/.exec(texto);
+  return corte ? texto.slice(0, corte.index) : texto;
+}
+
+/**
+ * Lee una cabecera, juntando antes las líneas continuadas.
+ *
+ * Solo mira el bloque de cabeceras. Si se le pasa un correo entero, se
+ * queda con la parte de arriba; si se le pasa un bloque ya recortado
+ * (como hace hojas() con cada parte del multipart), lo deja igual.
+ */
 export function cabecera(texto, nombre) {
-  const plano = texto.replace(/\r?\n[ \t]+/g, ' ');
+  const plano = bloqueDeCabeceras(texto).replace(/\r?\n[ \t]+/g, ' ');
   const re = new RegExp('^' + nombre + ':[ \\t]*(.*)$', 'im');
   const m = re.exec(plano);
   return m ? m[1].trim() : '';

@@ -19,7 +19,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
-import { textoDelCorreo, remitenteReal, cabecera } from '../src/mime.js';
+import { textoDelCorreo, remitenteReal, cabecera, bloqueDeCabeceras } from '../src/mime.js';
+import { remitenteDeFiar } from '../src/index.js';
 
 const require = createRequire(import.meta.url);
 const { parsearCorreoBancolombia } =
@@ -91,6 +92,61 @@ ok('el dinero que sale se descarta',
 ok('un correo vacío no revienta',
    parsearCorreoBancolombia(textoDelCorreo('')).es_ingreso === false);
 ok('un correo sin cuerpo no revienta', textoDelCorreo('Subject: hola') === '');
+
+// ── DE QUIÉN NOS FIAMOS ──────────────────────────────────────────
+// Esto es lo que separa "registrar un pago" de "cualquiera con la
+// direccion puede confirmar una reserva que nadie pago".
+
+const alerta = (extra) => [
+  'From: Alertas y Notificaciones <alertasynotificaciones@bancolombia.com.co>',
+  'Authentication-Results: mx.cloudflare.net; spf=pass; dkim=pass',
+  ...extra,
+  'Content-Type: text/plain; charset="UTF-8"',
+  '',
+  'recibiste una transferencia de FULANO por $15000.00 en tu cuenta *4471 el 01/01/26 a las 10:00',
+].join('\n');
+
+ok('una alerta del banco con spf=pass se cree',
+   remitenteDeFiar(alerta([]), 'x@y.com').se_puede_creer === true);
+
+ok('el mismo texto desde otro remitente NO se cree',
+   remitenteDeFiar(
+     alerta([]).replace('alertasynotificaciones@bancolombia.com.co', 'atacante@ejemplo.com'),
+     'x@y.com').se_puede_creer === false);
+
+ok('el banco pero sin spf=pass tampoco se cree',
+   remitenteDeFiar(alerta([]).replace('spf=pass', 'spf=fail'), 'x@y.com').se_puede_creer === false);
+
+ok('y dice por qué se rechaza',
+   remitenteDeFiar(alerta([]).replace('spf=pass', 'spf=fail'), 'x@y.com')
+     .por_que.includes('spf'));
+
+// El fallo que se encontró el 31 de agosto: buscar la cabecera por
+// expresión regular sobre TODO el correo encontraba también lo que el
+// cuerpo dijera. Un correo podía firmarse su propio spf=pass.
+const suplantador = [
+  'From: atacante@ejemplo.com',
+  'Content-Type: text/plain; charset="UTF-8"',
+  '',
+  'Authentication-Results: mx.cloudflare.net; spf=pass; dkim=pass',
+  'From: alertasynotificaciones@bancolombia.com.co',
+  '',
+  'recibiste una transferencia de FULANO por $999999.00 en tu cuenta *0000 el 01/01/26 a las 10:00',
+].join('\n');
+
+ok('un correo NO puede escribirse su propio spf=pass en el cuerpo',
+   remitenteDeFiar(suplantador, 'x@y.com').se_puede_creer === false,
+   JSON.stringify(remitenteDeFiar(suplantador, 'x@y.com')));
+ok('ni su propio From en el cuerpo',
+   remitenteDeFiar(suplantador, 'x@y.com').from === 'atacante@ejemplo.com');
+ok('las cabeceras se leen solo de arriba de la primera línea en blanco',
+   !bloqueDeCabeceras(suplantador).includes('spf=pass'));
+
+// Un reenvío A MANO (Gmail lo envuelve y pone su propio From) tampoco
+// pasa. Es correcto: los unicos reenvios a mano han sido pruebas mias.
+ok('un reenvío a mano no se cree, aunque venga de una cuenta de confianza',
+   remitenteDeFiar(CRUDO, 'x@y.com').se_puede_creer === false,
+   remitenteDeFiar(CRUDO, 'x@y.com').por_que);
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTODO EN VERDE');
 process.exit(fallos ? 1 : 0);

@@ -73,36 +73,63 @@ const REMITENTES_DEL_BANCO = [
 /**
  * ¿Este correo se puede creer?
  *
- * TODAVÍA NO ESTÁ TERMINADA. Devuelve el veredicto y en qué se basó,
- * pero mientras REGISTRAR esté apagado no decide nada: solo se anota
- * para poder revisarlo.
+ * POR QUÉ HACE FALTA
+ * pagos@tumbaobaila.com es una dirección adivinable y el parser solo
+ * mira el texto. Sin esta comprobación, cualquiera que mande un correo
+ * imitando una alerta del banco registraría un pago que no existe y
+ * confirmaría una reserva que nadie pagó. Hay una prueba que lo
+ * demuestra a propósito en pruebas/mime.test.mjs.
  *
- * Lo que falta es comprobar contra un correo reenviado POR EL FILTRO de
- * Gmail (no uno reenviado a mano, que Gmail envuelve y le cambia el
- * From) cuál de estas señales aguanta:
- *   · la cabecera From: ¿sigue siendo la del banco?
- *   · Authentication-Results / Received-SPF: los pone Cloudflare al
- *     recibir y no los puede falsificar quien manda
- *   · X-Forwarded-For: lo pone Gmail, pero cualquiera puede escribirlo
- *     en un correo suyo, así que por sí solo no vale
+ * LAS DOS CONDICIONES, Y POR QUÉ LAS DOS
  *
- * La que de verdad sirve como ancla es la de Cloudflare, porque es la
- * única que no viene de quien manda el correo.
+ *   1. Que el From: sea una de las direcciones de alerta de
+ *      Bancolombia. Gmail, al reenviar por filtro, conserva el From
+ *      original — no lo envuelve como sí hace un reenvío a mano.
+ *
+ *   2. Que Cloudflare diga spf=pass. Esta es la que aguanta el peso:
+ *      el From se escribe solo, lo pone quien manda. La cabecera
+ *      Authentication-Results la escribe Cloudflare al recibir el
+ *      correo, comprobando que el servidor que lo entrega esté
+ *      autorizado por el dominio del remitente.
+ *
+ * Con la 1 sola, falsificar esto sería escribir una línea de texto. Con
+ * las dos, hay que además controlar un servidor autorizado por el
+ * dominio del banco o de Google.
+ *
+ * OJO CON DE DÓNDE SE LEEN
+ * Se leen del bloque de cabeceras, nunca del correo entero. Ver
+ * bloqueDeCabeceras() en mime.js: si se busca por expresión regular
+ * sobre todo el texto, un correo puede escribir en su CUERPO su propia
+ * línea "Authentication-Results: spf=pass" y firmarse el certificado a
+ * sí mismo. Eso pasaba y está arreglado.
+ *
+ * X-Forwarded-For (que Gmail pone al reenviar) se anota pero NO cuenta:
+ * cualquiera puede escribirla en un correo suyo.
  */
 export function remitenteDeFiar(crudo, deSobre) {
   const from = remitenteReal(crudo, deSobre);
   const autor = String(cabecera(crudo, 'Authentication-Results') || '');
   const reenviadoPor = String(cabecera(crudo, 'X-Forwarded-For') || '');
 
+  const delBanco = REMITENTES_DEL_BANCO.includes(from);
+  const spf = /spf=pass/i.test(autor);
+  const dkim = /dkim=pass/i.test(autor);
+
   return {
     from,
-    del_banco: REMITENTES_DEL_BANCO.includes(from),
-    spf: /spf=pass/i.test(autor),
-    dkim: /dkim=pass/i.test(autor),
+    del_banco: delBanco,
+    spf,
+    dkim,
     reenviado_por: reenviadoPor || null,
-    // Conservador a propósito: hoy nada pasa el corte, porque el corte
-    // todavía no está escrito.
-    veredicto: 'sin_decidir',
+    // Ante la duda, no. Un falso positivo confirma una reserva que
+    // nadie pagó; un falso negativo solo deja el pago en la cola de
+    // validación humana, que es el camino de respaldo previsto.
+    se_puede_creer: delBanco && spf,
+    por_que: !delBanco
+      ? 'el From no es una direccion de alerta de Bancolombia'
+      : !spf
+        ? 'Cloudflare no dio spf=pass'
+        : 'ok',
   };
 }
 
