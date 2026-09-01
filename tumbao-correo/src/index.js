@@ -361,8 +361,17 @@ export default {
         if (v) correos.push({ clave: c, ...v });
       }
 
-      // Lo que el Worker HABRÍA registrado, sin los cuerpos de los
-      // correos. Es la vista para comparar contra lo que hizo n8n.
+      // Qué entendió el Worker de cada correo y qué hizo con él, sin
+      // los cuerpos. Es la vista de diagnóstico.
+      //
+      // OJO CON `registrado`: es el campo que dice si el pago llegó de
+      // verdad a Supabase y qué contestó. Al principio no estaba en
+      // esta lista, y el 1 de septiembre eso hizo perder un buen rato:
+      // cinco pagos reales aparecían aquí como si no se hubieran
+      // intentado registrar, cuando en realidad los cinco estaban en la
+      // base. La vista de diagnóstico escondía justo el dato que hace
+      // falta para diagnosticar. Si se añade un campo al registro,
+      // añádelo también aquí.
       if (url.pathname === '/parseos') {
         return json({
           ok: true,
@@ -372,8 +381,11 @@ export default {
             de: c.de,
             asunto: c.asunto,
             message_id: c.message_id,
+            modo: c.modo,
+            descartado: c.descartado,
             procedencia: c.procedencia,
             analisis: c.analisis,
+            registrado: c.registrado,
             fallo: c.fallo,
           })),
         });
