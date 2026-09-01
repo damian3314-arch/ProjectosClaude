@@ -17,35 +17,38 @@
  * arriesga lo único que no se puede caer. Cuando esto esté rodado se
  * puede juntar; hoy no.
  *
- * EN QUÉ VA — MODO ESPEJO
- * Hoy este Worker LEE Y ENTIENDE los correos pero NO escribe nada en
- * Supabase. Guarda lo que HABRÍA registrado, para poder compararlo con
- * lo que registró n8n sobre los mismos correos.
+ * EN QUÉ VA — EN PRODUCCIÓN DESDE EL 1 DE SEPTIEMBRE DE 2026
+ * Este Worker es el que registra los pagos del banco. El disparador de
+ * Gmail del workflow "Tumbao · Ingesta de pagos" quedó APAGADO en el
+ * mismo movimiento, y tiene que seguir así.
  *
- * No es prudencia de adorno, son dos razones concretas:
+ * POR QUÉ NO PUEDEN CONVIVIR
+ * El índice único que protege la tabla es sobre `hoja_fila`. n8n guarda
+ * ahí el id de la API de Gmail; aquí va el Message-ID del correo. Son
+ * valores distintos, así que el índice NO los cruza: con los dos
+ * caminos vivos, el mismo pago entraría dos veces. Volver atrás es
+ * quitar la variable REGISTRAR y reactivar aquel nodo, otra vez en un
+ * solo movimiento.
  *
- *   1. Mientras n8n también ingiere, escribir aquí duplicaría pagos. El
- *      índice único que protege la tabla es sobre `hoja_fila`, y ahí
- *      n8n guarda el id de la API de Gmail mientras que aquí solo se
- *      tiene el Message-ID del correo: son distintos, así que el índice
- *      NO los cruzaría. Los dos caminos no pueden estar vivos a la vez;
- *      el cambio tiene que ser un relevo, no una convivencia.
+ * LO QUE SE COMPROBÓ ANTES DE DAR EL RELEVO
+ *   · 3 de 3 alertas reales parseadas igual que n8n, campos idénticos,
+ *     incluido el caso sin llave (referencia null en ambos)
+ *   · el Worker las recibió antes que n8n las tres veces
+ *   · el filtro de remitente acertó contra cabeceras reales de un
+ *     correo reenviado por el filtro de Gmail
+ *   · la llave de Supabase, con /salud?hondo=1 antes de apagar nada
  *
- *   2. Falta cerrar quién puede escribir aquí. Esta dirección es
- *      adivinable y el parser solo mira el texto: cualquiera que mande
- *      un correo imitando una alerta del banco podría registrar un pago
- *      que no existe y confirmar una reserva que nadie pagó. El filtro
- *      de remitente hay que escribirlo contra las cabeceras REALES de un
- *      correo reenviado por el filtro de Gmail, no contra las que uno
- *      se imagina. Ver `remitenteDeFiar()`.
+ * QUIÉN PUEDE ESCRIBIR AQUÍ
+ * Esta dirección es adivinable y el parser solo mira el texto, así que
+ * sin filtro cualquiera podría registrar un pago que no existe y
+ * confirmar una reserva que nadie pagó. Lo cierra `remitenteDeFiar()`:
+ * exige que el From sea del banco Y que Cloudflare haya dado spf=pass.
  *
- * Para el relevo (cuando ya se haya visto una alerta real llegar por el
- * filtro y esté cerrado el punto 2):
- *   1. escribir el filtro de remitente de verdad
- *   2. `npx wrangler secret put SUPABASE_SERVICE_KEY`
- *   3. poner la variable REGISTRAR = "1"
- *   4. apagar el disparador de Gmail del workflow "Tumbao · Ingesta de
- *      pagos" en n8n, en el mismo momento
+ * SI ESTO SE MUERE
+ * No falla nada visible: la página sigue tomando reservas y la gente
+ * sigue pagando, simplemente nadie se confirma. Por eso el panel avisa
+ * cuando alguien que ya dijo que pagó lleva más de 30 minutos esperando
+ * (ver pintarPulso en docs/admin.html).
  *
  * LO QUE SE GUARDA, Y POR QUÉ CADUCA
  * Aquí caen alertas del banco: montos, nombres de quien paga y los
@@ -313,11 +316,38 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === '/salud') {
-      return json({
+      const base = {
         ok: true,
         buzon: 'pagos@tumbaobaila.com',
         modo: env.REGISTRAR === '1' ? 'registrando' : 'espejo',
-      });
+        tiene_llave_supabase: Boolean(env.SUPABASE_SERVICE_KEY),
+      };
+
+      // Con llave y ?hondo=1 se comprueba de verdad que la llave de
+      // Supabase sirve, con una lectura que no cambia nada.
+      //
+      // Existe por una razón concreta: el relevo apaga n8n. Si la llave
+      // estuviera mal, los pagos dejarían de registrarse y no se sabría
+      // hasta que alguien reclamara. Esto permite comprobarlo ANTES de
+      // apagar nada, y después sirve de chequeo cuando algo huela mal.
+      if (url.searchParams.get('hondo') === '1') {
+        if (!conLlave(url, env)) return json({ ok: false, error: 'no_autorizado' }, 401);
+        try {
+          const r = await fetch(
+            `${env.SUPABASE_URL}/rest/v1/pagos?select=id&limit=1`,
+            { headers: { apikey: env.SUPABASE_SERVICE_KEY,
+                         Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}` } });
+          const t = await r.text();
+          return json({ ...base,
+            supabase: r.ok ? 'responde' : `falla ${r.status}`,
+            detalle: r.ok ? undefined : t.slice(0, 200) });
+        } catch (e) {
+          return json({ ...base, supabase: 'no_alcanzable',
+            detalle: String(e && e.message ? e.message : e).slice(0, 200) });
+        }
+      }
+
+      return json(base);
     }
 
     if (url.pathname === '/ultimos' || url.pathname === '/parseos') {

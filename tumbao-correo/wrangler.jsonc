@@ -14,18 +14,21 @@
   ],
 
   "vars": {
-    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co",
 
-    // REGISTRAR no está puesto a propósito. Sin él este Worker lee y
-    // entiende los correos pero NO escribe en Supabase (modo espejo).
+    // EL RELEVO SE DIO EL 1 DE SEPTIEMBRE DE 2026, 15:23 (Bogotá).
     //
-    // Ponerlo a "1" es EL RELEVO, y va junto con apagar el disparador
-    // de Gmail del workflow "Tumbao · Ingesta de pagos" en n8n. En el
-    // mismo movimiento, no en dos: mientras los dos caminos estén
-    // vivos, el mismo pago se registraría dos veces, porque el índice
-    // único es sobre hoja_fila y ahí n8n guarda el id de la API de
-    // Gmail mientras que aquí va el Message-ID del correo. Son
-    // distintos, así que el índice no los cruza.
+    // Desde aquí se registran los pagos del banco. El disparador de
+    // Gmail del workflow "Tumbao · Ingesta de pagos" quedó APAGADO en
+    // el mismo movimiento, y tiene que seguir así: los dos caminos usan
+    // identificadores distintos —n8n guarda el id de la API de Gmail y
+    // aquí va el Message-ID del correo— así que el índice único sobre
+    // hoja_fila NO los cruza y con los dos vivos el mismo pago entraría
+    // dos veces.
+    //
+    // PARA VOLVER ATRÁS: quitar esta variable y reactivar aquel nodo,
+    // otra vez en un solo movimiento.
+    "REGISTRAR": "1"
   },
 
   // Los secretos van por wrangler, nunca aquí:
