@@ -133,6 +133,67 @@ export function remitenteDeFiar(crudo, deSobre) {
   };
 }
 
+/**
+ * Registrar el pago en Supabase y cruzarlo con la reserva que lo espera.
+ *
+ * Es lo mismo que hacen los nodos "Registrar y conciliar" y "Barrer lo
+ * que quedó a medias" del workflow de n8n, con los mismos parámetros. La
+ * decisión de confirmar NO vive aquí: vive dentro de
+ * registrar_pago_y_conciliar() en Postgres, que bloquea la fila y, si
+ * hay dos reservas que encajan con el mismo monto, no adivina — manda a
+ * validación humana.
+ *
+ * p_hoja_fila es el Message-ID del correo, y es lo que hace que esto sea
+ * repetible: la función hace `on conflict (hoja_fila) do nothing`, así
+ * que si Cloudflare entrega el mismo correo dos veces, el pago se
+ * registra una.
+ *
+ * OJO CON EL RELEVO: n8n manda ahí el id de la API de Gmail, que es OTRO
+ * valor. Mientras los dos caminos estén vivos, el índice no los cruza y
+ * el mismo pago entraría dos veces. Por eso encender esto y apagar el
+ * disparador de Gmail de n8n es un solo movimiento, no dos.
+ */
+async function registrarPago(env, analisis, idMensaje, textoLimpio) {
+  const llamar = async (funcion, cuerpo) => {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${funcion}`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cuerpo),
+    });
+    const texto = await r.text();
+    if (!r.ok) throw new Error(`${funcion} ${r.status}: ${texto.slice(0, 200)}`);
+    try { return JSON.parse(texto); } catch (_) { return {}; }
+  };
+
+  const resultado = await llamar('registrar_pago_y_conciliar', {
+    p_banco: analisis.banco,
+    p_valor_cop: analisis.valor_cop,
+    p_fecha_pago: analisis.fecha_pago,
+    p_referencia: analisis.llave,
+    p_remitente: analisis.remitente,
+    p_ultimos_4: analisis.ultimos_4,
+    p_confianza: analisis.confianza,
+    p_raw_email: String(textoLimpio || '').slice(0, 4000),
+    p_hoja_fila: idMensaje,
+  });
+
+  // Reintenta cruzar las reservas que siguen esperando sin depósito. Si
+  // falla, el pago ya quedó registrado y eso es lo que no se puede
+  // perder, así que no se propaga el error.
+  let barrido = null;
+  try {
+    barrido = await llamar('conciliar_pendientes', {});
+  } catch (e) {
+    barrido = { error: String(e && e.message ? e.message : e).slice(0, 200) };
+  }
+
+  return { resultado, barrido };
+}
+
 function json(datos, estado = 200) {
   return new Response(JSON.stringify(datos, null, 2), {
     status: estado,
@@ -216,15 +277,33 @@ export default {
         : { descartado: true }),
     };
 
-    await env.BUZON.put(
-      `correo:${Date.now()}:${crypto.randomUUID().slice(0, 8)}`,
-      JSON.stringify(registro),
-      { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA }
-    );
+    const clave = `correo:${Date.now()}:${crypto.randomUUID().slice(0, 8)}`;
+    await env.BUZON.put(clave, JSON.stringify(registro),
+      { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
 
-    // El relevo todavía no está dado. Cuando lo esté, aquí va la llamada
-    // a registrar_pago_y_conciliar() — y no antes, por lo que dice la
-    // cabecera de este archivo.
+    // Registrar de verdad, solo si se dan LAS TRES:
+    //   · el interruptor está puesto (relevo dado, n8n apagado)
+    //   · el correo se puede creer (From del banco + spf=pass)
+    //   · y es dinero ENTRANDO
+    //
+    // El orden importa: el correo se guarda ANTES de registrar. Si
+    // Supabase estuviera caído, el correo ya está a salvo y se puede
+    // reprocesar a mano; al revés se perdería. Por eso se guarda dos
+    // veces: la primera para no perderlo, la segunda para dejar anotado
+    // qué contestó Supabase.
+    if (env.REGISTRAR === '1' && delBanco && analisis && analisis.es_ingreso) {
+      try {
+        registro.registrado = await registrarPago(
+          env, analisis, idMensaje, texto);
+      } catch (e) {
+        registro.registrado = {
+          error: String(e && e.message ? e.message : e).slice(0, 300),
+        };
+      }
+      await env.BUZON.put(
+        clave, JSON.stringify(registro),
+        { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
+    }
   },
 
   /* ── leer lo que llegó ───────────────────────────────────────────

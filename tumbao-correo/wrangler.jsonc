@@ -13,12 +13,32 @@
     }
   ],
 
-  // La llave para leer /ultimos va como secreto, no aquí:
+  "vars": {
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co"
+
+    // REGISTRAR no está puesto a propósito. Sin él este Worker lee y
+    // entiende los correos pero NO escribe en Supabase (modo espejo).
+    //
+    // Ponerlo a "1" es EL RELEVO, y va junto con apagar el disparador
+    // de Gmail del workflow "Tumbao · Ingesta de pagos" en n8n. En el
+    // mismo movimiento, no en dos: mientras los dos caminos estén
+    // vivos, el mismo pago se registraría dos veces, porque el índice
+    // único es sobre hoja_fila y ahí n8n guarda el id de la API de
+    // Gmail mientras que aquí va el Message-ID del correo. Son
+    // distintos, así que el índice no los cruza.
+  },
+
+  // Los secretos van por wrangler, nunca aquí:
   //   npx wrangler secret put LLAVE_BUZON
+  //   npx wrangler secret put SUPABASE_SERVICE_KEY
   //
-  // Sin ella el endpoint contesta 401 y no enseña nada. No se deja
-  // abierto ni "porque es una URL que nadie sabe": ahí dentro hay
+  // LLAVE_BUZON: sin ella /ultimos contesta 401 y no enseña nada. No se
+  // deja abierto ni "porque es una URL que nadie sabe": ahí dentro hay
   // nombres de clientes y cuánto pagó cada uno.
+  //
+  // SUPABASE_SERVICE_KEY: solo hace falta para el relevo. Mientras no
+  // esté, aunque alguien pusiera REGISTRAR la llamada fallaría y se
+  // anotaría el error, sin perder el correo.
 
   "observability": { "enabled": true }
 }
