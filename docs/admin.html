@@ -3415,6 +3415,12 @@ const CONFIG = {
 
     $('#caja-tiles').innerHTML = !enCierre ? '' : [
       ['cajon', pesos(d.esperado_efectivo), 'en el cajón', 'base + efectivo − salidas'],
+      // PENDIENTE: en la tirilla esto ya se llama "ingresos del día" y
+      // "salidas". Aquí sigue diciendo "entró hoy" y "salió" porque estas
+      // tarjetas van pegadas al bloque de abajo, que dice "Entró", "Salió"
+      // y "Total entró hoy". Cambiar solo las tarjetas dejaría la misma
+      // cifra con dos nombres a diez centímetros de distancia. Se renombra
+      // todo junto cuando se rehaga el bloque del cierre.
       ['bueno', pesos(d.total_ingresos), 'entró hoy', 'la plata que entró hoy'],
       ['ojo',   pesos(d.ingreso_transferencia + d.reservas_cop), 'a banco', 'no está en el cajón'],
       ['malo',  pesos(d.total_egresos), 'salió', 'egresos del día'],
@@ -3621,7 +3627,7 @@ const CONFIG = {
     // Va sin conteo de personas a propósito —una mensualidad no es
     // alguien que entró hoy— pero su plata sí es del día, y es la
     // mayoría: en el histórico son $4.725.000 contra $435.000 de clase
-    // suelta. Mientras no estuvo, la tirilla decía "Entró hoy" y mostraba
+    // suelta. Mientras no estuvo, la sección de ingresos del día mostraba
     // el 8% del dinero.
     //
     // Se suman los dos medios por concepto: resumen_conceptos trae una
@@ -3658,14 +3664,14 @@ const CONFIG = {
       `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
         { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
 
-      // Entro = gente que entro hoy a clase suelta, venga por donde
-      // venga. Las tres puertas son ajenas entre si —comprobado
+      // Ingresos del dia = gente que entro hoy a clase suelta, venga por
+      // donde venga. Las tres puertas son ajenas entre si —comprobado
       // cruzando por pago_id y por cobro_mov_id— asi que sumarlas no
       // repite a nadie.
-      `<hr>` + titulo('ENTRÓ HOY') +
-      linea('Página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
-      linea('Apuntados a mano', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
-      linea('Cobrados en Caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
+      `<hr>` + titulo('INGRESOS DEL DÍA') +
+      linea('Reservas página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
+      linea('Reservas manuales', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
+      linea('Pagos en caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
       // El número de personas va aquí y no en el total, porque es lo que
       // se cruza contra el cuaderno de la puerta. Abajo se suman
       // mensualidades, que no son gente entrando.
@@ -3673,22 +3679,22 @@ const CONFIG = {
         `a clase suelta · ${pesos(sueltaCop)}</div>` +
       otrosLista.map(([concepto, cop]) =>
         linea(nombreConcepto(concepto), pesos(cop))).join('') +
-      linea('= Entró', pesos(entroCop), 'g grande') +
+      linea('= Entradas', pesos(entroCop), 'g grande') +
 
-      `<hr>` + titulo('SALIÓ') +
+      `<hr>` + titulo('SALIDAS') +
       ((d.resumen_conceptos || []).filter(x => x.sentido === 'egreso')
         .map(x => linea(nombreConcepto(x.concepto) + (x.n > 1 ? ' x' + x.n : ''),
                         pesos(x.valor_cop))).join('') || linea('Nada', '—')) +
-      linea('= Salió', pesos(salio), 'g grande') +
+      linea('= Salidas', pesos(salio), 'g grande') +
 
-      // El arqueo del efectivo. Va después de SALIÓ porque lo que debía
+      // El arqueo del efectivo. Va después de SALIDAS porque lo que debía
       // haber en el cajón depende de lo que entró y salió en efectivo,
       // no de lo que cobró la página ni de lo que reportó el banco.
       //
       // "Debía haber" no es adorno: sin él, el veredicto sería una
       // palabra sin contra qué comprobarla. Es base + efectivo que
       // entró − efectivo que salió, y enfrente lo que se contó.
-      `<hr>` + titulo('EL CAJÓN · efectivo') +
+      `<hr>` + titulo('CAJA 1') +
       linea('Base al abrir', pesos(d.base_cop)) +
       linea('Debía haber', pesos(d.esperado_efectivo)) +
       linea('Se contó', pesos(c.contado_cop || 0)) +

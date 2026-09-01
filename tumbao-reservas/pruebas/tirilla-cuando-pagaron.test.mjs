@@ -120,7 +120,7 @@ ok('y lo distingue de la mensualidad cobrada en recepción',
 
 // ── y que sea una tirilla, no la del cierre ──────────────────────
 ok('se titula CUÁNDO PAGARON', /CUÁNDO PAGARON/.test(t.texto));
-ok('no trae el arqueo del cajón', !/EL CAJÓN/.test(t.texto));
+ok('no trae el arqueo del cajón', !/CAJA 1/.test(t.texto));
 ok('no trae el veredicto de si cuadró', !/SÍ CUADRA|NO CUADRA/.test(t.texto));
 
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
