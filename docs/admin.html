@@ -1241,9 +1241,18 @@ const CONFIG = {
 
     <!-- Aquí es donde de verdad se comprueba que la plata llegó. La foto
          del comprobante no comprueba nada: puede ser vieja o editada. El
-         depósito en esta lista lo confirmó el banco. Y como la lista va
-         20 días atrás, quien transfirió el lunes y llega el miércoles
-         sigue estando. -->
+         depósito en esta lista lo confirmó el banco.
+
+         La lista va TRES días atrás (0068), no uno: quien transfiere a
+         las once de la noche y llega a las siete de la mañana tiene su
+         depósito fechado ayer. No se confunda con el contador de "sin
+         identificar", que sí es del día y arranca limpio cada mañana:
+         esto no es una lista de pendientes, es la herramienta con la que
+         se adjudica la plata.
+
+         Al que aparece más tarde no le hace falta salir aquí: se le
+         registra el ingreso y se apunta abajo, en la nota, la referencia
+         de su comprobante. -->
     <div id="modal-banco" hidden>
       <label for="modal-dep-buscar">¿Cuál de estos depósitos es?</label>
       <input id="modal-dep-buscar" type="search" autocomplete="off"
@@ -1256,7 +1265,15 @@ const CONFIG = {
     </div>
 
     <label for="modal-nota">Nota <span class="suave">(opcional)</span></label>
-    <input id="modal-nota" type="text" maxlength="200" placeholder="Ej: pagó la mamá" autocomplete="off">
+    <!-- LA NOTA ES DONDE VIVE LA REFERENCIA DEL COMPROBANTE. Cuando
+         alguien llega días después diciendo que ya pagó, su depósito
+         puede no estar en la lista de arriba: se registra el ingreso
+         igual y se apunta aquí la referencia que trae en el
+         comprobante. Ese texto es lo único que amarra este cobro con el
+         renglón del extracto cuando se concilie el mes, así que el
+         ejemplo del recuadro enseña una referencia y no un recado. -->
+    <input id="modal-nota" type="text" maxlength="200"
+           placeholder="Ej: ref M12621896 · o: pagó la mamá" autocomplete="off">
     <div class="modal-pie">
       <button class="btn" id="modal-cancelar">Cancelar</button>
       <button class="btn primario" id="modal-guardar">Guardar</button>
@@ -3731,9 +3748,10 @@ const CONFIG = {
     // tarjeta simplemente no sale. Nada más se rompe.
     if (!b) return '';
 
-    // Solo lo de HOY manda el color. El arrastre histórico —depósitos
-    // de antes de que existiera este módulo— nunca baja a cero, así que
-    // si mandara él la tarjeta viviría en ámbar y dejaría de decir nada.
+    // Solo lo de HOY. Desde la 0067 no hay otra cosa: la ventana de lo
+    // que sigue sin dueño es el día, no las tres semanas de atrás.
+    // Antes esto arrastraba y nunca bajaba a cero, así que la tarjeta
+    // vivía en ámbar y dejaba de decir nada.
     const hoy = Number(b.libre_hoy_cop || 0);
     const nHoy = Number(b.libre_hoy_n || 0);
     const cl = hoy > 0 ? 'ojo' : 'bueno';
@@ -3741,11 +3759,14 @@ const CONFIG = {
       ? `${pesos(hoy)} de hoy sin identificar · ${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'}`
       : 'todo lo de hoy identificado';
 
-    const atras = Number(b.atras_cop || 0);
+    // Ya no se anuncia nada "de días atrás": lo que no se identificó
+    // quedó contado en el cierre de su día y no vuelve a pedir turno.
+    // Lo que quedó sin identificar cada día se conserva en
+    // caja_cierres.banco_sin_ident_cop, que es contra lo que se concilia
+    // el mes — no contra una lista que se acumula en pantalla.
     const pie = [
       b.corte ? 'hasta las ' + hora12(b.corte) : 'sin avisos hoy',
       b.mes_cop != null ? 'en el mes ' + pesos(b.mes_cop) : '',
-      atras > 0 ? `${pesos(atras)} por revisar de días atrás` : '',
     ].filter(Boolean).join(' · ');
 
     return `<div class="tile banco ${cl}">` +
@@ -3770,8 +3791,6 @@ const CONFIG = {
 
     const hoy = Number(b.libre_hoy_cop || 0);
     const nHoy = Number(b.libre_hoy_n || 0);
-    const atras = Number(b.atras_cop || 0);
-    const nAtras = Number(b.atras_n || 0);
     const sinResp = Number(b.sin_respaldo_cop || 0);
     const nSinResp = Number(b.sin_respaldo_n || 0);
 
@@ -3779,15 +3798,20 @@ const CONFIG = {
     // cola de depósitos que el banco reportó y todavía nadie reclamó. Se
     // dice para que no se pierda de vista, pero sin competir en la
     // pantalla con las tres preguntas que sí importan para cerrar hoy.
-    if (!hoy && !sinResp && !atras) {
-      return `<p class="suave banco-nota">✓ El banco no tiene nada suelto: todo lo que ha entrado tiene dueño.</p>`;
+    if (!hoy && !sinResp) {
+      return `<p class="suave banco-nota">✓ Todo lo que entró hoy tiene dueño.</p>`;
     }
     const partes = [];
-    if (hoy) partes.push(`${pesos(hoy)} de hoy sin reclamar (${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'})`);
+    if (hoy) partes.push(`${pesos(hoy)} sin reclamar (${nHoy} ${nHoy === 1 ? 'depósito' : 'depósitos'})`);
     if (sinResp) partes.push(`${pesos(sinResp)} apuntado sin respaldo del banco (${nSinResp} ${nSinResp === 1 ? 'transferencia' : 'transferencias'})`);
-    if (atras) partes.push(`${pesos(atras)} de días atrás (${nAtras})`);
-    return `<p class="suave banco-nota">⚠ Aparte de esto, el banco tiene suelto: ` +
-      partes.join(' · ') + `. No es del cierre de hoy, pero conviene revisarlo.</p>`;
+    // ESTO NO IMPIDE CERRAR, Y SE DICE. Puede pasar perfectamente que
+    // alguien pagara y no avisara; el cierre se hace igual y la cifra
+    // queda guardada en el cierre del día. Si esa persona aparece a los
+    // tres días, se le registra el ingreso en la Caja apuntando la
+    // referencia de su comprobante, y con eso se amarra al extracto
+    // cuando se concilie el mes.
+    return `<p class="suave banco-nota">⚠ De hoy queda por identificar: ` +
+      partes.join(' · ') + `. No impide cerrar: queda anotado en el cierre de hoy.</p>`;
   }
 
   // Una fila del cierre. `sub` es la línea chica de debajo: en los

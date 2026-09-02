@@ -623,10 +623,25 @@ await recargar();
   ? bien('el titular habla solo de hoy', await pista())
   : falla('el titular habla solo de hoy', await pista());
 
+/* LO NO IDENTIFICADO NO SE ARRASTRA (0067).
+ *
+ * La letra chica anunciaba "$X por revisar de días atrás". Se quitó por
+ * la regla de quien lleva la caja: el cuadre es del día, y lo que no se
+ * logró identificar ya quedó contado en el cierre de ESE día —vive en
+ * caja_cierres.banco_sin_ident_cop, que es contra lo que se concilia el
+ * mes—. Volver a sacarlo cada mañana convertía el aviso en una lista que
+ * solo crece, y una lista que solo crece se deja de mirar.
+ *
+ * El simulacro trae el arrastre entero, así que si alguien devolviera la
+ * línea esta prueba lo vería. */
 const pieTarjeta = (await tarjeta.locator('.corte').innerText()).replace(/\s+/g, ' ');
-/7:42 pm/.test(pieTarjeta) && /en el mes/.test(pieTarjeta) && /días atrás/.test(pieTarjeta)
-  ? bien('hora, mes y arrastre van en letra chica', pieTarjeta)
+/7:42 pm/.test(pieTarjeta) && /en el mes/.test(pieTarjeta)
+  ? bien('hora y mes van en letra chica', pieTarjeta)
   : falla('la letra chica', pieTarjeta);
+
+!/días atrás/.test(pieTarjeta)
+  ? bien('y ya no se anuncia nada arrastrado de días atrás')
+  : falla('volvió el arrastre a la letra chica', pieTarjeta);
 
 // Con 75 depósitos la lista es un muro: sin filtro la cajera escoge el
 // primero que le cuadre de valor, que es justo lo que hay que evitar.
