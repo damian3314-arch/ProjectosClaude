@@ -1037,13 +1037,13 @@ const hojas = await pagina.evaluate(() =>
 const hojaTexto = id => ((hojas.find(h => h.id === id) || {}).texto || '')
   .replace(/\s+/g, ' ');
 
-hojas.length === 3
- && hojas.map(h => h.id).join(' ') === 'hoja-cierre hoja-plata hoja-punteo'
-  ? bien('un clic saca las tres hojas, y en su orden',
+hojas.length === 2
+ && hojas.map(h => h.id).join(' ') === 'hoja-cierre hoja-punteo'
+  ? bien('un clic saca las dos hojas, y en su orden',
          hojas.map(h => h.id).join(' '))
-  : falla('las tres hojas del cierre', hojas.map(h => h.id).join(' ') || 'ninguna');
+  : falla('las dos hojas del cierre', hojas.map(h => h.id).join(' ') || 'ninguna');
 
-// Todo lo que sigue es la HOJA 1. Las otras dos tienen sus propias
+// Todo lo que sigue es la HOJA 1. La otra tiene sus propias
 // pruebas (tirilla-cuadre-puerta-banco y tirilla-cuando-pagaron).
 const t = hojaTexto('hoja-cierre');
 
@@ -1053,7 +1053,7 @@ const t = hojaTexto('hoja-cierre');
 
 // Se archivan sueltas: sin el número de hoja, tres papeles de dos días
 // distintos encima del mostrador no se distinguen.
-/HOJA 1 DE 3/.test(t) && /Hoja 1 de 3/.test(t)
+/HOJA 1 DE 2/.test(t) && /Hoja 1 de 2/.test(t)
   ? bien('la hoja dice cuál es, arriba y en el pie')
   : falla('la numeración de la hoja 1', t.slice(0, 120));
 
@@ -1172,7 +1172,6 @@ const t = hojaTexto('hoja-cierre');
  * La hoja 3 se lleva al lado del extracto y contesta "¿de la gente que
  * entró hoy, qué renglón del banco es cada una?"; la 1 se archiva con
  * el efectivo y contesta "¿cuadró el día?". */
-const p2 = hojaTexto('hoja-plata');
 const p3 = hojaTexto('hoja-punteo');
 
 /EL PUNTEO, PAGO POR PAGO/.test(p3) && !/CIERRE DE CAJA/.test(p3)
@@ -1183,30 +1182,43 @@ const p3 = hojaTexto('hoja-punteo');
 /* LO QUE PIDIÓ EL DUEÑO: que el papel PRECISE qué es efectivo y qué
  * transferencia, y de entrada, no al final. Confundirlos es una noche
  * buscando en el extracto una plata que estaba en el cajón. */
-/EFECTIVO O TRANSFERENCIA/.test(p3) && /se busca en el extracto/.test(p3)
- && /NO aparece en el extracto/.test(p3)
+/EFECTIVO O TRANSFERENCIA/.test(p3)
+ && /POR TRANSFERENCIA · BUSCAR EN EL EXTRACTO/.test(p3)
+ && /EN EFECTIVO · NO ESTÁ EN EL EXTRACTO/.test(p3)
   ? bien('el punteo separa lo que se busca en el banco de lo que está en el cajón')
   : falla('efectivo contra transferencia', p3.slice(0, 300));
 
-/* EL PUENTE ENTRE LAS DOS CIFRAS QUE NUNCA SE PARECEN (0064).
+/* DE ESO, QUÉ ERA CADA PESO — AHORA EN LA HOJA 1 (0064).
  *
- * El papel del 29 de agosto decía "Entradas del día $360.000" y debajo
- * una cifra del banco mucho menor, y la dueña restaba a mano en el
- * margen. Las dos estaban bien: de las 21 que entraron, 16 habían
- * pagado días antes y su plata está en el extracto de otro día. Estas
- * dos secciones son la explicación, y por eso van arriba del todo. */
-/QUIÉN ENTRÓ HOY/.test(p2) && /Entraron a clase21 personas/.test(p2)
- && /ya habían pagado antes16/.test(p2) && /pagaron hoy5 · \$75\.000/.test(p2)
-  ? bien('separa a quien entró hoy de quien ya había pagado antes')
-  : falla('quién entró hoy', p2.slice(0, 300));
+ * Esto era la hoja 2 del fajo y la dueña la eliminó en cuanto la vio
+ * impresa: una página entera para un desglose de seis renglones, que
+ * además obligaba a pasar el papel adelante y atrás porque el total que
+ * desglosaba estaba en la hoja anterior. Ahora va pegado a ese total.
+ *
+ * Lo que se comprueba es que el desglose siga PEGADO a su total y no
+ * suelto en cualquier parte de la hoja: separados vuelven a ser dos
+ * cifras que no se sabe si se suman o se explican. */
+/DEPÓSITOS REGISTRADOS HOY/.test(t) && /DE ESO/.test(t)
+ && t.indexOf('Total registrado') < t.indexOf('DE ESO')
+ && t.indexOf('DE ESO') < t.indexOf('POR REVISAR')
+  ? bien('el desglose de la plata va pegado al total que desglosa')
+  : falla('el bloque DE ESO en la hoja 1', t.slice(0, 400));
 
 // Cupos Y depósitos, en ese orden: tres amigas con un solo pago son 3
 // cupos y 1 renglón del extracto. Si dijera solo "3" habría que buscar
 // tres renglones que no existen.
-/QUÉ SE REGISTRÓ HOY/.test(p2) && /Clases futuras3 cupos · 1 depósito · \$45\.000/.test(p2)
- && /= Depósitos registrados hoy\$245\.000/.test(p2)
+// Sale pegado (`textContent` junta las dos mitades del renglón, sin
+// espacio entre el rótulo y la cifra), de ahí el "hoy5" y el "futuras3".
+/Clases de hoy5 · \$75\.000/.test(t)
+ && /Clases futuras3 cupos · 1 depósito · \$45\.000/.test(t)
   ? bien('lo pagado por adelantado va en cupos Y en renglones del extracto')
-  : falla('qué se registró hoy', p2.slice(0, 400));
+  : falla('el desglose por concepto', t.slice(0, 500));
+
+// Con todo identificado el papel lo dice en positivo. Un renglón
+// "Sin identificar $0" se lee como algo roto, no como un día limpio.
+/Sin identificar: nada ✓/.test(t) && !/Sin identificar \$0/.test(t)
+  ? bien('sin hueco, el papel lo dice en positivo y no imprime un cero')
+  : falla('el renglón de sin identificar', t.slice(0, 500));
 
 // El ancho es de rollo, no de folio: a 210mm la impresora del mostrador
 // la parte en dos. Se lee el texto del <style>, no el CSSOM: las reglas

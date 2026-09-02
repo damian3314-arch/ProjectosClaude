@@ -1,5 +1,5 @@
 /**
- * HOJA 3 DE 3 — "el punteo, pago por pago".
+ * HOJA 2 DE 2 — "el punteo, pago por pago".
  *
  * La hoja que se pone al lado del extracto de Bancolombia para ir
  * tachando renglones. Lo que no puede fallar es que el papel sume lo
@@ -17,14 +17,14 @@
  * estuvo ahí — y ese bloque va arriba del todo, antes del primer
  * renglón, porque es lo que hay que saber antes de empezar a buscar.
  *
- * Las tres hojas salen ahora de un solo clic y se comprueban sobre el
- * texto de ESTA hoja, no sobre el del fajo entero: casi todo lo de aquí
- * es "esto sale en la 3 y no en la 1", y sobre las tres pegadas eso no
- * se puede afirmar. De ahí que se lea `hojas.find(...)` y no `texto`.
+ * Las dos hojas salen de un solo clic y se comprueban sobre el texto de
+ * ESTA hoja, no sobre el del fajo entero: casi todo lo de aquí es "esto
+ * sale en la 2 y no en la 1", y sobre las dos pegadas eso no se puede
+ * afirmar. De ahí que se lea `hojas.find(...)` y no `texto`.
  *
- * El fixture no trae `cuadre` a propósito: así la hoja 2 sale en su
- * versión vacía y se comprueba de paso que eso no arrastra a la 3. La
- * hoja 2 con datos la cubre tirilla-cuadre-puerta-banco.
+ * Fueron tres hojas. La de en medio ("qué era la plata del día") se
+ * eliminó y su desglose vive ahora dentro de la hoja 1; lo comprueba
+ * tirilla-cuadre-puerta-banco.
  *
  * El gancho window.__e2e lo pone instrumentar.mjs sobre una copia
  * temporal de docs/admin.html. Sin argumentos:
@@ -89,14 +89,16 @@ const t = hoja.texto;
 // La 1, para comprobar que lo de allí no se repite aquí.
 const cierre = (fajo.hojas.find(h => h.id === 'hoja-cierre') || { texto: '' }).texto;
 
-// ── sale, y sale la tercera ──────────────────────────────────────
-ok('el punteo es una de las tres hojas del fajo',
-   fajo.n === 3 && fajo.hojas.length === 3,
+// ── sale, y sale la segunda ──────────────────────────────────────
+ok('el punteo es una de las dos hojas del fajo',
+   fajo.n === 2 && fajo.hojas.length === 2,
    fajo.hojas.map(h => h.id).join(' '));
-ok('y es la última', fajo.hojas[2].id === 'hoja-punteo');
-ok('se dice a sí misma cuál es', /HOJA 3 DE 3/.test(t));
+ok('y es la última', fajo.hojas[1].id === 'hoja-punteo');
+ok('la hoja del medio ya no se imprime',
+   !fajo.hojas.some(h => h.id === 'hoja-plata'));
+ok('se dice a sí misma cuál es', /HOJA 2 DE 2/.test(t));
 ok('y lo repite en el pie, que es lo que asoma en la carpeta',
-   /Hoja 3 de 3/.test(t));
+   /Hoja 2 de 2/.test(t));
 ok('se titula EL PUNTEO, PAGO POR PAGO', /EL PUNTEO, PAGO POR PAGO/.test(t));
 
 // ── efectivo contra transferencia, antes de buscar nada ──────────
@@ -109,10 +111,19 @@ ok('y va antes de la lista de movimientos',
    t.indexOf('EFECTIVO O TRANSFERENCIA') < t.indexOf('BUSCAR EN EL EXTRACTO'));
 ok('lo de transferencia incluye lo que aún no tiene renglón',
    /235\.000/.test(t), '185.000 del extracto + 50.000 sin depósito escogido');
-ok('y dice dónde se busca', /se busca en el extracto/.test(t));
 ok('el efectivo se dice aparte', /140\.000/.test(t));
-ok('y avisa de que en el extracto NO está',
-   /está en el cajón/.test(t) && /NO aparece en el extracto/.test(t));
+// LA DISTINCIÓN LA CARGAN LOS TÍTULOS, NO UNA GLOSA. Debajo de cada
+// una de estas dos cifras había una frase ("se busca en el extracto",
+// "está en el cajón") que repetía el encabezado de su sección. Se
+// quitaron por petición del dueño —la hoja tenía demasiada letra— y lo
+// que no puede perderse es que el papel siga diciendo cuál de las dos
+// se busca en el banco y cuál no.
+ok('los títulos siguen diciendo dónde se busca cada una',
+   /POR TRANSFERENCIA · BUSCAR EN EL EXTRACTO/.test(t) &&
+   /EN EFECTIVO · NO ESTÁ EN EL EXTRACTO/.test(t));
+ok('y ya no repiten esa explicación debajo de la cifra',
+   !/se busca en el extracto, renglón por renglón/.test(t) &&
+   !/está en el cajón/.test(t));
 ok('los dos no se suman en una sola cifra',
    !/375\.000/.test(t), '235.000 + 140.000 no debe aparecer como total');
 
@@ -133,7 +144,7 @@ ok('y el segundo se marca como parte del mismo pago',
 ok('la camiseta sin depósito escogido se nombra aparte',
    /SIN DEPÓSITO ESCOGIDO/.test(t) && /Camiseta/i.test(t));
 ok('y dice que hay que buscarla por el valor',
-   /buscarla por el valor/.test(t));
+   /[Bb]uscarla en el extracto por el valor/.test(t));
 ok('el efectivo dice de qué fue cada uno',
    /18:25 · Clase suelta/.test(t) && /18:52 · Mensualidad/.test(t));
 
@@ -181,12 +192,15 @@ ok('no trae el veredicto de si cuadró el cajón',
    !/SÍ CUADRA|NO CUADRA/.test(t));
 ok('y ese veredicto sí está en la hoja 1', /SÍ CUADRA/.test(cierre));
 
-// ── la hoja 2 vacía no arrastra a la 3 ───────────────────────────
-// Un cierre viejo sin `cuadre` deja la hoja 2 en su versión en blanco.
-// Eso es correcto; lo que no puede pasar es que se lleve la 3 por
-// delante, que es la que de verdad se puntea.
-ok('con la hoja 2 en blanco, la 3 sale completa igual',
+// ── un cierre viejo no se lleva por delante el punteo ────────────
+// Este fixture no trae `cuadre` (la 0064), así que la hoja 1 sale sin
+// su bloque de desglose. Da igual: el punteo no depende de ese dato
+// —sale de `conciliacion`— y es la hoja que de verdad se tacha contra
+// el extracto. Tiene que salir entera aunque a la otra le falte algo.
+ok('sin `cuadre`, el punteo sale completo igual',
    /BUSCAR EN EL EXTRACTO/.test(t) && /185\.000/.test(t));
+ok('y la hoja 1 lo dice en vez de fingir un desglose',
+   /no hay desglose/.test(cierre) && !/DE ESO/.test(cierre));
 
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');

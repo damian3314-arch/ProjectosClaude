@@ -94,7 +94,9 @@ const GANCHO = `
       // módulo cajaDatos, y escribe las TRES hojas dentro de #tirilla
       // (no #tirilla-pagos ni un elemento por hoja). Cada hoja es un
       // <section class="hoja"> con su propio id: hoja-cierre,
-      // hoja-plata, hoja-punteo. Los recuadros son .ojo (no .recuadro).
+      // hoja-punteo. Los recuadros son .ojo (no .recuadro). Fueron
+      // tres: la de en medio (hoja-plata) se eliminó y su desglose
+      // vive ahora dentro de hoja-cierre.
       //
       // Devuelve el texto de cada hoja POR SEPARADO además del papel
       // entero: casi todo lo que se comprueba es "esto sale en la hoja
