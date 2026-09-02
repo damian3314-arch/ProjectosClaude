@@ -88,18 +88,47 @@ const GANCHO = `
 
     window.__e2e = {
 
-      /* ── la tirilla de pagos ──────────────────────────────────── */
+      /* ── las tres hojas del cierre ────────────────────────────── */
 
-      // pintarTirillaPagos() NO recibe argumentos: lee de la variable de
-      // módulo cajaDatos, y escribe en #tirilla (no #tirilla-pagos).
-      // Los recuadros son .ojo (no .recuadro).
-      tirillaPagos(d) {
+      // pintarTirillas() NO recibe argumentos: lee de la variable de
+      // módulo cajaDatos, y escribe las TRES hojas dentro de #tirilla
+      // (no #tirilla-pagos ni un elemento por hoja). Cada hoja es un
+      // <section class="hoja"> con su propio id: hoja-cierre,
+      // hoja-plata, hoja-punteo. Los recuadros son .ojo (no .recuadro).
+      //
+      // Devuelve el texto de cada hoja POR SEPARADO además del papel
+      // entero: casi todo lo que se comprueba es "esto sale en la hoja
+      // 3 y NO en la 1", y sobre el texto pegado de las tres eso no se
+      // puede afirmar.
+      //
+      // \`texto\` es innerText y no textContent a propósito: en pantalla
+      // #tirilla está oculto, así que innerText devuelve lo mismo que
+      // textContent —todo pegado, sin saltos— y las pruebas ya leen
+      // así. Quien escriba una nueva que use el \`junto\` sin espacios.
+      tirillas(d) {
         cajaDatos = d;
-        pintarTirillaPagos();
-        const t = document.querySelector('#tirilla');
+        const n = pintarTirillas();
+        const cont = document.querySelector('#tirilla');
+        const hojas = Array.from(cont.querySelectorAll('.hoja')).map(h => ({
+          id: h.id,
+          texto: h.innerText,
+          recuadros: h.querySelectorAll('.ojo').length,
+          // El corte de página que manda la hoja siguiente al papel
+          // siguiente. La última tiene que NO llevarlo: con él la
+          // impresora escupe una cuarta hoja en blanco.
+          //
+          // OJO: las reglas de .hoja viven dentro de @media print, así
+          // que esto solo dice la verdad si la prueba puso la página en
+          // modo impresión antes (page.emulateMedia({media:'print'})).
+          // En pantalla devuelve 'auto' para las tres, que es correcto
+          // —en pantalla no hay papel— pero no comprueba nada.
+          corte: getComputedStyle(h).breakAfter,
+        }));
         return {
-          texto: t ? t.innerText : '',
-          recuadros: t ? t.querySelectorAll('.ojo').length : 0,
+          n,
+          hojas,
+          texto: cont.innerText,
+          recuadros: cont.querySelectorAll('.ojo').length,
         };
       },
 

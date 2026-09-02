@@ -999,9 +999,13 @@ await pagina.setViewportSize({ width: 1280, height: 900 });
 await pagina.click('#caja-recargar');
 await pagina.waitForTimeout(700);
 
-(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir la tirilla')
-  ? bien('cerrado, ofrece imprimir la tirilla')
-  : falla('el botón de la tirilla', 'no salió');
+// UN SOLO BOTÓN, TRES HOJAS. Antes eran dos botones que escribían los
+// dos en el mismo `#tirilla`: había que imprimir, volver y volver a
+// imprimir, y quien se olvidaba del segundo clic se quedaba sin con qué
+// puntear el extracto.
+(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir el cierre')
+  ? bien('cerrado, ofrece imprimir el cierre entero')
+  : falla('el botón del cierre', 'no salió');
 
 // LO QUE GARANTIZA EL CIERRE: con el día cerrado no entra nada más. Sin
 // esto se podía cerrar a las 9, vender a las 9:05, y el papel impreso
@@ -1014,21 +1018,44 @@ await pagina.waitForTimeout(600);
 // es que la pantalla NO invente movimientos sobre un día cerrado: la
 // puerta de verdad es la de Postgres, y esa tiene su prueba en
 // humo-abrir-cerrar.sql. Aquí basta con que el cierre siga en pie.
-(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir la tirilla')
+(await pagina.locator('#caja-cierre').innerText()).includes('Imprimir el cierre')
   ? bien('el cierre sigue en pie después de intentar registrar')
   : falla('el cierre se deshizo');
 
-// ---- la tirilla ----
-await pagina.evaluate(() => document.querySelector('#btn-tirilla').click());
+// ---- el cierre entero: un clic, tres hojas ----
+await pagina.evaluate(() => document.querySelector('#btn-tirillas').click());
 await pagina.waitForTimeout(400);
 
-const tirilla = (await pagina.locator('#tirilla').innerText({ timeout: 3000 })
-  .catch(() => '')) || await pagina.locator('#tirilla').evaluate(e => e.textContent);
-const t = tirilla.replace(/\s+/g, ' ');
+// Las tres hojas se leen POR SEPARADO y no como un solo texto pegado.
+// Buena parte de lo que hay que comprobar es "esto sale en la hoja 3 y
+// NO en la 1" —el arqueo del cajón en la hoja del punteo serían dos
+// cajones distintos en la misma impresión—, y sobre las tres juntas eso
+// no se puede afirmar.
+const hojas = await pagina.evaluate(() =>
+  Array.from(document.querySelectorAll('#tirilla .hoja'))
+    .map(h => ({ id: h.id, texto: h.textContent })));
+const hojaTexto = id => ((hojas.find(h => h.id === id) || {}).texto || '')
+  .replace(/\s+/g, ' ');
+
+hojas.length === 3
+ && hojas.map(h => h.id).join(' ') === 'hoja-cierre hoja-plata hoja-punteo'
+  ? bien('un clic saca las tres hojas, y en su orden',
+         hojas.map(h => h.id).join(' '))
+  : falla('las tres hojas del cierre', hojas.map(h => h.id).join(' ') || 'ninguna');
+
+// Todo lo que sigue es la HOJA 1. Las otras dos tienen sus propias
+// pruebas (tirilla-cuadre-puerta-banco y tirilla-cuando-pagaron).
+const t = hojaTexto('hoja-cierre');
 
 /TUMBAO/.test(t) && /CIERRE DE CAJA/.test(t)
   ? bien('la tirilla lleva encabezado')
   : falla('el encabezado de la tirilla', t.slice(0, 80));
+
+// Se archivan sueltas: sin el número de hoja, tres papeles de dos días
+// distintos encima del mostrador no se distinguen.
+/HOJA 1 DE 3/.test(t) && /Hoja 1 de 3/.test(t)
+  ? bien('la hoja dice cuál es, arriba y en el pie')
+  : falla('la numeración de la hoja 1', t.slice(0, 120));
 
 /* Tiene que responder lo que la dueña cruza contra su cuaderno de la
  * puerta: cuánta gente de clase suelta entró hoy y por cuál de las tres
@@ -1082,7 +1109,10 @@ const t = tirilla.replace(/\s+/g, ' ');
  * veredicto de abajo signifique algo: con cuánto se abrió, cuánto
  * debería haber y cuánto se contó. Sin "Debía haber" el "NO CUADRA" es
  * una palabra sin nada contra qué comprobarla. */
-/CAJA 1/.test(t) && /Base al abrir\$95\.000/.test(t)
+// "Se abrió con" y no "Base al abrir": la dueña tachó el rótulo viejo
+// en el margen del papel del 29 de agosto. "Base" es palabra de
+// contador; quien abre la caja a las nueve la abre con algo.
+/CAJA 1/.test(t) && /Se abrió con\$95\.000/.test(t)
  && /Debía haber/.test(t) && /Se contó/.test(t)
   ? bien('el arqueo trae con cuánto se abrió, cuánto debía haber y cuánto se contó',
          (t.match(/CAJA 1.*?Se contó\$[\d.]+/) || [])[0])
@@ -1132,24 +1162,31 @@ const t = tirilla.replace(/\s+/g, ' ');
   ? bien('en pantalla la tirilla no estorba')
   : falla('la tirilla se ve en pantalla');
 
-/* ---- la segunda tirilla: "cuándo pagaron" ----
- * Es otro papel con otro trabajo: la del cierre se archiva con el
- * efectivo y contesta "¿cuadró el día?"; ésta se lleva al lado del
- * extracto y contesta "¿de la gente que entró hoy, qué renglón del
- * banco es cada una?".
+/* ---- las hojas 2 y 3, del MISMO clic ----
+ * Antes esto pulsaba un segundo botón. Ya no existe: el cierre son tres
+ * hojas y salen las tres o no sale ninguna. Lo que se comprueba aquí es
+ * que la 2 y la 3 salieran de verdad en la misma impresión y que cada
+ * una siga siendo su propio papel — si el arqueo del cajón se colara en
+ * la del punteo, habría dos cajones distintos en el mismo fajo.
  *
- * Esta prueba no la pulsaba nunca. Las dos escriben en el MISMO
- * #tirilla, así que un error al pintar la segunda dejaría el rollo con
- * lo que quedó de la primera y saldría por la impresora un papel con el
- * título equivocado. */
-await pagina.evaluate(() => document.querySelector('#btn-tirilla-pagos').click());
-await pagina.waitForTimeout(400);
-const p2 = (await pagina.locator('#tirilla').evaluate(e => e.textContent))
-  .replace(/\s+/g, ' ');
+ * La hoja 3 se lleva al lado del extracto y contesta "¿de la gente que
+ * entró hoy, qué renglón del banco es cada una?"; la 1 se archiva con
+ * el efectivo y contesta "¿cuadró el día?". */
+const p2 = hojaTexto('hoja-plata');
+const p3 = hojaTexto('hoja-punteo');
 
-/CUÁNDO PAGARON/.test(p2) && !/CIERRE DE CAJA/.test(p2)
-  ? bien('el segundo papel se imprime y es otro papel, no el del cierre')
-  : falla('la segunda tirilla', p2.slice(0, 200));
+/EL PUNTEO, PAGO POR PAGO/.test(p3) && !/CIERRE DE CAJA/.test(p3)
+ && !/CAJA 1/.test(p3)
+  ? bien('la hoja del punteo es su propio papel, no el del cierre')
+  : falla('la hoja del punteo', p3.slice(0, 200));
+
+/* LO QUE PIDIÓ EL DUEÑO: que el papel PRECISE qué es efectivo y qué
+ * transferencia, y de entrada, no al final. Confundirlos es una noche
+ * buscando en el extracto una plata que estaba en el cajón. */
+/EFECTIVO O TRANSFERENCIA/.test(p3) && /se busca en el extracto/.test(p3)
+ && /NO aparece en el extracto/.test(p3)
+  ? bien('el punteo separa lo que se busca en el banco de lo que está en el cajón')
+  : falla('efectivo contra transferencia', p3.slice(0, 300));
 
 /* EL PUENTE ENTRE LAS DOS CIFRAS QUE NUNCA SE PARECEN (0064).
  *

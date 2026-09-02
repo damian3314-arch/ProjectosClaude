@@ -851,7 +851,7 @@ const CONFIG = {
     background:var(--bg);color:var(--tx-2);cursor:default;border-style:dashed;
   }
 
-  /* ---------- la tirilla ----------
+  /* ---------- las tirillas ----------
      Imprimir la pantalla daba una captura del sistema: colores, tarjetas,
      botones y la mitad de la información que solo tiene sentido en un
      navegador. Una tirilla es otra cosa — cabe en el rollo de 80mm de la
@@ -860,7 +860,14 @@ const CONFIG = {
 
      No se genera con una librería de PDF: se imprime a "Guardar como
      PDF", que es lo que ya sabe hacer cualquier navegador y funciona
-     igual en el celular de la cajera. Una dependencia menos que mantener. */
+     igual en el celular de la cajera. Una dependencia menos que mantener.
+
+     SON TRES HOJAS Y SALEN DE UN SOLO CLIC. Antes eran dos botones que
+     escribían en este mismo `#tirilla`: había que imprimir, volver y
+     volver a imprimir, y la segunda pisaba a la primera. Quien se
+     olvidaba del segundo clic se quedaba sin con qué puntear el
+     extracto. Ahora las tres conviven dentro de `#tirilla` como tres
+     `.hoja` y el navegador las separa con el corte de página. */
   #tirilla{display:none}
 
   @media print{
@@ -874,10 +881,32 @@ const CONFIG = {
       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       font-size:9pt;line-height:1.35;
     }
+    /* Cada hoja arranca en papel nuevo. Las dos propiedades a la vez
+       porque `break-after` es la moderna y `page-break-after` la que
+       entiende el driver viejo de la impresora del mostrador. */
+    #tirilla .hoja{break-after:page;page-break-after:always}
+    /* La última NO lleva corte: con él la impresora escupía una cuarta
+       hoja en blanco al final de cada cierre. */
+    #tirilla .hoja:last-child{break-after:auto;page-break-after:auto}
     #tirilla h1{font-size:12pt;margin:0;letter-spacing:.12em;text-align:center}
     #tirilla .sub{text-align:center;font-size:8pt;margin:.5mm 0 2mm}
     #tirilla hr{border:0;border-top:1px dashed #000;margin:2mm 0}
-    #tirilla .t{font-weight:700;font-size:8pt;letter-spacing:.06em;margin:2mm 0 .8mm}
+    /* `break-after:avoid` porque un título solo al pie de una hoja, con
+       sus renglones en la siguiente, es peor que no titular nada. */
+    #tirilla .t{font-weight:700;font-size:8pt;letter-spacing:.06em;margin:2mm 0 .8mm;
+      break-after:avoid;page-break-after:avoid}
+    /* El subtítulo de dentro de una sección: "SE PAGÓ Y SE DISFRUTA
+       HOY". Manda menos que un .t y por eso no lleva espaciado de letra. */
+    #tirilla .st{font-weight:700;font-size:7.5pt;margin:1.5mm 0 .3mm;
+      break-after:avoid;page-break-after:avoid}
+    /* Un renglón del extracto y su detalle (quién lo mandó, a quién le
+       pagó) son UNA sola cosa: partirlos por la mitad deja media línea
+       del banco sin nombre en la hoja siguiente. */
+    #tirilla .mov-banco{break-inside:avoid;page-break-inside:avoid}
+    /* El pie que identifica la hoja cuando se recogen sueltas de la
+       impresora: qué número es, de cuántas, y de qué día. */
+    #tirilla .pie{margin-top:5mm;border-top:1px dashed #000;padding-top:1mm;
+      text-align:center;font-size:7.5pt;letter-spacing:.04em}
     #tirilla .l{display:flex;justify-content:space-between;gap:3mm}
     #tirilla .l span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
     #tirilla .l.g{font-weight:700;border-top:1px solid #000;margin-top:1mm;padding-top:1mm}
@@ -890,6 +919,9 @@ const CONFIG = {
        gente contada por dentro, no dieciséis personas más. */
     #tirilla .l.sangria span:first-child{padding-left:3.5mm}
     #tirilla .peq{font-size:7.5pt}
+    /* La aclaración de debajo de un renglón cuelga de él, igual que las
+       líneas sangradas: "por transferencia" bajo "Reservas página". */
+    #tirilla .peq.sangria{padding-left:3.5mm}
     #tirilla .firma{margin-top:8mm;border-top:1px solid #000;padding-top:1mm;
       text-align:center;font-size:7.5pt}
     /* Un descuadre no puede pasar desapercibido en papel en blanco y
@@ -3749,24 +3781,69 @@ const CONFIG = {
 
   const campoAG = n => 'AdminGym · ' + n;
 
-  /* ---------- la tirilla ----------
-     Lo que se archiva junto al efectivo. Cabe en el rollo de 80mm y dice
-     todo lo que hay que saber sin abrir el sistema: con cuánto se abrió,
-     de qué fue cada peso, cómo cuadró el arqueo y los cuatro números que
-     se enfrentan a AdminGym.
+  /* ══════════ el cierre en papel: tres hojas de un solo clic ══════════
+
+     UN CIERRE SON TRES HOJAS Y SE IMPRIMEN JUNTAS. Antes eran dos
+     botones —"Imprimir la tirilla" e "Imprimir cuándo pagaron"— que
+     escribían los dos en `#tirilla`: había que imprimir, volver al
+     panel y volver a imprimir, y la segunda pisaba a la primera. Con
+     las tres en el DOM a la vez, un clic saca el cierre entero y no hay
+     forma de quedarse a medias.
+
+     Cada hoja contesta UNA pregunta y se archiva por su cuenta:
+
+       1. ¿cuadró el cajón?            → se archiva con el efectivo
+       2. ¿de qué era la plata de hoy? → se archiva con el cierre
+       3. ¿qué renglón del extracto es cada pago? → se puntea al lado
+                                          del extracto del banco
+
+     Las tres llevan pie con su número y su fecha porque salen sueltas de
+     la impresora y se archivan sueltas: sin eso, tres hojas de dos días
+     distintos encima del mostrador no se distinguen.
+
+     LO QUE ATRAVIESA LAS TRES: efectivo y transferencia nunca se
+     mezclan sin decirlo. El efectivo no aparece jamás en el extracto de
+     Bancolombia; la transferencia sí. Confundirlos es una noche entera
+     buscando en el banco una plata que estaba en el cajón. */
+
+  const tirLinea = (t, v, cl) =>
+    `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
+  const tirTitulo = t => `<div class="t">${esc(t)}</div>`;
+  // El rótulo de dentro de una sección: no abre bloque, agrupa renglones.
+  const tirSubtitulo = t => `<div class="st">${esc(t)}</div>`;
+
+  /* El envoltorio común: cabecera, cuerpo y pie. El número de hoja va
+     arriba Y abajo a propósito — arriba se lee al recogerla, abajo se
+     lee cuando ya está en la carpeta y solo asoma el borde. */
+  const HOJAS_DEL_CIERRE = 3;
+  const hojaDeCierre = (n, id, rotulo, dia, cuerpo) =>
+    `<section class="hoja" id="${id}">` +
+      `<h1>TUMBAO</h1>` +
+      `<div class="sub">${esc(rotulo)} · HOJA ${n} DE ${HOJAS_DEL_CIERRE}<br>` +
+        `${esc(conFecha(dia, { weekday: 'long', day: 'numeric',
+                               month: 'long', year: 'numeric' }))}</div>` +
+      cuerpo +
+      `<div class="pie">Hoja ${n} de ${HOJAS_DEL_CIERRE} · ` +
+        `${esc(rotulo)} · ${esc(conFecha(dia, { day: 'numeric', month: 'short',
+                                                year: 'numeric' }))}</div>` +
+    `</section>`;
+
+  /* ---------- hoja 1: el cierre ----------
+     Lo que se archiva junto al efectivo. Dice todo lo que hay que saber
+     sin abrir el sistema: con cuánto se abrió, de qué fue cada peso y
+     cómo cuadró el arqueo.
 
      Va agrupada por concepto y no movimiento por movimiento: veinte
      líneas de "Clase suelta $15.000" no dicen más que "Clase suelta ×20
      $300.000", y la tirilla tiene que caber en una mano. */
-  function pintarTirilla() {
-    const d = cajaDatos; if (!d) return;
+  function hojaCierre() {
+    const d = cajaDatos;
     const c = d.cierre || {};
     const b = d.banco || {};
     const ent = d.entradas || {};
 
-    const linea = (t, v, cl) =>
-      `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
-    const titulo = t => `<div class="t">${esc(t)}</div>`;
+    const linea = tirLinea;
+    const titulo = tirTitulo;
     // En papel "$-5.000" se lee mal y "-$5.000" se lee bien: el signo va
     // delante del peso, no entre el peso y el número.
     const conSigno = (n) => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
@@ -3788,10 +3865,16 @@ const CONFIG = {
     const pagN = Number(ent.pagina_transferencia_n || 0);
     const mano  = Number(ent.a_mano_cop || 0);
     const manoN = Number(ent.a_mano_n || 0);
-    const cajaSuelta = Number(ent.efectivo_cop || 0)
-                     + Number(ent.recepcion_transferencia_cop || 0);
-    const cajaN = Number(ent.efectivo_n || 0)
-                + Number(ent.recepcion_transferencia_n || 0);
+    // "Pagos en caja" son los dos medios juntos, porque en el mostrador
+    // se cobra igual de una forma que de la otra. Pero abajo se abre en
+    // sus dos mitades: solo una de ellas va a aparecer en el extracto
+    // del banco, y quien puntea necesita saber cuál.
+    const efe  = Number(ent.efectivo_cop || 0);
+    const efeN = Number(ent.efectivo_n || 0);
+    const rec  = Number(ent.recepcion_transferencia_cop || 0);
+    const recN = Number(ent.recepcion_transferencia_n || 0);
+    const cajaSuelta = efe + rec;
+    const cajaN = efeN + recN;
 
     // 0059: la cuenta de personas viene del servidor con su propia
     // regla, y NO de sumar las casillas de dinero. Sumarlas dejaba
@@ -3838,24 +3921,39 @@ const CONFIG = {
     const pv = d.por_verificar || {};
     const verificar = Array.isArray(pv.lista) ? pv.lista : [];
 
-    // La tirilla contesta cuatro preguntas y nada mas: cuanta gente
+    // La hoja 1 contesta cuatro preguntas y nada mas: cuanta gente
     // entro, cuanto salio, cuanto reporto el banco, y que hay que
     // revisar. Todo lo demas se quito a proposito — cada seccion extra
     // era una cifra mas que interpretar en el unico momento del dia en
     // que hay prisa.
-    $('#tirilla').innerHTML =
-      `<h1>TUMBAO</h1>` +
-      `<div class="sub">CIERRE DE CAJA<br>${esc(conFecha(d.dia,
-        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
+    return hojaDeCierre(1, 'hoja-cierre', 'CIERRE DE CAJA', d.dia,
 
       // Ingresos del dia = gente que entro hoy a clase suelta, venga por
       // donde venga. Las tres puertas son ajenas entre si —comprobado
       // cruzando por pago_id y por cobro_mov_id— asi que sumarlas no
       // repite a nadie.
       `<hr>` + titulo('INGRESOS DEL DÍA') +
+      // CADA PUERTA DICE POR DÓNDE ENTRÓ SU PLATA. Un formulario web no
+      // recibe billetes: lo de la página es transferencia siempre y hay
+      // que buscarlo en el extracto.
       linea('Reservas página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
+      (pagN ? `<div class="peq sangria">por transferencia</div>` : '') +
+      // Las manuales son el caso raro: reservas de recepción cuyo cobro
+      // nadie registró (0054). Su plata no está en el cajón NI en el
+      // banco, y por eso no se puede decir de qué medio es — decirlo
+      // manda a corregirlo en Caja en vez de a buscarlo.
       linea('Reservas manuales', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
+      (manoN ? `<div class="peq sangria">sin registrar el cobro: ` +
+               `ni en el cajón ni en el banco</div>` : '') +
       linea('Pagos en caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
+      // LAS DOS MITADES DEL MOSTRADOR. En caja se cobra igual en
+      // efectivo que por transferencia y el total no distingue, pero al
+      // puntear son dos mundos: lo de transferencia hay que encontrarlo
+      // en el extracto y lo de efectivo tiene que estar en el cajón.
+      // Sin este desglose, quien cuadraba buscaba en el banco plata que
+      // nunca pasó por ahí.
+      linea('en efectivo', efeN ? `${efeN} · ${pesos(efe)}` : '—', 'sangria peq') +
+      linea('por transferencia', recN ? `${recN} · ${pesos(rec)}` : '—', 'sangria peq') +
       // El número de personas va aquí y no en el total, porque es lo que
       // se cruza contra el cuaderno de la puerta. Abajo se suman
       // mensualidades, que no son gente entrando.
@@ -3879,7 +3977,14 @@ const CONFIG = {
       // palabra sin contra qué comprobarla. Es base + efectivo que
       // entró − efectivo que salió, y enfrente lo que se contó.
       `<hr>` + titulo('CAJA 1') +
-      linea('Base al abrir', pesos(d.base_cop)) +
+      // Todo lo de esta sección es EFECTIVO. La transferencia no pasa
+      // por el cajón y por eso no puede descuadrar un arqueo: sin
+      // decirlo, un "NO CUADRA" mandaba a revisar el extracto.
+      `<div class="peq">Solo efectivo. La transferencia no pasa por el cajón.</div>` +
+      // "Se abrió con" y no "Base al abrir": la dueña tachó el nombre
+      // viejo en el papel. Es la misma cifra —`base_cop`— dicha como se
+      // dice en el mostrador. No lo devuelvas.
+      linea('Se abrió con', pesos(d.base_cop)) +
       linea('Debía haber', pesos(d.esperado_efectivo)) +
       linea('Se contó', pesos(c.contado_cop || 0)) +
       (dif === 0
@@ -3899,6 +4004,9 @@ const CONFIG = {
       // había reportado menos de lo que reportó — justo el error que se
       // resuelve mirando el extracto, que es el único que sí sabe.
       `<hr>` + titulo('DEPÓSITOS REGISTRADOS HOY') +
+      // Todo depósito es transferencia por definición: lo dice para que
+      // nadie lo sume a lo que hay que contar en el cajón.
+      `<div class="peq">Todo por transferencia. Pago por pago, en la hoja 3.</div>` +
       linea('Total registrado', pesos(bancoHoy), 'g grande') +
 
       // La razon de ser del cierre. Una reserva de la pagina que se
@@ -3921,29 +4029,164 @@ const CONFIG = {
       `<hr>` +
       `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
       (c.nota ? `<div class="peq">${esc(c.nota)}</div>` : '') +
-      `<div class="firma">Firma</div>`;
+      `<div class="firma">Firma</div>`);
   }
 
-  /* ---------- la segunda tirilla: cuándo pagaron ----------
-     Va aparte de la del cierre a propósito. La del cierre se archiva
-     junto al efectivo y contesta "¿cuadró el día?"; esta se lleva al
-     lado del extracto y contesta otra cosa: "¿de la gente que entró
-     hoy, qué línea del banco es cada una?".
+  /* ---------- hoja 2: qué era la plata del día ----------
+     El puente entre lo que entró por la puerta y lo que entró al banco.
+     Sale de `cuadre` (0064).
 
-     Meterla dentro de la otra habría sido volver a lo que ya se pidió
-     quitar: más cifras que interpretar en el momento del día en que hay
-     prisa. Cuadrar contra el banco no se hace con prisa. */
-  function pintarTirillaPagos() {
-    const d = cajaDatos; if (!d) return;
+     LO QUE TIENE QUE DECIR CON PALABRAS, NO DEDUCIRSE: qué de lo que se
+     registró hoy son clases que se disfrutan HOY y qué son reservas
+     futuras que se disfrutan otro día. Los datos ya venían partidos
+     (`clases_hoy_*` y `futuras_*`); lo que faltaba era que el papel lo
+     dijera, en vez de dejar que quien lo lea adivine si "Clases
+     futuras" ya está contado arriba o no.
+
+     `cuadre` puede no venir: un cierre viejo servido por un servidor
+     sin la 0064 no lo trae. La hoja se imprime igual y dice por qué está
+     vacía — quitarla movería la numeración y quien recoja el fajo
+     contaría dos hojas donde deberían ir tres. */
+  function hojaPlataDelDia() {
+    const d = cajaDatos;
+    const linea = tirLinea;
+    const titulo = tirTitulo;
+    const subtitulo = tirSubtitulo;
+
+    const cuadre  = d.cuadre;
+    const quien   = (cuadre || {}).quien_entro   || {};
+    const alBanco = (cuadre || {}).entro_al_banco || {};
+    const cuenta  = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+    if (!cuadre) {
+      return hojaDeCierre(2, 'hoja-plata', 'QUÉ ERA LA PLATA DEL DÍA', d.dia,
+        `<hr>` +
+        `<div class="ojo">Este cierre se guardó con una versión del ` +
+          `servidor que todavía no partía la plata del día.` +
+          `<div class="peq" style="font-weight:400">No hay con qué llenar ` +
+            `esta hoja. Las hojas 1 y 3 salen completas.</div></div>`);
+    }
+
+    // Cupos Y depósitos, en ese orden. Tres amigas que reservan el
+    // sábado que viene con un solo pago son 3 cupos y 1 renglón del
+    // extracto: si esto dijera solo "3", habría que buscar tres
+    // renglones que no existen.
+    const futCupos = Number(alBanco.futuras_cupos || 0);
+    const futDep   = Number(alBanco.futuras_depositos || 0);
+    // Con cero cupos la línea se imprime igual, con raya. Que nadie
+    // pagara por adelantado ese día también es información, y esconder
+    // la línea obliga a preguntarse si faltó o si no hubo.
+    const futuras = futCupos > 0
+      ? `${cuenta(futCupos, 'cupo', 'cupos')} · ` +
+        `${cuenta(futDep, 'depósito', 'depósitos')} · ${pesos(alBanco.futuras_cop)}`
+      : '—';
+    const clasesHoyN = Number(alBanco.clases_hoy_n || 0);
+    const otrosBanco = Array.isArray(alBanco.otros) ? alBanco.otros : [];
+
+    return hojaDeCierre(2, 'hoja-plata', 'QUÉ ERA LA PLATA DEL DÍA', d.dia,
+
+      /* ── el puente entre las dos cifras que nunca se parecen (0064) ──
+         La tirilla del sábado 29 de agosto decía "Entradas del día
+         $360.000" y debajo "Bancolombia reportó hoy $195.000", y la
+         dueña restaba a mano en el margen del papel. Las dos cifras
+         estaban bien: de las 21 personas que entraron ese día, 16 habían
+         pagado días antes y su plata está en el extracto de otro día.
+         Restarlas da una diferencia que no significa nada.
+
+         Por eso esta hoja va ANTES del punteo: primero se entiende por
+         qué las dos cifras no tienen por qué parecerse, y en la hoja
+         siguiente se buscan los renglones. */
+      `<hr>` + titulo('QUIÉN ENTRÓ HOY') +
+      linea('Entraron a clase',
+            cuenta(Number(quien.personas || 0), 'persona', 'personas')) +
+      // Los tres renglones de debajo son la MISMA gente contada por
+      // dentro: suman el de arriba, no se le añaden. De ahí la sangría.
+      linea('ya habían pagado antes',
+            String(Number(quien.pagaron_antes || 0)), 'sangria peq') +
+      linea('pagaron hoy',
+            `${Number(quien.pagaron_hoy || 0)} · ${pesos(quien.pagaron_hoy_cop)}`,
+            'sangria peq') +
+      // Solo si los hay: en un día normal es cero, y un renglón que
+      // siempre dice cero enseña a no leer el papel.
+      (Number(quien.sin_deposito || 0) > 0
+        ? linea('sin depósito', String(Number(quien.sin_deposito)), 'sangria peq')
+        : '') +
+      `<div class="peq">Los de "ya habían pagado antes" tienen su plata en ` +
+        `el extracto de OTRO día. No se buscan hoy.</div>` +
+
+      `<hr>` + titulo('QUÉ SE REGISTRÓ HOY') +
+      // `entro_al_banco` son depósitos: transferencia, toda. El efectivo
+      // del día no está en esta cuenta y va en la hoja 3.
+      `<div class="peq">Todo esto entró POR TRANSFERENCIA y está en el ` +
+        `extracto. El efectivo del día va en la hoja 3.</div>` +
+
+      // LAS DOS MITADES QUE PIDIÓ EL DUEÑO, CON SU NOMBRE. La plata que
+      // entró hoy no es toda de hoy: parte paga la clase de esta noche y
+      // parte paga un cupo del sábado que viene. Antes había que
+      // deducirlo de que una línea dijera "Clases de hoy" y la otra
+      // "Clases futuras"; ahora lo dice el papel.
+      subtitulo('SE PAGÓ HOY Y SE DISFRUTA HOY') +
+      linea('Clases de hoy',
+            clasesHoyN ? `${clasesHoyN} · ${pesos(alBanco.clases_hoy_cop)}` : '—') +
+
+      subtitulo('SE PAGÓ HOY, SE DISFRUTA OTRO DÍA') +
+      linea('Clases futuras', futuras) +
+      `<div class="peq sangria">reservas por adelantado: la clase todavía ` +
+        `no se ha dictado</div>` +
+
+      // Mensualidades, camisetas, cumpleaños: pagan cosas que no tienen
+      // cupo ni fecha que buscar. Con el mismo nombre legible que usa
+      // el resto del panel, para que el papel y la pantalla se llamen
+      // igual. Solo si los hay: un subtítulo sobre nada es ruido.
+      (otrosBanco.length
+        ? subtitulo('NO ES UNA CLASE') +
+          otrosBanco.map(x => linea(nombreConcepto(x.concepto) +
+                          (Number(x.n || 0) > 1 ? ' x' + Number(x.n) : ''),
+                          pesos(x.cop))).join('')
+        : '') +
+
+      // El total es lo IDENTIFICADO, que es exactamente lo que suman
+      // los renglones de encima. `sin_identificar_cop` no se imprime a
+      // propósito: `reporto_banco_cop` no es lo que reportó Bancolombia
+      // sino lo que el sistema ingirió, así que esa resta da cero casi
+      // siempre, y un renglón que siempre dice $0 enseña a ignorar el
+      // papel. Lo que de verdad quedó sin dueño se persigue en el panel.
+      linea('= Depósitos registrados hoy',
+            pesos(alBanco.identificado_cop), 'g grande') +
+      // EL AMARRE ENTRE LA HOJA 1 Y LA 2. Las dos dicen "depósitos
+      // registrados hoy" y en un día limpio dicen el mismo número: esta
+      // hoja es el desglose de aquel total. Cuando no coinciden hay
+      // depósitos que el sistema no supo de qué eran, y eso es
+      // exactamente lo que hay que perseguir. Sin esta línea, dos
+      // cifras con el mismo nombre en el mismo fajo harían desconfiar
+      // del papel entero.
+      `<div class="peq">Es el total de la hoja 1 desglosado. Si no ` +
+        `coinciden, hay depósitos que el sistema no supo de qué eran.</div>`);
+      // Sin línea de firma: esta hoja no se tacha ni se aprueba, se
+      // lee. La firma va en la 1 (el arqueo) y el "Revisado" en la 3
+      // (el punteo), que son las dos que alguien tiene que responder.
+  }
+
+  /* ---------- hoja 3: el punteo, pago por pago ----------
+     La que se pone al lado del extracto de Bancolombia y se va tachando.
+     Contesta "¿de la gente que entró hoy, qué renglón del banco es cada
+     una?", y es la única de las tres que se lee sin prisa.
+
+     AQUÍ ES DONDE MÁS IMPORTA SEPARAR EFECTIVO DE TRANSFERENCIA: lo de
+     transferencia se busca renglón por renglón en el extracto; lo de
+     efectivo no se va a encontrar ahí nunca, porque está en el cajón.
+     Por eso la hoja abre diciendo cuánto es cada cosa, antes de que
+     nadie empiece a buscar. */
+  function hojaPunteo() {
+    const d = cajaDatos;
     const k = d.conciliacion || {};
     const banco = Array.isArray(k.banco) ? k.banco : [];
     const efec  = Array.isArray(k.efectivo) ? k.efectivo : [];
     const sinP  = Array.isArray(k.sin_pago) ? k.sin_pago : [];
     const sinE  = Array.isArray(k.sin_enlazar) ? k.sin_enlazar : [];
 
-    const linea = (t, v, cl) =>
-      `<div class="l ${cl || ''}"><span>${esc(t)}</span><span>${esc(v)}</span></div>`;
-    const titulo = t => `<div class="t">${esc(t)}</div>`;
+    const linea = tirLinea;
+    const titulo = tirTitulo;
 
     // El extracto del banco va por días, así que el papel también. Sin
     // esto habría que ir saltando de página en el extracto por cada
@@ -3964,91 +4207,35 @@ const CONFIG = {
     const idHoy    = Number(k.banco_hoy_cop || 0);
     const falta    = Math.max(bancoHoy - idHoy, 0);
 
-    /* ── el puente entre las dos cifras que nunca se parecen (0064) ──
-       La tirilla del sábado 29 de agosto decía "Entradas del día
-       $360.000" y debajo "Bancolombia reportó hoy $195.000", y la dueña
-       restaba a mano en el margen del papel. Las dos cifras estaban
-       bien: de las 21 personas que entraron ese día, 16 habían pagado
-       días antes y su plata está en el extracto de otro día. Restarlas
-       da una diferencia que no significa nada.
+    /* ── EFECTIVO CONTRA TRANSFERENCIA, ANTES DE EMPEZAR A BUSCAR ──
+       Lo primero que hay que saber al sentarse con el extracto al lado:
+       cuánto de lo de hoy se puede encontrar ahí y cuánto no se va a
+       encontrar nunca.
 
-       Este bloque es el puente, y por eso va ARRIBA del todo: primero
-       se entiende por qué las dos cifras no tienen por qué parecerse, y
-       después se buscan los renglones. Por un lado quién cruzó la
-       puerta y con qué plata; por otro, qué era cada depósito que se
-       registró hoy.
+       Lo de transferencia son los renglones del extracto (`banco_cop`,
+       que incluye días anteriores porque quien pagó el martes la clase
+       de hoy está en la página del martes) más lo que se registró como
+       transferencia sin escoger depósito (`sin_enlazar_cop`): ese
+       también está en el extracto, solo que todavía no se sabe en qué
+       renglón. Lo de efectivo está en el cajón y en ninguna otra parte.
 
-       `cuadre` puede no venir: un cierre viejo servido por un servidor
-       sin la 0064 no lo trae. Entonces no se pinta el bloque y el resto
-       del papel sale igual que siempre. */
-    const cuadre  = d.cuadre;
-    const quien   = (cuadre || {}).quien_entro   || {};
-    const alBanco = (cuadre || {}).entro_al_banco || {};
-    const cuenta  = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+       Sin este bloque, quien cuadraba restaba el total del día contra el
+       extracto y le sobraba justo el efectivo. */
+    const porTransferencia = Number(k.banco_cop || 0) + Number(k.sin_enlazar_cop || 0);
+    const enEfectivo       = Number(k.efectivo_cop || 0);
 
-    // Cupos Y depósitos, en ese orden. Tres amigas que reservan el
-    // sábado que viene con un solo pago son 3 cupos y 1 renglón del
-    // extracto: si esto dijera solo "3", habría que buscar tres
-    // renglones que no existen.
-    const futCupos = Number(alBanco.futuras_cupos || 0);
-    const futDep   = Number(alBanco.futuras_depositos || 0);
-    // Con cero cupos la línea se imprime igual, con raya. Que nadie
-    // pagara por adelantado ese día también es información, y esconder
-    // la línea obliga a preguntarse si faltó o si no hubo.
-    const futuras = futCupos > 0
-      ? `${cuenta(futCupos, 'cupo', 'cupos')} · ` +
-        `${cuenta(futDep, 'depósito', 'depósitos')} · ${pesos(alBanco.futuras_cop)}`
-      : '—';
-    const clasesHoyN = Number(alBanco.clases_hoy_n || 0);
+    return hojaDeCierre(3, 'hoja-punteo', 'EL PUNTEO, PAGO POR PAGO', d.dia,
 
-    const bloqueCuadre = !cuadre ? '' :
-      `<hr>` + titulo('QUIÉN ENTRÓ HOY') +
-      linea('Entraron a clase',
-            cuenta(Number(quien.personas || 0), 'persona', 'personas')) +
-      // Los tres renglones de debajo son la MISMA gente contada por
-      // dentro: suman el de arriba, no se le añaden. De ahí la sangría.
-      linea('ya habían pagado antes',
-            String(Number(quien.pagaron_antes || 0)), 'sangria peq') +
-      linea('pagaron hoy',
-            `${Number(quien.pagaron_hoy || 0)} · ${pesos(quien.pagaron_hoy_cop)}`,
-            'sangria peq') +
-      // Solo si los hay: en un día normal es cero, y un renglón que
-      // siempre dice cero enseña a no leer el papel.
-      (Number(quien.sin_deposito || 0) > 0
-        ? linea('sin depósito', String(Number(quien.sin_deposito)), 'sangria peq')
-        : '') +
+      `<hr>` + titulo('EFECTIVO O TRANSFERENCIA') +
+      linea('Por transferencia', pesos(porTransferencia)) +
+      `<div class="peq sangria">se busca en el extracto, renglón por renglón</div>` +
+      linea('En efectivo', pesos(enEfectivo)) +
+      `<div class="peq sangria">está en el cajón: NO aparece en el extracto</div>` +
 
-      `<hr>` + titulo('QUÉ SE REGISTRÓ HOY') +
-      linea('Clases de hoy',
-            clasesHoyN ? `${clasesHoyN} · ${pesos(alBanco.clases_hoy_cop)}` : '—') +
-      linea('Clases futuras', futuras) +
-      // Mensualidades, camisetas, cumpleaños: pagan cosas que no tienen
-      // cupo ni fecha que buscar. Con el mismo nombre legible que usa
-      // el resto del panel, para que el papel y la pantalla se llamen
-      // igual.
-      (Array.isArray(alBanco.otros) ? alBanco.otros : [])
-        .map(x => linea(nombreConcepto(x.concepto) +
-                        (Number(x.n || 0) > 1 ? ' x' + Number(x.n) : ''),
-                        pesos(x.cop))).join('') +
-      // El total es lo IDENTIFICADO, que es exactamente lo que suman
-      // los renglones de encima. `sin_identificar_cop` no se imprime a
-      // propósito: `reporto_banco_cop` no es lo que reportó Bancolombia
-      // sino lo que el sistema ingirió, así que esa resta da cero casi
-      // siempre, y un renglón que siempre dice $0 enseña a ignorar el
-      // papel. Lo que de verdad quedó sin dueño se persigue en el panel.
-      linea('= Depósitos registrados hoy',
-            pesos(alBanco.identificado_cop), 'g grande');
+      `<div class="peq">Cada renglón de abajo es un movimiento del ` +
+        `extracto. Debajo, qué pagó.</div>` +
 
-    $('#tirilla').innerHTML =
-      `<h1>TUMBAO</h1>` +
-      `<div class="sub">CUÁNDO PAGARON<br>${esc(conFecha(d.dia,
-        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</div>` +
-      bloqueCuadre +
-
-      `<div class="peq">Cada renglón es un movimiento del extracto. ` +
-        `Debajo, qué pagó.</div>` +
-
-      `<hr>` + titulo('BUSCAR EN EL EXTRACTO') +
+      `<hr>` + titulo('POR TRANSFERENCIA · BUSCAR EN EL EXTRACTO') +
       (banco.length
         ? [...porDia.entries()].map(([dia, g]) =>
             `<div class="peq" style="margin-top:1.5mm"><b>${esc(cuandoFue(g.dias))}` +
@@ -4057,7 +4244,11 @@ const CONFIG = {
               const nombres = Array.isArray(x.para) ? x.para : [];
               const conc = (Array.isArray(x.conceptos) ? x.conceptos : [])
                 .map(nombreConcepto).join(', ');
-              return linea(x.hora, pesos(x.valor_cop)) +
+              // Envuelto en .mov-banco para que el corte de página no
+              // parta el renglón de su detalle: media línea del banco
+              // sin nombre en la hoja siguiente no se puede puntear.
+              return `<div class="mov-banco">` +
+              linea(x.hora, pesos(x.valor_cop)) +
               `<div class="peq">${esc(x.remitente || 'sin nombre en el banco')}` +
                 (x.referencia ? ` · ref ${esc(x.referencia)}` : '') + `</div>` +
               // Un pago que llegó en dos transferencias son DOS renglones
@@ -4088,18 +4279,25 @@ const CONFIG = {
                         (Number(x.cobros) > 1 ? `, ${Number(x.cobros)} personas` : '')
                       : ` · en recepción`) +
                     `</div>`
-                  : `<div class="peq">→ cobrado en la puerta</div>`);
+                  : `<div class="peq">→ cobrado en la puerta</div>`) +
+              `</div>`;
             }).join('')
           ).join('') +
           linea('= Buscar en el banco', pesos(k.banco_cop || 0), 'g grande')
         : `<div class="peq">Nada de lo de hoy entró por el banco.</div>`) +
 
+      // EL EFECTIVO SE IMPRIME AUNQUE NO HAYA. Antes la sección
+      // desaparecía en un día sin efectivo, y quien puntea no podía
+      // distinguir "hoy no entró nada en efectivo" de "se me olvidó
+      // mirarlo". Es justo la confusión que hace perder la noche
+      // buscando en el banco plata que estaba en el cajón — o al revés.
+      `<hr>` + titulo('EN EFECTIVO · NO ESTÁ EN EL EXTRACTO') +
       (efec.length
-        ? `<hr>` + titulo('EN EFECTIVO · no va al banco') +
-          efec.map(x => linea(`${x.hora} · ${nombreConcepto(x.concepto)}`,
+        ? efec.map(x => linea(`${x.hora} · ${nombreConcepto(x.concepto)}`,
                               pesos(x.valor_cop))).join('') +
           linea('= En el cajón', pesos(k.efectivo_cop || 0), 'g')
-        : '') +
+        : `<div class="peq">Hoy no entró nada en efectivo. ` +
+          `Nada que buscar en el cajón.</div>`) +
 
       // Se registró como transferencia pero sin escoger el depósito. Esa
       // plata está en el extracto y no se sabe en qué renglón: hay que
@@ -4150,7 +4348,23 @@ const CONFIG = {
         ? `<div class="peq">Puede ser de una clase de otro día o plata que ` +
           `nadie ha reclamado. Sale en la lista de sin dueño del panel.</div>`
         : '') +
-      `<div class="firma">Revisado</div>`;
+      `<div class="firma">Revisado</div>`);
+  }
+
+  /* ---------- las tres, de un solo clic ----------
+     El único sitio que escribe en `#tirilla`. Las tres hojas entran
+     juntas y en orden: primero el cajón, luego de qué era la plata,
+     luego el punteo. Ese orden es el del trabajo — se cierra, se
+     entiende y después se concilia — y también el de quien recoge el
+     fajo de la impresora.
+
+     Devuelve cuántas hojas escribió: cero cuando todavía no hay día
+     cargado, y ahí no hay nada que imprimir. */
+  function pintarTirillas() {
+    const d = cajaDatos;
+    if (!d) { $('#tirilla').innerHTML = ''; return 0; }
+    $('#tirilla').innerHTML = hojaCierre() + hojaPlataDelDia() + hojaPunteo();
+    return HOJAS_DEL_CIERRE;
   }
 
   function pintarCierre() {
@@ -4304,11 +4518,14 @@ const CONFIG = {
       bloqueBanco() +
 
       (d.cerrado
-        ? `<button class="btn primario" id="btn-tirilla">Imprimir la tirilla</button>` +
-          // Botón aparte y no una sección más de la tirilla del cierre:
-          // son dos papeles con dos trabajos distintos, y este solo se
-          // imprime el día que se va a cuadrar contra el extracto.
-          `<button class="btn" id="btn-tirilla-pagos">Imprimir cuándo pagaron</button>` +
+        ? // UN SOLO BOTÓN. Antes eran dos —"Imprimir la tirilla" e
+          // "Imprimir cuándo pagaron"— y los dos escribían en el mismo
+          // `#tirilla`: había que imprimir, volver aquí y volver a
+          // imprimir, y quien se olvidaba del segundo clic se quedaba
+          // sin con qué puntear el extracto. El cierre son tres hojas y
+          // salen las tres o no sale ninguna.
+          `<button class="btn primario" id="btn-tirillas">` +
+            `Imprimir el cierre · 3 hojas</button>` +
           `<button class="btn" id="btn-rehacer">Corregir el cierre</button>`
         : `<div class="grupo"><div class="et">Cerrar el día</div>` +
             // LOS GASTOS SE PREGUNTAN, NO SE ESPERAN.
@@ -4567,16 +4784,11 @@ const CONFIG = {
       return;
     }
 
-    if (ev.target.id === 'btn-tirilla') {
-      pintarTirilla();
-      window.print();
-      return;
-    }
-
-    // Las dos escriben en el mismo #tirilla y se imprimen igual: el
-    // rollo es uno solo y el CSS de impresión ya esconde todo lo demás.
-    if (ev.target.id === 'btn-tirilla-pagos') {
-      pintarTirillaPagos();
+    // Un clic, tres hojas. Las tres se pintan dentro de `#tirilla` y el
+    // navegador las reparte por el corte de página: una sola llamada a
+    // print(), un solo fajo, y el cierre completo o nada.
+    if (ev.target.id === 'btn-tirillas') {
+      pintarTirillas();
       window.print();
       return;
     }
@@ -4639,7 +4851,9 @@ const CONFIG = {
         });
         cajaRehacer = null;
         await cargarCaja(true);
-        nota('Día cerrado', 'bien', 'Imprime la tirilla y archívala con el efectivo.');
+        nota('Día cerrado', 'bien',
+             'Imprime el cierre: son 3 hojas. La 1 se archiva con el ' +
+             'efectivo y la 3 se puntea contra el extracto.');
       } catch (e) { ev.target.disabled = false; fallo(e, 'No se pudo cerrar el día'); }
     }
   });
