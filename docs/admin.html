@@ -891,6 +891,22 @@ const CONFIG = {
     #tirilla h1{font-size:12pt;margin:0;letter-spacing:.12em;text-align:center}
     #tirilla .sub{text-align:center;font-size:8pt;margin:.5mm 0 2mm}
     #tirilla hr{border:0;border-top:1px dashed #000;margin:2mm 0}
+    /* Puntos guía entre el rótulo y la cifra, como los dibujó la dueña.
+       No son adorno: en un rollo de 72mm el ojo pierde el renglón a
+       medio camino y acaba leyendo la cifra de la línea de abajo.
+       El relleno es un <span> vacío que se estira; el `translateY` sube
+       los puntos a la altura del texto en vez de dejarlos en la base. */
+    #tirilla .g2{display:flex;align-items:baseline;gap:0}
+    #tirilla .g2 .n{flex:0 0 auto;white-space:pre}
+    #tirilla .g2 .p{flex:1 1 auto;border-bottom:1.2px dotted #000;
+      margin:0 1.2mm;transform:translateY(-.28em)}
+    #tirilla .g2 .v{flex:0 0 auto;white-space:nowrap;
+      font-variant-numeric:tabular-nums}
+    #tirilla .g2.f{font-weight:700}
+    /* El rótulo de un grupo: "Cupos en caja". Sus renglones van debajo
+       con sangría, como en el papel que ella dibujó. */
+    #tirilla .gr{margin-top:2.5mm}
+    #tirilla .gracias{text-align:center;margin-top:4mm}
     /* `break-after:avoid` porque un título solo al pie de una hoja, con
        sus renglones en la siguiente, es peor que no titular nada. */
     #tirilla .t{font-weight:700;font-size:8pt;letter-spacing:.06em;margin:2mm 0 .8mm;
@@ -3830,292 +3846,189 @@ const CONFIG = {
   // quién había pagado antes ya se responde con el contador de
   // personas de la hoja 1 y con el punteo de la 2.
   const HOJAS_DEL_CIERRE = 2;
+  /* La hoja 1 ya no pasa por aquí: la dueña la dibujó con su propia
+     cabecera —TUMBAO, CIERRE DE CAJA, y la fecha con guiones— y sin
+     numeración de hoja. Este envoltorio le quedó solo al punteo, que sí
+     necesita decir qué es: sale de la misma impresora y detrás del
+     cierre, y sin rótulo se confunde con él. Por eso tampoco dice ya
+     "HOJA 2 DE 2" — la 1 no está numerada y anunciar una numeración que
+     la otra hoja no lleva hace buscar un número que no existe. */
   const hojaDeCierre = (n, id, rotulo, dia, cuerpo) =>
     `<section class="hoja" id="${id}">` +
       `<h1>TUMBAO</h1>` +
-      `<div class="sub">${esc(rotulo)} · HOJA ${n} DE ${HOJAS_DEL_CIERRE}<br>` +
+      `<div class="sub"><b>${esc(rotulo)}</b><br>` +
         `${esc(conFecha(dia, { weekday: 'long', day: 'numeric',
                                month: 'long', year: 'numeric' }))}</div>` +
       cuerpo +
-      `<div class="pie">Hoja ${n} de ${HOJAS_DEL_CIERRE} · ` +
-        `${esc(rotulo)} · ${esc(conFecha(dia, { day: 'numeric', month: 'short',
+      `<div class="pie">${esc(rotulo)} · ` +
+        `${esc(conFecha(dia, { day: 'numeric', month: 'short',
                                                 year: 'numeric' }))}</div>` +
     `</section>`;
 
   /* ---------- hoja 1: el cierre ----------
-     Lo que se archiva junto al efectivo. Dice todo lo que hay que saber
-     sin abrir el sistema: con cuánto se abrió, de qué fue cada peso y
-     cómo cuadró el arqueo.
+     ESTE FORMATO LO DIBUJÓ LA DUEÑA, A MANO, Y SE SIGUE AL PIE DE LA
+     LETRA. Antes de esto el papel lo diseñaba yo: llegó a tener el
+     arqueo, el desglose de la plata del banco, el contador de personas,
+     lo que quedaba por revisar y una firma. Ella lo leyó, y lo que
+     devolvió fue esta hoja — más corta, sin veredictos y con puntos
+     guía. No la "mejores" por tu cuenta: cada bloque que se añada aquí
+     hay que justificarlo delante de quien la usa a las nueve de la
+     noche con gente esperando en la puerta.
 
-     Va agrupada por concepto y no movimiento por movimiento: veinte
-     líneas de "Clase suelta $15.000" no dicen más que "Clase suelta ×20
-     $300.000", y la tirilla tiene que caber en una mano. */
+     La estructura es suya, en su orden:
+
+       de dónde salió cada cupo   (página, manuales, caja)
+       las mensualidades y lo demás, partido en efectivo y bancos
+       el resumen de ingresos
+       el movimiento del cajón, que termina en el saldo que se deja
+
+     LO ÚNICO QUE NO ESTABA EN SU DIBUJO son dos renglones que solo
+     aparecen cuando hay algo que decir, y en su mismo formato: el
+     descuadre del arqueo (si lo hay) y los cobros sin registrar (si los
+     hay). En un día normal la hoja sale exactamente como ella la pidió.
+
+     LOS SUBTOTALES SE CALCULAN DE LOS MISMOS RENGLONES QUE SE IMPRIMEN,
+     nunca de un campo aparte del servidor. Es lo que garantiza que el
+     papel sume: si mañana aparece un concepto nuevo, entra en el
+     desglose y en el total a la vez, y no puede quedarse fuera de uno
+     de los dos. */
   function hojaCierre() {
     const d = cajaDatos;
     const c = d.cierre || {};
-    const b = d.banco || {};
     const ent = d.entradas || {};
 
-    const linea = tirLinea;
-    const titulo = tirTitulo;
-    const subtitulo = tirSubtitulo;
-    // En papel "$-5.000" se lee mal y "-$5.000" se lee bien: el signo va
-    // delante del peso, no entre el peso y el número.
-    const conSigno = (n) => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
+    // Rótulo · puntos · cifra. `f` lo pone en negrita (los totales).
+    const g = (rotulo, valor, f) =>
+      `<div class="g2${f ? ' f' : ''}"><span class="n">${esc(rotulo)}</span>` +
+      `<span class="p"></span><span class="v">${esc(valor)}</span></div>`;
+    const grupo = t => `<div class="gr">${esc(t)}</div>`;
 
-    /* Lo que quedó de la hoja 2 borrada: de lo que entró hoy, qué era
-       cada peso. Sale de `cuadre` (0064), que un cierre viejo guardado
-       por un servidor anterior no trae — de ahí que todo esto sea
-       opcional y el bloque se salte entero si falta. */
-    const cuadre  = d.cuadre;
-    const alBanco = (cuadre || {}).entro_al_banco || {};
-    const clasesHoyN = Number(alBanco.clases_hoy_n || 0);
-    const otrosBanco = Array.isArray(alBanco.otros) ? alBanco.otros : [];
-    const cuenta = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
-    const futCupos = Number(alBanco.futuras_cupos || 0);
-    const futDep   = Number(alBanco.futuras_depositos || 0);
-    // Con cero cupos la línea se imprime igual, con raya: que nadie
-    // pagara por adelantado también es información, y esconder el
-    // renglón obliga a preguntarse si faltó o si no hubo.
-    const futuras = futCupos > 0
-      ? `${cuenta(futCupos, 'cupo', 'cupos')} · ` +
-        `${cuenta(futDep, 'depósito', 'depósitos')} · ${pesos(alBanco.futuras_cop)}`
-      : '—';
-    // Nunca negativo en el papel: si el desglose superara al total, el
-    // fallo es de datos y un "−$5.000 sin identificar" solo confunde a
-    // quien cuadra. Se enseña como cero y la diferencia se persigue en
-    // el panel, que es donde se puede hacer algo con ella.
-    const sinIdent = Math.max(Number(alBanco.sin_identificar_cop || 0), 0);
+    /* Plural español de andar por casa, suficiente para los conceptos
+       que se cobran aquí: vocal + s ("camiseta" → "camisetas"),
+       consonante + es ("mensualidad" → "mensualidades"), y lo que ya
+       acaba en s se queda igual ("cumpleaños"). */
+    const plural = (s, n) => {
+      if (n === 1) return s;
+      if (/s$/i.test(s)) return s;
+      return /[aeiouáéíóú]$/i.test(s) ? s + 's' : s + 'es';
+    };
+    // "1 cupo" / "4 cupos", en minúscula como en el papel de ella.
+    const unidad = (n, palabra) => `${n} ${plural(palabra, n)}`;
 
-    // Las tres puertas por las que alguien entra a una clase suelta.
-    // Son conjuntos ajenos y por eso se pueden sumar sin repetir a
-    // nadie:
-    //
-    //   pagina    reservas web/formulario ya cruzadas con un deposito
-    //   a mano    apuntadas en recepcion cuyo cobro no quedo en Caja
-    //             (exige cobro_mov_id nulo: si el cobro si se registro,
-    //             ya cuenta abajo)
-    //   caja      movimientos de Caja con concepto 'clase_suelta', en
-    //             efectivo o por transferencia
-    //
-    // Comprobado cruzando por pago_id y por cobro_mov_id: ningun
-    // movimiento de clase suelta corresponde a una reserva.
-    const pag  = Number(ent.pagina_transferencia_cop || 0);
+    /* ── los cupos, por la puerta que entraron ──────────────────────
+       Las tres son conjuntos ajenos y por eso se pueden sumar sin
+       repetir a nadie. "Bancos" es la palabra de ella para lo que el
+       resto del panel llama transferencia; en el papel manda ella. */
     const pagN = Number(ent.pagina_transferencia_n || 0);
-    const mano  = Number(ent.a_mano_cop || 0);
+    const pag  = Number(ent.pagina_transferencia_cop || 0);
     const manoN = Number(ent.a_mano_n || 0);
-    // "Pagos en caja" son los dos medios juntos, porque en el mostrador
-    // se cobra igual de una forma que de la otra. Pero abajo se abre en
-    // sus dos mitades: solo una de ellas va a aparecer en el extracto
-    // del banco, y quien puntea necesita saber cuál.
-    const efe  = Number(ent.efectivo_cop || 0);
+    const mano  = Number(ent.a_mano_cop || 0);
     const efeN = Number(ent.efectivo_n || 0);
-    const rec  = Number(ent.recepcion_transferencia_cop || 0);
+    const efe  = Number(ent.efectivo_cop || 0);
     const recN = Number(ent.recepcion_transferencia_n || 0);
-    const cajaSuelta = efe + rec;
-    const cajaN = efeN + recN;
+    const rec  = Number(ent.recepcion_transferencia_cop || 0);
 
-    // 0059: la cuenta de personas viene del servidor con su propia
-    // regla, y NO de sumar las casillas de dinero. Sumarlas dejaba
-    // fuera a quien entró con una clase reprogramada (su plata entró
-    // otro día), a quien se le anuló el cobro y se rehizo, y a quien se
-    // confirmó a mano sin depósito enlazado. El 28 de agosto decía 10
-    // cuando en la puerta habían entrado 11.
-    //
-    // El coalesce deja el panel funcionando contra un servidor sin la
-    // 0059 todavía: la cuenta vieja es peor, pero no rompe el cierre.
-    const sueltaN   = ent.personas_n != null
-                    ? Number(ent.personas_n)
-                    : pagN + manoN + cajaN;
-    const sueltaCop = pag + mano + cajaSuelta;
-
-    // Lo demás que registra Caja: mensualidad, cumpleaños, otro ingreso.
-    // Va sin conteo de personas a propósito —una mensualidad no es
-    // alguien que entró hoy— pero su plata sí es del día, y es la
-    // mayoría: en el histórico son $4.725.000 contra $435.000 de clase
-    // suelta. Mientras no estuvo, la sección de ingresos del día mostraba
-    // el 8% del dinero.
-    //
-    // Se suman los dos medios por concepto: resumen_conceptos trae una
-    // fila por (concepto, medio), y en el papel "Mensualidades" es una
-    // sola línea, no una por efectivo y otra por transferencia.
-    const otros = {};
-    for (const x of (d.resumen_conceptos || [])) {
+    /* ── todo lo que no es un cupo ──────────────────────────────────
+       Mensualidades, camisetas, cumpleaños. Se leen de
+       `resumen_conceptos` en vez de escribirlos a mano para que un
+       concepto nuevo aparezca solo, sin tocar esta función — si no, el
+       día que se venda algo nuevo el total dejaría de cuadrar sin que
+       nadie sepa por qué. */
+    const conc = Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [];
+    const otros = new Map();
+    for (const x of conc) {
       if (x.sentido !== 'ingreso' || x.concepto === 'clase_suelta') continue;
-      otros[x.concepto] = (otros[x.concepto] || 0) + Number(x.valor_cop || 0);
+      const k = x.concepto;
+      if (!otros.has(k)) otros.set(k, { ef: 0, efN: 0, tr: 0, trN: 0 });
+      const o = otros.get(k);
+      if (x.medio === 'efectivo') { o.ef += Number(x.valor_cop || 0); o.efN += Number(x.n || 0); }
+      else                       { o.tr += Number(x.valor_cop || 0); o.trN += Number(x.n || 0); }
     }
-    const otrosLista = Object.entries(otros).sort((a, b) => b[1] - a[1]);
-    const otrosCop = otrosLista.reduce((n, [, v]) => n + v, 0);
 
-    const entroCop = sueltaCop + otrosCop;
+    let otrosEf = 0, otrosTr = 0;
+    for (const o of otros.values()) { otrosEf += o.ef; otrosTr += o.tr; }
 
-    const dif = Number(c.diferencia_cop || 0);
-    const salio = Number(d.total_egresos || 0);
-    // Lo que el banco confirmo hoy, de cualquier dia de clase. Si el
-    // corte todavia no llego, se arma con lo que hay.
-    const bancoHoy = b.recibido_cop != null ? b.recibido_cop
-      : Number(d.ingreso_transferencia || 0) + Number(d.reservas_cop || 0);
+    // Los tres subtotales, sacados de los renglones de arriba.
+    const enEfectivo = efe + otrosEf;
+    const porBancos  = pag + rec + otrosTr;
+    // Apuntadas en recepción sin que el cobro quedara registrado en
+    // ninguna parte: ni en el cajón ni en el banco. No es efectivo ni
+    // es banco, así que va en su propio renglón — meterla en cualquiera
+    // de los dos haría que el papel jurara tener una plata localizable
+    // que no lo es. Solo sale si la hay.
+    const total = enEfectivo + porBancos + mano;
 
-    // Lo confirmado a mano, ya agrupado por referencia de deposito.
-    const pv = d.por_verificar || {};
-    const verificar = Array.isArray(pv.lista) ? pv.lista : [];
+    /* ── el cajón ───────────────────────────────────────────────────
+       Solo efectivo: la transferencia no pasa por aquí. "Gastos /
+       retiros" junta los dos que sacan billetes del cajón —lo que se
+       gastó y lo que se llevó al cerrar—, que es como lo pidió ella.
 
-    // La hoja 1 contesta cuatro preguntas y nada mas: cuanta gente
-    // entro, cuanto salio, cuanto reporto el banco, y que hay que
-    // revisar. Todo lo demas se quito a proposito — cada seccion extra
-    // era una cifra mas que interpretar en el unico momento del dia en
-    // que hay prisa.
-    return hojaDeCierre(1, 'hoja-cierre', 'CIERRE DE CAJA', d.dia,
+       El saldo se CALCULA, no se copia de `dejado_cop`: así el renglón
+       de arriba y el de abajo no pueden contradecirse. En un cierre
+       bien hecho da exactamente lo que se dejó. */
+    const base = Number(d.base_cop || 0);
+    const gastos = Number(d.egreso_efectivo || 0) + Number(c.retirado_cop || 0);
+    const saldo = base + enEfectivo - gastos;
 
-      // Ingresos del dia = gente que entro hoy a clase suelta, venga por
-      // donde venga. Las tres puertas son ajenas entre si —comprobado
-      // cruzando por pago_id y por cobro_mov_id— asi que sumarlas no
-      // repite a nadie.
-      `<hr>` + titulo('INGRESOS DEL DÍA') +
-      // CADA PUERTA DICE POR DÓNDE ENTRÓ SU PLATA. Un formulario web no
-      // recibe billetes: lo de la página es transferencia siempre y hay
-      // que buscarlo en el extracto.
-      linea('Reservas página', pagN ? `${pagN} · ${pesos(pag)}` : '—') +
-      (pagN ? `<div class="peq sangria">por transferencia</div>` : '') +
-      // Las manuales son el caso raro: reservas de recepción cuyo cobro
-      // nadie registró (0054). Su plata no está en el cajón NI en el
-      // banco, y por eso no se puede decir de qué medio es — decirlo
-      // manda a corregirlo en Caja en vez de a buscarlo.
-      linea('Reservas manuales', manoN ? `${manoN} · ${pesos(mano)}` : '—') +
-      (manoN ? `<div class="peq sangria">sin registrar el cobro: ` +
-               `ni en el cajón ni en el banco</div>` : '') +
-      linea('Pagos en caja', cajaN ? `${cajaN} · ${pesos(cajaSuelta)}` : '—') +
-      // LAS DOS MITADES DEL MOSTRADOR. En caja se cobra igual en
-      // efectivo que por transferencia y el total no distingue, pero al
-      // puntear son dos mundos: lo de transferencia hay que encontrarlo
-      // en el extracto y lo de efectivo tiene que estar en el cajón.
-      // Sin este desglose, quien cuadraba buscaba en el banco plata que
-      // nunca pasó por ahí.
-      linea('en efectivo', efeN ? `${efeN} · ${pesos(efe)}` : '—', 'sangria peq') +
-      linea('por transferencia', recN ? `${recN} · ${pesos(rec)}` : '—', 'sangria peq') +
-      // El número de personas va aquí y no en el total, porque es lo que
-      // se cruza contra el cuaderno de la puerta. Abajo se suman
-      // mensualidades, que no son gente entrando.
-      `<div class="peq">${sueltaN} ${sueltaN === 1 ? 'persona' : 'personas'} ` +
-        `a clase suelta · ${pesos(sueltaCop)}</div>` +
-      otrosLista.map(([concepto, cop]) =>
-        linea(nombreConcepto(concepto), pesos(cop))).join('') +
-      linea('= Entradas', pesos(entroCop), 'g grande') +
+    // El descuadre del arqueo. NO estaba en el dibujo de ella y sale
+    // solo cuando lo hay: en un día que cuadra la hoja queda tal cual
+    // la pidió, y el día que no, es lo primero que salta. Sin esto un
+    // faltante no aparecería en ninguna parte del papel.
+    const dif = d.cerrado ? Number(c.diferencia_cop || 0) : 0;
+    const conSigno = n => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
 
-      `<hr>` + titulo('SALIDAS') +
-      ((d.resumen_conceptos || []).filter(x => x.sentido === 'egreso')
-        .map(x => linea(nombreConcepto(x.concepto) + (x.n > 1 ? ' x' + x.n : ''),
-                        pesos(x.valor_cop))).join('') || linea('Nada', '—')) +
-      linea('= Salidas', pesos(salio), 'g grande') +
+    return `<section class="hoja" id="hoja-cierre">` +
+      `<h1>TUMBAO</h1>` +
+      `<div class="sub"><b>CIERRE DE CAJA</b></div>` +
+      // Con guiones y en ese orden porque así la escribió ella. No se
+      // usa `conFecha`: el locale mete barras y el papel diría otra cosa
+      // que el dibujo. `d.dia` viene siempre como AAAA-MM-DD.
+      g('Fecha:', String(d.dia || '').split('-').reverse().join('-')) +
+      `<hr>` +
 
-      // El arqueo del efectivo. Va después de SALIDAS porque lo que debía
-      // haber en el cajón depende de lo que entró y salió en efectivo,
-      // no de lo que cobró la página ni de lo que reportó el banco.
-      //
-      // "Debía haber" no es adorno: sin él, el veredicto sería una
-      // palabra sin contra qué comprobarla. Es base + efectivo que
-      // entró − efectivo que salió, y enfrente lo que se contó.
-      `<hr>` + titulo('CAJA 1') +
-      // Todo lo de esta sección es EFECTIVO. La transferencia no pasa
-      // por el cajón y por eso no puede descuadrar un arqueo: sin
-      // decirlo, un "NO CUADRA" mandaba a revisar el extracto.
-      `<div class="peq">Solo efectivo. La transferencia no pasa por el cajón.</div>` +
-      // "Se abrió con" y no "Base al abrir": la dueña tachó el nombre
-      // viejo en el papel. Es la misma cifra —`base_cop`— dicha como se
-      // dice en el mostrador. No lo devuelvas.
-      linea('Se abrió con', pesos(d.base_cop)) +
-      linea('Debía haber', pesos(d.esperado_efectivo)) +
-      linea('Se contó', pesos(c.contado_cop || 0)) +
-      (dif === 0
-        ? `<div class="veredicto">SÍ CUADRA ✓</div>`
-        : `<div class="veredicto mal">NO CUADRA — ${conSigno(dif)}</div>`) +
+      grupo('Reservas por página') +
+      g('  ' + unidad(pagN, 'cupo'), pesos(pag)) +
 
-      // ESTE RÓTULO DECÍA "BANCOLOMBIA REPORTÓ HOY / Entró al banco" Y
-      // ERA MENTIRA. NO LO DEVUELVAS. `banco.recibido_cop` sale de
-      //
-      //   select coalesce(sum(valor_cop),0) from pagos
-      //    where fecha_pago >= v_desde and fecha_pago < v_hasta;
-      //
-      // o sea: la suma de los depósitos que el sistema alcanzó a
-      // REGISTRAR hoy, no lo que dice el extracto de Bancolombia. Son
-      // dos cifras distintas siempre que un correo del banco no se
-      // ingiera, y con el nombre viejo el papel juraba que el banco
-      // había reportado menos de lo que reportó — justo el error que se
-      // resuelve mirando el extracto, que es el único que sí sabe.
-      `<hr>` + titulo('DEPÓSITOS REGISTRADOS HOY') +
-      // Todo depósito es transferencia por definición: lo dice para que
-      // nadie lo sume a lo que hay que contar en el cajón.
-      `<div class="peq">Todo por transferencia. Pago por pago, en la hoja 2.</div>` +
-      linea('Total registrado', pesos(bancoHoy), 'g grande') +
+      grupo('Reservas manuales') +
+      g('  ' + unidad(manoN, 'cupo'), pesos(mano)) +
 
-      /* ── DE ESO, QUÉ ERA CADA PESO (0064) ────────────────────────────
-         Esto era una hoja entera y ahora son seis renglones debajo del
-         total que desglosan. Va aquí y no aparte porque la pregunta que
-         contesta —"entraron $715.000, ¿de qué eran?"— solo tiene
-         sentido pegada a ese número; en su propia página había que
-         pasar el papel para atrás y para adelante comparando dos cifras
-         que se llamaban casi igual.
+      grupo('Cupos en caja') +
+      g('  Efectivo: ' + unidad(efeN, 'cupo'), pesos(efe)) +
+      g('  Bancos:   ' + unidad(recN, 'cupo'), pesos(rec)) +
 
-         El orden lo pidió el dueño tal cual: primero lo que se disfruta
-         hoy, después lo que paga una clase que aún no se ha dictado,
-         después lo que no es una clase, y al final lo que nadie ha
-         sabido nombrar.
-
-         SIN IDENTIFICAR SÍ SE IMPRIME. Antes se ocultaba a propósito,
-         con el argumento de que casi siempre daría $0 y un renglón que
-         siempre dice cero enseña a no leer el papel. Con datos reales
-         resultó falso: el 1 de septiembre eran $250.000 —dos
-         mensualidades que llegaron al banco y nadie cobró en la Caja—.
-         Es la cifra que dice cuánto trabajo queda, y esconderla era
-         justamente lo que hacía que las cuentas no dieran. */
-      (cuadre
-        ? subtitulo('DE ESO') +
-          linea('Clases de hoy',
-                clasesHoyN
-                  ? `${clasesHoyN} · ${pesos(alBanco.clases_hoy_cop)}`
-                  : '—', 'sangria') +
-          // Cupos Y depósitos: tres amigas que reservan el sábado que
-          // viene con un solo pago son 3 cupos y UN renglón del
-          // extracto. Con solo "3" habría que buscar tres renglones que
-          // no existen.
-          linea('Clases futuras', futuras, 'sangria') +
-          // Mensualidades, camisetas, cumpleaños: pagan cosas sin cupo
-          // ni fecha que buscar.
-          otrosBanco.map(x => linea(
-            nombreConcepto(x.concepto) +
-              (Number(x.n || 0) > 1 ? ' x' + Number(x.n) : ''),
-            pesos(x.cop), 'sangria')).join('') +
-          // Lo que el banco trajo y este bloque no supo nombrar. Por
-          // resta contra el mismo total de arriba, nunca por una cuenta
-          // paralela: dos formas de contar el extracto en el mismo
-          // papel es justo lo que se está tratando de arreglar.
-          (sinIdent > 0
-            ? linea('Sin identificar', pesos(sinIdent), 'sangria')
-            : `<div class="peq sangria">Sin identificar: nada ✓</div>`)
-        : `<div class="peq">Este cierre se guardó antes de que el ` +
-          `sistema partiera la plata del día: no hay desglose.</div>`) +
-
-      // La razon de ser del cierre. Una reserva de la pagina que se
-      // confirmo SOLA ya esta cruzada con un deposito: ese cruce es la
-      // prueba de que la plata entro, y buscarla en el extracto es
-      // tiempo perdido. Aqui va solo lo que confirmo alguien a mano.
-      //
-      // Agrupado por referencia y no por persona: un grupo que paga
-      // junto es UNA linea del extracto. El 27 de agosto tres personas
-      // eran un solo deposito de $45.000.
-      `<hr>` + titulo('POR REVISAR') +
-      (verificar.length
-        ? `<div class="peq">Lo que no pasó solo en la página.</div>` +
-          verificar.map(x => linea(
-            x.sin_plata ? 'Reprogramada' : `Ref ${x.referencia}`,
-            x.sin_plata ? `${x.personas} · ya pagó antes`
-                        : `${x.personas} · ${pesos(x.cop)}`)).join('')
-        : `<div class="veredicto">NADA POR REVISAR ✓</div>`) +
+      // Un bloque por concepto, con las dos mitades. La línea que está
+      // en cero no se imprime: el papel de ella solo enseña lo que pasó.
+      [...otros.entries()].map(([k, o]) => {
+        const nom = nombreConcepto(k);
+        // El rótulo del grupo va en plural ("Mensualidades") y la
+        // unidad de cada renglón en minúscula ("4 mensualidades"),
+        // como en el papel de ella.
+        return grupo(plural(nom, 2)) +
+          (o.efN ? g('  Efectivo: ' + unidad(o.efN, nom.toLowerCase()), pesos(o.ef)) : '') +
+          (o.trN ? g('  Bancos:   ' + unidad(o.trN, nom.toLowerCase()), pesos(o.tr)) : '');
+      }).join('') +
 
       `<hr>` +
-      `<div class="peq">Cerró: ${esc(c.hora || '')} · ${esc(c.quien || 'sin nombre')}</div>` +
-      (c.nota ? `<div class="peq">${esc(c.nota)}</div>` : '') +
-      `<div class="firma">Firma</div>`);
+      grupo('Resumen de ingresos') +
+      g('Ingresos en efectivo', pesos(enEfectivo)) +
+      g('Ingresos por bancos', pesos(porBancos)) +
+      (mano > 0 ? g('Sin registrar el cobro', pesos(mano)) : '') +
+      g('TOTAL INGRESOS', pesos(total), true) +
+
+      `<hr>` +
+      grupo('Movimiento de caja física') +
+      g('Base inicial', pesos(base)) +
+      g('Entradas en efectivo', pesos(enEfectivo)) +
+      g('Gastos / retiros', pesos(gastos)) +
+      `<hr>` +
+      g('SALDO FINAL EN CAJA', pesos(saldo), true) +
+      (dif !== 0
+        ? g('Descuadre al contar', conSigno(dif), true)
+        : '') +
+      `<hr>` +
+
+      `<div class="gracias">Gracias</div>` +
+    `</section>`;
   }
 
   /* ---------- hoja 2: el punteo, pago por pago ----------

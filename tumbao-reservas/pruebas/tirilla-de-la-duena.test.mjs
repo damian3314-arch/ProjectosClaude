@@ -1,0 +1,210 @@
+/**
+ * HOJA 1 — la tirilla del cierre, tal como la dibujó la dueña.
+ *
+ * Este formato no lo diseñó nadie del lado del código: la dueña lo
+ * dibujó a mano en un rollo y lo mandó. Antes de eso el papel llevaba
+ * el arqueo con veredicto, el desglose de la plata del banco, el
+ * contador de personas, lo que quedaba por revisar y una firma; ella lo
+ * leyó y devolvió esta hoja, más corta y sin veredictos.
+ *
+ * Lo que esta prueba protege NO es que el papel sea bonito, es que
+ * SUME. La tirilla se archiva junto al efectivo y es lo único que queda
+ * del día sin abrir el sistema: si un renglón se cae del subtotal, o el
+ * saldo final no es lo que de verdad se dejó en el cajón, el error se
+ * descubre semanas después y ya no hay a quién preguntarle.
+ *
+ * De ahí que los subtotales se comprueben CONTRA LOS RENGLONES QUE SE
+ * IMPRIMEN y no contra un campo del servidor: es la única forma de que
+ * un concepto nuevo no pueda entrar en el desglose y quedarse fuera del
+ * total, que es exactamente como se pierde plata en un papel.
+ *
+ * Los casos que lo rompen:
+ *   · un concepto que nadie previó (una camiseta, un cumpleaños) tiene
+ *     que aparecer solo, con su bloque y dentro del total.
+ *   · una reserva apuntada a mano no es efectivo ni es banco —el cobro
+ *     no se registró en ninguna parte—, así que no puede sumarse a
+ *     ninguno de los dos sin que el papel jure tener una plata
+ *     localizable que no lo es.
+ *   · un descuadre al contar el cajón no estaba en el dibujo de ella,
+ *     pero tiene que salir cuando lo hay: sin eso un faltante no
+ *     aparece en ningún sitio del papel.
+ *
+ * El gancho window.__e2e lo pone instrumentar.mjs sobre una copia
+ * temporal de docs/admin.html. Sin argumentos:
+ *
+ *   node tirilla-de-la-duena.test.mjs
+ *
+ * Admite una ruta suelta para apuntar a otra copia del panel.
+ */
+import { chromium } from 'playwright-core';
+import { rutaDelPanel } from './instrumentar.mjs';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const p = await b.newPage({ viewport: { width: 430, height: 900 } });
+const errs = []; p.on('pageerror', e => errs.push(String(e)));
+await p.goto('file://' + rutaDelPanel());
+
+let fallos = 0;
+const ok = (n, c, extra = '') => { if (!c) fallos++;
+  console.log(`${c ? '✓' : '✗'} ${n}${extra ? '  → ' + extra : ''}`); };
+
+// El texto sale pegado (`innerText` sobre un #tirilla oculto no mete
+// saltos), así que se compara sobre la versión sin espacios: "6 cupos"
+// y "$90.000" quedan como "6cupos$90.000".
+const pintar = async (d) => {
+  const fajo = await p.evaluate(x => window.__e2e.tirillas(x), d);
+  const h = fajo.hojas.find(x => x.id === 'hoja-cierre') || { texto: '' };
+  return { fajo, texto: h.texto, junto: h.texto.replace(/\s/g, '') };
+};
+
+/* ── el día real: 1 de septiembre de 2026 ─────────────────────────
+   Los mismos números que la dueña escribió en su dibujo, verificados
+   contra producción. Si esta prueba pasa, el papel que sale de la
+   impresora es el papel que ella pidió. */
+const REAL = {
+  dia: '2026-09-01',
+  cerrado: true,
+  base_cop: 100000,
+  egreso_efectivo: 0,
+  cierre: { hora: '19:43', quien: 'Tania', retirado_cop: 140000,
+            dejado_cop: 100000, contado_cop: 240000, diferencia_cop: 0 },
+  entradas: {
+    pagina_transferencia_n: 6, pagina_transferencia_cop: 90000,
+    a_mano_n: 0, a_mano_cop: 0,
+    efectivo_n: 1, efectivo_cop: 15000,
+    recepcion_transferencia_n: 4, recepcion_transferencia_cop: 60000,
+  },
+  resumen_conceptos: [
+    { concepto: 'mensualidad', medio: 'transferencia', sentido: 'ingreso',
+      n: 4, valor_cop: 500000 },
+    { concepto: 'mensualidad', medio: 'efectivo', sentido: 'ingreso',
+      n: 1, valor_cop: 125000 },
+    { concepto: 'clase_suelta', medio: 'transferencia', sentido: 'ingreso',
+      n: 4, valor_cop: 60000 },
+    { concepto: 'clase_suelta', medio: 'efectivo', sentido: 'ingreso',
+      n: 1, valor_cop: 15000 },
+  ],
+  banco: { recibido_cop: 715000 },
+  conciliacion: { banco: [], banco_cop: 0, banco_hoy_cop: 465000,
+                  efectivo: [], efectivo_cop: 0,
+                  sin_enlazar: [], sin_enlazar_cop: 0, sin_pago: [] },
+};
+
+let { fajo, texto: t, junto: j } = await pintar(REAL);
+
+// ── la cabecera que ella dibujó ──────────────────────────────────
+ok('se titula TUMBAO · CIERRE DE CAJA',
+   /TUMBAO/.test(t) && /CIERRE DE CAJA/.test(t));
+ok('la fecha va con guiones y el día delante', /01-09-2026/.test(t),
+   'así la escribió ella, no 2026-09-01 ni 01/09/2026');
+ok('la hoja del cierre no se numera', !/HOJA 1 DE/i.test(t),
+   'su dibujo no lleva numeración');
+ok('y termina dando las gracias', /Gracias/.test(t));
+
+// ── los cupos, por la puerta por la que entraron ─────────────────
+ok('reservas por página, con sus cupos', /Reservasporpágina6cupos\$90\.000/.test(j));
+ok('reservas manuales salen aunque sean cero',
+   /Reservasmanuales0cupos\$0/.test(j),
+   'un renglón ausente se lee como "se me olvidó", no como "no hubo"');
+ok('los cupos de caja, partidos en efectivo y bancos',
+   /Cuposencaja/.test(j) && /Efectivo:1cupo\$15\.000/.test(j) &&
+   /Bancos:4cupos\$60\.000/.test(j));
+
+// ── lo que no es un cupo ─────────────────────────────────────────
+ok('las mensualidades llevan su propio bloque', /Mensualidades/.test(t));
+ok('partidas también en efectivo y bancos',
+   /Efectivo:1mensualidad\$125\.000/.test(j) &&
+   /Bancos:4mensualidades\$500\.000/.test(j),
+   'y en plural cuando son varias');
+
+// ── el resumen: lo que de verdad protege esta prueba ─────────────
+ok('los ingresos en efectivo suman los renglones de efectivo',
+   /Ingresosenefectivo\$140\.000/.test(j), '15.000 del cupo + 125.000 de la mensualidad');
+ok('los de bancos suman los de bancos',
+   /Ingresosporbancos\$650\.000/.test(j), '90.000 página + 60.000 caja + 500.000 mensualidades');
+ok('y el TOTAL es la suma de los dos',
+   /TOTALINGRESOS\$790\.000/.test(j), '140.000 + 650.000');
+
+// ── el cajón ─────────────────────────────────────────────────────
+ok('el movimiento de caja arranca en la base',
+   /Baseinicial\$100\.000/.test(j));
+ok('mete solo el efectivo, no lo del banco',
+   /Entradasenefectivo\$140\.000/.test(j),
+   'la transferencia no pasa por el cajón');
+ok('gastos y retiros van juntos, como en su dibujo',
+   /Gastos\/retiros\$140\.000/.test(j), '0 de gastos + 140.000 que se llevó al cerrar');
+ok('y el saldo final es lo que de verdad se dejó',
+   /SALDOFINALENCAJA\$100\.000/.test(j),
+   '100.000 + 140.000 − 140.000, que es el dejado_cop real');
+
+// ── un día limpio no enseña veredictos ───────────────────────────
+ok('sin descuadre no aparece ningún renglón de descuadre',
+   !/Descuadre/.test(t));
+ok('ni el arqueo viejo con su SÍ CUADRA',
+   !/SÍ CUADRA|NO CUADRA|CAJA 1|Se abrió con|Debía haber/.test(t));
+ok('ni las secciones que ella quitó',
+   !/INGRESOS DEL DÍA|POR REVISAR|DE ESO|Firma/.test(t));
+
+/* ── un concepto que nadie previó ─────────────────────────────────
+   Se vende una camiseta. Tiene que salir con su bloque y, sobre todo,
+   entrar en los dos subtotales: un concepto nuevo que aparezca en el
+   desglose pero no en el total es plata perdida en el papel. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  resumen_conceptos: [...REAL.resumen_conceptos,
+    { concepto: 'camiseta', medio: 'efectivo', sentido: 'ingreso',
+      n: 2, valor_cop: 50000 }] }));
+ok('un concepto nuevo se imprime solo, sin tocar el código',
+   /Camisetas/.test(t) && /Efectivo:2camisetas\$50\.000/.test(j));
+ok('y entra en el subtotal de efectivo',
+   /Ingresosenefectivo\$190\.000/.test(j), '140.000 + 50.000');
+ok('y en el TOTAL', /TOTALINGRESOS\$840\.000/.test(j), '790.000 + 50.000');
+ok('y también en el cajón, que es donde están esos billetes',
+   /Entradasenefectivo\$190\.000/.test(j) &&
+   /SALDOFINALENCAJA\$150\.000/.test(j));
+
+/* ── una reserva apuntada a mano ──────────────────────────────────
+   El cobro no quedó registrado en ninguna parte: ni en el cajón ni en
+   el banco. Sumarla a cualquiera de los dos haría que el papel jurara
+   tener una plata que nadie puede ir a buscar. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  entradas: { ...REAL.entradas, a_mano_n: 1, a_mano_cop: 15000 } }));
+ok('la apuntada a mano sale con su cupo', /Reservasmanuales1cupo\$15\.000/.test(j));
+ok('no se cuela en el efectivo', /Ingresosenefectivo\$140\.000/.test(j));
+ok('ni en los bancos', /Ingresosporbancos\$650\.000/.test(j));
+ok('va en su propio renglón, dicho con todas las letras',
+   /Sinregistrarelcobro\$15\.000/.test(j));
+ok('pero SÍ suma en el total', /TOTALINGRESOS\$805\.000/.test(j),
+   '790.000 + 15.000: el papel no puede perderla');
+ok('y no toca el cajón, que solo cuenta billetes',
+   /SALDOFINALENCAJA\$100\.000/.test(j));
+
+/* ── el cajón no cuadró ───────────────────────────────────────────
+   Esto no estaba en el dibujo. Sale solo cuando lo hay: en un día
+   normal la hoja queda tal cual ella la pidió, y el día que falta
+   plata es lo último que se lee antes de firmar. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  cierre: { ...REAL.cierre, contado_cop: 235000, diferencia_cop: -5000 } }));
+ok('un faltante sí aparece', /Descuadre al contar/.test(t));
+ok('con el signo delante del peso, que en papel se lee bien',
+   /−\$5\.000/.test(t) && !/\$-5\.000/.test(t));
+
+/* ── un día todavía sin cerrar ────────────────────────────────────
+   Sin cierre no hay retiro ni conteo: la hoja se imprime igual (se usa
+   para mirar cómo va el día) y no puede inventarse un descuadre. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  cerrado: false, cierre: {} }));
+ok('sin cerrar el día la hoja sale igual', /TOTALINGRESOS\$790\.000/.test(j));
+ok('sin retiro, el cajón guarda todo lo que entró',
+   /SALDOFINALENCAJA\$240\.000/.test(j), '100.000 de base + 140.000');
+ok('y no se inventa un descuadre', !/Descuadre/.test(t));
+
+// ── el fajo sigue siendo dos hojas ───────────────────────────────
+({ fajo } = await pintar(REAL));
+ok('el cierre son dos hojas', fajo.n === 2,
+   fajo.hojas.map(h => h.id).join(' '));
+ok('la primera es la de ella', fajo.hojas[0].id === 'hoja-cierre');
+ok('y la segunda el punteo', fajo.hojas[1].id === 'hoja-punteo');
+
+ok('sin errores de JS', errs.length === 0, errs.join(' | '));
+console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
+await b.close();
+process.exit(fallos ? 1 : 0);

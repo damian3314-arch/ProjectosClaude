@@ -1051,112 +1051,82 @@ const t = hojaTexto('hoja-cierre');
   ? bien('la tirilla lleva encabezado')
   : falla('el encabezado de la tirilla', t.slice(0, 80));
 
-// Se archivan sueltas: sin el número de hoja, tres papeles de dos días
-// distintos encima del mostrador no se distinguen.
-/HOJA 1 DE 2/.test(t) && /Hoja 1 de 2/.test(t)
-  ? bien('la hoja dice cuál es, arriba y en el pie')
-  : falla('la numeración de la hoja 1', t.slice(0, 120));
-
-/* Tiene que responder lo que la dueña cruza contra su cuaderno de la
- * puerta: cuánta gente de clase suelta entró hoy y por cuál de las tres
- * puertas — no solo un total de entradas y salidas.
+/* LA TIRILLA ES LA QUE DIBUJÓ LA DUEÑA.
  *
- * LOS RÓTULOS CAMBIARON (eac3860, 507046b). Antes las tres puertas se
- * llamaban "Efectivo", "Transferencia, recepción" y "Transferencia,
- * página": nombraban el MEDIO de pago, que a quien cuadra el papel no
- * le dice nada. Ahora se llaman por de dónde vino la persona
- * —"Reservas página", "Reservas manuales", "Pagos en caja"—, y las dos
- * de mostrador van juntas en una sola línea porque en el mostrador se
- * cobra igual en efectivo que por transferencia.
+ * Aquí se comprobaban el desglose de las tres puertas, el contador de
+ * personas, el arqueo con su "SÍ CUADRA", los depósitos registrados,
+ * la sección de por revisar y la firma. Nada de eso está ya en el
+ * papel: la dueña lo leyó impreso y devolvió un dibujo mucho más
+ * corto, sin veredictos, y ese dibujo es ahora el formato.
  *
- * Se comprueban los tres rótulos y no uno: si volvieran a partirse por
- * medio de pago, o desapareciera una de las tres puertas, el papel
- * seguiría cuadrando y estaría escondiendo gente. */
-/INGRESOS DEL DÍA/.test(t) && /Reservas página/.test(t)
- && /Reservas manuales/.test(t) && /Pagos en caja/.test(t)
- && /= Entradas/.test(t) && /SALIDAS/.test(t) && /= Salidas/.test(t)
-  ? bien('desglosa las tres puertas por las que entró alguien, no solo un total')
-  : falla('el desglose de entradas', t.slice(0, 300));
-
-// Cada puerta con su cantidad de gente y su plata. El texto sale pegado
-// (`#tirilla` está oculto, así que se lee textContent y no hay saltos de
-// línea), de ahí el "manuales1" sin espacio.
-/Reservas página2 · \$30\.000/.test(t) && /Reservas manuales1 · \$15\.000/.test(t)
- && /Pagos en caja4 · \$60\.000/.test(t)
-  ? bien('cada puerta dice cuánta gente y cuánta plata',
-         (t.match(/Reservas página[^C]*/) || [])[0])
-  : falla('las cifras de cada puerta', t.slice(0, 300));
-
-/* LA CUENTA DE PERSONAS LA MANDA EL SERVIDOR, NO LA SUMA DEL PAPEL.
+ * No se relajaron las aserciones: se cambiaron por las del papel que
+ * de verdad sale. Lo que esta prueba vigila es que ese papel SUME —el
+ * detalle fino de cada renglón lo cubre tirilla-de-la-duena—, porque
+ * la tirilla se archiva junto al efectivo y es lo único que queda del
+ * día sin abrir el sistema.
  *
- * El simulacro manda personas_n = 8 con unas casillas que suman 7: es
- * el caso de la 0059 —quien entró con una clase reprogramada pagó otro
- * día y no está en ninguna casilla de dinero de hoy—. Si el panel
- * volviera a sumar las casillas imprimiría 7, que es el error del 28 de
- * agosto: el papel decía 10 y por la puerta habían entrado 11. */
-/8 personas a clase suelta/.test(t) && !/7 personas a clase suelta/.test(t)
-  ? bien('la gente que entró la cuenta el servidor, no la suma de las casillas')
-  : falla('la cuenta de personas', t.slice(0, 300));
+ * El simulacro de este archivo tiene un cumpleaños de $250.000 en
+ * efectivo y una reserva apuntada a mano: los dos casos que más
+ * fácilmente se caen de un total. */
+/Fecha: ?05-08-2026/.test(t)
+  ? bien('la fecha va como ella la escribió, con guiones')
+  : falla('la fecha de la tirilla', t.slice(0, 120));
 
-// El signo, delante del peso. "$-5.000" en papel se lee mal.
+/Reservas por página/.test(t) && /Reservas manuales/.test(t)
+ && /Cupos en caja/.test(t) && /Efectivo:/.test(t) && /Bancos:/.test(t)
+  ? bien('los cupos salen por la puerta por la que entraron')
+  : falla('los cupos en la tirilla', t.slice(0, 300));
+
+// Un concepto que no es un cupo se imprime solo, leyendo
+// `resumen_conceptos`. Sin esto, el día que se venda algo nuevo el
+// total dejaría de cuadrar y nadie sabría por qué.
+/Cumpleaños/.test(t) && /Efectivo: 1 cumpleaños\$250\.000/.test(t)
+ && /Mensualidades/.test(t) && /Bancos: 1 mensualidad\$125\.000/.test(t)
+  ? bien('los conceptos que no son cupos aparecen solos, con su bloque')
+  : falla('los otros conceptos', t.slice(0, 400));
+
+/* EL PAPEL TIENE QUE SUMAR. Los tres subtotales salen de los renglones
+ * de arriba, no de un campo aparte del servidor:
+ *
+ *   efectivo  45.000 (cupos) + 250.000 (cumpleaños)   = 295.000
+ *   bancos    30.000 (página) + 15.000 (caja) + 125.000 = 170.000
+ *   a mano    15.000  ← ni cajón ni banco: su propio renglón
+ *   TOTAL                                              = 480.000
+ */
+/Ingresos en efectivo\$295\.000/.test(t) && /Ingresos por bancos\$170\.000/.test(t)
+ && /TOTAL INGRESOS\$480\.000/.test(t)
+  ? bien('los subtotales suman exactamente los renglones impresos')
+  : falla('el resumen de ingresos', t.slice(0, 500));
+
+// La apuntada a mano no es efectivo ni es banco —el cobro no se
+// registró en ninguna parte—, así que va en su propio renglón. Pero sí
+// suma en el total: el papel no puede perderla.
+/Sin registrar el cobro\$15\.000/.test(t)
+  ? bien('lo apuntado a mano no se cuela en efectivo ni en bancos')
+  : falla('la reserva sin cobro registrado', t.slice(0, 500));
+
+// El cajón solo cuenta billetes: 95.000 de base + 295.000 que entraron
+// en efectivo − 50.000 de gastos y retiros = 340.000.
+/Base inicial\$95\.000/.test(t) && /Entradas en efectivo\$295\.000/.test(t)
+ && /Gastos \/ retiros\$50\.000/.test(t) && /SALDO FINAL EN CAJA\$340\.000/.test(t)
+  ? bien('el movimiento del cajón cierra en su saldo')
+  : falla('el movimiento de caja física', t.slice(0, 600));
+
+// El signo delante del peso: "$-5.000" en papel se lee mal.
 !/\$-/.test(t)
   ? bien('los negativos salen como −$5.000, no $-5.000')
   : falla('el signo del negativo', (t.match(/\$-[\d.]+/) || [])[0]);
 
-/* El arqueo del efectivo, que antes se titulaba "AL ABRIR" y ahora es
- * la sección "CAJA 1". Se dejó de comprobar solo el conteo de la
- * apertura y se comprueban los tres números que hacen falta para que el
- * veredicto de abajo signifique algo: con cuánto se abrió, cuánto
- * debería haber y cuánto se contó. Sin "Debía haber" el "NO CUADRA" es
- * una palabra sin nada contra qué comprobarla. */
-// "Se abrió con" y no "Base al abrir": la dueña tachó el rótulo viejo
-// en el margen del papel del 29 de agosto. "Base" es palabra de
-// contador; quien abre la caja a las nueve la abre con algo.
-/CAJA 1/.test(t) && /Se abrió con\$95\.000/.test(t)
- && /Debía haber/.test(t) && /Se contó/.test(t)
-  ? bien('el arqueo trae con cuánto se abrió, cuánto debía haber y cuánto se contó',
-         (t.match(/CAJA 1.*?Se contó\$[\d.]+/) || [])[0])
-  : falla('el arqueo en la tirilla', t.slice(0, 300));
+// Lo que ella quitó tiene que seguir fuera. Si alguien devuelve una de
+// estas secciones "porque hace falta", que sea una decisión y no un
+// descuido: esta línea lo convierte en un fallo visible.
+!/INGRESOS DEL DÍA|CAJA 1|Se abrió con|Debía haber|SÍ CUADRA|NO CUADRA|POR REVISAR|DE ESO|Firma/.test(t)
+  ? bien('las secciones que la dueña quitó siguen fuera')
+  : falla('volvió una sección que ella había quitado', t.slice(0, 400));
 
-/* SE BORRÓ: "trae los cuatro números de AdminGym".
- *
- * Comprobaba "COMPARAR CON ADMINGYM" y "DINERO EN CAJA" en la tirilla.
- * Esa sección ya no existe en `pintarTirilla`: se quitó a propósito
- * —el comentario del código lo dice, "cada seccion extra era una cifra
- * mas que interpretar en el unico momento del dia en que hay prisa"— y
- * los cuatro números de AdminGym viven ahora solo en la pantalla del
- * cierre, que es donde se copian. No se relajó la aserción: se borró,
- * porque lo que comprobaba ya no debe estar. Lo que sí sigue
- * comprobándose, unas líneas más arriba, es que la PANTALLA del cierre
- * siga nombrando AdminGym ("el cierre muestra los nombres de AdminGym").
- *
- * En su lugar va lo que sí ocupa ese sitio en el papel de hoy, y con el
- * rótulo importa cuál: el código lleva un aviso en mayúsculas de no
- * devolver "BANCOLOMBIA REPORTÓ HOY", porque esa cifra no es lo que
- * dice el extracto sino lo que el sistema alcanzó a registrar, y con el
- * nombre viejo el papel juraba que el banco había reportado de menos.
- * Por eso se comprueba también que el rótulo viejo NO esté. */
-/DEPÓSITOS REGISTRADOS HOY/.test(t) && /Total registrado\$330\.000/.test(t)
- && !/BANCOLOMBIA REPORTÓ/i.test(t) && !/Entró al banco/i.test(t)
-  ? bien('los depósitos del día se llaman registrados, no reportados por el banco')
-  : falla('los depósitos registrados en la tirilla', t.slice(0, 300));
-
-// La razón de ser del cierre: lo que hay que buscar en el extracto a
-// mano. Sin depósitos por verificar tiene que decirlo, no dejar el
-// hueco en blanco — un espacio vacío se lee como "se me olvidó".
-/POR REVISAR/.test(t) && /NADA POR REVISAR/.test(t)
-  ? bien('si no hay nada que revisar, lo dice')
-  : falla('la sección de por revisar', t.slice(0, 300));
-
-// El veredicto tiene que verse solo, sin tener que restar nada.
-/SÍ CUADRA|NO CUADRA/.test(t)
-  ? bien('dice si cuadra o no, en una palabra',
-         (t.match(/SÍ CUADRA[^—]*|NO CUADRA[^—]*—[^A-Z]*/) || [])[0])
-  : falla('el veredicto de cuadre', t.slice(0, 300));
-
-/Firma/.test(t)
-  ? bien('y una línea para firmar') : falla('la firma');
-
+/Gracias/.test(t)
+  ? bien('y el papel termina dando las gracias')
+  : falla('el cierre de la tirilla');
 // En pantalla no se ve: solo existe al imprimir.
 (await pagina.locator('#tirilla').isHidden())
   ? bien('en pantalla la tirilla no estorba')
@@ -1188,37 +1158,21 @@ const p3 = hojaTexto('hoja-punteo');
   ? bien('el punteo separa lo que se busca en el banco de lo que está en el cajón')
   : falla('efectivo contra transferencia', p3.slice(0, 300));
 
-/* DE ESO, QUÉ ERA CADA PESO — AHORA EN LA HOJA 1 (0064).
+/* EL DESGLOSE DE LA PLATA DEL BANCO YA NO ESTÁ EN LA HOJA 1.
  *
- * Esto era la hoja 2 del fajo y la dueña la eliminó en cuanto la vio
- * impresa: una página entera para un desglose de seis renglones, que
- * además obligaba a pasar el papel adelante y atrás porque el total que
- * desglosaba estaba en la hoja anterior. Ahora va pegado a ese total.
- *
- * Lo que se comprueba es que el desglose siga PEGADO a su total y no
- * suelto en cualquier parte de la hoja: separados vuelven a ser dos
- * cifras que no se sabe si se suman o se explican. */
-/DEPÓSITOS REGISTRADOS HOY/.test(t) && /DE ESO/.test(t)
- && t.indexOf('Total registrado') < t.indexOf('DE ESO')
- && t.indexOf('DE ESO') < t.indexOf('POR REVISAR')
-  ? bien('el desglose de la plata va pegado al total que desglosa')
-  : falla('el bloque DE ESO en la hoja 1', t.slice(0, 400));
+ * Fue una hoja entera, luego un bloque "DE ESO" dentro del cierre, y
+ * al final la dueña dibujó el papel sin él. La pregunta que contestaba
+ * —de lo que entró hoy, cuánto se supo nombrar y cuánto no— se
+ * responde ahora al final del punteo, que es donde se concilia contra
+ * el extracto y donde de verdad hace falta. */
+/CONTRA EL EXTRACTO DE HOY/.test(p3) && /Total registrado hoy/.test(p3)
+ && /Identificado aquí/.test(p3)
+  ? bien('lo que quedó sin identificar se responde en el punteo')
+  : falla('el cuadre contra el extracto', p3.slice(0, 400));
 
-// Cupos Y depósitos, en ese orden: tres amigas con un solo pago son 3
-// cupos y 1 renglón del extracto. Si dijera solo "3" habría que buscar
-// tres renglones que no existen.
-// Sale pegado (`textContent` junta las dos mitades del renglón, sin
-// espacio entre el rótulo y la cifra), de ahí el "hoy5" y el "futuras3".
-/Clases de hoy5 · \$75\.000/.test(t)
- && /Clases futuras3 cupos · 1 depósito · \$45\.000/.test(t)
-  ? bien('lo pagado por adelantado va en cupos Y en renglones del extracto')
-  : falla('el desglose por concepto', t.slice(0, 500));
-
-// Con todo identificado el papel lo dice en positivo. Un renglón
-// "Sin identificar $0" se lee como algo roto, no como un día limpio.
-/Sin identificar: nada ✓/.test(t) && !/Sin identificar \$0/.test(t)
-  ? bien('sin hueco, el papel lo dice en positivo y no imprime un cero')
-  : falla('el renglón de sin identificar', t.slice(0, 500));
+!/DE ESO/.test(t)
+  ? bien('y ya no ocupa sitio en la tirilla de la dueña')
+  : falla('el bloque DE ESO volvió a la hoja 1', t.slice(0, 300));
 
 // El ancho es de rollo, no de folio: a 210mm la impresora del mostrador
 // la parte en dos. Se lee el texto del <style>, no el CSSOM: las reglas

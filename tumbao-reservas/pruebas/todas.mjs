@@ -30,7 +30,7 @@ const SUITES = [
   'juntar-depositos',
   'pulso-ingesta',
   'tarjeta-sabado',
-  'tirilla-cuadre-puerta-banco',
+  'tirilla-de-la-duena',
   'tirilla-cuando-pagaron',
 ];
 

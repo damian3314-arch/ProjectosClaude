@@ -1,5 +1,5 @@
 /**
- * HOJA 2 DE 2 — "el punteo, pago por pago".
+ * LA SEGUNDA HOJA — "el punteo, pago por pago".
  *
  * La hoja que se pone al lado del extracto de Bancolombia para ir
  * tachando renglones. Lo que no puede fallar es que el papel sume lo
@@ -23,8 +23,10 @@
  * afirmar. De ahí que se lea `hojas.find(...)` y no `texto`.
  *
  * Fueron tres hojas. La de en medio ("qué era la plata del día") se
- * eliminó y su desglose vive ahora dentro de la hoja 1; lo comprueba
- * tirilla-cuadre-puerta-banco.
+ * eliminó, y la primera es ahora el papel que dibujó la dueña —más
+ * corto, sin veredictos—; lo comprueba tirilla-de-la-duena. Esta hoja
+ * sobrevivió a esa poda porque es la única con la que se puede
+ * conciliar contra el extracto del banco.
  *
  * El gancho window.__e2e lo pone instrumentar.mjs sobre una copia
  * temporal de docs/admin.html. Sin argumentos:
@@ -96,10 +98,16 @@ ok('el punteo es una de las dos hojas del fajo',
 ok('y es la última', fajo.hojas[1].id === 'hoja-punteo');
 ok('la hoja del medio ya no se imprime',
    !fajo.hojas.some(h => h.id === 'hoja-plata'));
-ok('se dice a sí misma cuál es', /HOJA 2 DE 2/.test(t));
+// Ya no se numera "HOJA 2 DE 2": la hoja 1 es el dibujo de la dueña y
+// no lleva número, así que anunciar una numeración que la otra no
+// tiene hace buscar un número que no existe. Lo que sí hace falta es
+// que esta hoja diga QUÉ es: sale de la misma impresora, detrás del
+// cierre, y sin rótulo se confunde con él.
+ok('dice qué papel es, arriba', /EL PUNTEO, PAGO POR PAGO/.test(t));
 ok('y lo repite en el pie, que es lo que asoma en la carpeta',
-   /Hoja 2 de 2/.test(t));
-ok('se titula EL PUNTEO, PAGO POR PAGO', /EL PUNTEO, PAGO POR PAGO/.test(t));
+   (t.match(/EL PUNTEO, PAGO POR PAGO/g) || []).length >= 2);
+ok('sin numerarse, porque la hoja 1 tampoco se numera',
+   !/HOJA \d DE \d/i.test(t));
 
 // ── efectivo contra transferencia, antes de buscar nada ──────────
 // Lo que pidió el dueño: que el papel PRECISE qué es efectivo y qué
@@ -187,10 +195,12 @@ ok('y lo distingue de la mensualidad cobrada en recepción',
 // ser otro papel hay que comprobarlo dentro del mismo fajo: si el
 // arqueo se colara aquí, habría dos cajones distintos en una impresión.
 ok('no trae el arqueo del cajón', !/CAJA 1/.test(t));
-ok('aunque el fajo sí lo traiga, en la hoja 1', /CAJA 1/.test(cierre));
+ok('y la hoja 1 tampoco: la dueña quitó ese arqueo',
+   !/CAJA 1/.test(cierre));
 ok('no trae el veredicto de si cuadró el cajón',
    !/SÍ CUADRA|NO CUADRA/.test(t));
-ok('y ese veredicto sí está en la hoja 1', /SÍ CUADRA/.test(cierre));
+ok('ni en la hoja 1, que ahora cierra en su saldo',
+   !/SÍ CUADRA/.test(cierre) && /SALDO FINAL EN CAJA/.test(cierre));
 
 // ── un cierre viejo no se lleva por delante el punteo ────────────
 // Este fixture no trae `cuadre` (la 0064), así que la hoja 1 sale sin
@@ -199,8 +209,8 @@ ok('y ese veredicto sí está en la hoja 1', /SÍ CUADRA/.test(cierre));
 // el extracto. Tiene que salir entera aunque a la otra le falte algo.
 ok('sin `cuadre`, el punteo sale completo igual',
    /BUSCAR EN EL EXTRACTO/.test(t) && /185\.000/.test(t));
-ok('y la hoja 1 lo dice en vez de fingir un desglose',
-   /no hay desglose/.test(cierre) && !/DE ESO/.test(cierre));
+ok('y la hoja 1 sale igual, que no depende de ese dato',
+   /TOTAL INGRESOS/.test(cierre) && !/DE ESO/.test(cierre));
 
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
