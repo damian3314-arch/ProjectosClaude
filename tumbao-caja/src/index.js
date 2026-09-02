@@ -1116,12 +1116,40 @@ export default {
           return json({ ok: false, error: 'PAGO_INVALIDO',
             mensaje: 'No se reconoce ese depósito. Recarga la lista.' }, 400, origen);
         }
+        // A cuánta gente cubre este cobro. Tres personas que llegan
+        // juntas y pagan $45.000 son UN movimiento y TRES entradas; sin
+        // esto el cierre contaba una sola y la cuenta de gente del día
+        // no cuadraba nunca. El valor no se teclea aparte: es
+        // cantidad × precio, así que los dos números no se pueden
+        // contradecir. Se valida aquí y NO se confía en el navegador:
+        // Postgres lo vuelve a comprobar, pero un "3 personas" que
+        // llegue como texto raro no puede convertirse en un cobro.
+        const cantidad = b.cantidad === undefined || b.cantidad === null || b.cantidad === ''
+          ? 1
+          : parseInt(String(b.cantidad).replace(/[^\d]/g, ''), 10);
+        if (!Number.isFinite(cantidad) || cantidad < 1) {
+          return json({ ok: false, error: 'CANTIDAD_INVALIDA',
+            mensaje: 'La cantidad tiene que ser al menos 1.' }, 400, origen);
+        }
+        // El mismo criterio que el tope del valor: alto pero real. La
+        // clase más grande tiene treinta cupos.
+        if (cantidad > 50) {
+          return json({ ok: false, error: 'CANTIDAD_SOSPECHOSA',
+            mensaje: 'Cincuenta personas en un solo cobro no es un cobro, '
+                   + 'es un error de tecleo. Revísalo.' }, 400, origen);
+        }
         const args = {
           p_token: token, p_sentido: sentido, p_concepto: concepto,
           p_valor: valor,
           p_medio: b.medio === 'transferencia' ? 'transferencia' : 'efectivo',
           p_nota: b.nota ? String(b.nota).slice(0, 200) : null,
         };
+        // Igual que con p_pago_id: solo se manda cuando de verdad hay
+        // algo que decir. PostgREST resuelve la función por los
+        // parámetros que recibe, así que mandar p_cantidad siempre
+        // obligaría a tener ya aplicada la migración 0065 — y hasta
+        // entonces no se podría ni cobrar.
+        if (cantidad > 1) args.p_cantidad = cantidad;
         // Solo se manda cuando de verdad hay depósito escogido. PostgREST
         // resuelve la función por los parámetros que recibe: mandar
         // p_pago_id siempre obligaría a que la migración 0027 ya
@@ -1188,6 +1216,33 @@ export default {
             mensaje: 'Escoge al menos dos depósitos para juntarlos.' }, 400, origen);
         }
         r = await rpc(env, 'caja_fusionar_pagos', { p_token: token, p_ids: ids });
+
+      } else if (ruta === '/api/enlazar-deposito') {
+        // El depósito que llegó tarde. La cajera cobró una mensualidad
+        // por transferencia y la registró a mano con la clienta
+        // delante; horas después llegó la alerta del banco y entró un
+        // depósito sin dueño. Nadie los cruzaba, así que esa plata
+        // quedaba contada en la Caja Y persiguiéndose en la tirilla:
+        // es lo que más descuadraba las cuentas del día.
+        //
+        // Postgres decide todo lo que importa —que el movimiento sea de
+        // hoy, que no esté ya enlazado, que no sea efectivo, que el
+        // depósito esté libre y que alcance—; aquí solo se comprueba
+        // que los dos ids tengan forma de uuid, para no mandar basura
+        // a la RPC.
+        const mov = String(b.mov_id || '');
+        if (!/^[0-9a-f-]{36}$/i.test(mov)) {
+          return json({ ok: false, error: 'ID_INVALIDO',
+            mensaje: 'No se reconoce ese movimiento. Recarga la caja del día.' }, 400, origen);
+        }
+        const dep = String(b.pago_id || '');
+        if (!/^[0-9a-f-]{36}$/i.test(dep)) {
+          return json({ ok: false, error: 'PAGO_INVALIDO',
+            mensaje: 'No se reconoce ese depósito. Recarga la lista.' }, 400, origen);
+        }
+        r = await rpc(env, 'caja_enlazar_deposito', {
+          p_token: token, p_mov_id: mov, p_pago_id: dep,
+        });
 
       } else if (ruta === '/api/separar-pago') {
         const id = String(b.id || '');
