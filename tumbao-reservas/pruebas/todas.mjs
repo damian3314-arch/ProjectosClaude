@@ -24,6 +24,7 @@ import { panelInstrumentado, PANEL } from './instrumentar.mjs';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 
 const SUITES = [
+  'caja-contador-y-enlace',
   'confirmar-pide-referencia',
   'deposito-a-caja',
   'juntar-depositos',

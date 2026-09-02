@@ -268,6 +268,122 @@ const GANCHO = `
         });
       },
 
+      /* ── la Caja: conceptos, contador y lista del día ─────────── */
+
+      // El día de la caja, sin salir a la red. \`traido\` se marca por lo
+      // mismo que en sembrar(): tocar cualquier cosa llama a cargarCaja()
+      // sin forzar, y sin esto pediría el día y pisaría el sembrado.
+      //
+      // La lista de movimientos se abre a propósito: nace cerrada
+      // (cajaMovsAbiertos) y las pruebas que la leen la quieren pintada.
+      sembrarCaja(dia) {
+        mostrar('caja');
+        cajaDatos = dia || null;
+        traido.set('caja', Date.now());
+        cajaMovsAbiertos = true;
+        pintarCaja();
+        return $$('#p-caja .caja-btn').length;
+      },
+
+      // Los nombres de los conceptos que se pueden escoger, en orden.
+      // El nombre está en el \`.q\` de cada tarjeta; el \`.v\` es el precio.
+      conceptos() {
+        return $$('#p-caja .caja-btn').map(b => txt(b.querySelector('.q')));
+      },
+
+      // Cada línea de la lista del día, con los espacios normalizados:
+      // el HTML mete saltos entre los <span> y "3 × Clase suelta" llega
+      // partido en tres pedazos.
+      movimientos() {
+        return $$('#caja-lista .mov')
+          .map(m => m.textContent.replace(/\\s+/g, ' ').trim());
+      },
+
+      // Abrir el modal por el nombre del concepto, que es lo que ve
+      // quien lo usa. El clic va a la tarjeta entera: el panel escucha
+      // por delegación en #p-caja.
+      tocarConcepto(nombre) {
+        const b = $$('#p-caja .caja-btn')
+          .find(x => txt(x.querySelector('.q')) === nombre);
+        if (!b) return false;
+        b.click();
+        return true;
+      },
+
+      // Todo lo del modal de registrar de una vez. \`editable\` es lo que
+      // de verdad importa del contador: el valor se calcula y NO se
+      // teclea, así que readOnly es la comprobación, no el valor.
+      modal() {
+        const v = $('#modal-valor');
+        return {
+          abierto: seVe($('#modal-caja')),
+          texto: txt($('#modal-texto')),
+          valor: v.value,
+          editable: !v.readOnly,
+          contadorVisible: seVe($('#modal-cantidad')),
+          cantidad: txt($('#cant-n')),
+          resumen: txt($('#cant-resumen')),
+          masApagado: $('#cant-mas').disabled,
+          menosApagado: $('#cant-menos').disabled,
+        };
+      },
+
+      // El + y el − del contador, n veces cada uno.
+      mas(n) {
+        for (let i = 0; i < (n || 1); i++) $('#cant-mas').click();
+        return txt($('#cant-n'));
+      },
+      menos(n) {
+        for (let i = 0; i < (n || 1); i++) $('#cant-menos').click();
+        return txt($('#cant-n'));
+      },
+
+      guardar() {
+        $('#modal-guardar').click();
+      },
+
+      /* ── el depósito que llegó tarde ──────────────────────────── */
+
+      // "Ya lo registré" del depósito i. Es la acción CONTRARIA a tocar
+      // la fila: no crea un movimiento, enlaza uno que ya existe.
+      yaLoRegistre(i) {
+        const b = $$('#sin-dueno [data-yalo]')[i];
+        if (!b) return false;
+        b.click();
+        return true;
+      },
+
+      // El panel de escoger el cobro. \`vacio\` es el texto de cuando no
+      // hay ninguno enlazable, que tiene que decir por qué y no salir
+      // como una lista vacía.
+      enlace() {
+        const c = $('#enl-panel');
+        return {
+          abierto: !!c,
+          opciones: $$('#enl-panel [data-enlazar-mov]')
+            .map(b => b.textContent.replace(/\\s+/g, ' ').trim()),
+          vacio: txt(c && c.querySelector('.enl-vacio')),
+          texto: c ? c.textContent.replace(/\\s+/g, ' ').trim() : '',
+          hayCancelar: !!$('#enl-cancelar'),
+        };
+      },
+
+      escogerCobro(i) {
+        const b = $$('#enl-panel [data-enlazar-mov]')[i];
+        if (!b) return false;
+        b.click();
+        return true;
+      },
+
+      // Los avisos flotantes, el más nuevo primero (nota() los antepone).
+      // Es donde salen el sobrante y los mensajes de error de Postgres.
+      avisos() {
+        return $$('#avisos .nota').map(n => ({
+          clase: n.className,
+          texto: n.textContent.replace(/\\s+/g, ' ').trim(),
+        }));
+      },
+
       /* ── las tarjetas de clase del tablero ────────────────────── */
 
       // tarjetaClase(c) devuelve HTML suelto; pintarTablero lo mete en

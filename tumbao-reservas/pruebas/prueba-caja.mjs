@@ -336,9 +336,15 @@ visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el pan
 
 /* Los botones con los que se registra la plata, uno por concepto.
  *
- * ERAN 9 Y AHORA SON 11, Y ESTÁ BIEN: d6dc548 añadió "Media mensualidad"
+ * ERAN 9 Y LUEGO 11, Y ESTÁ BIEN: d6dc548 añadió "Media mensualidad"
  * y "Camiseta" a CONCEPTOS a propósito, sin valor sugerido porque
  * todavía no tienen tarifa. No sobra ninguno ni se duplicó nada.
+ *
+ * Y AHORA SON 10: se fue "Otro ingreso". Era el cajón de sastre donde
+ * caían los $15.000 que nadie quiso buscar en la lista, y el cierre no
+ * los contaba como clase suelta — así se perdía la cuenta de gente del
+ * día sin dejar rastro. Los movimientos viejos que lo tienen guardado
+ * se siguen pintando con su nombre; lo que se quitó es poder escogerlo.
  *
  * Se comprueba la LISTA y no el número. Un contador solo dice "son
  * once" y se lo cree igual si un concepto desaparece y otro se
@@ -346,7 +352,7 @@ visible ? bien('la pestaña Caja abre') : falla('la pestaña Caja abre', 'el pan
  * justo el error que hay que ver. Con los rótulos, además, el fallo
  * dice qué cambió en vez de dejar dos números que no explican nada. */
 const ROTULOS = ['Clase suelta', 'Media mensualidad', 'Mensualidad',
-                 'Cumpleaños', 'Camiseta', 'Otro ingreso',
+                 'Cumpleaños', 'Camiseta',
                  'Profesores', 'Cafetería', 'Aseo', 'Papelería', 'Otra salida'];
 const rotulos = (await pagina.locator('.caja-btn .q').allInnerTexts()).map(t => t.trim());
 rotulos.join('|') === ROTULOS.join('|')
@@ -638,6 +644,21 @@ await pagina.waitForTimeout(250);
   ? bien('buscar por nombre deja un solo candidato de 75')
   : falla('buscar por nombre', `quedaron ${await pagina.locator('.dep').count()}`);
 
+// Escoger el depósito trae el valor del banco cuando el concepto se
+// teclea a mano: si la cajera dejó otra cifra, Postgres rechaza el
+// enlace, así que mejor que cuadre desde aquí.
+//
+// Esto se comprueba en Mensualidad y ya no en Clase suelta: desde el
+// contador, una clase suelta vale cantidad × $15.000 y su campo está
+// bloqueado a propósito. No se pisa nada ahí, y por eso el caso se mira
+// donde el valor todavía se escribe.
+await pagina.fill('#modal-valor', '99999');
+await pagina.locator('.dep').first().click();
+await pagina.waitForTimeout(200);
+(await pagina.inputValue('#modal-valor')) === '15000'
+  ? bien('escoger el depósito trae el valor del banco')
+  : falla('el valor del depósito', await pagina.inputValue('#modal-valor'));
+
 // Buscando por valor salen el que cuadra exacto Y unos pocos que
 // alcanzan aunque valgan más: desde la 0039 un depósito de $30.000
 // puede pagar una clase de $15.000.
@@ -704,14 +725,20 @@ const viejo = (await pagina.locator('.dep').first().innerText()).replace(/\s+/g,
 await pagina.fill('#modal-dep-buscar', 'camila');
 await pagina.waitForTimeout(250);
 
-// Escogerlo trae el valor del banco: si la cajera teclea otra cosa,
-// Postgres rechaza el enlace, así que mejor que aquí ya cuadre.
-await pagina.fill('#modal-valor', '99999');
+// En Clase suelta el valor lo manda el contador: una clase son $15.000
+// y el campo está bloqueado. Escoger el depósito NO lo pisa —ni hacia
+// arriba ni hacia abajo— porque el monto y la cuenta de gente tienen
+// que seguir diciendo lo mismo. Que aquí cuadre con el banco es
+// coincidencia buscada: una clase suelta vale exactamente lo que llegó.
 await dep.click();
 await pagina.waitForTimeout(200);
 (await pagina.inputValue('#modal-valor')) === '15000'
-  ? bien('escoger el depósito trae el valor del banco')
-  : falla('el valor del depósito', await pagina.inputValue('#modal-valor'));
+  ? bien('con el contador, el depósito no pisa el valor calculado')
+  : falla('el valor calculado de la clase suelta', await pagina.inputValue('#modal-valor'));
+
+(await pagina.locator('#modal-valor').evaluate(el => el.readOnly))
+  ? bien('y ese valor no se puede teclear a mano')
+  : falla('el valor de la clase suelta', 'se dejó editar');
 
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(800);

@@ -272,6 +272,37 @@ const CONFIG = {
   }
   #sin-dueno .partes .separar{font-size:.7rem;min-height:1.8rem;padding:.2rem .55rem}
 
+  /* ---------- "Ya lo registré" ----------
+     La fila entera del depósito CREA un movimiento nuevo. Esto hace lo
+     contrario: busca el movimiento que ya existe y le pega el depósito.
+     Confundir las dos es exactamente el doble conteo que se está
+     tratando de cerrar, así que no puede parecerse: va debajo, pequeña,
+     sangrada bajo su depósito y sin el borde de botón grande. Lo que se
+     toca sin mirar sigue siendo la fila. */
+  #sin-dueno .yalo{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+    padding:.1rem 0 .5rem .6rem;margin:-.15rem 0 0 .5rem;
+    border-left:2px solid var(--line-2);
+  }
+  #sin-dueno .yalo .cbt{font-size:.7rem;min-height:1.8rem;padding:.2rem .55rem}
+  #sin-dueno .yalo .pista-yalo{font-size:.7rem;color:var(--tx-3)}
+  /* El panel de escoger el cobro. Mismo sitio que el botón que lo abrió:
+     "este depósito ↔ este cobro" tiene que verse de un vistazo. */
+  #sin-dueno .enl{
+    padding:.5rem .6rem .55rem;margin:-.15rem 0 .55rem .5rem;
+    border-left:2px solid var(--ok);background:var(--bg-3);
+    border-radius:0 var(--r) var(--r) 0;
+  }
+  #sin-dueno .enl .enl-tit{margin:0 0 .45rem;font-size:.76rem;color:var(--tx-2)}
+  #sin-dueno .enl .enl-lista{display:grid;gap:.3rem;margin-bottom:.5rem}
+  #sin-dueno .enl .enl-mov{
+    width:100%;text-align:left;border-radius:10px;font-size:.78rem;
+    font-variant-numeric:tabular-nums;
+  }
+  #sin-dueno .enl .enl-vacio{
+    margin:0 0 .5rem;font-size:.74rem;color:var(--tx-3);line-height:1.4;
+  }
+
   /* ---------- buscador y grupos de la cola ---------- */
   .buscar{flex:1;min-width:11rem;max-width:24rem;position:relative}
   .buscar input{padding-left:2rem}
@@ -798,6 +829,28 @@ const CONFIG = {
   .medio.on{border-color:var(--gold);color:var(--tx);background:rgba(255,193,77,.12)}
   .modal-pie{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.3rem}
 
+  /* ---------- el contador de clases sueltas ----------
+     Botones grandes: esto se toca con el pulgar, con tres personas
+     esperando en la puerta. El número va en medio y en grande porque es
+     el dato que hay que comprobar antes de guardar. */
+  .contador{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem}
+  .contador .cnt{
+    width:2.8rem;height:2.8rem;flex:none;border-radius:10px;
+    background:var(--bg-3);border:1px solid var(--line);color:var(--tx);
+    font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;
+  }
+  .contador .cnt:hover:not(:disabled){border-color:var(--gold)}
+  .contador .cnt:disabled{opacity:.35;cursor:default}
+  .contador .cnt-n{
+    min-width:2.5rem;text-align:center;font-size:1.5rem;font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  /* El valor calculado no se puede teclear. Se ve distinto para que no
+     se intente: apagado y sin cursor de escritura. */
+  .caja-modal input[readonly]{
+    background:var(--bg);color:var(--tx-2);cursor:default;border-style:dashed;
+  }
+
   /* ---------- la tirilla ----------
      Imprimir la pantalla daba una captura del sistema: colores, tarjetas,
      botones y la mitad de la información que solo tiene sentido en un
@@ -1101,7 +1154,29 @@ const CONFIG = {
 <div class="modal" id="modal-caja" hidden>
   <div class="caja-modal">
     <h3 id="modal-titulo"><span class="pin"></span><span id="modal-texto">Registrar</span></h3>
+
+    <!-- Cuánta gente entró en este cobro. Solo sale en Clase suelta: es
+         el único concepto que se cobra varias veces de una, cuando llegan
+         tres juntas y pagan $45.000 en un solo billete.
+
+         Va ARRIBA del valor y no debajo porque es la causa: se escoge
+         cuántas son y el valor de abajo se recalcula solo. Al revés
+         parecería que el valor manda y el contador lo comenta. -->
+    <div id="modal-cantidad" hidden>
+      <label for="cant-mas">¿Cuántas clases sueltas?</label>
+      <div class="contador">
+        <button class="cnt" type="button" id="cant-menos" aria-label="Una menos">−</button>
+        <span class="cnt-n" id="cant-n" aria-live="polite">1</span>
+        <button class="cnt" type="button" id="cant-mas" aria-label="Una más">+</button>
+      </div>
+      <p class="ap-pista" id="cant-resumen">1 clase suelta · $15.000</p>
+    </div>
+
     <label for="modal-valor">Valor</label>
+    <!-- Con el contador puesto este campo NO se teclea: es cantidad ×
+         precio. Dos casillas independientes acabarían diciendo cosas
+         distintas —"3 personas" y $30.000— y entonces ninguna de las dos
+         serviría para cuadrar el día. -->
     <input id="modal-valor" type="text" inputmode="numeric" placeholder="15.000" autocomplete="off">
     <div class="medios">
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
@@ -2932,11 +3007,73 @@ const CONFIG = {
   let juntando = false;
   const escogidos = new Set();
 
+  /* Modo "ya lo registré": el depósito que llegó tarde.
+     La cajera cobró una transferencia y la registró a mano porque la
+     clienta estaba delante; minutos después llegó la alerta del banco y
+     entró aquí un depósito que nadie cruza nunca. Esa plata queda contada
+     en la Caja Y persiguiéndose en esta lista, y la dueña la busca todos
+     los días creyendo que falta algo.
+
+     Es la operación CONTRARIA a tocar la fila: tocar la fila crea un
+     movimiento nuevo; esto le pega el depósito a uno que ya existe.
+     Guarda el id del depósito que se está enlazando, o null. */
+  let enlazando = null;
+
+  /* Los cobros de hoy a los que se les puede pegar este depósito.
+     Las tres condiciones son las mismas que exige Postgres, para que la
+     lista no ofrezca nada que vaya a rebotar:
+       · ingreso — un egreso es plata que salió, el banco no la recibió;
+       · transferencia — un cobro en efectivo está en el cajón, no en el
+         banco: no es el mismo dinero y enlazarlo descuadraría el arqueo;
+       · sin depósito todavía — el que ya tiene uno no admite otro.
+     Los anulados no llegan: caja_del_dia ya no los manda. */
+  const cobrosEnlazables = () =>
+    ((cajaDatos && cajaDatos.movimientos) || []).filter(m =>
+      m.sentido === 'ingreso' && m.medio === 'transferencia' && !m.con_banco);
+
+  function panelEnlace() {
+    // Sin la caja del día no hay a qué enlazar, y decir "no hay cobros"
+    // sería mentir: lo que pasa es que no se pudo leer.
+    if (!cajaDatos) {
+      return `<div class="enl" id="enl-panel">` +
+        `<p class="enl-vacio">No se pudo leer la caja de hoy. Ábrela, ` +
+          `recárgala y vuelve a intentarlo.</p>` +
+        `<button type="button" class="cbt" id="enl-cancelar">Cancelar</button>` +
+      `</div>`;
+    }
+    const cobros = cobrosEnlazables();
+    return `<div class="enl" id="enl-panel">` +
+      `<p class="enl-tit">¿Cuál de los cobros de hoy es este depósito?</p>` +
+      (cobros.length
+        ? `<div class="enl-lista">` +
+            cobros.map(m =>
+              `<button type="button" class="cbt enl-mov" ` +
+                `data-enlazar-mov="${esc(m.id)}">` +
+                `${esc(m.hora)} · ` +
+                `${Number(m.cantidad) > 1 ? esc(m.cantidad) + ' × ' : ''}` +
+                `${esc(nombreConcepto(m.concepto))} · ${esc(pesos(m.valor_cop))}` +
+                (m.nota ? ` · ${esc(m.nota)}` : '') +
+              `</button>`).join('') +
+          `</div>`
+        // Con esas palabras y no con una lista vacía: la cajera tiene
+        // que poder saber POR QUÉ no está el cobro que ella recuerda
+        // haber hecho, y la respuesta casi siempre es que lo registró en
+        // efectivo.
+        : `<p class="enl-vacio">Ningún cobro de hoy puede ser este ` +
+          `depósito. Solo se enlazan los ingresos por transferencia que ` +
+          `todavía no tienen depósito: un cobro en efectivo no puede ser ` +
+          `esta transferencia, porque esa plata está en el cajón y no en ` +
+          `el banco.</p>`) +
+      `<button type="button" class="cbt" id="enl-cancelar">Cancelar</button>` +
+    `</div>`;
+  }
+
   function pintarSinDueno() {
     const caja = $('#sin-dueno');
     if (!pagosLibres.length) {
       caja.hidden = true; caja.innerHTML = '';
       juntando = false; escogidos.clear();
+      enlazando = null;
       return;
     }
     // El saldo del grupo, cuando son varios juntos. Para uno solo es su
@@ -3004,7 +3141,20 @@ const CONFIG = {
               `<button type="button" class="cbt separar" data-separar="${esc(id)}">` +
                 `Separar</button>` +
             `</div>`
-          : '');
+          : '') +
+        // La segunda salida del depósito: no cobrarlo otra vez, sino
+        // decir que el cobro YA está hecho. Va en una línea aparte y
+        // pequeña, colgando de su depósito: la acción de veinte veces al
+        // día es tocar la fila, y esta es la rara. En modo juntar no
+        // aparece — ahí tocar significa escoger y un tercer verbo sobra.
+        (juntando ? ''
+          : enlazando === id
+            ? panelEnlace()
+            : `<div class="yalo">` +
+                `<button type="button" class="cbt" data-yalo="${esc(id)}">` +
+                  `Ya lo registré</button>` +
+                `<span class="pista-yalo">y este depósito es el respaldo</span>` +
+              `</div>`);
       }).join('') +
       `</div>`;
   }
@@ -3331,19 +3481,39 @@ const CONFIG = {
      directo con el Worker, que guarda la llave de Supabase. El token es
      el mismo del panel — quien pueda entrar aquí puede vender. */
 
+  // "Otro ingreso" ya no está, y no es un descuido.
+  //
+  // Era el cajón de sastre donde caían los $15.000 que alguien no quiso
+  // buscar en la lista. El problema es que el cierre cuenta gente por
+  // concepto: un cobro apuntado como "otro ingreso" no es una clase
+  // suelta para nadie, así que la cuenta de personas del día se perdía
+  // sin dejar rastro — el arqueo del efectivo cuadraba y el número de
+  // gente no, sin ninguna pista de dónde salía la diferencia.
+  //
+  // Quitarlo de aquí obliga a escoger qué se cobró. Los movimientos
+  // viejos que ya lo tienen guardado se siguen pintando: eso lo resuelve
+  // CONCEPTOS_RETIRADOS, aquí abajo.
   const CONCEPTOS = [
     { s:'ingreso', c:'clase_suelta',      n:'Clase suelta',      v:15000  },
     { s:'ingreso', c:'media_mensualidad', n:'Media mensualidad', v:null   },
     { s:'ingreso', c:'mensualidad',       n:'Mensualidad',       v:125000 },
     { s:'ingreso', c:'cumpleanos',        n:'Cumpleaños',        v:250000 },
     { s:'ingreso', c:'camiseta',          n:'Camiseta',          v:null   },
-    { s:'ingreso', c:'otro_ingreso',      n:'Otro ingreso',      v:null   },
     { s:'egreso',  c:'profesores',    n:'Profesores',    v:null   },
     { s:'egreso',  c:'cafeteria',     n:'Cafetería',     v:null   },
     { s:'egreso',  c:'aseo',          n:'Aseo',          v:null   },
     { s:'egreso',  c:'papeleria',     n:'Papelería',     v:null   },
     { s:'egreso',  c:'otro_egreso',   n:'Otra salida',   v:null   },
   ];
+
+  // Conceptos que ya no se pueden escoger pero que siguen guardados en
+  // movimientos de días anteriores. Postgres no los borró —la plata se
+  // cobró de verdad— así que la pantalla tiene que saber pintarlos. Sin
+  // esto, la lista del día y la tirilla enseñarían el código crudo
+  // ("otro_ingreso") justo en los movimientos que ya cuesta entender.
+  const CONCEPTOS_RETIRADOS = {
+    otro_ingreso: 'Otro ingreso',
+  };
 
   let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
   // Los dos arrancan cerrados a propósito: ver el listado no hace daño,
@@ -3472,7 +3642,11 @@ const CONFIG = {
     $('#caja-lista').innerHTML = ms.length ? ms.map(m =>
       `<div class="mov ${m.sentido === 'egreso' ? 'sale' : 'entra'}">` +
       `<span class="h">${esc(m.hora)}</span>` +
-      `<span class="q">${esc(nombreConcepto(m.concepto))}` +
+      // "3 × Clase suelta $45.000". Sin el "3 ×" la línea dice $45.000 y
+      // no dice a cuánta gente cubrió, que es justo lo que hay que
+      // comprobar cuando la cuenta de la puerta no cuadra con la caja.
+      `<span class="q">${Number(m.cantidad) > 1 ? esc(m.cantidad) + ' × ' : ''}` +
+      `${esc(nombreConcepto(m.concepto))}` +
       // Un visto junto a la transferencia que sí señala un depósito del
       // banco. Lo que importa es el contraste: la que no lo tiene se ve
       // sola de un vistazo.
@@ -3486,7 +3660,8 @@ const CONFIG = {
     pintarCierre();
   }
 
-  const nombreConcepto = c => (CONCEPTOS.find(x => x.c === c) || {}).n || c;
+  const nombreConcepto = c =>
+    (CONCEPTOS.find(x => x.c === c) || {}).n || CONCEPTOS_RETIRADOS[c] || c;
 
   /* ---------- el banco: el único dato que no teclea nadie ----------
      Todo lo demás en esta pantalla lo escribió alguien del mostrador,
@@ -4192,7 +4367,67 @@ const CONFIG = {
     if (ev.target.closest('#modo-juntar')) {
       juntando = !juntando;
       escogidos.clear();
+      enlazando = null;
       pintarSinDueno();
+      return;
+    }
+
+    /* ── el depósito que llegó tarde ─────────────────────────────── */
+
+    // "Ya lo registré": abrir la lista de cobros de hoy. Los cobros
+    // salen de la Caja del día, que estando en el tablero puede no
+    // haberse cargado nunca; cargarCaja() sin forzar respeta la caché,
+    // así que abrir esto dos veces seguidas no pide dos veces.
+    const yalo = ev.target.closest('[data-yalo]');
+    if (yalo) {
+      enlazando = yalo.dataset.yalo;
+      await cargarCaja();
+      pintarSinDueno();
+      return;
+    }
+
+    if (ev.target.closest('#enl-cancelar')) {
+      enlazando = null;
+      pintarSinDueno();
+      return;
+    }
+
+    // Enlazar de verdad. Postgres decide: que el movimiento sea de hoy,
+    // que no esté ya enlazado, que no sea efectivo, que el depósito esté
+    // libre y que alcance.
+    const cobro = ev.target.closest('[data-enlazar-mov]');
+    if (cobro) {
+      const dep = enlazando;
+      cobro.disabled = true;
+      try {
+        const r = await alWorker('enlazar-deposito',
+                                 { mov_id: cobro.dataset.enlazarMov, pago_id: dep });
+        enlazando = null;
+        // El sobrante NO se calla. Si el depósito era de $50.000 y el
+        // cobro de $15.000, esa plata sigue sin dueño y va a seguir
+        // apareciendo en la lista: verlo volver sin haberlo avisado es
+        // exactamente la sensación de "aquí falta algo" que se está
+        // tratando de quitar.
+        const sobra = Number(r.sobrante_cop || 0);
+        nota('Quedó enlazado', 'bien',
+             `${nombreConcepto(r.concepto)} ${pesos(r.valor_cop)}` +
+             (sobra > 0
+               ? ` · a ese depósito le quedan ${pesos(sobra)} sin dueño, ` +
+                 `así que sigue en la lista.`
+               : ' · el depósito sale de la lista.'));
+        // Las dos listas: el depósito desaparece de arriba y el
+        // movimiento gana su visto del banco abajo.
+        await cargarPendientes(true);
+        await cargarCaja(true);
+      } catch (e) {
+        // A propósito sin pasar por fallo(): los mensajes de
+        // caja_enlazar_deposito vienen redactados desde Postgres para la
+        // cajera —"esa plata está en el cajón, no en el banco"— y la
+        // tabla de traducciones del panel los cambiaría por algo más
+        // corto y más pobre.
+        nota('No se pudo enlazar', 'mal', e.message);
+        cobro.disabled = false;
+      }
       return;
     }
 
@@ -4412,6 +4647,50 @@ const CONFIG = {
   // El depósito del banco que la cajera escogió, si escogió alguno.
   let cajaPago = null;
 
+  /* ---------- cuánta gente cubre este cobro ----------
+     Solo Clase suelta. Es el único concepto que se cobra varias veces de
+     una: llegan tres, pagan $45.000 juntas y hasta ahora eso quedaba como
+     UNA persona en el cierre. Una mensualidad de dos personas son dos
+     cobros distintos, con dos nombres, así que ahí el contador solo
+     estorbaría.
+
+     El tope es el mismo que ya aplican el Worker y Postgres. Aquí no se
+     valida nada: se impide llegar. */
+  const TOPE_CANTIDAD = 50;
+  let cajaCantidad = 1;
+  const conContador = x => !!x && x.c === 'clase_suelta';
+
+  // Pinta el contador y, de paso, el valor: con el contador puesto el
+  // valor SIEMPRE es cantidad × precio y el campo se bloquea. Es la
+  // decisión de fondo — un solo número mandando, para que el monto y la
+  // cuenta de gente no puedan contradecirse.
+  function pintarCantidad() {
+    const aplica = conContador(cajaElegido);
+    $('#modal-cantidad').hidden = !aplica;
+    const campo = $('#modal-valor');
+    campo.readOnly = aplica;
+    if (!aplica) return;
+
+    const precio = cajaElegido.v || 0;
+    const total = cajaCantidad * precio;
+    campo.value = String(total);
+    $('#cant-n').textContent = String(cajaCantidad);
+    $('#cant-menos').disabled = cajaCantidad <= 1;
+    $('#cant-mas').disabled = cajaCantidad >= TOPE_CANTIDAD;
+    // Lo que se está a punto de registrar, escrito como se diría en voz
+    // alta. Es la última comprobación antes de guardar.
+    $('#cant-resumen').textContent =
+      `${cajaCantidad} ${cajaCantidad === 1 ? 'clase suelta' : 'clases sueltas'} · ` +
+      pesos(total);
+  }
+
+  const moverCantidad = paso => {
+    cajaCantidad = Math.min(TOPE_CANTIDAD, Math.max(1, cajaCantidad + paso));
+    pintarCantidad();
+  };
+  $('#cant-menos').addEventListener('click', () => moverCantidad(-1));
+  $('#cant-mas').addEventListener('click', () => moverCantidad(1));
+
   // `pago` llega cuando se vino tocando un depósito del tablero: entonces
   // el modal abre con ese depósito ya escogido, en transferencia y con su
   // valor puesto. Sigue siendo el mismo modal de siempre —se puede
@@ -4425,8 +4704,24 @@ const CONFIG = {
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
     // El valor del depósito manda sobre el precio del concepto: es lo que
     // de verdad llegó al banco.
-    const valor = pago ? pago.valor : (x.v || 0);
+    let valor = pago ? pago.valor : (x.v || 0);
+
+    cajaCantidad = 1;
+    if (conContador(x)) {
+      // Viniendo de un depósito, la cantidad se deduce de lo que llegó:
+      // $45.000 en clases sueltas son tres personas, y obligar a subir el
+      // contador a mano hasta cuadrar con el depósito sería pedirle a la
+      // cajera que haga la división que el panel ya sabe hacer. Si no da
+      // exacto —$50.000— se queda en una y el resto sigue como saldo del
+      // depósito, que es lo que ya hacía antes.
+      const precio = x.v || 0;
+      if (pago && precio > 0 && pago.valor % precio === 0) {
+        cajaCantidad = Math.min(TOPE_CANTIDAD, Math.max(1, pago.valor / precio));
+      }
+      valor = cajaCantidad * precio;
+    }
     $('#modal-valor').value = valor ? String(valor) : '';
+    pintarCantidad();
     $('#modal-nota').value = '';
     for (const b of document.querySelectorAll('.medio')) b.classList.toggle('on', b.dataset.medio === cajaMedio);
     // Arranca filtrando por el precio del concepto: para una mensualidad
@@ -4438,6 +4733,12 @@ const CONFIG = {
   }
   const cerrarModal = () => {
     $('#modal-caja').hidden = true; cajaElegido = null; cajaPago = null;
+    // El contador vuelve a uno: dejar un "3" puesto haría que el
+    // siguiente cobro naciera cobrando tres clases sin que nadie lo
+    // pidiera. El campo se desbloquea aquí mismo por lo mismo.
+    cajaCantidad = 1;
+    $('#modal-cantidad').hidden = true;
+    $('#modal-valor').readOnly = false;
   };
   $('#modal-cancelar').addEventListener('click', cerrarModal);
   $('#modal-caja').addEventListener('click', e => { if (e.target.id === 'modal-caja') cerrarModal(); });
@@ -4542,7 +4843,14 @@ const CONFIG = {
         // pisa lo tecleado cuando no cabe o cuando no hay nada escrito.
         const saldo = Number(b.dataset.valor);
         const puesto = Number(String($('#modal-valor').value).replace(/\D/g, ''));
-        if (!ya && (!puesto || puesto > saldo)) $('#modal-valor').value = saldo;
+        // Con el contador puesto el valor NO se pisa: manda cantidad ×
+        // precio. Si el depósito no alcanza para las tres clases, eso lo
+        // dice Postgres al guardar y con su propio mensaje; cambiar aquí
+        // el monto en silencio dejaría cobradas dos personas donde la
+        // cajera contó tres.
+        if (!conContador(cajaElegido) && !ya && (!puesto || puesto > saldo)) {
+          $('#modal-valor').value = saldo;
+        }
 
         // Y si va a quedar plata, decirlo. Un reparto tiene que ser una
         // decisión que alguien tomó mirando, no algo que pasó solo.
@@ -4591,16 +4899,23 @@ const CONFIG = {
     // y leerlo después reventaba con "Cannot read properties of null".
     // El movimiento sí quedaba grabado, pero la pantalla decía que no.
     const queEra = cajaElegido.n;
+    // Los conceptos sin contador cubren una sola cosa. Se manda igual y
+    // no se omite: el Worker solo se lo pasa a Postgres cuando pasa de
+    // uno, pero decir "esto cubrió a una persona" es más honesto que
+    // callarlo y que lo suponga el que lea la petición.
+    const cantidad = conContador(cajaElegido) ? cajaCantidad : 1;
     $('#modal-guardar').disabled = true;
     try {
       await alWorker('registrar', {
         sentido: cajaElegido.s, concepto: cajaElegido.c,
         valor, medio: cajaMedio, nota: $('#modal-nota').value,
         pago_id: cajaMedio === 'transferencia' ? cajaPago : null,
+        cantidad,
       });
       cerrarModal();
       await cargarCaja(true);
-      nota('Registrado', 'bien', `${queEra} ${pesos(valor)}`);
+      nota('Registrado', 'bien',
+           (cantidad > 1 ? `${cantidad} × ${queEra} · ` : `${queEra} `) + pesos(valor));
     } catch (e) {
       fallo(e, 'No se pudo registrar');
     } finally { $('#modal-guardar').disabled = false; }
