@@ -2635,7 +2635,11 @@ const CONFIG = {
       fecha, hora,
       activa: base ? base.activa : true,
       cupo_manual: base ? base.cupo_manual : null,
-      aforo: base ? base.aforo : 30
+      // 0066: el aforo por defecto subió de 30 a 35. Si se vuelve a
+      // mover, hay que moverlo también en la base (default de
+      // clases.aforo, generar_horario y admin_guardar_semana) o la
+      // semana siguiente vuelve sola al número viejo.
+      aforo: base ? base.aforo : 35
     };
     cambios.set(k, Object.assign(actual, parche));
     refrescarBarra();
@@ -2713,11 +2717,11 @@ const CONFIG = {
       // Se pinta de una para que se vea, aunque todavía no esté guardada.
       dia.clases.push({
         clase_id: null, hora: h, nombre: 'Clase ' + hora12(h), profesor: 'Por asignar',
-        activa: true, aforo: 30, activos_plan: 0, cupo_total: 30, cupo_tomado: 0,
+        activa: true, aforo: 35, activos_plan: 0, cupo_total: 35, cupo_tomado: 0,
         cupo_manual: null, ya_paso: false
       });
       dia.clases.sort((a, b) => a.hora.localeCompare(b.hora));
-      tocar(dia.fecha, h, null, { activa: true, cupo_manual: null, aforo: 30 });
+      tocar(dia.fecha, h, null, { activa: true, cupo_manual: null, aforo: 35 });
       pintarSemana();
     });
 
