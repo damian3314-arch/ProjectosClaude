@@ -18,13 +18,19 @@
  * (silencio del banco), que era la idea inicial y habría saltado casi a
  * diario.
  *
- *   node pulso-ingesta.test.mjs <ruta a admin.html con __e2e>
+ * El gancho window.__e2e lo pone instrumentar.mjs sobre una copia
+ * temporal de docs/admin.html. Sin argumentos:
+ *
+ *   node pulso-ingesta.test.mjs
+ *
+ * Admite una ruta suelta para apuntar a otra copia del panel.
  */
 import { chromium } from 'playwright-core';
+import { rutaDelPanel } from './instrumentar.mjs';
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const p = await b.newPage({ viewport: { width: 430, height: 900 } });
 const errs = []; p.on('pageerror', e => errs.push(String(e)));
-await p.goto('file://' + process.argv[2]);
+await p.goto('file://' + rutaDelPanel());
 
 let fallos = 0;
 const ok = (n, c, extra = '') => { if (!c) fallos++;

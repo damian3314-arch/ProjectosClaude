@@ -13,10 +13,16 @@
  * propio—, porque un input sin estilo dentro de una fila flex se
  * encoge hasta desaparecer y nadie lo encuentra.
  *
- * Necesita Chromium:
- *   node confirmar-pide-referencia.test.mjs <ruta a admin.html con __e2e>
+ * Necesita Chromium. El gancho window.__e2e lo pone instrumentar.mjs
+ * sobre una copia temporal de docs/admin.html, así que corre sin
+ * argumentos:
+ *
+ *   node confirmar-pide-referencia.test.mjs
+ *
+ * Admite una ruta suelta para apuntar a otra copia del panel.
  */
 import { chromium } from 'playwright-core';
+import { rutaDelPanel } from './instrumentar.mjs';
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const p = await b.newPage({ viewport: { width: 430, height: 900 } });
 
@@ -27,7 +33,7 @@ await p.route('**/api/**', async r => {
     body: JSON.stringify({ ok: true, mensaje: 'confirmada' }) });
 });
 const errs = []; p.on('pageerror', e => errs.push(String(e)));
-await p.goto('file://' + process.argv[2]);
+await p.goto('file://' + rutaDelPanel());
 
 // Una reserva en la cola, sin depósito cerca: el caso en que la única
 // salida es "Confirmar igual", que es justo el que se quiere frenar.

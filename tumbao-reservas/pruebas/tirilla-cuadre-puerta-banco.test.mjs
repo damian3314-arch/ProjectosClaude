@@ -19,13 +19,19 @@
  *     `cuadre`. El papel tiene que salir igual que siempre, no en
  *     blanco.
  *
- *   node tirilla-cuadre-puerta-banco.test.mjs <ruta a admin.html con __e2e>
+ * El gancho window.__e2e lo pone instrumentar.mjs sobre una copia
+ * temporal de docs/admin.html. Sin argumentos:
+ *
+ *   node tirilla-cuadre-puerta-banco.test.mjs
+ *
+ * Admite una ruta suelta para apuntar a otra copia del panel.
  */
 import { chromium } from 'playwright-core';
+import { rutaDelPanel } from './instrumentar.mjs';
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const p = await b.newPage({ viewport: { width: 430, height: 900 } });
 const errs = []; p.on('pageerror', e => errs.push(String(e)));
-await p.goto('file://' + process.argv[2]);
+await p.goto('file://' + rutaDelPanel());
 
 // El 29 de agosto de verdad, verificado contra producción: 21 entraron,
 // 16 traían la plata de días antes, y al banco entraron $105.000 que
