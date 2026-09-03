@@ -868,6 +868,25 @@ const CONFIG = {
      olvidaba del segundo clic se quedaba sin con qué puntear el
      extracto. Ahora las tres conviven dentro de `#tirilla` como tres
      `.hoja` y el navegador las separa con el corte de página. */
+  /* ── mensualidad ────────────────────────────────────────────────
+     Los cupos como tres números grandes: es lo que hay que mirar antes
+     de prometerle un cupo a alguien por WhatsApp. */
+  .mens-cupos{display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr));
+    gap:.6rem; margin-bottom:1rem}
+  .mens-cupo{background:var(--bg-2); border:1px solid var(--line);
+    border-radius:var(--r); padding:.7rem; text-align:center}
+  .mens-cupo .v{font-size:1.6rem; font-weight:800; color:var(--ok); line-height:1}
+  .mens-cupo.lleno .v{color:var(--hot)}
+  .mens-cupo .k{font-size:.78rem; margin-top:.15rem}
+  .fila.mens{align-items:flex-start; gap:.8rem}
+  .mens-quien{flex:1 1 auto; min-width:0}
+  .mens-que{color:var(--gold)}
+  .fila.mens .et{font-size:.66rem; font-weight:800; letter-spacing:.04em;
+    padding:.1rem .4rem; border-radius:999px; margin-left:.4rem;
+    background:var(--bg-3); color:var(--tx-2)}
+  .fila.mens .et.bien{background:#14532d; color:#bbf7d0}
+  .fila.mens .et.ojo{background:#4a3410; color:var(--gold)}
+
   #tirilla{display:none}
 
   @media print{
@@ -1012,6 +1031,9 @@ const CONFIG = {
         Por disfrutar<span class="globo" id="globo-disf" hidden></span>
       </button>
       <button class="tab" role="tab" id="tab-caja" aria-selected="false">Caja</button>
+      <button class="tab" role="tab" id="tab-mensualidad" aria-selected="false">
+        Mensualidad<span class="globo" id="globo-mens" hidden></span>
+      </button>
       <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>Usuarios</button>
     </div>
 
@@ -1179,6 +1201,20 @@ const CONFIG = {
     </div>
 
     <!-- ── usuarios (solo propietario) ── -->
+    <!-- ── mensualidad ──
+         Lo que recoge la página pública. Sin esta pestaña esos datos
+         serían un agujero: la gente llenaría el formulario y nadie se
+         enteraría, que es exactamente lo que pasaba cuando todo iba por
+         WhatsApp. -->
+    <div class="panel" id="p-mensualidad">
+      <div class="barra">
+        <h2>Mensualidad</h2>
+        <button class="btn chico" id="mens-recargar">Actualizar</button>
+      </div>
+      <div id="mens-cupos" class="mens-cupos"></div>
+      <div id="mens-lista"></div>
+    </div>
+
     <div class="panel" id="p-usuarios">
       <div class="semana-bar">
         <b>Quién entra al panel</b>
@@ -1765,7 +1801,8 @@ const CONFIG = {
   });
 
   /* ---------- pestañas ---------- */
-  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja', 'usuarios'];
+  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja',
+                   'mensualidad', 'usuarios'];
   let panelActual = 'tablero';
   function verPanel(cual) {
     panelActual = cual;
@@ -3653,6 +3690,94 @@ const CONFIG = {
   }
 
   $('#tab-caja').addEventListener('click', () => { verPanel('caja'); cargarCaja(); });
+
+  /* ══════════ MENSUALIDAD ═══════════════════════════════════════════
+     Lo que recoge la página pública: quién quiere mensualidad, quién
+     tiene cupo apartado mientras paga y quién quedó esperando.
+
+     ESTO ES LA MITAD QUE FALTABA. La página sola no sirve de nada: si
+     nadie mira lo que recoge, es el mismo agujero de antes con otra
+     forma. El orden lo dice todo — primero quien ya pagó y está
+     esperando que alguien lo active, después quien tiene cupo y aún no
+     ha pagado, y al final la lista de espera. */
+  let mensDatos = null;
+
+  const MENS_ESTADOS = {
+    pagada:         { et: 'YA PAGÓ',   cl: 'bien',
+                      que: 'Actívale la mensualidad y cóbrala en Caja.' },
+    esperando_pago: { et: 'SIN PAGAR', cl: 'ojo',
+                      que: 'Tiene el cupo apartado 24 horas.' },
+    lista_espera:   { et: 'EN ESPERA', cl: '',
+                      que: 'Avísale cuando se libere un cupo.' },
+    atendida:       { et: 'LISTA',     cl: 'bien', que: '' },
+  };
+
+  async function cargarMensualidad(silencio) {
+    if (!silencio) $('#mens-lista').innerHTML = '<p class="suave">Cargando…</p>';
+    try {
+      mensDatos = await alWorker('mensualidad');
+      pintarMensualidad();
+    } catch (e) {
+      $('#mens-lista').innerHTML =
+        `<p class="suave">No se pudo cargar: ${esc(e.message || 'error')}</p>`;
+    }
+  }
+
+  function pintarMensualidad() {
+    const d = mensDatos || {};
+    const cupos = (d.cupos && d.cupos.horas) || [];
+    const lista = d.solicitudes || [];
+
+    // Los cupos primero: es lo que hay que mirar antes de prometerle
+    // nada a nadie por WhatsApp.
+    $('#mens-cupos').innerHTML = cupos.map(h => {
+      const libre = Number(h.libres) > 0;
+      return `<div class="mens-cupo ${libre ? '' : 'lleno'}">` +
+        `<div class="v">${h.libres}</div>` +
+        `<div class="k">libres · ${esc(h.etiqueta)}</div>` +
+        `<div class="ag">${h.ocupadas} de ${h.tope}</div>` +
+      `</div>`;
+    }).join('') || '<p class="suave">Sin horarios configurados.</p>';
+
+    // El globo de la pestaña cuenta solo lo que EXIGE hacer algo hoy:
+    // quien ya pagó. La lista de espera no es una tarea pendiente, es
+    // una cola — y un globo que nunca baja se deja de mirar.
+    const porHacer = lista.filter(x => x.estado === 'pagada').length;
+    const globo = $('#globo-mens');
+    globo.hidden = porHacer === 0;
+    globo.textContent = String(porHacer);
+
+    if (!lista.length) {
+      $('#mens-lista').innerHTML =
+        '<p class="suave">Todavía nadie ha llenado el formulario de mensualidad.</p>';
+      return;
+    }
+
+    $('#mens-lista').innerHTML = lista.map(x => {
+      const e = MENS_ESTADOS[x.estado] || { et: x.estado, cl: '', que: '' };
+      const hh = (cupos.find(c => c.hora === x.hora) || {}).etiqueta || x.hora;
+      const wa = 'https://wa.me/57' + String(x.celular).replace(/\D/g, '');
+      return `<div class="fila mens ${e.cl}">
+        <div class="mens-quien">
+          <b>${esc(x.nombre)}</b>
+          <span class="et ${e.cl}">${e.et}</span>
+          <div class="ag">${esc(hh)} · ${esc(x.cuando)}` +
+            (Number(x.dias) > 0 ? ` · hace ${x.dias} d` : '') + `</div>
+          <div class="ag">${esc(x.celular)}` +
+            (x.documento ? ` · CC ${esc(x.documento)}` : '') +
+            (x.correo ? ` · ${esc(x.correo)}` : '') + `</div>` +
+          (x.referencia
+            ? `<div class="ag">ref ${esc(x.referencia)}</div>` : '') +
+          (e.que ? `<div class="ag mens-que">${e.que}</div>` : '') +
+        `</div>
+        <a class="btn chico" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
+      </div>`;
+    }).join('');
+  }
+
+  $('#tab-mensualidad').addEventListener('click',
+    () => { verPanel('mensualidad'); cargarMensualidad(); });
+  $('#mens-recargar').addEventListener('click', () => cargarMensualidad());
   $('#caja-recargar').addEventListener('click', () => cargarCaja(true));
 
   async function cargarCaja(forzar) {

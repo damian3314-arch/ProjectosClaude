@@ -28,6 +28,7 @@ const SUITES = [
   'confirmar-pide-referencia',
   'deposito-a-caja',
   'juntar-depositos',
+  'mensualidad-pagina',
   'pulso-ingesta',
   'tarjeta-sabado',
   'tirilla-de-la-duena',

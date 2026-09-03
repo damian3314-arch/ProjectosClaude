@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mensualidad · Tumbao</title>
+<meta name="description" content="Aparta tu mensualidad en Tumbao. Elige tu horario, mira si hay cupo y paga en un paso.">
+<meta name="theme-color" content="#EADCF9">
+<meta property="og:title" content="Mensualidad · Tumbao">
+<meta property="og:description" content="Elige tu horario, mira si hay cupo y aparta tu mensualidad.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23EADCF9'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='%23F5811F'%3ET%3C/text%3E%3C/svg%3E">
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   CONFIGURACIÓN — lo único que hay que tocar para moverla de sitio.
+
+   Los datos de pago son los mismos que ya se mandan por WhatsApp y los
+   mismos que usa la página de reservas: si cambia la cuenta, cambia en
+   los dos sitios o la gente pagará a una cuenta vieja.
+   ───────────────────────────────────────────────────────────── */
+const CONFIG = {
+  API: 'https://tumbao-caja.damian3314.workers.dev/tumbao/mensualidad',
+  WHATSAPP: '573017833550',
+  PAGO: {
+    qr:      'img/qr-breb.png',
+    llave:   '1096803067',
+    banco:   'Bancolombia',
+    tipo:    'Ahorros',
+    cuenta:  '91289724619',
+    titular: 'Luz Alejandra Santiago García'
+  }
+};
+</script>
+
+<style>
+  /* La paleta sale del afiche que circula por Instagram y WhatsApp: es
+     lo que la persona acaba de ver antes de tocar el enlace. Si la
+     página fuera de otro color, el primer segundo se le va en dudar si
+     llegó al sitio correcto. */
+  :root{
+    --lila:#EADCFA; --lila-2:#DCC9F2; --blanco:#fff;
+    --naranja:#F5811F; --naranja-2:#E0700F;
+    --magenta:#E31C79;
+    --morado:#3C1B63; --morado-2:#6B5B82;
+    --ok:#1E9E62; --mal:#C62B4E;
+    --linea:#D6C4EC;
+    --r:16px;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--lila); color:var(--morado);
+    font-family:var(--sans); font-size:16px; line-height:1.5;
+    padding:0 0 3rem;
+  }
+  .wrap{max-width:460px; margin:0 auto; padding:0 1.1rem}
+
+  /* ── cabecera ───────────────────────────────────────────────── */
+  header{text-align:center; padding:2rem 0 1.4rem}
+  .logo{
+    font-size:2.6rem; font-weight:900; letter-spacing:-.02em;
+    color:var(--naranja); margin:0; line-height:1;
+  }
+  .lema{color:var(--magenta); font-weight:700; font-size:.95rem; margin:.25rem 0 0}
+
+  h1{
+    font-size:1.75rem; line-height:1.15; margin:1.2rem 0 .4rem;
+    font-weight:800; text-align:center;
+  }
+  h1 em{font-style:normal; color:var(--magenta); display:block}
+  .entrada{text-align:center; color:var(--morado-2); margin:0 0 1.4rem}
+
+  /* ── tarjetas ───────────────────────────────────────────────── */
+  .tarjeta{
+    background:var(--blanco); border-radius:var(--r); padding:1.2rem;
+    margin-bottom:1rem; border:1px solid var(--linea);
+  }
+  h2{font-size:1.1rem; margin:0 0 .2rem; font-weight:800}
+  .sub{color:var(--morado-2); font-size:.9rem; margin:0 0 1rem}
+
+  /* ── el precio ──────────────────────────────────────────────── */
+  .precio{text-align:center; padding:.4rem 0 .2rem}
+  .precio .n{font-size:2.1rem; font-weight:900; color:var(--morado); line-height:1}
+  .precio .p{color:var(--morado-2); font-size:.9rem; margin-top:.15rem}
+  .incluye{list-style:none; padding:0; margin:1rem 0 0}
+  .incluye li{
+    display:flex; gap:.6rem; align-items:flex-start;
+    padding:.4rem 0; font-size:.94rem;
+  }
+  .incluye .tic{color:var(--ok); font-weight:900; flex:0 0 auto}
+
+  /* ── horarios ───────────────────────────────────────────────── */
+  .horas{display:grid; gap:.6rem}
+  .hora{
+    display:flex; align-items:center; gap:.85rem; width:100%;
+    background:var(--blanco); border:2px solid var(--linea);
+    border-radius:var(--r); padding:.85rem .95rem; cursor:pointer;
+    font:inherit; color:inherit; text-align:left;
+  }
+  .hora:hover{border-color:var(--lila-2)}
+  .hora.on{border-color:var(--naranja); background:#FFF6EE}
+  .hora .h{font-weight:800; font-size:1.05rem; flex:0 0 auto; min-width:5.2rem}
+  .hora .est{font-size:.85rem; color:var(--morado-2)}
+  .hora .est b{color:var(--ok)}
+  .hora.lleno .est b{color:var(--magenta)}
+  .hora:disabled{cursor:default; opacity:1}
+  .pastilla{
+    margin-left:auto; flex:0 0 auto; font-size:.72rem; font-weight:800;
+    padding:.22rem .55rem; border-radius:999px; letter-spacing:.02em;
+  }
+  .pastilla.libre{background:#E4F6EC; color:var(--ok)}
+  .pastilla.lleno{background:#FDE7F0; color:var(--magenta)}
+
+  /* ── formulario ─────────────────────────────────────────────── */
+  label{display:block; font-weight:700; font-size:.88rem; margin:.9rem 0 .3rem}
+  label .opt{font-weight:400; color:var(--morado-2)}
+  input[type=text],input[type=tel],input[type=email]{
+    width:100%; padding:.7rem .8rem; font:inherit;
+    border:2px solid var(--linea); border-radius:12px; background:var(--blanco);
+    color:var(--morado);
+  }
+  input:focus{outline:none; border-color:var(--naranja)}
+  input.mal{border-color:var(--mal)}
+  .habeas{display:flex; gap:.6rem; align-items:flex-start; margin:1rem 0 0}
+  .habeas input{margin-top:.25rem; flex:0 0 auto; width:1.05rem; height:1.05rem}
+  .habeas span{font-size:.82rem; color:var(--morado-2); line-height:1.45}
+  /* La trampa para bots: un campo que un humano nunca ve ni llena. */
+  .trampa{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
+
+  /* ── botones ────────────────────────────────────────────────── */
+  .btn{
+    display:block; width:100%; padding:.9rem 1rem; font:inherit;
+    font-weight:800; border-radius:999px; border:0; cursor:pointer;
+    background:var(--naranja); color:#fff; font-size:1.02rem; margin-top:1.1rem;
+  }
+  .btn:hover{background:var(--naranja-2)}
+  .btn:disabled{opacity:.55; cursor:default}
+  .btn.suave{background:transparent; color:var(--morado-2); font-weight:600; font-size:.9rem; margin-top:.5rem}
+  .btn.wa{background:#25D366}
+  .btn.wa:hover{background:#1DB954}
+
+  /* ── pago ───────────────────────────────────────────────────── */
+  .monto{
+    background:#FFF6EE; border:2px dashed var(--naranja); border-radius:var(--r);
+    padding:.9rem; text-align:center; margin-bottom:1rem;
+  }
+  .monto .n{font-size:1.9rem; font-weight:900; line-height:1}
+  .monto .p{font-size:.82rem; color:var(--morado-2); margin-top:.2rem}
+  .dato{
+    display:flex; justify-content:space-between; align-items:center; gap:.7rem;
+    padding:.6rem 0; border-bottom:1px solid var(--linea); font-size:.94rem;
+  }
+  .dato:last-of-type{border-bottom:0}
+  .dato .k{color:var(--morado-2); flex:0 0 auto}
+  /* `anywhere` y no `break-all`: break-all parte cualquier palabra por
+     la mitad y dejaba "Luz Alejandra Santiago Gar / cía". Este corta
+     entre palabras cuando puede, y solo dentro de una si no cabe —que
+     es lo que hace falta para el número de cuenta. */
+  .dato .v{font-weight:700; text-align:right; overflow-wrap:anywhere}
+  .copiar{
+    border:1px solid var(--linea); background:var(--blanco); border-radius:8px;
+    font:inherit; font-size:.74rem; font-weight:700; padding:.2rem .5rem;
+    cursor:pointer; color:var(--morado-2); flex:0 0 auto;
+  }
+  .copiar:hover{border-color:var(--naranja); color:var(--naranja)}
+  .qr{display:block; width:190px; max-width:60%; margin:1rem auto .4rem; border-radius:12px}
+  .qr-nota{text-align:center; font-size:.8rem; color:var(--morado-2); margin:0}
+
+  /* ── avisos ─────────────────────────────────────────────────── */
+  .aviso{border-radius:12px; padding:.8rem .9rem; font-size:.9rem; margin:1rem 0 0}
+  .aviso.info{background:#F1E8FC; color:var(--morado)}
+  .aviso.bien{background:#E4F6EC; color:#14603D}
+  .aviso.mal{background:#FDE7F0; color:#8E1436}
+
+  /* ── final ──────────────────────────────────────────────────── */
+  .final{text-align:center; padding:1rem 0}
+  .final .ico{font-size:2.6rem; line-height:1}
+  .final h2{margin:.6rem 0 .3rem; font-size:1.3rem}
+  .final p{color:var(--morado-2); margin:0 0 .3rem}
+
+  .pie{text-align:center; font-size:.8rem; color:var(--morado-2); padding:1.6rem 0 0}
+  .pie a{color:var(--morado-2)}
+
+  section[hidden]{display:none!important}
+  .cargando{text-align:center; color:var(--morado-2); padding:1.5rem 0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <p class="logo">TUMBAO</p>
+  <p class="lema">Baila pa' sanar</p>
+</header>
+
+<!-- ═══════ 0 · qué es ═══════ -->
+<section id="s0">
+  <h1>Tu mensualidad<em>te espera</em></h1>
+  <p class="entrada">Elige tu horario, mira si hay cupo y apártala aquí mismo.</p>
+
+  <div class="tarjeta">
+    <div class="precio">
+      <div class="n" id="precio">$125.000</div>
+      <div class="p">al mes · un horario fijo</div>
+    </div>
+    <ul class="incluye">
+      <li><span class="tic">✓</span><span>Todas tus clases de <b>lunes a viernes</b> en el horario que elijas.</span></li>
+      <li><span class="tic">✓</span><span>No tienes que reservar entre semana: solo llegas y entras.</span></li>
+      <li><span class="tic">✓</span><span>El <b>sábado</b> sí se aparta cupo, y también está incluido.</span></li>
+    </ul>
+  </div>
+
+  <div class="tarjeta">
+    <h2>¿Qué horario quieres?</h2>
+    <p class="sub">Cada horario tiene cupo limitado. Esto es lo que hay ahora mismo.</p>
+    <div class="horas" id="horas">
+      <div class="cargando">Mirando los cupos…</div>
+    </div>
+    <div id="err0"></div>
+  </div>
+</section>
+
+<!-- ═══════ 1 · datos ═══════ -->
+<section id="s1" hidden>
+  <div class="tarjeta">
+    <h2 id="t1">¿Quién eres?</h2>
+    <p class="sub" id="sub1"></p>
+
+    <form id="form" novalidate autocomplete="on">
+      <div class="trampa" aria-hidden="true">
+        <label for="apellido2">No llenar</label>
+        <input id="apellido2" name="apellido2" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <label for="nombre">Nombre y apellido</label>
+      <input id="nombre" type="text" autocomplete="name" placeholder="María Fernanda Ruiz">
+
+      <label for="celular">Celular (WhatsApp)</label>
+      <input id="celular" type="tel" inputmode="numeric" autocomplete="tel-national"
+             placeholder="3001234567" maxlength="12">
+
+      <label for="documento">Documento <span class="opt">(opcional)</span></label>
+      <input id="documento" type="text" inputmode="numeric" placeholder="1098765432" maxlength="20">
+
+      <label for="correo">Correo <span class="opt">(opcional)</span></label>
+      <input id="correo" type="email" autocomplete="email" placeholder="maria@correo.com">
+
+      <label class="habeas" for="habeas">
+        <input id="habeas" type="checkbox">
+        <span>Autorizo a Tumbao a guardar y usar mis datos para gestionar mi
+              mensualidad y contactarme por WhatsApp.</span>
+      </label>
+
+      <button class="btn" type="submit" id="btn-enviar">Continuar</button>
+      <button class="btn suave" type="button" id="volver0">← Cambiar de horario</button>
+    </form>
+    <div id="err1"></div>
+  </div>
+</section>
+
+<!-- ═══════ 2 · pagar ═══════ -->
+<section id="s2" hidden>
+  <div class="tarjeta">
+    <h2>¡Tienes cupo! Falta el pago</h2>
+    <p class="sub" id="sub2"></p>
+
+    <div class="monto">
+      <div class="n" id="monto">$125.000</div>
+      <div class="p">transfiere exactamente este valor</div>
+    </div>
+
+    <div class="dato">
+      <span class="k">Llave Bre-B</span>
+      <span class="v" id="d-llave"></span>
+      <button class="copiar" type="button" data-copiar="d-llave">Copiar</button>
+    </div>
+    <div class="dato">
+      <span class="k">Banco</span>
+      <span class="v" id="d-banco"></span>
+    </div>
+    <div class="dato">
+      <span class="k">Cuenta de ahorros</span>
+      <span class="v" id="d-cuenta"></span>
+      <button class="copiar" type="button" data-copiar="d-cuenta">Copiar</button>
+    </div>
+    <div class="dato">
+      <span class="k">A nombre de</span>
+      <span class="v" id="d-titular"></span>
+    </div>
+
+    <img class="qr" id="qr" alt="Código QR para pagar" loading="lazy">
+    <!-- El QR es estático: NO lleva el monto dentro. Si no se dice, la
+         gente escanea y envía cualquier valor. -->
+    <p class="qr-nota">El QR no trae el valor: escríbelo tú al pagar.</p>
+
+    <label for="referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
+    <input id="referencia" type="text" placeholder="Ej: M12621896" maxlength="60">
+    <p class="sub" style="margin:.4rem 0 0">
+      Si nos la dejas, encontramos tu pago más rápido.
+    </p>
+
+    <button class="btn" type="button" id="btn-pague">Ya transferí</button>
+    <div id="err2"></div>
+  </div>
+</section>
+
+<!-- ═══════ 3 · listo ═══════ -->
+<section id="s3" hidden>
+  <div class="tarjeta">
+    <div class="final" id="final"></div>
+    <a class="btn wa" id="wa" href="#" target="_blank" rel="noopener">Escribirnos por WhatsApp</a>
+  </div>
+</section>
+
+<p class="pie">
+  ¿Dudas? <a id="wa2" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a><br>
+  ¿Solo quieres una clase suelta? <a href="/">Resérvala aquí</a>
+</p>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+
+  // Lo que se sabe de la persona mientras avanza por los pasos.
+  let horas = [];          // los cupos que devolvió el servidor
+  let horaElegida = null;  // 'HH:MM'
+  let valorCop = 125000;
+  let solicitud = null;    // { id, estado }
+
+  const waUrl = (texto) =>
+    `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(texto)}`;
+  $('#wa2').href = waUrl('Hola Tumbao, quiero información sobre la mensualidad.');
+
+  const aviso = (donde, texto, clase) => {
+    const c = $(donde);
+    c.innerHTML = texto ? `<div class="aviso ${clase || 'mal'}">${texto}</div>` : '';
+  };
+
+  const ir = (n) => {
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = true;
+    $('#s' + n).hidden = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  /* ── los cupos ─────────────────────────────────────────────────
+     Es lo primero que se pinta y lo que decide todo lo demás. Si esto
+     falla no se puede seguir: mandar a alguien a pagar sin saber si hay
+     cupo es exactamente el problema que la página vino a resolver. */
+  async function cargarCupos() {
+    try {
+      const r = await fetch(CONFIG.API, { method: 'GET' });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error('sin datos');
+      horas = d.horas || [];
+      valorCop = Number(d.valor_cop || 125000);
+      $('#precio').textContent = pesos(valorCop);
+      $('#monto').textContent = pesos(valorCop);
+      pintarHoras();
+    } catch (e) {
+      $('#horas').innerHTML = '';
+      aviso('#err0',
+        'No pudimos leer los cupos en este momento. ' +
+        `<a href="${waUrl('Hola Tumbao, quiero mensualidad pero la página no cargó los cupos.')}" ` +
+        'target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y te decimos.', 'mal');
+    }
+  }
+
+  function pintarHoras() {
+    if (!horas.length) {
+      $('#horas').innerHTML = '<p class="sub">No hay horarios de mensualidad configurados.</p>';
+      return;
+    }
+    $('#horas').innerHTML = horas.map(h => {
+      const libre = Number(h.libres) > 0;
+      // Cuántos cupos quedan, dicho como se diría en voz alta. El número
+      // exacto importa: "queda 1" mueve mucho más que "hay cupo".
+      const est = libre
+        ? (Number(h.libres) === 1
+            ? '<b>Queda 1 cupo</b>'
+            : `<b>Quedan ${h.libres} cupos</b>`)
+        : '<b>Sin cupo</b> · entras a la lista de espera';
+      return `<button type="button" class="hora${libre ? '' : ' lleno'}" data-hora="${h.hora}">
+          <span class="h">${h.etiqueta}</span>
+          <span class="est">${est}</span>
+          <span class="pastilla ${libre ? 'libre' : 'lleno'}">${libre ? 'CUPO' : 'ESPERA'}</span>
+        </button>`;
+    }).join('');
+
+    for (const b of $('#horas').querySelectorAll('.hora')) {
+      b.addEventListener('click', () => {
+        horaElegida = b.dataset.hora;
+        for (const o of $('#horas').querySelectorAll('.hora')) o.classList.toggle('on', o === b);
+        const h = horas.find(x => x.hora === horaElegida);
+        const hay = Number(h.libres) > 0;
+        $('#t1').textContent = hay ? '¿Quién eres?' : 'Te avisamos apenas se libere';
+        // Se dice ANTES de pedir los datos si va a poder pagar o no. Que
+        // alguien llene el formulario creyendo que compra y termine en
+        // una lista de espera es la peor forma de enterarse.
+        $('#sub1').innerHTML = hay
+          ? `Horario de las <b>${h.etiqueta}</b>. Con estos datos te apartamos el cupo mientras pagas.`
+          : `El horario de las <b>${h.etiqueta}</b> está lleno. Déjanos tus datos y ` +
+            'te escribimos apenas quede un cupo. <b>No tienes que pagar nada ahora.</b>';
+        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Entrar a la lista de espera';
+        aviso('#err1', '');
+        ir(1);
+      });
+    }
+  }
+
+  /* ── los datos ─────────────────────────────────────────────── */
+  $('#volver0').addEventListener('click', () => ir(0));
+
+  const limpiarTel = v => {
+    let t = String(v || '').replace(/\D/g, '');
+    if (t.length === 12 && t.startsWith('57')) t = t.slice(2);
+    return t;
+  };
+
+  $('#form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nombre = $('#nombre').value.trim();
+    const tel = limpiarTel($('#celular').value);
+    const habeas = $('#habeas').checked;
+
+    for (const id of ['#nombre', '#celular']) $(id).classList.remove('mal');
+    if (nombre.length < 2) { $('#nombre').classList.add('mal');
+      return aviso('#err1', 'Escribe tu nombre.', 'mal'); }
+    if (tel.length !== 10) { $('#celular').classList.add('mal');
+      return aviso('#err1', 'El celular son 10 dígitos, sin espacios.', 'mal'); }
+    if (!habeas) return aviso('#err1', 'Falta autorizar el uso de tus datos.', 'mal');
+
+    aviso('#err1', '');
+    const btn = $('#btn-enviar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const r = await fetch(CONFIG.API + '/solicitar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, celular: tel, hora: horaElegida,
+          documento: $('#documento').value.trim(),
+          correo: $('#correo').value.trim(),
+          habeas: true, apellido2: $('#apellido2').value,
+        }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+
+      solicitud = d;
+      valorCop = Number(d.valor_cop || valorCop);
+      // El estado lo decide el servidor, no lo que la página pintó hace
+      // un minuto: los cupos pueden haberse ido mientras escribía.
+      if (d.estado === 'esperando_pago') { pintarPago(); ir(2); }
+      else { pintarEspera(); ir(3); }
+    } catch (e) {
+      aviso('#err1', (e && e.message) ||
+        'No pudimos guardar tus datos. Inténtalo otra vez.', 'mal');
+    } finally {
+      btn.disabled = false;
+      const h = horas.find(x => x.hora === horaElegida);
+      btn.textContent = (h && Number(h.libres) > 0)
+        ? 'Continuar al pago' : 'Entrar a la lista de espera';
+    }
+  });
+
+  /* ── el pago ───────────────────────────────────────────────── */
+  function pintarPago() {
+    const h = horas.find(x => x.hora === horaElegida);
+    $('#sub2').innerHTML =
+      `Te guardamos el cupo de las <b>${h ? h.etiqueta : ''}</b> por <b>24 horas</b>. ` +
+      'Transfiere y avísanos aquí mismo.';
+    $('#monto').textContent = pesos(valorCop);
+    $('#d-llave').textContent = CONFIG.PAGO.llave;
+    $('#d-banco').textContent = CONFIG.PAGO.banco;
+    $('#d-cuenta').textContent = CONFIG.PAGO.cuenta;
+    $('#d-titular').textContent = CONFIG.PAGO.titular;
+    $('#qr').src = CONFIG.PAGO.qr;
+  }
+
+  for (const b of document.querySelectorAll('.copiar')) {
+    b.addEventListener('click', async () => {
+      const t = $('#' + b.dataset.copiar).textContent;
+      try { await navigator.clipboard.writeText(t); b.textContent = '¡Listo!'; }
+      catch (e) { b.textContent = t; }   // sin permiso, al menos se ve
+      setTimeout(() => { b.textContent = 'Copiar'; }, 1800);
+    });
+  }
+
+  $('#btn-pague').addEventListener('click', async () => {
+    if (!solicitud) return;
+    const btn = $('#btn-pague');
+    btn.disabled = true; btn.textContent = 'Avisando…';
+    try {
+      const r = await fetch(CONFIG.API + '/pague', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: solicitud.id,
+                               referencia: $('#referencia').value.trim() }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      pintarPagado(); ir(3);
+    } catch (e) {
+      aviso('#err2', (e && e.message) ||
+        'No pudimos registrar tu aviso. Escríbenos por WhatsApp.', 'mal');
+      btn.disabled = false; btn.textContent = 'Ya transferí';
+    }
+  });
+
+  /* ── los finales ───────────────────────────────────────────── */
+  function pintarEspera() {
+    const h = horas.find(x => x.hora === horaElegida);
+    const hh = h ? h.etiqueta : 'ese horario';
+    $('#final').innerHTML =
+      `<div class="ico">📝</div>
+       <h2>Quedaste en la lista</h2>
+       <p>Te escribimos por WhatsApp apenas se libere un cupo de las <b>${hh}</b>.</p>
+       <p><b>No pagues nada todavía.</b></p>`;
+    $('#wa').href = waUrl(
+      `Hola Tumbao, quedé en lista de espera para la mensualidad de las ${hh}.`);
+  }
+
+  function pintarPagado() {
+    const h = horas.find(x => x.hora === horaElegida);
+    const hh = h ? h.etiqueta : '';
+    $('#final').innerHTML =
+      `<div class="ico">💜</div>
+       <h2>¡Gracias! Ya nos llegó tu aviso</h2>
+       <p>Estamos confirmando el pago con el banco. Te escribimos por
+          WhatsApp para activarte la mensualidad de las <b>${hh}</b>.</p>
+       <p>Si tienes el comprobante a mano, mándanoslo y vamos más rápido.</p>`;
+    $('#wa').href = waUrl(
+      `Hola Tumbao, ya transferí la mensualidad de las ${hh}. Les mando el comprobante.`);
+  }
+
+  cargarCupos();
+})();
+</script>
+</body>
+</html>

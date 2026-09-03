@@ -790,6 +790,87 @@ async function pagina(request, env, ruta, origen, ctx) {
         mensaje: mensajes[r.estado] || '' }, 200, origen);
     }
 
+    /* ═══════ MENSUALIDAD ═══════════════════════════════════════════
+       Hasta ahora el embudo se partía en dos y solo una mitad tenía a
+       dónde ir: quien quería clase suelta llegaba a la página, y quien
+       quería MENSUALIDAD se quedaba en el WhatsApp. A veces se le
+       mandaba el número de cuenta y pagaba, y esa plata entraba al banco
+       sin nombre, sin hora y sin nadie que supiera de quién era — una de
+       las fuentes de los depósitos sin dueño del cierre.
+
+       Estas tres rutas son la otra mitad del embudo. */
+
+    // Cuántos cupos quedan por hora. Es lo primero que pinta la página,
+    // así que no pide nada más que esto.
+    if (ruta === '/tumbao/mensualidad' && metodo === 'GET') {
+      const r = await rpc(env, 'mensualidad_cupos', {});
+      if (!r || !r.ok) {
+        return json({ ok: false, error: 'FALLA',
+          mensaje: 'No pudimos leer los cupos. Inténtalo otra vez.' }, 502, origen);
+      }
+      return json(r, 200, origen);
+    }
+
+    if (ruta === '/tumbao/mensualidad/solicitar' && metodo === 'POST') {
+      // La misma trampa para bots que en /tumbao/reservar: un campo que
+      // un humano nunca llena. Se responde ok para no enseñarle al bot
+      // que lo pillaron.
+      if (txt(b.apellido2, 40) !== '') {
+        return json({ ok: true, estado: 'lista_espera' }, 200, origen);
+      }
+
+      let tel = txt(b.celular, 25).replace(/\D/g, '');
+      if (tel.length === 12 && tel.startsWith('57')) tel = tel.slice(2);
+
+      const nombre = txt(b.nombre, 80);
+      const habeas = b.habeas === true || b.habeas === 'true';
+      if (!(nombre.length >= 2 && tel.length === 10 && habeas)) {
+        return json({ ok: false, error: 'datos_incompletos',
+          mensaje: 'Revisa el nombre, el celular y la autorización de datos.' },
+          400, origen);
+      }
+
+      // El cupo lo decide Postgres, no esta ruta ni el navegador: entre
+      // que la página pintó "quedan 2" y la persona terminó de escribir
+      // pueden haberse ido los dos.
+      const r = await rpc(env, 'mensualidad_solicitar', {
+        p_nombre:    nombre,
+        p_celular:   tel,
+        p_hora:      txt(b.hora, 5),
+        p_documento: txt(b.documento, 20) || null,
+        p_correo:    txt(b.correo, 120) || null,
+      });
+
+      if (!r || !r.ok) {
+        const mapa = { HORA_NO_DISPONIBLE: 409, HORA_INVALIDA: 400,
+                       CELULAR_INVALIDO: 400, NOMBRE_CORTO: 400 };
+        return json({ ok: false, error: (r && r.error) || 'desconocido',
+          mensaje: 'No pudimos guardar tus datos. Escríbenos por WhatsApp.' },
+          mapa[r && r.error] || 400, origen);
+      }
+      return json(r, 200, origen);
+    }
+
+    // «Ya pagué». No confirma nada por sí solo: dice que la persona
+    // asegura haber transferido. Lo que de verdad confirma es el correo
+    // del banco, igual que en la clase suelta.
+    if (ruta === '/tumbao/mensualidad/pague' && metodo === 'POST') {
+      const id = txt(b.id, 40);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        return json({ ok: false, error: 'ID_INVALIDO' }, 400, origen);
+      }
+      const r = await rpc(env, 'mensualidad_reportar_pago', {
+        p_id: id, p_referencia: txt(b.referencia, 60) || null,
+      });
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'desconocido',
+          mensaje: (r && r.mensaje) ||
+            'No pudimos registrar tu aviso. Escríbenos por WhatsApp.' },
+          r && r.error === 'NO_EXISTE' ? 404 : 400, origen);
+      }
+      return json(r, 200, origen);
+    }
+
     return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);
 
   } catch (e) {
@@ -1052,6 +1133,12 @@ export default {
           await soltarVencidos(env);
         }
         r = await rpc(env, cual.fn, { p_token: token, ...args });
+
+      // Lo que ve el panel: la lista de espera y quién dijo que ya pagó.
+      // Sin esto los datos que recoge la página no llegarían a nadie, que
+      // es exactamente el problema que vino a resolver.
+      } else if (ruta === '/api/mensualidad') {
+        r = await rpc(env, 'mensualidad_lista', { p_token: token });
 
       } else if (ruta === '/api/dia') {
         r = await rpc(env, 'caja_del_dia', {
