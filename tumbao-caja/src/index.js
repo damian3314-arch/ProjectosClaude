@@ -1150,6 +1150,27 @@ export default {
         // obligaría a tener ya aplicada la migración 0065 — y hasta
         // entonces no se podría ni cobrar.
         if (cantidad > 1) args.p_cantidad = cantidad;
+        /* DE QUÉ CAJA SALIÓ (0069). Solo aplica a un egreso: un gasto
+           puede salir del cajón del mostrador —la caja menor, la única
+           que se arquea contando billetes— o de la plata de la empresa,
+           que no pasa por ahí. Sin esta distinción un pago que hizo la
+           dueña con la cuenta de la empresa bajaba el arqueo del cajón e
+           inventaba un faltante.
+
+           Se manda solo cuando es 'caja_mayor', por lo mismo que
+           p_cantidad: PostgREST resuelve la función por los parámetros
+           que recibe, así que mandarlo siempre exigiría tener ya
+           aplicada la 0069 y hasta entonces no se podría ni cobrar.
+           'caja_menor' es el valor por defecto de la función. */
+        if (sentido === 'egreso' && b.origen === 'caja_mayor') {
+          args.p_origen = 'caja_mayor';
+          // Un cajón no transfiere: si salió por transferencia, salió de
+          // la caja mayor por definición. Postgres lo vuelve a comprobar.
+        } else if (sentido === 'egreso' && args.p_medio === 'transferencia') {
+          return json({ ok: false, error: 'ORIGEN_NO_APLICA',
+            mensaje: 'De la caja menor solo sale efectivo. Si fue una '
+                   + 'transferencia, marca que salió de la caja mayor.' }, 400, origen);
+        }
         // Solo se manda cuando de verdad hay depósito escogido. PostgREST
         // resuelve la función por los parámetros que recibe: mandar
         // p_pago_id siempre obligaría a que la migración 0027 ya

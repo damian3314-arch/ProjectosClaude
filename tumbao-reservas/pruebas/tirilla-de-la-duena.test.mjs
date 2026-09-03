@@ -84,6 +84,21 @@ const REAL = {
       n: 1, valor_cop: 15000 },
   ],
   banco: { recibido_cop: 715000 },
+  // El desglose de lo que trajo el banco (0064), tal como estaba ese día:
+  // $465.000 se supieron nombrar y $250.000 quedaron sin dueño.
+  cuadre: {
+    quien_entro: { personas: 7, pagaron_antes: 1, pagaron_hoy: 5,
+                   pagaron_hoy_cop: 75000, sin_deposito: 1 },
+    entro_al_banco: {
+      clases_hoy_n: 5, clases_hoy_cop: 75000,
+      futuras_cupos: 0, futuras_depositos: 0, futuras_cop: 0,
+      otros: [{ concepto: 'mensualidad', n: 3, cop: 375000 },
+              { concepto: 'clase_suelta', n: 1, cop: 15000 }],
+      otros_cop: 390000,
+      identificado_cop: 465000,
+      reporto_banco_cop: 715000,
+      sin_identificar_cop: 250000 },
+  },
   conciliacion: { banco: [], banco_cop: 0, banco_hoy_cop: 465000,
                   efectivo: [], efectivo_cop: 0,
                   sin_enlazar: [], sin_enlazar_cop: 0, sin_pago: [] },
@@ -203,6 +218,84 @@ ok('el cierre son dos hojas', fajo.n === 2,
    fajo.hojas.map(h => h.id).join(' '));
 ok('la primera es la de ella', fajo.hojas[0].id === 'hoja-cierre');
 ok('y la segunda el punteo', fajo.hojas[1].id === 'hoja-punteo');
+
+/* ── LA FECHA ────────────────────────────────────────────────────
+   Tania reportó que "no salía la fecha del día". Iba con los puntos
+   guía de las demás filas, que empujan el valor al borde derecho, y en
+   un rollo de 72mm esa fila de puntos se lee como un separador y no
+   como un dato. Ahora va pegada a su rótulo, como en su dibujo. */
+({ texto: t, junto: j } = await pintar(REAL));
+ok('la fecha sale pegada a su rótulo, sin puntos guía',
+   /Fecha: 01-09-2026/.test(t), 'como en el dibujo de ella');
+ok('y no es una fila de puntos como los totales',
+   !/Fecha:\s*\.{3}/.test(t));
+
+// Un papel sin fecha no se puede archivar. Si el servidor no la mandara
+// —no debería pasar nunca— se pone la del navegador antes que un hueco.
+({ texto: t } = await pintar({ ...REAL, dia: null }));
+ok('sin fecha del servidor no queda el hueco',
+   /Fecha: \d{2}-\d{2}-\d{4}/.test(t), (t.match(/Fecha: [^\n]*/) || [])[0]);
+
+/* ── EL TOTALIZADOR POR CONCEPTO ─────────────────────────────────
+   Lo pidió Tania al revisar el cierre: poder decir «vendimos diez
+   clases sueltas y tres mensualidades». Las sueltas entran por cuatro
+   puertas y salen en cuatro renglones, así que esa pregunta no la
+   contestaba ni el detalle de arriba ni el resumen por medio de pago. */
+({ texto: t, junto: j } = await pintar(REAL));
+ok('hay un bloque de totales del día', /Totales del día/.test(t));
+ok('las clases sueltas se suman de las cuatro puertas',
+   /Clasessueltas11·\$165\.000/.test(j),
+   '6 página + 0 manuales + 1 efectivo + 4 bancos = 11');
+ok('y las mensualidades de sus dos mitades',
+   /Mensualidades5·\$625\.000/.test(j), '1 efectivo + 4 bancos = 5');
+ok('el totalizador va antes del resumen por medio de pago',
+   t.indexOf('Totales del día') < t.indexOf('Resumen de ingresos'));
+
+/* ── EL BANCO DE HOY, CON LAS FUTURAS APARTADAS ──────────────────
+   El razonamiento de quien lleva la caja: la plata de una reserva
+   futura entra hoy pero la clase es el sábado, y el cruce se hace ese
+   día. Así que no se persigue: se aparta en su renglón y se saca de la
+   cuenta del día. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  cuadre: { ...REAL.cuadre, entro_al_banco: { ...REAL.cuadre.entro_al_banco,
+    futuras_cupos: 7, futuras_depositos: 5, futuras_cop: 105000 } } }));
+ok('el papel dice cuánto reportó el banco', /Reportó\$715\.000/.test(j));
+ok('y cuánto de eso es del día', /Deldía\$465\.000/.test(j),
+   'clases de hoy + lo que no es una clase');
+ok('las reservas futuras van en su renglón, contadas',
+   /Reservasfuturas7·\$105\.000/.test(j),
+   'siete reservas para otro día: no se cruzan hoy');
+ok('y lo que sigue sin nombre, aparte', /Sinidentificar\$250\.000/.test(j));
+
+// Un cierre viejo sin `cuadre` no puede tumbar la hoja.
+const sinCuadre = { ...REAL }; delete sinCuadre.cuadre;
+({ texto: t } = await pintar(sinCuadre));
+ok('sin `cuadre` el bloque del banco no se imprime', !/El banco hoy/.test(t));
+ok('pero el resto de la hoja sale entero', /TOTAL INGRESOS/.test(t));
+
+/* ── CAJA MENOR Y CAJA MAYOR (0069) ──────────────────────────────
+   No todos los gastos salen del cajón del mostrador. Lo que pagó la
+   empresa se reporta, pero NO puede bajar el saldo de este cajón: eso
+   era un faltante inventado cada vez que Tania pagaba algo con la
+   cuenta. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  egreso_efectivo: 20000,
+  egreso_caja_mayor_efectivo: 500000,
+  egreso_transferencia: 300000 }));
+ok('el gasto del cajón sí baja el saldo',
+   /Gastos\/retiros\$160\.000/.test(j), '20.000 del cajón + 140.000 retirados');
+ok('y el saldo queda descontándolo',
+   /SALDOFINALENCAJA\$80\.000/.test(j), '100.000 + 140.000 − 160.000');
+ok('lo pagado con caja mayor se reporta aparte',
+   /Pagadoconcajamayor\$800\.000/.test(j), '500.000 en efectivo + 300.000 por transferencia');
+ok('y se dice que no salió de este cajón', /no sale de este cajón/.test(t));
+ok('va debajo del saldo, fuera de la resta',
+   t.indexOf('SALDO FINAL EN CAJA') < t.indexOf('Pagado con caja mayor'));
+
+// Sin gastos de la empresa el renglón no aparece: uno que casi siempre
+// diría $0 enseña a no leer el papel.
+({ texto: t } = await pintar(REAL));
+ok('sin caja mayor, ese renglón no se imprime', !/Pagado con caja mayor/.test(t));
 
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');

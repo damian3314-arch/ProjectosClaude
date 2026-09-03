@@ -907,6 +907,9 @@ const CONFIG = {
        con sangría, como en el papel que ella dibujó. */
     #tirilla .gr{margin-top:2.5mm}
     #tirilla .gracias{text-align:center;margin-top:4mm}
+    /* La fecha va sola, sin puntos guía: es la cabecera del papel, no
+       un total. Con los puntos parecía un separador y se dejaba de leer. */
+    #tirilla .fecha{margin:1.5mm 0 .5mm}
     /* `break-after:avoid` porque un título solo al pie de una hoja, con
        sus renglones en la siguiente, es peor que no titular nada. */
     #tirilla .t{font-weight:700;font-size:8pt;letter-spacing:.06em;margin:2mm 0 .8mm;
@@ -1238,6 +1241,35 @@ const CONFIG = {
       El banco reporta las transferencias solo. Escoge abajo el depósito;
       si no aparece todavía, se registra igual y queda marcado hasta que llegue.
     </p>
+
+    <!-- DE QUÉ CAJA SALIÓ. Solo para gastos (0069).
+
+         No todos los gastos salen del cajón del mostrador: unas veces se
+         paga con la cuenta de la empresa y otras con efectivo de la
+         empresa que no está en ese cajón. Hasta ahora solo había un
+         sitio donde apuntarlo, así que ese gasto se registraba como si
+         hubiera salido del cajón y el arqueo de la noche pedía menos
+         billetes de los que de verdad tenía que haber: un faltante
+         inventado.
+
+         La caja menor es la única que se arquea contando billetes. Lo
+         que sale de la caja mayor se reporta igual —sale en las salidas
+         del día— pero no toca el arqueo. -->
+    <div id="modal-origen" hidden>
+      <label>¿De qué caja salió?</label>
+      <div class="medios">
+        <button class="origen on" data-origen="caja_menor" type="button">
+          🧰 Caja menor
+        </button>
+        <button class="origen" data-origen="caja_mayor" type="button">
+          🏦 Caja mayor
+        </button>
+      </div>
+      <p class="ap-pista" id="modal-pista-origen">
+        Caja menor es el cajón del mostrador, el que cuadras al cerrar.
+        Caja mayor es plata de la empresa: se apunta, pero no sale del cajón.
+      </p>
+    </div>
 
     <!-- Aquí es donde de verdad se comprueba que la plata llegó. La foto
          del comprobante no comprueba nada: puede ser vieja o editada. El
@@ -3585,6 +3617,9 @@ const CONFIG = {
   };
 
   let cajaDatos = null, cajaElegido = null, cajaMedio = 'efectivo';
+  // 0069: de qué caja sale un gasto. Arranca siempre en la caja menor
+  // —el cajón del mostrador— que es de donde sale la gran mayoría.
+  let cajaOrigen = 'caja_menor';
   // Los dos arrancan cerrados a propósito: ver el listado no hace daño,
   // pero ver los totales sí, y el que los destapa es el cajero cuando
   // decide que terminó.
@@ -3962,6 +3997,11 @@ const CONFIG = {
        concepto nuevo aparezca solo, sin tocar esta función — si no, el
        día que se venda algo nuevo el total dejaría de cuadrar sin que
        nadie sepa por qué. */
+    // El desglose de lo que trajo el banco hoy (0064). Un cierre viejo
+    // guardado por un servidor anterior no lo trae, y entonces el bloque
+    // del banco no se imprime — el resto de la hoja no depende de él.
+    const alBanco = (d.cuadre || {}).entro_al_banco || {};
+
     const conc = Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [];
     const otros = new Map();
     for (const x of conc) {
@@ -3975,6 +4015,12 @@ const CONFIG = {
 
     let otrosEf = 0, otrosTr = 0;
     for (const o of otros.values()) { otrosEf += o.ef; otrosTr += o.tr; }
+
+    // Las clases sueltas entran por cuatro puertas distintas y en el
+    // papel salen en cuatro renglones. Esta es la suma de las cuatro:
+    // la cifra que contesta «¿cuántas sueltas vendimos hoy?».
+    const sueltasN   = pagN + manoN + efeN + recN;
+    const sueltasCop = pag + mano + efe + rec;
 
     // Los tres subtotales, sacados de los renglones de arriba.
     const enEfectivo = efe + otrosEf;
@@ -3995,7 +4041,12 @@ const CONFIG = {
        de arriba y el de abajo no pueden contradecirse. En un cierre
        bien hecho da exactamente lo que se dejó. */
     const base = Number(d.base_cop || 0);
+    // 0069: `egreso_efectivo` es ya SOLO el de la caja menor, que es lo
+    // único que sale de este cajón. Lo que se pagó con plata de la
+    // empresa va aparte y no entra en esta resta.
     const gastos = Number(d.egreso_efectivo || 0) + Number(c.retirado_cop || 0);
+    const cajaMayor = Number(d.egreso_caja_mayor_efectivo || 0)
+                    + Number(d.egreso_transferencia || 0);
     const saldo = base + enEfectivo - gastos;
 
     // El descuadre del arqueo. NO estaba en el dibujo de ella y sale
@@ -4005,13 +4056,50 @@ const CONFIG = {
     const dif = d.cerrado ? Number(c.diferencia_cop || 0) : 0;
     const conSigno = n => (n < 0 ? '−' : '+') + pesos(Math.abs(n));
 
+    // AAAA-MM-DD → DD-MM-AAAA. Si no viniera del servidor se usa hoy:
+    // un papel sin fecha no se puede archivar.
+    const aDiaMesAno = (iso) => {
+      const t = String(iso || '').slice(0, 10).split('-');
+      return t.length === 3 && t[0].length === 4 ? `${t[2]}-${t[1]}-${t[0]}` : '';
+    };
+    const hoyLocal = () => {
+      const n = new Date();
+      const dd = String(n.getDate()).padStart(2, '0');
+      const mm = String(n.getMonth() + 1).padStart(2, '0');
+      return `${dd}-${mm}-${n.getFullYear()}`;
+    };
+    const fechaDelPapel = aDiaMesAno(d.dia) || hoyLocal();
+
+    /* Lo que el banco trajo hoy, partido en las tres cosas que son.
+       `delDiaCop` es lo que se disfrutó hoy más lo que no es una clase
+       (mensualidades, camisetas): todo eso se consume hoy. Las futuras
+       van aparte y lo que sobra es lo que falta por averiguar. */
+    const futN      = Number(alBanco.futuras_cupos || 0);
+    const delDiaCop = Number(alBanco.clases_hoy_cop || 0)
+                    + Number(alBanco.otros_cop || 0);
+    // Nunca negativo en el papel: si el desglose superara al total el
+    // fallo es de datos, y un "−$5.000 sin identificar" solo confunde a
+    // quien cuadra. La diferencia se persigue en el panel.
+    const sinIdent = Math.max(Number(alBanco.sin_identificar_cop || 0), 0);
+
     return `<section class="hoja" id="hoja-cierre">` +
       `<h1>TUMBAO</h1>` +
       `<div class="sub"><b>CIERRE DE CAJA</b></div>` +
-      // Con guiones y en ese orden porque así la escribió ella. No se
-      // usa `conFecha`: el locale mete barras y el papel diría otra cosa
-      // que el dibujo. `d.dia` viene siempre como AAAA-MM-DD.
-      g('Fecha:', String(d.dia || '').split('-').reverse().join('-')) +
+      /* LA FECHA, EN RENGLÓN PROPIO Y SIN PUNTOS GUÍA.
+         Iba con los puntos de las demás filas, que empujan la cifra al
+         borde derecho: en un rollo de 72mm una fila de puntos entre
+         "Fecha:" y el número se lee como un separador, no como un dato,
+         y Tania reportó que la fecha "no salía". Aquí va pegada a su
+         rótulo, como en su dibujo.
+
+         Con guiones y el día delante porque así la escribió ella; no se
+         usa `conFecha`, que mete barras según el locale del navegador.
+         `d.dia` viene siempre como AAAA-MM-DD desde caja_del_dia.
+
+         El respaldo es la fecha de hoy: un papel sin fecha no se puede
+         archivar, así que si algún día el servidor no la mandara, es
+         mejor la del navegador que un hueco. */
+      `<div class="fecha">Fecha: ${esc(fechaDelPapel)}</div>` +
       `<hr>` +
 
       grupo('Reservas por página') +
@@ -4036,6 +4124,25 @@ const CONFIG = {
           (o.trN ? g('  Bancos:   ' + unidad(o.trN, nom.toLowerCase()), pesos(o.tr)) : '');
       }).join('') +
 
+      /* ── B. CUÁNTO SE VENDIÓ DE CADA COSA ────────────────────────
+         Lo pidió Tania al revisar el cierre: poder decir «vendimos diez
+         clases sueltas y tres mensualidades». Arriba está el detalle por
+         la puerta por la que entró cada cupo y abajo el resumen por
+         medio de pago; ninguno de los dos contesta esa pregunta, porque
+         las clases sueltas están repartidas en cuatro renglones.
+
+         Se suma de los MISMOS renglones que se imprimen arriba, no de un
+         campo aparte: si mañana aparece una puerta nueva o un concepto
+         nuevo, entra aquí solo y el total no se queda corto. */
+      `<hr>` + grupo('Totales del día') +
+      (sueltasN
+        ? g('Clases sueltas', `${sueltasN} · ${pesos(sueltasCop)}`)
+        : '') +
+      [...otros.entries()].map(([k, o]) => {
+        const n = o.efN + o.trN;
+        return n ? g(plural(nombreConcepto(k), n), `${n} · ${pesos(o.ef + o.tr)}`) : '';
+      }).join('') +
+
       `<hr>` +
       grupo('Resumen de ingresos') +
       g('Ingresos en efectivo', pesos(enEfectivo)) +
@@ -4053,7 +4160,48 @@ const CONFIG = {
       (dif !== 0
         ? g('Descuadre al contar', conSigno(dif), true)
         : '') +
+
+      /* LO QUE SE PAGÓ CON PLATA DE LA EMPRESA (0069).
+         Va DEBAJO del saldo y fuera de la resta a propósito: no salió de
+         este cajón y meterlo arriba volvería a inventar el faltante que
+         todo esto vino a arreglar. Se imprime solo si lo hubo, porque un
+         renglón que casi siempre dice $0 enseña a no leer el papel. */
+      (cajaMayor > 0
+        ? g('Pagado con caja mayor', pesos(cajaMayor)) +
+          `<div class="peq">no sale de este cajón</div>`
+        : '') +
       `<hr>` +
+
+      /* ── D. EL BANCO DE HOY, EN CUATRO RENGLONES ─────────────────
+         El razonamiento es de quien lleva la caja, y es el que zanja la
+         confusión que traía este papel desde el principio:
+
+           «Siempre se está pensando cuánto ingresó por clases futuras, y
+            eso es lo que causa la confusión, porque ese dinero ingresa
+            hoy pero la persona viene el sábado. En el cierre del sábado
+            se hace el cruce y se verifica que vino, aunque pagó hace
+            tres días. ¿Qué necesidad de matarse la cabeza hoy? Yo lo que
+            quiero es revisar lo de ESE día.»
+
+         Así que las futuras no se persiguen: se APARTAN. Se dicen en un
+         renglón —cuántas reservas y cuánta plata— y se sacan de la
+         cuenta del día. Lo que queda debajo, si queda algo, es lo único
+         que de verdad hay que averiguar hoy.
+
+         Sale de `cuadre` (0064). Un cierre viejo servido por un servidor
+         anterior no lo trae, y entonces este bloque no se imprime: el
+         resto de la hoja no depende de él. */
+      (alBanco.reporto_banco_cop != null
+        ? `<hr>` + grupo('El banco hoy') +
+          g('Reportó', pesos(alBanco.reporto_banco_cop)) +
+          g('Del día', pesos(delDiaCop)) +
+          // Cupos, no depósitos: ella cuenta reservas. Tres amigas con un
+          // solo pago son tres reservas del sábado que viene.
+          (futN
+            ? g('Reservas futuras', `${futN} · ${pesos(alBanco.futuras_cop)}`)
+            : '') +
+          (sinIdent > 0 ? g('Sin identificar', pesos(sinIdent)) : '')
+        : '') +
 
       `<div class="gracias">Gracias</div>` +
     `</section>`;
@@ -4814,6 +4962,9 @@ const CONFIG = {
     cajaElegido = x;
     cajaMedio = pago ? 'transferencia' : 'efectivo';
     $('#modal-pista-medio').hidden = true;
+    // Cada gasto arranca preguntando de nuevo: heredar el de la ventana
+    // anterior es como se acaba apuntando en la caja equivocada.
+    cajaOrigen = 'caja_menor';
     cajaPago = pago ? pago.id : null;
     $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
@@ -4843,6 +4994,7 @@ const CONFIG = {
     // de 125.000 la lista baja de setenta y pico a uno o dos.
     $('#modal-dep-buscar').value = valor ? String(valor) : '';
     pintarDepositos();
+    pintarOrigen();
     $('#modal-caja').hidden = false;
     setTimeout(() => $('#modal-valor').focus(), 60);
   }
@@ -4869,11 +5021,49 @@ const CONFIG = {
       // El banco ya manda sus depósitos: se dice justo cuando se elige
       // transferencia, que es cuando importa.
       $('#modal-pista-medio').hidden = cajaMedio !== 'transferencia';
+      // Un cajón no transfiere: si el gasto salió por transferencia,
+      // salió de la caja mayor y no hay nada que escoger.
+      if (cajaMedio === 'transferencia') cajaOrigen = 'caja_mayor';
+      pintarOrigen();
       // Al cambiar de efectivo a transferencia aparece la lista; al
       // volver a efectivo se olvida el depósito, que si no quedaría
       // enlazado a un cobro en billetes.
       cajaPago = null;
       pintarDepositos();
+    });
+  }
+
+  /* DE QUÉ CAJA SALIÓ EL GASTO (0069).
+
+     Solo se pregunta en un egreso: un ingreso siempre entra, y dónde
+     entra ya lo dice el medio de pago. Y cuando el gasto salió por
+     transferencia no se pregunta tampoco — un cajón no transfiere, así
+     que salió de la caja mayor por definición y se deja fijado. */
+  function pintarOrigen() {
+    const caja = $('#modal-origen');
+    const aplica = cajaElegido && cajaElegido.s === 'egreso';
+    caja.hidden = !aplica;
+    if (!aplica) { cajaOrigen = 'caja_menor'; return; }
+
+    // Por transferencia no se puede elegir: se enseña fijado en caja
+    // mayor para que quede dicho de dónde salió, no escondido.
+    const forzado = cajaMedio === 'transferencia';
+    for (const o of caja.querySelectorAll('.origen')) {
+      o.classList.toggle('on', o.dataset.origen === cajaOrigen);
+      o.disabled = forzado;
+    }
+    $('#modal-pista-origen').textContent = forzado
+      ? 'Una transferencia no sale del cajón del mostrador: se registra '
+        + 'como caja mayor.'
+      : 'Caja menor es el cajón del mostrador, el que cuadras al cerrar. '
+        + 'Caja mayor es plata de la empresa: se apunta, pero no sale del cajón.';
+  }
+
+  for (const b of document.querySelectorAll('#modal-origen .origen')) {
+    b.addEventListener('click', () => {
+      if (b.disabled) return;
+      cajaOrigen = b.dataset.origen;
+      pintarOrigen();
     });
   }
 
@@ -5014,6 +5204,10 @@ const CONFIG = {
     // y leerlo después reventaba con "Cannot read properties of null".
     // El movimiento sí quedaba grabado, pero la pantalla decía que no.
     const queEra = cajaElegido.n;
+    // Por lo mismo: el aviso de abajo dice de qué caja salió, y para
+    // entonces cajaElegido y cajaOrigen ya se reiniciaron.
+    const esEgreso = cajaElegido.s === 'egreso';
+    const origenUsado = cajaOrigen;
     // Los conceptos sin contador cubren una sola cosa. Se manda igual y
     // no se omite: el Worker solo se lo pasa a Postgres cuando pasa de
     // uno, pero decir "esto cubrió a una persona" es más honesto que
@@ -5026,11 +5220,21 @@ const CONFIG = {
         valor, medio: cajaMedio, nota: $('#modal-nota').value,
         pago_id: cajaMedio === 'transferencia' ? cajaPago : null,
         cantidad,
+        // Solo en un gasto: en un ingreso no significa nada y mandarlo
+        // sería ruido que el Worker tendría que ignorar.
+        origen: cajaElegido.s === 'egreso' ? cajaOrigen : undefined,
       });
       cerrarModal();
       await cargarCaja(true);
       nota('Registrado', 'bien',
-           (cantidad > 1 ? `${cantidad} × ${queEra} · ` : `${queEra} `) + pesos(valor));
+           (cantidad > 1 ? `${cantidad} × ${queEra} · ` : `${queEra} `) + pesos(valor) +
+           // Se dice de qué caja salió: es lo único del gasto que no se
+           // puede deducir mirando la cifra, y si se apuntó en la caja
+           // equivocada este es el momento de verlo.
+           (esEgreso
+             ? (origenUsado === 'caja_mayor' ? ' · de la caja mayor'
+                                             : ' · del cajón')
+             : ''));
     } catch (e) {
       fallo(e, 'No se pudo registrar');
     } finally { $('#modal-guardar').disabled = false; }
