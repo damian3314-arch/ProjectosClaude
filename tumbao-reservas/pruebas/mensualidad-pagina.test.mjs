@@ -89,15 +89,31 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
     [...document.querySelectorAll('.hora')].map(h => h.innerText).join(' ~ '));
 
   ok('pinta las tres horas', (await p.locator('.hora').count()) === 3);
-  ok('la de 5 cupos los dice en plural', /Quedan 5 cupos/.test(txt));
+  ok('la de 5 cupos los dice en plural', /\b5 cupos\b/.test(txt));
   // "Queda 1 cupo" y no "Quedan 1 cupos": el número exacto mueve mucho
   // más que "hay cupo", y una concordancia rota lo hace parecer roto.
-  ok('la de 1 cupo va en singular', /Queda 1 cupo\b/.test(txt) && !/Quedan 1 cupos/.test(txt));
-  ok('la llena dice que es lista de espera',
-     /Sin cupo/.test(txt) && /lista de espera/.test(txt));
-  ok('y se distinguen de un vistazo',
-     (await p.locator('.pastilla.libre').count()) === 2 &&
-     (await p.locator('.pastilla.lleno').count()) === 1);
+  ok('la de 1 cupo va en singular',
+     /\b1 cupo\b/.test(txt) && !/1 cupos/.test(txt));
+  // Sin distinguir mayúsculas: lo que importa es que la fila diga las dos
+  // cosas —que no hay cupo y que la anotan—, no cómo se capitalice.
+  ok('la llena dice que no hay cupo y que la anotan',
+     /Sin cupo/.test(txt) && /lista de espera/i.test(txt));
+  /* Las pastillas usan el MISMO vocabulario que la lista de clases de la
+     página de reservas —.cupos, .cupos.pocos, .cupos.cero— y no unos
+     nombres propios. Las dos páginas son el mismo embudo partido en dos:
+     el día que se cambie la marca hay que poder buscar el mismo nombre
+     en los dos archivos. Con el fixture: 5 libres → normal, 1 → pocos,
+     0 → cero. */
+  ok('las pastillas de cupo son las de la página de reservas',
+     (await p.locator('.cupos').count()) === 3);
+  ok('la que va justa se marca en dorado',
+     (await p.locator('.cupos.pocos').count()) === 1, '1 cupo → pocos');
+  ok('y la llena en rojo',
+     (await p.locator('.cupos.cero').count()) === 1);
+  // Y la fila entera reusa .clase, la misma forma que una clase suelta:
+  // quien ya reservó por la otra página reconoce esto sin leerlo.
+  ok('la fila reusa el componente .clase',
+     (await p.locator('.clase.hora').count()) === 3);
   ok('el precio sale del servidor, no del HTML',
      (await p.locator('#precio').textContent()).includes('125.000'));
   ok('sin errores de JS', errs.length === 0, errs.join(' | '));
@@ -266,6 +282,68 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
      (await p.locator('#err0 a').count()) === 1);
   ok('sin reventar con un error de JS', errs.length === 0, errs.join(' | '));
   await p.close();
+}
+
+/* ═══════ LAS DOS PÁGINAS SON LA MISMA CASA ════════════════════════
+   No basta con que se PAREZCA: se compara contra index.html de verdad,
+   token por token. De WhatsApp se manda a una o a la otra según lo que
+   quiera la persona, y unas veces a las dos seguidas — si se separan,
+   cruzar de una a otra se siente como salir del sitio.
+
+   Esto es lo que evita que la próxima vez que alguien toque una de las
+   dos, la otra se quede atrás sin que nadie lo note. */
+{
+  const { readFileSync } = await import('node:fs');
+  const men = readFileSync('/home/user/ProjectosClaude/docs/mensualidad.html', 'utf8');
+  const res = readFileSync('/home/user/ProjectosClaude/docs/index.html', 'utf8');
+
+  // Los colores y el radio de las esquinas, exactamente los mismos.
+  const TOKENS = ['--bg:#0d0b0f', '--bg-2:#161219', '--bg-3:#1f1a24',
+                  '--line:#312a38', '--tx:#f4eff6', '--tx-2:#b3a7bd',
+                  '--tx-3:#7d7186', '--hot:#ff6b35', '--gold:#ffc14d',
+                  '--ok:#4ade80', '--bad:#ff6b81', '--r:14px'];
+  const faltan = TOKENS.filter(t => !(men.includes(t) && res.includes(t)));
+  ok('la paleta es la misma, token por token', faltan.length === 0,
+     faltan.join(' ') || `${TOKENS.length} tokens`);
+
+  // El fondo con los dos degradados: es la firma visual de la marca.
+  ok('el fondo lleva los mismos dos degradados',
+     men.includes('radial-gradient(70rem 40rem at 50% -12rem,rgba(255,107,53,.16)') &&
+     res.includes('radial-gradient(70rem 40rem at 50% -12rem,rgba(255,107,53,.16)'));
+
+  // El logo con el degradado recortado sobre el texto.
+  ok('el logo usa el mismo degradado',
+     men.includes('linear-gradient(100deg,var(--gold),var(--hot) 55%,#ff4f7d)') &&
+     res.includes('linear-gradient(100deg,var(--gold),var(--hot) 55%,#ff4f7d)'));
+
+  // Y el mismo ancho de columna: 44rem en las dos.
+  ok('la columna mide lo mismo en las dos',
+     men.includes('max-width:44rem') && res.includes('max-width:44rem'));
+
+  /* Los componentes compartidos, por nombre. Si alguien renombra .btn a
+     .boton en una de las dos, esto salta. */
+  const COMPONENTES = ['.btn', '.btn-ghost', '.clase', '.cupos', '.monto',
+                       '.qr-caja', '.datos-pago', '.fila-dato', '.copiar',
+                       '.tick', '.aviso', '.check', '.trampa', '.pasos',
+                       '.skel', '.resumen', '.hint'];
+  const sueltos = COMPONENTES.filter(c =>
+    !(men.includes(c + '{') || men.includes(c + ' ')) ||
+    !(res.includes(c + '{') || res.includes(c + ' ')));
+  ok('los componentes se llaman igual en las dos',
+     sueltos.length === 0, sueltos.join(' ') || `${COMPONENTES.length} componentes`);
+
+  // Y los datos de pago tienen que ser LOS MISMOS. Que una página mande
+  // a una cuenta y la otra a otra es la peor forma de descubrirlo.
+  ok('mandan a la misma cuenta',
+     men.includes("cuenta:  '91289724619'") && res.includes("cuenta:  '91289724619'"));
+  ok('y a la misma llave Bre-B',
+     men.includes("llave:   '1096803067'") && res.includes("llave:   '1096803067'"));
+  ok('y al mismo WhatsApp',
+     men.includes("'573017833550'") && res.includes("'573017833550'"));
+
+  // Ninguna de las dos puede quedarse con la piel clara del afiche.
+  ok('no quedó nada de la paleta lila del primer intento',
+     !/--lila|#EADCFA|#3C1B63/.test(men));
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
