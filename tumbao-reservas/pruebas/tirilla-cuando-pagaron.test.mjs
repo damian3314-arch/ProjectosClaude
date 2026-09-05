@@ -45,11 +45,48 @@ await p.goto('file://' + rutaDelPanel());
 // Lo que devuelve caja_del_dia el 28 de agosto, con sus casos reales:
 // un depósito compartido, uno de hace dos días, efectivo de puerta y
 // alguien que entró sin depósito.
+/* `entradas` y `resumen_conceptos` describen EL MISMO DÍA que la
+   conciliación de abajo, renglón por renglón, y desde la 0072 eso es
+   obligatorio: la cabecera de esta hoja ya no se arma de `conciliacion`
+   sino de `ingresosDelDia`, la misma función que usa la hoja 1, para que
+   las dos no puedan abrir con cifras distintas.
+
+   Lo que pagó cada renglón del banco:
+
+     Camila Lopez              15.000  1 suelta por la página
+     Genny Paola (85 + 40)    125.000  1 mensualidad, en dos partes
+     Isabel + Lizet            30.000  2 sueltas por la página
+     Juan Gabriel Ospina       15.000  1 suelta cobrada en recepción
+     (sin depósito escogido)   50.000  1 camiseta
+
+   Suma por bancos: 45.000 de página + 15.000 de recepción + 175.000 de
+   mensualidad y camiseta = 235.000. En efectivo: 15.000 de una suelta +
+   125.000 de una mensualidad = 140.000. Son las mismas dos cifras que
+   esta prueba exigía antes de la 0072, ahora obtenidas por el camino
+   por el que de verdad las saca el papel. */
 const DIA = {
   dia: '2026-08-28',
   banco: { recibido_cop: 580000 },
-  entradas: { personas_n: 5 },
-  cierre: {}, resumen_conceptos: [], por_verificar: {},
+  entradas: {
+    personas_n: 5,
+    pagina_transferencia_n: 3, pagina_transferencia_cop: 45000,
+    recepcion_transferencia_n: 1, recepcion_transferencia_cop: 15000,
+    efectivo_n: 1, efectivo_cop: 15000,
+    a_mano_n: 0, a_mano_cop: 0,
+  },
+  cierre: {}, por_verificar: {},
+  resumen_conceptos: [
+    { concepto: 'clase_suelta', medio: 'transferencia', sentido: 'ingreso',
+      n: 4, valor_cop: 60000 },
+    { concepto: 'clase_suelta', medio: 'efectivo', sentido: 'ingreso',
+      n: 1, valor_cop: 15000 },
+    { concepto: 'mensualidad', medio: 'transferencia', sentido: 'ingreso',
+      n: 1, valor_cop: 125000 },
+    { concepto: 'mensualidad', medio: 'efectivo', sentido: 'ingreso',
+      n: 1, valor_cop: 125000 },
+    { concepto: 'camiseta', medio: 'transferencia', sentido: 'ingreso',
+      n: 1, valor_cop: 50000 },
+  ],
   conciliacion: {
     banco: [
       { dia: '2026-08-26', dias_antes: 2, hora: '09:10', valor_cop: 15000,
@@ -211,6 +248,91 @@ ok('sin `cuadre`, el punteo sale completo igual',
    /BUSCAR EN EL EXTRACTO/.test(t) && /185\.000/.test(t));
 ok('y la hoja 1 sale igual, que no depende de ese dato',
    /TOTAL INGRESOS/.test(cierre) && !/DE ESO/.test(cierre));
+
+/* ── EL DEPÓSITO DEL QUE UNA NO VINO (0072) ──────────────────────
+   EL CASO QUE ORIGINÓ TODO ESTO. El 5 de septiembre Diana Carreño
+   transfirió $45.000 por tres clases de las 09:00. Dos entraron y María
+   Fernanda Caicedo no vino: quedó reprogramada al 08-09.
+
+   Desde la 0071 la hoja 1 cuenta a quien entró, así que decía dos
+   personas · $30.000 — correcto. Y esta hoja tiene que seguir enseñando
+   $45.000 en ese renglón, porque es lo que dice el extracto y es lo que
+   se tacha — también correcto. Pero el papel mostraba $45.000 con DOS
+   nombres debajo y no explicaba los $15.000 que faltaban, así que las
+   dos hojas del mismo día parecían mentir. Damián: «una dice 300 y la
+   otra 315, esas son las diferencias que causan las confusiones».
+
+   Lo que se comprueba aquí es que el papel cierre esa resta él solo.
+   Las cifras replican el día real: la hoja 1 dice $300.000 por bancos y
+   el extracto trae $285.000 de renglones más $30.000 sin depósito. */
+const CON_NO_VINO = {
+  dia: '2026-09-05',
+  banco: { recibido_cop: 105000 },
+  entradas: {
+    personas_n: 20,
+    pagina_transferencia_n: 17, pagina_transferencia_cop: 255000,
+    recepcion_transferencia_n: 3, recepcion_transferencia_cop: 45000,
+    efectivo_n: 0, efectivo_cop: 0, a_mano_n: 0, a_mano_cop: 0,
+  },
+  cierre: {}, por_verificar: {},
+  resumen_conceptos: [
+    { concepto: 'clase_suelta', medio: 'transferencia', sentido: 'ingreso',
+      n: 3, valor_cop: 45000 },
+  ],
+  conciliacion: {
+    banco: [
+      { dia: '2026-09-05', dias_antes: 0, hora: '14:46', valor_cop: 45000,
+        remitente: 'DIANA CAAROLINA CARREÑO URIBE', referencia: '1096803067',
+        para: ['Carolina Carreño', 'Lina Johana Francis'], conceptos: [],
+        cobros: 0, es_parte: false,
+        no_vino: ['Maria Fernanda Caicedo'] },
+      { dia: '2026-09-05', dias_antes: 0, hora: '09:11', valor_cop: 240000,
+        remitente: 'VARIOS', referencia: null,
+        para: ['Los demás'], conceptos: [], cobros: 0, es_parte: false,
+        no_vino: [] },
+    ],
+    banco_cop: 285000, banco_hoy_cop: 105000, no_vino_cop: 15000,
+    efectivo: [], efectivo_cop: 0,
+    sin_enlazar: [{ hora: '08:00', concepto: 'clase_suelta', valor_cop: 15000 },
+                  { hora: '09:40', concepto: 'clase_suelta', valor_cop: 15000 }],
+    sin_enlazar_cop: 30000,
+    sin_pago: [],
+  },
+};
+
+const fajo2 = await p.evaluate(d => window.__e2e.tirillas(d), CON_NO_VINO);
+const t2 = (fajo2.hojas.find(h => h.id === 'hoja-punteo') || { texto: '' }).texto;
+const c2 = (fajo2.hojas.find(h => h.id === 'hoja-cierre') || { texto: '' }).texto;
+const j2 = t2.replace(/\s/g, '');
+
+// LO PRIMERO: las dos hojas abren con la misma cifra. Es el arreglo.
+ok('la hoja 1 dice $300.000 por bancos',
+   /Ingresosporbancos\$300\.000/.test(c2.replace(/\s/g, '')));
+ok('y la hoja 2 abre con esa misma cifra, no con la del extracto',
+   /Portransferencia\$300\.000/.test(j2),
+   'antes decía $315.000 y nadie sabía por qué');
+ok('el renglón del extracto SÍ sigue diciendo lo que dice el banco',
+   /\$45\.000/.test(t2), 'es lo que se tacha; cambiarlo rompería el punteo');
+
+// Y el papel explica la diferencia solo, sin que nadie reste de cabeza.
+ok('nombra a quien no vino, debajo de su propio renglón',
+   /Maria Fernanda Caicedo/.test(t2));
+ok('y dice que no vino y que queda para otro día',
+   /no vino: Maria Fernanda Caicedo · queda para otro día/.test(t2));
+ok('el nombre va debajo del depósito que la pagó',
+   t2.indexOf('DIANA CAAROLINA') < t2.indexOf('Maria Fernanda Caicedo'));
+ok('el total del banco dice cuánto de él es de quien no vino',
+   /deeso,\$15\.000sondequiennovino/.test(j2),
+   '285.000 en el extracto, de los cuales 15.000 no entraron');
+ok('y cierra la resta contra la hoja 1',
+   /\$270\.000\+lodeabajosindepósito=\$300\.000,igualquelahoja1/.test(j2),
+   '285.000 − 15.000 = 270.000, más 30.000 sin depósito = 300.000');
+
+// Un día sin nadie que faltara no imprime nada de esto: un renglón que
+// casi siempre diría $0 enseña a no leer el papel.
+ok('un día limpio no habla de quien no vino',
+   !/no vino/.test(t) && !/son de quien/.test(t),
+   'el fixture del 28 de agosto no tiene ausentes');
 
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');

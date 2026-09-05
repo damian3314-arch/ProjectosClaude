@@ -4101,6 +4101,58 @@ const CONFIG = {
      papel sume: si mañana aparece un concepto nuevo, entra en el
      desglose y en el total a la vez, y no puede quedarse fuera de uno
      de los dos. */
+  /* ---------- los subtotales del día, UNA sola vez ----------
+     Las dos hojas dicen «cuánto entró por bancos» y «cuánto en
+     efectivo», y hasta hoy cada una lo sacaba de un sitio distinto: la
+     hoja 1 de `entradas` y la hoja 2 de `conciliacion`. El 5 de
+     septiembre eso dio $300.000 en una y $315.000 en la otra, las dos
+     bien, y Damián lo dijo sin rodeos: «esas son las diferencias que
+     causan las confusiones».
+
+     Los $15.000 eran un depósito de $45.000 por tres clases del que una
+     no vino. La hoja 1 contaba dos personas (correcto desde la 0071) y
+     la hoja 2 enseñaba el renglón del extracto, $45.000 (también
+     correcto, es lo que se tacha). Nadie unía las dos cosas.
+
+     Ahora el número lo calcula esta función y las dos hojas lo copian.
+     No pueden discrepar aunque quieran: no hay dos fórmulas. */
+  function ingresosDelDia(d) {
+    const ent = d.entradas || {};
+    const efe = Number(ent.efectivo_cop || 0);
+    const pag = Number(ent.pagina_transferencia_cop || 0);
+    const rec = Number(ent.recepcion_transferencia_cop || 0);
+    const mano = Number(ent.a_mano_cop || 0);
+
+    // Mensualidades, camisetas, cumpleaños. Se leen de
+    // `resumen_conceptos` en vez de escribirlos a mano para que un
+    // concepto nuevo aparezca solo, sin tocar esta función — si no, el
+    // día que se venda algo nuevo el total dejaría de cuadrar sin que
+    // nadie sepa por qué.
+    const otros = new Map();
+    for (const x of (Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [])) {
+      if (x.sentido !== 'ingreso' || x.concepto === 'clase_suelta') continue;
+      if (!otros.has(x.concepto)) otros.set(x.concepto, { ef: 0, efN: 0, tr: 0, trN: 0 });
+      const o = otros.get(x.concepto);
+      if (x.medio === 'efectivo') { o.ef += Number(x.valor_cop || 0); o.efN += Number(x.n || 0); }
+      else                       { o.tr += Number(x.valor_cop || 0); o.trN += Number(x.n || 0); }
+    }
+    let otrosEf = 0, otrosTr = 0;
+    for (const o of otros.values()) { otrosEf += o.ef; otrosTr += o.tr; }
+
+    return {
+      otros,
+      enEfectivo: efe + otrosEf,
+      porBancos:  pag + rec + otrosTr,
+      // Apuntadas en recepción sin que el cobro quedara registrado en
+      // ninguna parte: ni en el cajón ni en el banco. No es efectivo ni
+      // es banco, así que va en su propio renglón — meterla en
+      // cualquiera de los dos haría que el papel jurara tener una plata
+      // localizable que no lo es.
+      sinRegistrar: mano,
+      total: efe + otrosEf + pag + rec + otrosTr + mano,
+    };
+  }
+
   function hojaCierre() {
     const d = cajaDatos;
     const c = d.cierre || {};
@@ -4137,25 +4189,13 @@ const CONFIG = {
     const recN = Number(ent.recepcion_transferencia_n || 0);
     const rec  = Number(ent.recepcion_transferencia_cop || 0);
 
-    /* ── todo lo que no es un cupo ──────────────────────────────────
-       Mensualidades, camisetas, cumpleaños. Se leen de
-       `resumen_conceptos` en vez de escribirlos a mano para que un
-       concepto nuevo aparezca solo, sin tocar esta función — si no, el
-       día que se venda algo nuevo el total dejaría de cuadrar sin que
-       nadie sepa por qué. */
-    const conc = Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [];
-    const otros = new Map();
-    for (const x of conc) {
-      if (x.sentido !== 'ingreso' || x.concepto === 'clase_suelta') continue;
-      const k = x.concepto;
-      if (!otros.has(k)) otros.set(k, { ef: 0, efN: 0, tr: 0, trN: 0 });
-      const o = otros.get(k);
-      if (x.medio === 'efectivo') { o.ef += Number(x.valor_cop || 0); o.efN += Number(x.n || 0); }
-      else                       { o.tr += Number(x.valor_cop || 0); o.trN += Number(x.n || 0); }
-    }
-
-    let otrosEf = 0, otrosTr = 0;
-    for (const o of otros.values()) { otrosEf += o.ef; otrosTr += o.tr; }
+    /* ── todo lo que no es un cupo, y los subtotales ────────────────
+       Mensualidades, camisetas, cumpleaños salen en `otros`. Los tres
+       subtotales los calcula `ingresosDelDia`, que es la MISMA función
+       que usa la hoja 2: es lo que garantiza que las dos digan la misma
+       cifra. Ver el comentario de esa función. */
+    const ing = ingresosDelDia(d);
+    const otros = ing.otros;
 
     // Las clases sueltas entran por cuatro puertas distintas y en el
     // papel salen en cuatro renglones. Esta es la suma de las cuatro:
@@ -4163,15 +4203,9 @@ const CONFIG = {
     const sueltasN   = pagN + manoN + efeN + recN;
     const sueltasCop = pag + mano + efe + rec;
 
-    // Los tres subtotales, sacados de los renglones de arriba.
-    const enEfectivo = efe + otrosEf;
-    const porBancos  = pag + rec + otrosTr;
-    // Apuntadas en recepción sin que el cobro quedara registrado en
-    // ninguna parte: ni en el cajón ni en el banco. No es efectivo ni
-    // es banco, así que va en su propio renglón — meterla en cualquiera
-    // de los dos haría que el papel jurara tener una plata localizable
-    // que no lo es. Solo sale si la hay.
-    const total = enEfectivo + porBancos + mano;
+    const enEfectivo = ing.enEfectivo;
+    const porBancos  = ing.porBancos;
+    const total      = ing.total;
 
     /* ── el cajón ───────────────────────────────────────────────────
        Solo efectivo: la transferencia no pasa por aquí. "Gastos /
@@ -4382,19 +4416,28 @@ const CONFIG = {
     /* ── EFECTIVO CONTRA TRANSFERENCIA, ANTES DE EMPEZAR A BUSCAR ──
        Lo primero que hay que saber al sentarse con el extracto al lado:
        cuánto de lo de hoy se puede encontrar ahí y cuánto no se va a
-       encontrar nunca.
+       encontrar nunca. Sin este bloque, quien cuadraba restaba el total
+       del día contra el extracto y le sobraba justo el efectivo.
 
-       Lo de transferencia son los renglones del extracto (`banco_cop`,
-       que incluye días anteriores porque quien pagó el martes la clase
-       de hoy está en la página del martes) más lo que se registró como
-       transferencia sin escoger depósito (`sin_enlazar_cop`): ese
-       también está en el extracto, solo que todavía no se sabe en qué
-       renglón. Lo de efectivo está en el cajón y en ninguna otra parte.
+       LAS DOS CIFRAS SALEN DE `ingresosDelDia`, LA MISMA QUE LA HOJA 1.
+       Antes se armaban aquí, de `conciliacion`: `banco_cop` +
+       `sin_enlazar_cop`. Eso daba $315.000 el 5 de septiembre donde la
+       hoja 1 decía $300.000, y las dos tenían razón —la diferencia era
+       un depósito de $45.000 por tres clases del que una no vino—, pero
+       nadie podía saberlo mirando los papeles. Damián: «esas son las
+       diferencias que causan las confusiones».
 
-       Sin este bloque, quien cuadraba restaba el total del día contra el
-       extracto y le sobraba justo el efectivo. */
-    const porTransferencia = Number(k.banco_cop || 0) + Number(k.sin_enlazar_cop || 0);
-    const enEfectivo       = Number(k.efectivo_cop || 0);
+       Ahora las dos hojas abren con el mismo número porque lo calcula la
+       misma función. Lo que se tacha contra el extracto sigue siendo el
+       total del banco, que va abajo, en su sección y con su nombre: son
+       dos preguntas distintas y ahora cada una está donde toca. */
+    const ing = ingresosDelDia(d);
+    const porTransferencia = ing.porBancos;
+    const enEfectivo       = ing.enEfectivo;
+
+    // Cuánto de los renglones de abajo es de gente que no entró (0072).
+    // Es lo que explica que el extracto traiga más que el cierre.
+    const noVinoCop = Number(k.no_vino_cop || 0);
 
     return hojaDeCierre(2, 'hoja-punteo', 'EL PUNTEO, PAGO POR PAGO', d.dia,
 
@@ -4412,6 +4455,11 @@ const CONFIG = {
               ` · ${esc(conFecha(dia, { day: 'numeric', month: 'short' }))}</b></div>` +
             g.filas.map(x => {
               const nombres = Array.isArray(x.para) ? x.para : [];
+              // 0072: los de ESTE depósito que no entraron. Van debajo,
+              // en su propia línea: el renglón vale $45.000 y solo hay
+              // dos nombres arriba, y sin esta línea los $15.000 que
+              // faltan no se los explica nadie.
+              const noVino = Array.isArray(x.no_vino) ? x.no_vino : [];
               const conc = (Array.isArray(x.conceptos) ? x.conceptos : [])
                 .map(nombreConcepto).join(', ');
               // Envuelto en .mov-banco para que el corte de página no
@@ -4450,10 +4498,37 @@ const CONFIG = {
                       : ` · en recepción`) +
                     `</div>`
                   : `<div class="peq">→ cobrado en la puerta</div>`) +
+              // 0072: y quién de este mismo depósito no entró. Es la
+              // frase que hace cuadrar las dos hojas: sin ella el
+              // renglón dice $45.000, arriba hay dos nombres, y los
+              // $15.000 de la tercera no aparecen en ninguna parte.
+              // Sin glifo a propósito: el texto de esta hoja se compara
+              // en las pruebas y el corredor cuenta las ✗ de la salida
+              // para saber cuántas fallaron. Una ✗ impresa en el papel
+              // le hacía contar un fallo que no existía.
+              (noVino.length
+                ? `<div class="peq">no ${noVino.length === 1 ? 'vino' : 'vinieron'}: ` +
+                  `${esc(noVino.join(', '))} · ` +
+                  `${noVino.length === 1 ? 'queda' : 'quedan'} para otro día</div>`
+                : '') +
               `</div>`;
             }).join('')
           ).join('') +
-          linea('= Buscar en el banco', pesos(k.banco_cop || 0), 'g grande')
+          linea('= Buscar en el banco', pesos(k.banco_cop || 0), 'g grande') +
+          /* POR QUÉ ESTE TOTAL ES MAYOR QUE EL DE ARRIBA.
+             Arriba dice lo que entró hoy; aquí, lo que hay que tachar en
+             el extracto. Son distintos justo por esto: el banco cobró la
+             clase de quien después no vino, y su renglón sigue en el
+             extracto. La resta se imprime para que quien cuadra no tenga
+             que hacerla de cabeza — es la pregunta que se hizo Damián
+             mirando los dos papeles. */
+          (noVinoCop > 0
+            ? `<div class="peq">de eso, ${esc(pesos(noVinoCop))} son de quien ` +
+              `no vino (va dicho arriba, en su renglón)</div>` +
+              `<div class="peq">${esc(pesos(Number(k.banco_cop || 0) - noVinoCop))} ` +
+              `+ lo de abajo sin depósito = ${esc(pesos(porTransferencia))}, ` +
+              `igual que la hoja 1</div>`
+            : '')
         : `<div class="peq">Nada de lo de hoy entró por el banco.</div>`) +
 
       // EL EFECTIVO SE IMPRIME AUNQUE NO HAYA. Antes la sección
