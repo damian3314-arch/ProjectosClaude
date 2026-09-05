@@ -251,27 +251,69 @@ ok('y las mensualidades de sus dos mitades',
 ok('el totalizador va antes del resumen por medio de pago',
    t.indexOf('Totales del día') < t.indexOf('Resumen de ingresos'));
 
-/* ── EL BANCO DE HOY, CON LAS FUTURAS APARTADAS ──────────────────
-   El razonamiento de quien lleva la caja: la plata de una reserva
-   futura entra hoy pero la clase es el sábado, y el cruce se hace ese
-   día. Así que no se persigue: se aparta en su renglón y se saca de la
-   cuenta del día. */
+/* ── LA PLATA FUTURA SE FUE DEL PAPEL (0071) ─────────────────────
+   Aquí iba «El banco hoy»: reportó / del día / reservas futuras / sin
+   identificar. Cuatro renglones que obligaban a cuadrar dos días a la
+   vez —el de hoy y el del sábado que viene— y que eran justo lo que
+   hacía que las cifras del cierre parecieran contradecirse.
+
+   Damián: «quitarle lo que diga de la plata futura, porque eso es lo
+   que está causando el conflicto». El anticipo se cuadra el día en que
+   la persona entra, que es cuando se sabe si vino.
+
+   Se comprueba con el cierre que MÁS lo tentaba: $715.000 reportados,
+   siete reservas futuras y $250.000 sin dueño. Ninguno de esos cuatro
+   números puede asomar. */
 ({ texto: t, junto: j } = await pintar({ ...REAL,
   cuadre: { ...REAL.cuadre, entro_al_banco: { ...REAL.cuadre.entro_al_banco,
     futuras_cupos: 7, futuras_depositos: 5, futuras_cop: 105000 } } }));
-ok('el papel dice cuánto reportó el banco', /Reportó\$715\.000/.test(j));
-ok('y cuánto de eso es del día', /Deldía\$465\.000/.test(j),
-   'clases de hoy + lo que no es una clase');
-ok('las reservas futuras van en su renglón, contadas',
-   /Reservasfuturas7·\$105\.000/.test(j),
-   'siete reservas para otro día: no se cruzan hoy');
-ok('y lo que sigue sin nombre, aparte', /Sinidentificar\$250\.000/.test(j));
+ok('el bloque del banco ya no se imprime', !/El banco hoy/.test(t));
+ok('no se dice cuánto reportó el banco', !/Reportó/.test(t));
+ok('las reservas futuras no salen en el papel', !/Reservas futuras/.test(t),
+   'se cuadran el día que la persona entra, no hoy');
+ok('ni lo que sigue sin identificar', !/Sin identificar/.test(t),
+   'eso se persigue en el panel, no en el papel');
+ok('ninguna de esas cifras se cuela', !/715\.000/.test(j) && !/105\.000/.test(j),
+   'ni el total del banco ni el de las futuras');
+ok('pero el resto de la hoja sale entero', /TOTAL INGRESOS/.test(t));
 
-// Un cierre viejo sin `cuadre` no puede tumbar la hoja.
+/* ── LO ÚNICO QUE QUEDA POR BUSCAR ───────────────────────────────
+   Lo que sí se lleva a la hoja 1: los cobros que recepción registró
+   como transferencia sin escoger el depósito. El 5 de septiembre eran
+   dos, $30.000, y no tenían respaldo en el banco. Están en el extracto
+   y no se sabe en qué renglón: es lo único de este papel sobre lo que
+   hay que hacer algo.
+
+   Sale de `conciliacion`, que es de donde lo saca también la hoja 2:
+   las dos hojas no pueden decir cosas distintas de la misma plata. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  conciliacion: { ...REAL.conciliacion,
+    sin_enlazar: [{ hora: '08:00', concepto: 'clase_suelta', valor_cop: 15000 },
+                  { hora: '09:40', concepto: 'clase_suelta', valor_cop: 15000 }],
+    sin_enlazar_cop: 30000 } }));
+ok('el papel dice cuántos cobros quedan y por cuánto',
+   /Paraconciliar2cobros\$30\.000/.test(j),
+   'los dos cobros de recepción sin depósito escogido');
+ok('y dice qué hacer con ellos', /buscarlos en el extracto/.test(t));
+ok('y por qué están ahí', /se registraron sin escoger depósito/.test(t));
+ok('y a qué hoja ir por el detalle', /el detalle va en la hoja 2/.test(t));
+ok('va después del saldo del cajón',
+   t.indexOf('SALDO FINAL EN CAJA') < t.indexOf('Para conciliar'));
+
+// Un día en que todo cruzó lo dice, no calla. El renglón que desaparece
+// no se distingue del que nadie miró.
+({ texto: t } = await pintar(REAL));
+ok('un día limpio lo dice explícitamente',
+   /Nada pendiente: todo cruzó con el banco/.test(t));
+ok('y no inventa nada que buscar', !/buscarlos en el extracto/.test(t));
+
+// Un cierre viejo sin `cuadre` no puede tumbar la hoja: ya no se lee
+// ese dato para nada, pero la prueba se queda como red.
 const sinCuadre = { ...REAL }; delete sinCuadre.cuadre;
 ({ texto: t } = await pintar(sinCuadre));
-ok('sin `cuadre` el bloque del banco no se imprime', !/El banco hoy/.test(t));
-ok('pero el resto de la hoja sale entero', /TOTAL INGRESOS/.test(t));
+ok('sin `cuadre` la hoja sale igual', /TOTAL INGRESOS/.test(t));
+ok('y el bloque de conciliar tampoco depende de él',
+   /Para conciliar/.test(t));
 
 /* ── CAJA MENOR Y CAJA MAYOR (0069) ──────────────────────────────
    No todos los gastos salen del cajón del mostrador. Lo que pagó la

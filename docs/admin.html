@@ -696,6 +696,14 @@ const CONFIG = {
   }
   .dep-aviso{margin:.45rem 0 0;font-size:.75rem;color:var(--tx-3);line-height:1.35}
   #modal-dep-buscar{font-size:.88rem;padding:.45rem .65rem;margin-bottom:.45rem}
+  /* "No está en la lista" queda marcado cuando se toca: guardar una
+     transferencia sin depósito ahora exige haberlo dicho, y quien mira la
+     ventana tiene que poder ver si ya lo dijo. Mismo tratamiento que un
+     depósito escogido, que es la otra mitad de la misma decisión. */
+  #modal-sin-deposito.on{
+    border-color:var(--gold);color:var(--gold);
+    box-shadow:0 0 0 3px rgba(255,193,77,.13);
+  }
 
   /* La cola histórica: va bajo la línea y en gris, porque no es de este
      día y no exige hacer nada hoy. */
@@ -1275,7 +1283,8 @@ const CONFIG = {
          el cierre decía 490.000 cuando al banco entraron 475.000. -->
     <p class="ap-pista" id="modal-pista-medio" hidden>
       El banco reporta las transferencias solo. Escoge abajo el depósito;
-      si no aparece todavía, se registra igual y queda marcado hasta que llegue.
+      si no aparece, toca «No está en la lista» y se registra igual, marcado
+      para buscarlo en el extracto. Una de las dos hace falta para guardar.
     </p>
 
     <!-- DE QUÉ CAJA SALIÓ. Solo para gastos (0069).
@@ -1601,6 +1610,10 @@ const CONFIG = {
     try { el.focus({ preventScroll: false }); } catch (_) { el.focus(); }
     const limpia = () => { el.classList.remove('malo-campo'); if (marcado === el) marcado = null; };
     el.addEventListener('input', limpia, { once: true });
+    // Un botón no dispara `input`, así que sin esto se quedaría rojo
+    // para siempre después de atenderlo. Se apaga al tocarlo, que es
+    // justo lo que se le está pidiendo a quien lo ve.
+    if (el.tagName === 'BUTTON') el.addEventListener('click', limpia, { once: true });
   }
 
   /* El punto único por donde salen los fallos: traduce, avisa y marca.
@@ -3657,6 +3670,14 @@ const CONFIG = {
   // 0069: de qué caja sale un gasto. Arranca siempre en la caja menor
   // —el cajón del mostrador— que es de donde sale la gran mayoría.
   let cajaOrigen = 'caja_menor';
+
+  /* ¿La cajera dijo A PROPÓSITO que este cobro va sin depósito?
+     Falso mientras no toque "No está en la lista". Ver más abajo, en
+     #modal-guardar, por qué esto no puede quedarse en falso por olvido.
+
+     Se reinicia al abrir la ventana y al cambiar de medio: decir "no
+     está" para un cobro no vale para el siguiente. */
+  let cajaSinDeposito = false;
   // Los dos arrancan cerrados a propósito: ver el listado no hace daño,
   // pero ver los totales sí, y el que los destapa es el cajero cuando
   // decide que terminó.
@@ -4122,10 +4143,17 @@ const CONFIG = {
        concepto nuevo aparezca solo, sin tocar esta función — si no, el
        día que se venda algo nuevo el total dejaría de cuadrar sin que
        nadie sepa por qué. */
-    // El desglose de lo que trajo el banco hoy (0064). Un cierre viejo
-    // guardado por un servidor anterior no lo trae, y entonces el bloque
-    // del banco no se imprime — el resto de la hoja no depende de él.
-    const alBanco = (d.cuadre || {}).entro_al_banco || {};
+    /* LO ÚNICO QUE QUEDA POR AVERIGUAR: los cobros que recepción
+       registró como transferencia sin escoger el depósito. Esa plata
+       está en el extracto y no se sabe en qué renglón, así que hay que
+       buscarla a mano por el valor. El resto cruzó solo.
+
+       Sale de `conciliacion`, que es lo mismo que lista la hoja 2 en su
+       sección "SIN DEPÓSITO ESCOGIDO": las dos hojas no pueden decir
+       cosas distintas sobre la misma plata. */
+    const kon = d.conciliacion || {};
+    const sinEnlN   = Array.isArray(kon.sin_enlazar) ? kon.sin_enlazar.length : 0;
+    const sinEnlCop = Number(kon.sin_enlazar_cop || 0);
 
     const conc = Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [];
     const otros = new Map();
@@ -4194,18 +4222,6 @@ const CONFIG = {
       return `${dd}-${mm}-${n.getFullYear()}`;
     };
     const fechaDelPapel = aDiaMesAno(d.dia) || hoyLocal();
-
-    /* Lo que el banco trajo hoy, partido en las tres cosas que son.
-       `delDiaCop` es lo que se disfrutó hoy más lo que no es una clase
-       (mensualidades, camisetas): todo eso se consume hoy. Las futuras
-       van aparte y lo que sobra es lo que falta por averiguar. */
-    const futN      = Number(alBanco.futuras_cupos || 0);
-    const delDiaCop = Number(alBanco.clases_hoy_cop || 0)
-                    + Number(alBanco.otros_cop || 0);
-    // Nunca negativo en el papel: si el desglose superara al total el
-    // fallo es de datos, y un "−$5.000 sin identificar" solo confunde a
-    // quien cuadra. La diferencia se persigue en el panel.
-    const sinIdent = Math.max(Number(alBanco.sin_identificar_cop || 0), 0);
 
     return `<section class="hoja" id="hoja-cierre">` +
       `<h1>TUMBAO</h1>` +
@@ -4295,38 +4311,38 @@ const CONFIG = {
         ? g('Pagado con caja mayor', pesos(cajaMayor)) +
           `<div class="peq">no sale de este cajón</div>`
         : '') +
-      `<hr>` +
 
-      /* ── D. EL BANCO DE HOY, EN CUATRO RENGLONES ─────────────────
-         El razonamiento es de quien lleva la caja, y es el que zanja la
-         confusión que traía este papel desde el principio:
+      /* ── D. LO ÚNICO QUE QUEDA POR BUSCAR ────────────────────────
+         Aquí iba «El banco hoy»: reportó / del día / reservas futuras /
+         sin identificar. Se quitó entero, y la razón es de Damián:
 
-           «Siempre se está pensando cuánto ingresó por clases futuras, y
-            eso es lo que causa la confusión, porque ese dinero ingresa
-            hoy pero la persona viene el sábado. En el cierre del sábado
-            se hace el cruce y se verifica que vino, aunque pagó hace
-            tres días. ¿Qué necesidad de matarse la cabeza hoy? Yo lo que
-            quiero es revisar lo de ESE día.»
+           «Simplificar el cierre: quitarle lo que diga de la plata
+            futura, porque eso es lo que está causando el conflicto. Lo
+            que se necesita saber es entraron veinticuatro personas, se
+            recibió tanto, la plata sí está en el banco, pagaron tanto en
+            efectivo, tanto en transferencia, se registró en recepción o
+            en caja manual dos —esos dos son los que tienes que buscar en
+            el extracto—, se hizo la conciliación automática, y paré de
+            contar.»
 
-         Así que las futuras no se persiguen: se APARTAN. Se dicen en un
-         renglón —cuántas reservas y cuánta plata— y se sacan de la
-         cuenta del día. Lo que queda debajo, si queda algo, es lo único
-         que de verdad hay que averiguar hoy.
+         El anticipo que se pagó hoy para el sábado se cuadra el sábado,
+         cuando la persona entra. Ponerlo en el papel de hoy obligaba a
+         cuadrar dos días a la vez y era lo que hacía que las cifras
+         parecieran contradecirse.
 
-         Sale de `cuadre` (0064). Un cierre viejo servido por un servidor
-         anterior no lo trae, y entonces este bloque no se imprime: el
-         resto de la hoja no depende de él. */
-      (alBanco.reporto_banco_cop != null
-        ? `<hr>` + grupo('El banco hoy') +
-          g('Reportó', pesos(alBanco.reporto_banco_cop)) +
-          g('Del día', pesos(delDiaCop)) +
-          // Cupos, no depósitos: ella cuenta reservas. Tres amigas con un
-          // solo pago son tres reservas del sábado que viene.
-          (futN
-            ? g('Reservas futuras', `${futN} · ${pesos(alBanco.futuras_cop)}`)
-            : '') +
-          (sinIdent > 0 ? g('Sin identificar', pesos(sinIdent)) : '')
-        : '') +
+         Lo que sí queda es esto: los cobros que se registraron como
+         transferencia sin escoger el depósito. Están en el extracto y no
+         se sabe en qué renglón. Todo lo demás ya cruzó solo. */
+      /* El renglón va en la misma forma que los de arriba —rótulo
+         sangrado, puntos, cifra— y no como «Buscar en el extracto ·
+         2 cobros · $30.000» de una sola línea: eso se salía del rollo de
+         72mm y la cifra quedaba cortada. En el papel manda el ancho. */
+      `<hr>` + grupo('Para conciliar') +
+      (sinEnlN
+        ? g('  ' + unidad(sinEnlN, 'cobro'), pesos(sinEnlCop)) +
+          `<div class="peq">buscarlos en el extracto · se registraron ` +
+          `sin escoger depósito · el detalle va en la hoja 2</div>`
+        : `<div class="peq">Nada pendiente: todo cruzó con el banco.</div>`) +
 
       `<div class="gracias">Gracias</div>` +
     `</section>`;
@@ -4616,15 +4632,17 @@ const CONFIG = {
     const efectivoEntro = Number(d.ingreso_efectivo || 0);
     const gastos = Number(d.total_egresos || 0);
     const retirado = d.cerrado ? Number(d.cierre.retirado_cop || 0) : 0;
-    // Lo que se pagó hoy pero es para una clase de otro día — un
-    // anticipo. El 24 de agosto esto fue justo lo que hacía parecer que
-    // faltaban $105.000 al comparar contra AdminGym: dos personas
-    // pagaron ese día por clases del día siguiente. Esa plata SIGUE
-    // sumando al total de arriba —entró de verdad, y el arqueo la
-    // necesita—, pero aquí se separa de lo que un cliente disfrutó hoy
-    // mismo, que es lo que hay que cuadrar contra el cierre de AdminGym.
-    const futuras = Number(d.reservas_futuras_cop || 0);
-    const futurasN = Number(d.reservas_futuras_n || 0);
+    /* LA PLATA FUTURA SE SACÓ DE ESTA TARJETA.
+       Aquí salían dos renglones —«de clientes de hoy» y «para clases de
+       otro día»— que partían el total en dos. La idea era buena y el
+       efecto fue el contrario: quien cuadra veía dos cifras parecidas y
+       distintas en la misma pantalla y ya no sabía cuál era la del día.
+       Damián lo zanjó: «quitarle lo que diga de la plata futura, porque
+       eso es lo que está causando el conflicto».
+
+       El anticipo no desaparece: sigue sumando al total —entró de
+       verdad y el arqueo lo necesita— y se cuadra el día en que la
+       persona entra, que es cuando se sabe si vino. */
 
     $('#caja-cierre').innerHTML =
       `<h3>Cierre del día</h3>` +
@@ -4637,16 +4655,6 @@ const CONFIG = {
                ? 'lo dice el banco' + (bk.corte ? ' · hasta las ' + esc(bk.corte) : '')
                : null) +
         fila('Total entró hoy', pesos(efectivoEntro + transferencia), null, 'total') +
-
-        // La separación que sí importa para cuadrar contra AdminGym: de
-        // hoy y de mañana suman el total de arriba, ni un peso de más
-        // ni de menos.
-        (futuras > 0
-          ? fila('De eso, de clientes de hoy', pesos(transferencia - futuras)) +
-            `<div class="fila control"><span>De eso, para clases de otro día` +
-              `<span class="ag">${futurasN} ${futurasN === 1 ? 'reserva' : 'reservas'} · ya pagadas, se disfrutan después</span></span>` +
-              `<span class="no-suma">${pesos(futuras)}</span></div>`
-          : '') +
 
         // El desglose va DEBAJO del total y marcado como que no suma:
         // son las puertas por las que llegó esa MISMA plata, no algo que
@@ -5090,6 +5098,9 @@ const CONFIG = {
     // Cada gasto arranca preguntando de nuevo: heredar el de la ventana
     // anterior es como se acaba apuntando en la caja equivocada.
     cajaOrigen = 'caja_menor';
+    // Y lo mismo con el "no está en la lista": vale para este cobro y
+    // solo para este.
+    cajaSinDeposito = false;
     cajaPago = pago ? pago.id : null;
     $('#modal-texto').textContent = (x.s === 'egreso' ? 'Salida · ' : 'Ingreso · ') + x.n;
     $('#modal-titulo').classList.toggle('sale', x.s === 'egreso');
@@ -5129,6 +5140,11 @@ const CONFIG = {
     // siguiente cobro naciera cobrando tres clases sin que nadie lo
     // pidiera. El campo se desbloquea aquí mismo por lo mismo.
     cajaCantidad = 1;
+    // Y el "no está en la lista" no se hereda: cada cobro lo decide de
+    // nuevo quien lo registra.
+    cajaSinDeposito = false;
+    $('#modal-sin-deposito').classList.remove('on');
+    marcar(null);
     $('#modal-cantidad').hidden = true;
     $('#modal-valor').readOnly = false;
   };
@@ -5154,6 +5170,7 @@ const CONFIG = {
       // volver a efectivo se olvida el depósito, que si no quedaría
       // enlazado a un cobro en billetes.
       cajaPago = null;
+      cajaSinDeposito = false;
       pintarDepositos();
     });
   }
@@ -5201,6 +5218,7 @@ const CONFIG = {
     const aplica = cajaElegido && cajaElegido.s === 'ingreso' && cajaMedio === 'transferencia';
     caja.hidden = !aplica;
     $('#modal-dep-aviso').hidden = true;
+    $('#modal-sin-deposito').classList.toggle('on', cajaSinDeposito);
     if (!aplica) return;
 
     const libres = (cajaDatos && cajaDatos.pagos_libres) || [];
@@ -5266,6 +5284,10 @@ const CONFIG = {
       b.addEventListener('click', () => {
         const ya = cajaPago === b.dataset.pago;
         cajaPago = ya ? null : b.dataset.pago;
+        // Escoger un depósito deshace el "no está en la lista": si al
+        // final se guarda con depósito, no hay nada que buscar a mano.
+        cajaSinDeposito = false;
+        $('#modal-sin-deposito').classList.remove('on');
         $('#modal-depositos').querySelectorAll('[data-pago]')
           .forEach(o => o.classList.toggle('on', !ya && o === b));
         // El saldo del depósito es el TECHO, ya no el valor exacto: uno
@@ -5306,13 +5328,23 @@ const CONFIG = {
   // Registrar sin enlazar: Nequi, otra cuenta, o el aviso que todavía no
   // llega. Se permite, pero queda contado aparte en el cierre — no se
   // esconde y tampoco se acusa a nadie.
+  //
+  // Y desde hoy es OBLIGATORIO pasar por aquí para guardar una
+  // transferencia sin depósito: `cajaSinDeposito` es la constancia de
+  // que alguien lo decidió mirando la lista, no de que se le olvidó.
   $('#modal-sin-deposito').addEventListener('click', () => {
     cajaPago = null;
+    cajaSinDeposito = true;
     $('#modal-depositos').querySelectorAll('[data-pago]').forEach(o => o.classList.remove('on'));
+    $('#modal-sin-deposito').classList.add('on');
     aviso($('#modal-dep-aviso'),
-      'Va a quedar apuntado sin respaldo del banco. Sale marcado en el cierre.', '');
+      'Va a quedar apuntado sin respaldo del banco. Sale marcado en el cierre ' +
+      'para buscarlo en el extracto. Apunta abajo la referencia si la tienes.', '');
     $('#modal-dep-aviso').className = 'dep-aviso';
     $('#modal-dep-aviso').hidden = false;
+    // La nota es donde vive la referencia del comprobante, y es lo único
+    // que va a amarrar este cobro con su renglón del extracto.
+    $('#modal-nota').focus();
   });
 
   $('#modal-valor').addEventListener('keydown', e => { if (e.key === 'Enter') $('#modal-guardar').click(); });
@@ -5325,6 +5357,39 @@ const CONFIG = {
       marcar('#modal-valor');
       return;
     }
+
+    /* ── UNA TRANSFERENCIA NO SE GUARDA A CIEGAS ──────────────────────
+       El 5 de septiembre, de tres cobros hechos en recepción, dos se
+       registraron como transferencia sin escoger el depósito: el de las
+       08:00 con la referencia tecleada en la nota en vez de enlazada, y
+       el de las 09:40 sin nada. Esos $30.000 no tenían respaldo en el
+       banco —no había ningún depósito libre de ese día— y el papel
+       terminó diciendo dos cifras que no se podían reconciliar.
+
+       No es que la cajera hiciera algo raro: Guardar funcionaba igual
+       con depósito y sin él, así que el camino descuidado costaba lo
+       mismo que el cuidadoso. Ahora no: o se escoge el depósito, o se
+       dice a propósito que no está. Las dos son válidas; lo que deja de
+       poderse es no decir nada.
+
+       Solo aplica a un INGRESO por transferencia. Un gasto o un cobro en
+       efectivo no tienen depósito que escoger. */
+    if (cajaElegido.s === 'ingreso' && cajaMedio === 'transferencia'
+        && !cajaPago && !cajaSinDeposito) {
+      const hay = ((cajaDatos && cajaDatos.pagos_libres) || []).length;
+      nota('¿Cuál depósito es?', 'mal',
+        hay
+          ? 'Escoge de la lista el depósito que pagó esto. Si de verdad no ' +
+            'está —Nequi, otra cuenta, o el aviso que todavía no llega— toca ' +
+            '«No está en la lista» y se registra igual, marcado para buscarlo.'
+          : 'El banco no tiene depósitos sin reclamar. Si aun así la plata ' +
+            'llegó, toca «No está en la lista» y se registra marcado para ' +
+            'buscarlo en el extracto.');
+      marcar('#modal-sin-deposito');
+      $('#modal-banco').scrollIntoView({ block: 'nearest' });
+      return;
+    }
+
     // Se guarda antes de cerrar: cerrarModal() pone cajaElegido en null,
     // y leerlo después reventaba con "Cannot read properties of null".
     // El movimiento sí quedaba grabado, pero la pantalla decía que no.

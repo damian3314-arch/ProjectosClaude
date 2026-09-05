@@ -781,8 +781,25 @@ await pagina.waitForTimeout(200);
   : falla('el filtro ofreció un candidato que no cuadra',
           `${await pagina.locator('.dep').count()} visibles`);
 
+/* Y ahora Guardar a secas no basta. El 5 de septiembre dos cobros de
+   recepción se registraron como transferencia sin escoger depósito y
+   sin respaldo en el banco: no era descuido de la cajera, era que el
+   camino descuidado costaba lo mismo que el cuidadoso. */
+await pagina.click('#modal-guardar');
+await pagina.waitForTimeout(400);
+(await pagina.locator('#modal-caja').isVisible())
+  ? bien('guardar a secas no registra una transferencia sin depósito')
+  : falla('la transferencia sin depósito se guardó sin decirlo');
+
+// Dicho a propósito sí se guarda: se permite, se cuenta aparte, y no se
+// acusa a nadie.
+await pagina.click('#modal-sin-deposito');
+await pagina.waitForTimeout(150);
 await pagina.click('#modal-guardar');
 await pagina.waitForTimeout(800);
+(await pagina.locator('#modal-caja').isVisible())
+  ? falla('tras decir "no está en la lista", la ventana no se cerró')
+  : bien('diciendo que el depósito no está, se registra igual');
 
 // Lo confirmado en el mostrador tiene que verse, y tiene que verse como
 // algo que NO suma: es el punto de control de que esa plata se registró
@@ -832,30 +849,43 @@ cifraBanco !== sumaAMano || sumaAMano === esperadoBanco
 
 /* ANTICIPOS: lo que se pagó hoy para una clase de otro día.
  *
- * El 24 de agosto esto fue justo lo que hizo parecer que faltaban
- * $105.000 comparado contra AdminGym: dos personas pagaron ese día por
- * clases del día siguiente. Esa plata sigue sumando al total de
- * arriba —entró de verdad—, pero tiene que poder verse aparte de lo
- * que un cliente disfrutó hoy mismo. */
+ * Aquí salían dos renglones —«de clientes de hoy» y «para clases de
+ * otro día»— que partían el total en dos. La idea era separar el
+ * anticipo de lo que un cliente disfrutó hoy; el efecto fue el
+ * contrario. Damián, después de cuadrar el 5 de septiembre:
+ *
+ *   «Simplificar el cierre: quitarle lo que diga de la plata futura,
+ *    porque eso es lo que está causando el conflicto.»
+ *
+ * El anticipo NO desaparece de la caja: sigue sumando al total, que es
+ * lo que se comprueba aquí. Lo que desaparece es la invitación a
+ * cuadrar dos días a la vez. */
 futurasCop = 45000; futurasN = 1;
 await recargar();
 
-const deHoy = pagina.locator('#caja-cierre .fila')
-  .filter({ hasText: 'De eso, de clientes de hoy' });
-(await deHoy.innerText()).includes((esperadoBanco - 45000).toLocaleString('es-CO'))
-  ? bien('separa lo de hoy de los anticipos',
-         (await deHoy.innerText()).replace(/\s+/g, ' ').trim())
-  : falla('lo de hoy', await deHoy.innerText());
+const cierreConFuturas = await pagina.locator('#caja-cierre').innerText();
+!/de clientes de hoy/i.test(cierreConFuturas)
+ && !/para clases de otro día/i.test(cierreConFuturas)
+  ? bien('el cierre ya no parte el total en «hoy» y «otro día»')
+  : falla('sigue enseñando la plata futura',
+          cierreConFuturas.replace(/\s+/g, ' ').slice(0, 200));
 
-const paraOtroDia = pagina.locator('#caja-cierre .fila.control')
-  .filter({ hasText: 'De eso, para clases de otro día' });
-(await paraOtroDia.innerText()).includes('45.000') && (await paraOtroDia.innerText()).includes('1 reserva')
-  ? bien('y dice cuánto es anticipo y de cuántas reservas',
-         (await paraOtroDia.innerText()).replace(/\s+/g, ' ').trim())
-  : falla('el anticipo', await paraOtroDia.innerText());
+// Y el total no cambia por haber quitado el desglose: la plata entró de
+// verdad y el arqueo la necesita. Se compara el mismo renglón con
+// anticipos y sin ellos, que es la forma de comprobarlo sin volver a
+// escribir aquí la suma que hace el panel.
+const elTotal = () => pagina.locator('#caja-cierre .fila.total')
+  .filter({ hasText: 'Total entró hoy' }).innerText();
+const totalConFuturas = (await elTotal()).replace(/\s+/g, ' ').trim();
 
 futurasCop = 0; futurasN = 0;
 await recargar();
+
+const totalSinFuturas = (await elTotal()).replace(/\s+/g, ' ').trim();
+totalConFuturas === totalSinFuturas
+  ? bien('y el anticipo sigue sumando al total del día', totalConFuturas)
+  : falla('el total cambió al quitar el desglose',
+          `${totalConFuturas} vs ${totalSinFuturas}`);
 
 // La cola del banco (lo sin identificar, lo sin respaldo) ya no es una
 // tarjeta más con semáforos de color — el cierre solo tiene tres

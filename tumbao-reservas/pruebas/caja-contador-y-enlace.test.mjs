@@ -275,6 +275,130 @@ ok('un depósito de $45.000 en clases sueltas son tres', m.cantidad === '3', m.c
 ok('por el valor que llegó al banco', m.valor === '45000', m.valor);
 ok('y sigue sin poderse teclear', !m.editable);
 
+/* ═══════════ 11. una transferencia no se guarda a ciegas ═══════════
+
+   EL CASO REAL. El 5 de septiembre se hicieron tres cobros en
+   recepción. Dos se registraron como transferencia SIN escoger el
+   depósito: el de las 08:00 con la referencia tecleada en la nota en
+   vez de enlazada, y el de las 09:40 sin nada. Esos $30.000 no tenían
+   respaldo en el banco —ese día no había ningún depósito libre— y el
+   cierre terminó enseñando dos cifras que no se podían reconciliar.
+
+   La cajera no hizo nada raro: Guardar funcionaba igual con depósito y
+   sin él, así que el camino descuidado costaba lo mismo que el
+   cuidadoso. Lo que se cuida aquí es que deje de costar lo mismo.
+
+   Las dos salidas siguen abiertas —escoger el depósito, o decir que no
+   está— y las dos son válidas. Lo que deja de poderse es no decir
+   nada. */
+
+/* La lista del modal se lee de `cajaDatos.pagos_libres`, que es OTRA
+   forma que la del tablero de sin dueño: ahí la llave es `pago_id` y
+   aquí es `id`. Se escribe entera para que la prueba recorra el camino
+   bueno de verdad —escoger un depósito— y no el de la lista vacía. */
+const CON_DEP = () => Object.assign(dia(MOVS), { pagos_libres: [
+  { id: DEP, remitente: 'JENNY LISET VERGARA GONZALEZ',
+    valor_cop: 125000, saldo_cop: 125000, cuando: '02/09 18:44', dias: 0 },
+] });
+
+await p.evaluate(d => window.__e2e.sembrarCaja(d), CON_DEP());
+await p.evaluate(() => window.__e2e.tocarConcepto('Mensualidad'));
+await p.locator('#modal-caja .medio[data-medio="transferencia"]').click();
+
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+
+ok('no registra una transferencia sin decir cuál depósito es',
+   !enviado.some(x => /\/api\/registrar$/.test(x.url)),
+   enviado.map(x => x.url).join(' | '));
+m = await p.evaluate(() => window.__e2e.modal());
+ok('y la ventana se queda abierta para arreglarlo', m.abierto);
+av = await p.evaluate(() => window.__e2e.avisos());
+ok('lo dice como pregunta, no como regaño',
+   av.length > 0 && /Cuál depósito es/.test(av[0].texto), av[0] && av[0].texto.slice(0, 60));
+ok('y enseña las dos salidas que hay',
+   av[0] && /Escoge de la lista/.test(av[0].texto) && /No está en la lista/.test(av[0].texto),
+   av[0] && av[0].texto.slice(0, 140));
+ok('marcando el botón que hay que tocar si de verdad no está',
+   await p.locator('#modal-sin-deposito').evaluate(x => x.classList.contains('malo-campo')));
+
+// SALIDA A: decirlo a propósito. Se guarda, y queda marcado.
+await p.locator('#modal-sin-deposito').click();
+ok('el botón queda encendido al tocarlo',
+   await p.locator('#modal-sin-deposito').evaluate(x => x.classList.contains('on')));
+ok('y ya no está en rojo',
+   !await p.locator('#modal-sin-deposito').evaluate(x => x.classList.contains('malo-campo')));
+
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+let reg2 = enviado.find(x => /\/api\/registrar$/.test(x.url));
+ok('dicho a propósito, sí se guarda', !!reg2, enviado.map(x => x.url).join(' | '));
+ok('y va sin depósito, que es lo que se dijo',
+   !!reg2 && reg2.cuerpo.pago_id === null, reg2 && JSON.stringify(reg2.cuerpo.pago_id));
+
+// SALIDA B: escoger el depósito. Es el camino bueno y no pregunta nada.
+await p.evaluate(d => window.__e2e.sembrarCaja(d), CON_DEP());
+await p.evaluate(() => window.__e2e.tocarConcepto('Mensualidad'));
+await p.locator('#modal-caja .medio[data-medio="transferencia"]').click();
+await p.waitForTimeout(150);
+await p.locator('#modal-depositos [data-pago]').first().click();
+
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+reg2 = enviado.find(x => /\/api\/registrar$/.test(x.url));
+ok('con depósito escogido no pregunta nada', !!reg2, enviado.map(x => x.url).join(' | '));
+ok('y lo manda enlazado', !!reg2 && reg2.cuerpo.pago_id === DEP,
+   reg2 && String(reg2.cuerpo.pago_id));
+
+/* El "no está en la lista" NO se hereda. Decirlo para un cobro y que
+   valiera para el siguiente sería peor que no pedirlo: el segundo
+   pasaría sin que nadie lo mirara. */
+await p.evaluate(d => window.__e2e.sembrarCaja(d), CON_DEP());
+await p.evaluate(() => window.__e2e.tocarConcepto('Mensualidad'));
+await p.locator('#modal-caja .medio[data-medio="transferencia"]').click();
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+ok('el "no está" del cobro anterior no vale para este',
+   !enviado.some(x => /\/api\/registrar$/.test(x.url)),
+   enviado.map(x => x.url).join(' | '));
+
+// Y cambiar de transferencia a efectivo lo olvida también: en efectivo
+// no hay depósito que escoger y el permiso no tiene sentido.
+await p.locator('#modal-sin-deposito').click();
+await p.locator('#modal-caja .medio[data-medio="efectivo"]').click();
+await p.locator('#modal-caja .medio[data-medio="transferencia"]').click();
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+ok('pasar por efectivo y volver también lo olvida',
+   !enviado.some(x => /\/api\/registrar$/.test(x.url)),
+   enviado.map(x => x.url).join(' | '));
+
+// Un COBRO EN EFECTIVO no pregunta nada: no hay depósito que escoger.
+await p.locator('#modal-caja .medio[data-medio="efectivo"]').click();
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+ok('en efectivo no se pregunta por ningún depósito',
+   enviado.some(x => /\/api\/registrar$/.test(x.url)),
+   enviado.map(x => x.url).join(' | '));
+
+// Y un GASTO por transferencia tampoco: sale, no entra.
+await p.evaluate(d => window.__e2e.sembrarCaja(d), CON_DEP());
+await p.evaluate(() => window.__e2e.tocarConcepto('Profesores'));
+await p.locator('#modal-caja .medio[data-medio="transferencia"]').click();
+await p.locator('#modal-valor').fill('80000');
+enviado.length = 0;
+await p.evaluate(() => window.__e2e.guardar());
+await p.waitForTimeout(400);
+ok('un gasto por transferencia tampoco pregunta',
+   enviado.some(x => /\/api\/registrar$/.test(x.url)),
+   enviado.map(x => x.url).join(' | '));
+
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
 await b.close();
