@@ -4143,18 +4143,6 @@ const CONFIG = {
        concepto nuevo aparezca solo, sin tocar esta función — si no, el
        día que se venda algo nuevo el total dejaría de cuadrar sin que
        nadie sepa por qué. */
-    /* LO ÚNICO QUE QUEDA POR AVERIGUAR: los cobros que recepción
-       registró como transferencia sin escoger el depósito. Esa plata
-       está en el extracto y no se sabe en qué renglón, así que hay que
-       buscarla a mano por el valor. El resto cruzó solo.
-
-       Sale de `conciliacion`, que es lo mismo que lista la hoja 2 en su
-       sección "SIN DEPÓSITO ESCOGIDO": las dos hojas no pueden decir
-       cosas distintas sobre la misma plata. */
-    const kon = d.conciliacion || {};
-    const sinEnlN   = Array.isArray(kon.sin_enlazar) ? kon.sin_enlazar.length : 0;
-    const sinEnlCop = Number(kon.sin_enlazar_cop || 0);
-
     const conc = Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [];
     const otros = new Map();
     for (const x of conc) {
@@ -4312,37 +4300,32 @@ const CONFIG = {
           `<div class="peq">no sale de este cajón</div>`
         : '') +
 
-      /* ── D. LO ÚNICO QUE QUEDA POR BUSCAR ────────────────────────
-         Aquí iba «El banco hoy»: reportó / del día / reservas futuras /
-         sin identificar. Se quitó entero, y la razón es de Damián:
+      /* ── AQUÍ IBA «EL BANCO HOY», Y NO VUELVE ────────────────────
+         Cuatro renglones —Reportó / Del día / Reservas futuras / Sin
+         identificar— que decían cuánto llevaba el banco. Se quitaron
+         enteros. Damián:
 
-           «Simplificar el cierre: quitarle lo que diga de la plata
-            futura, porque eso es lo que está causando el conflicto. Lo
-            que se necesita saber es entraron veinticuatro personas, se
-            recibió tanto, la plata sí está en el banco, pagaron tanto en
-            efectivo, tanto en transferencia, se registró en recepción o
-            en caja manual dos —esos dos son los que tienes que buscar en
-            el extracto—, se hizo la conciliación automática, y paré de
-            contar.»
+           «Quitarle lo que diga de la plata futura, porque eso es lo que
+            está causando el conflicto.»
+           «Quitar esos campos que le muestren a la gente cuánto lleva el
+            banco, porque eso no les interesa.»
+
+         Y se quitaron A SECAS: nada ocupa su sitio. Llegué a poner aquí
+         un bloque «Para conciliar» con los cobros que se registraron sin
+         escoger depósito, y sobra — esa lista ya está en la hoja 2, que
+         es la que se usa con el extracto al lado. La hoja 1 es el papel
+         que se archiva con el efectivo y quedó exactamente como la
+         dibujó la dueña, ni un renglón más.
 
          El anticipo que se pagó hoy para el sábado se cuadra el sábado,
          cuando la persona entra. Ponerlo en el papel de hoy obligaba a
          cuadrar dos días a la vez y era lo que hacía que las cifras
          parecieran contradecirse.
 
-         Lo que sí queda es esto: los cobros que se registraron como
-         transferencia sin escoger el depósito. Están en el extracto y no
-         se sabe en qué renglón. Todo lo demás ya cruzó solo. */
-      /* El renglón va en la misma forma que los de arriba —rótulo
-         sangrado, puntos, cifra— y no como «Buscar en el extracto ·
-         2 cobros · $30.000» de una sola línea: eso se salía del rollo de
-         72mm y la cifra quedaba cortada. En el papel manda el ancho. */
-      `<hr>` + grupo('Para conciliar') +
-      (sinEnlN
-        ? g('  ' + unidad(sinEnlN, 'cobro'), pesos(sinEnlCop)) +
-          `<div class="peq">buscarlos en el extracto · se registraron ` +
-          `sin escoger depósito · el detalle va en la hoja 2</div>`
-        : `<div class="peq">Nada pendiente: todo cruzó con el banco.</div>`) +
+         El `<hr>` de arriba sí se queda: cerraba el bloque del cajón
+         antes de que existiera nada de esto, y es el que separa el saldo
+         de las gracias. */
+      `<hr>` +
 
       `<div class="gracias">Gracias</div>` +
     `</section>`;

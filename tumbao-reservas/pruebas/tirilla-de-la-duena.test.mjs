@@ -277,43 +277,38 @@ ok('ninguna de esas cifras se cuela', !/715\.000/.test(j) && !/105\.000/.test(j)
    'ni el total del banco ni el de las futuras');
 ok('pero el resto de la hoja sale entero', /TOTAL INGRESOS/.test(t));
 
-/* ── LO ÚNICO QUE QUEDA POR BUSCAR ───────────────────────────────
-   Lo que sí se lleva a la hoja 1: los cobros que recepción registró
-   como transferencia sin escoger el depósito. El 5 de septiembre eran
-   dos, $30.000, y no tenían respaldo en el banco. Están en el extracto
-   y no se sabe en qué renglón: es lo único de este papel sobre lo que
-   hay que hacer algo.
+/* ── Y NO SE PUSO NADA EN SU SITIO ───────────────────────────────
+   Se quitó A SECAS. Llegué a poner ahí un bloque «Para conciliar» con
+   los cobros registrados sin escoger depósito, y Damián lo paró en el
+   momento: «no vayas a cambiar la visual actual, es solo quitar esos
+   campos». Esa lista ya está en la hoja 2, que es la que se usa con el
+   extracto al lado; la hoja 1 es el papel que se archiva con el
+   efectivo y tiene que quedar como la dibujó la dueña.
 
-   Sale de `conciliacion`, que es de donde lo saca también la hoja 2:
-   las dos hojas no pueden decir cosas distintas de la misma plata. */
+   Esta comprobación es contra mí mismo: se pinta un día CON cobros sin
+   depósito —el caso que más tienta a nombrarlos aquí— y la hoja tiene
+   que seguir terminando en el saldo. */
 ({ texto: t, junto: j } = await pintar({ ...REAL,
   conciliacion: { ...REAL.conciliacion,
     sin_enlazar: [{ hora: '08:00', concepto: 'clase_suelta', valor_cop: 15000 },
                   { hora: '09:40', concepto: 'clase_suelta', valor_cop: 15000 }],
     sin_enlazar_cop: 30000 } }));
-ok('el papel dice cuántos cobros quedan y por cuánto',
-   /Paraconciliar2cobros\$30\.000/.test(j),
-   'los dos cobros de recepción sin depósito escogido');
-ok('y dice qué hacer con ellos', /buscarlos en el extracto/.test(t));
-ok('y por qué están ahí', /se registraron sin escoger depósito/.test(t));
-ok('y a qué hoja ir por el detalle', /el detalle va en la hoja 2/.test(t));
-ok('va después del saldo del cajón',
-   t.indexOf('SALDO FINAL EN CAJA') < t.indexOf('Para conciliar'));
-
-// Un día en que todo cruzó lo dice, no calla. El renglón que desaparece
-// no se distingue del que nadie miró.
-({ texto: t } = await pintar(REAL));
-ok('un día limpio lo dice explícitamente',
-   /Nada pendiente: todo cruzó con el banco/.test(t));
-ok('y no inventa nada que buscar', !/buscarlos en el extracto/.test(t));
+ok('nada ocupa el sitio del bloque del banco',
+   !/Para conciliar/.test(t) && !/Buscar en el extracto/i.test(t),
+   'esa lista va en la hoja 2, no aquí');
+ok('ni siquiera con cobros sin depósito el papel crece',
+   !/30\.000/.test(j), 'la hoja 1 no nombra esa plata');
+ok('la hoja termina en el saldo y las gracias',
+   t.indexOf('SALDO FINAL EN CAJA') < t.indexOf('Gracias'));
+ok('y no queda ningún bloque después del saldo',
+   /SALDOFINALENCAJA\$100\.000Gracias/.test(j), j.slice(-60));
 
 // Un cierre viejo sin `cuadre` no puede tumbar la hoja: ya no se lee
 // ese dato para nada, pero la prueba se queda como red.
 const sinCuadre = { ...REAL }; delete sinCuadre.cuadre;
 ({ texto: t } = await pintar(sinCuadre));
 ok('sin `cuadre` la hoja sale igual', /TOTAL INGRESOS/.test(t));
-ok('y el bloque de conciliar tampoco depende de él',
-   /Para conciliar/.test(t));
+ok('y sigue cerrando en el saldo', /SALDO FINAL EN CAJA/.test(t));
 
 /* ── CAJA MENOR Y CAJA MAYOR (0069) ──────────────────────────────
    No todos los gastos salen del cajón del mostrador. Lo que pagó la
