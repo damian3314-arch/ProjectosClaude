@@ -188,6 +188,96 @@ ok('y ya no dice que falte nada por pasar', !/por pasar/.test(despues), despues)
 ok('el botón desaparece de esa fila',
    await p.locator('[data-atender="11111111-1111-4111-8111-111111111111"]').count() === 0);
 
+/* ═══════════ 5. LA COLA SE VE, Y TIENE TURNO (0075) ═══════════
+
+   Damián: «importante que la lista de espera de mensualidad sí muestre
+   a la gente que está en espera, para tenerlos en prioridad».
+
+   Salían todas mezcladas en un solo listado, ordenadas pero sin decir
+   dónde acaba un grupo y empieza el otro, así que la cola no se leía
+   como cola. Y el globo de la pestaña las ignoraba siempre — incluso
+   cuando se liberaba un cupo de su horario, que es justo cuando hay que
+   llamarlas.
+
+   El día que se prueba: las 7pm llenas con tres esperando, y las 7am
+   con un cupo libre y alguien esperándolo desde hace días. */
+lista = { ok: true,
+  cupos: { ok: true, tope: 25, valor_cop: 125000, horas: [
+    { hora: '07:00', etiqueta: '7:00 am', tope: 25, ocupadas: 24,
+      activas: 24, por_procesar: 0, apartadas: 0, en_espera: 1, libres: 1 },
+    { hora: '18:00', etiqueta: '6:00 pm', tope: 25, ocupadas: 25,
+      activas: 25, por_procesar: 0, apartadas: 0, en_espera: 0, libres: 0 },
+    { hora: '19:00', etiqueta: '7:00 pm', tope: 25, ocupadas: 25,
+      activas: 25, por_procesar: 0, apartadas: 0, en_espera: 3, libres: 0 },
+  ] },
+  solicitudes: [
+    { id: 'aaaaaaaa-0000-4000-8000-000000000001', nombre: 'Paga Uno',
+      celular: '3000000001', hora: '19:00', estado: 'pagada',
+      cuando: '09/09 10:00', dias: 0, valor_cop: 125000 },
+    // La cola del 7pm, en el orden en que llegaron.
+    { id: 'bbbbbbbb-0000-4000-8000-000000000001', nombre: 'Espera Primera',
+      celular: '3000000011', hora: '19:00', estado: 'lista_espera',
+      cuando: '02/09 08:00', dias: 7, valor_cop: 125000 },
+    { id: 'bbbbbbbb-0000-4000-8000-000000000002', nombre: 'Espera Segunda',
+      celular: '3000000012', hora: '19:00', estado: 'lista_espera',
+      cuando: '05/09 09:00', dias: 4, valor_cop: 125000 },
+    { id: 'bbbbbbbb-0000-4000-8000-000000000003', nombre: 'Espera Tercera',
+      celular: '3000000013', hora: '19:00', estado: 'lista_espera',
+      cuando: '08/09 20:00', dias: 1, valor_cop: 125000 },
+    // Otra cola, la del 7am, que tiene su propia numeración.
+    { id: 'cccccccc-0000-4000-8000-000000000001', nombre: 'Espera Mañanera',
+      celular: '3000000021', hora: '07:00', estado: 'lista_espera',
+      cuando: '01/09 06:00', dias: 8, valor_cop: 125000 },
+  ] };
+
+await p.click('#mens-recargar');
+await p.waitForTimeout(700);
+
+const txt = (await p.locator('#mens-lista').innerText()).replace(/\s+/g, ' ');
+const tarj = (await p.locator('#mens-cupos').innerText()).replace(/\s+/g, ' ');
+
+ok('la lista de espera tiene su propia sección',
+   /LISTA DE ESPERA · POR ORDEN DE LLEGADA/i.test(txt), txt.slice(0, 200));
+ok('y dice cuántas hay en ella', /LISTA DE ESPERA · POR ORDEN DE LLEGADA 4/i.test(txt),
+   'tres del 7pm y una del 7am');
+ok('las pagadas van en su propia sección y primero',
+   txt.indexOf('YA PAGARON') < txt.indexOf('LISTA DE ESPERA'));
+
+ok('la que lleva más tiempo esperando sale de primera',
+   txt.indexOf('Espera Primera') < txt.indexOf('Espera Segunda') &&
+   txt.indexOf('Espera Segunda') < txt.indexOf('Espera Tercera'),
+   'es lo que decide a quién se llama cuando se libere un cupo');
+// El turno va pegado al nombre en `innerText`: la separación la pone el
+// margen del CSS, que no deja rastro en el texto.
+ok('cada una lleva su turno', /1º\s*Espera Primera/.test(txt) &&
+   /2º\s*Espera Segunda/.test(txt) && /3º\s*Espera Tercera/.test(txt),
+   txt.slice(txt.indexOf('LISTA DE ESPERA'), txt.indexOf('LISTA DE ESPERA') + 120));
+ok('el turno se cuenta por horario, no por el listado entero',
+   /1º\s*Espera Mañanera/.test(txt),
+   'la cola del 7am empieza en 1 aunque vaya después de las tres del 7pm');
+ok('una pagada no lleva turno', !/º Paga Uno/.test(txt),
+   'un número ahí parecería una prioridad que no existe');
+
+ok('la tarjeta del 7pm dice cuánta gente hace fila',
+   /3 en espera/.test(tarj), tarj);
+ok('y no las suma a las ocupadas',
+   /25 de 25/.test(tarj), 'quien espera no ocupa cupo');
+ok('donde hay cupo libre, la tarjeta pide llamarlas',
+   /1 en espera · ¡llámalas!/.test(tarj), tarj);
+ok('donde está lleno, no lo pide', !/3 en espera · ¡llámalas!/.test(tarj),
+   'no se puede atender hoy lo que no tiene cupo');
+
+const globo = await p.locator('#globo-mens').innerText();
+ok('el globo cuenta la pagada y la que ya tiene cupo esperándola',
+   globo.trim() === '2', globo);
+
+ok('y no las tres del horario lleno', globo.trim() !== '5',
+   'un globo que nunca baja se deja de mirar');
+
+ok('las de espera también traen el botón de procesar',
+   await p.locator('[data-atender="bbbbbbbb-0000-4000-8000-000000000001"]').count() === 1,
+   'ahí quiere decir «ya la llamé»');
+
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
 await b.close(); srv.close();

@@ -895,6 +895,22 @@ const CONFIG = {
   .mens-botones{display:flex; flex-direction:column; gap:.35rem;
     flex:0 0 auto; align-items:stretch}
   .mens-botones .btn{text-align:center; white-space:nowrap}
+  /* El encabezado de cada grupo. Sin esto las cuatro secciones salían
+     pegadas y la cola de espera no se leía como cola. */
+  .mens-grupo{display:flex; align-items:center; gap:.5rem;
+    margin:1.1rem 0 .45rem; font-size:.7rem; font-weight:800;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--tx-3)}
+  .mens-grupo:first-child{margin-top:.2rem}
+  .mens-cuantas{background:var(--bg-3); color:var(--tx-2);
+    border-radius:999px; padding:.05rem .45rem; font-size:.68rem}
+  /* El turno en la cola. Va delante del nombre porque es lo primero que
+     se mira para saber a quién le toca. */
+  .mens-turno{display:inline-block; min-width:1.5rem; margin-right:.35rem;
+    font-weight:800; color:var(--hot)}
+  /* Hay cupo libre y hay gente esperándolo: eso no es un dato, es una
+     llamada por hacer hoy. */
+  .mens-llamar{color:var(--gold); font-weight:700}
+  .mens-cola{color:var(--tx-3)}
   .fila.mens .et{font-size:.66rem; font-weight:800; letter-spacing:.04em;
     padding:.1rem .4rem; border-radius:999px; margin-left:.4rem;
     background:var(--bg-3); color:var(--tx-2)}
@@ -3782,18 +3798,38 @@ const CONFIG = {
           (apart ? ` · ${apart} apartado${apart === 1 ? '' : 's'}` : '') +
           `</div>`
         : '';
+      /* QUIÉN ESTÁ HACIENDO FILA POR ESTE HORARIO (0075).
+         Es lo que hay que saber ANTES de prometerle un cupo a alguien
+         por WhatsApp: si hay tres esperando, el que acaba de escribir
+         no es el primero. Va en oro cuando la hora está llena —ahí es
+         una cola de verdad— y en gris cuando hay cupo, porque entonces
+         lo que toca es llamarlas, no anotar a nadie más. */
+      const esp = Number(h.en_espera || 0);
+      const cola = esp
+        ? `<div class="ag ${libre ? 'mens-llamar' : 'mens-cola'}">` +
+          `${esp} en espera${libre ? ' · ¡llámalas!' : ''}</div>`
+        : '';
       return `<div class="mens-cupo ${libre ? '' : 'lleno'}">` +
         `<div class="v">${h.libres}</div>` +
         `<div class="k">libres · ${esc(h.etiqueta)}</div>` +
         `<div class="ag">${h.ocupadas} de ${h.tope}</div>` +
-        detalle +
+        detalle + cola +
       `</div>`;
     }).join('') || '<p class="suave">Sin horarios configurados.</p>';
 
-    // El globo de la pestaña cuenta solo lo que EXIGE hacer algo hoy:
-    // quien ya pagó. La lista de espera no es una tarea pendiente, es
-    // una cola — y un globo que nunca baja se deja de mirar.
-    const porHacer = lista.filter(x => x.estado === 'pagada').length;
+    /* EL GLOBO: lo que exige hacer algo HOY.
+       Quien ya pagó, siempre. Y quien está en lista de espera de un
+       horario que acaba de abrir un cupo — ese es justo el momento en
+       que la cola deja de ser una cola y pasa a ser una llamada por
+       hacer. Antes no contaba nunca, y una persona que llevaba una
+       semana esperando podía perder el cupo que se le liberó porque
+       nadie miraba esa pestaña. Lo que se sigue sin contar es la
+       espera de un horario lleno: eso no se puede atender hoy, y un
+       globo que nunca baja se deja de mirar. */
+    const conCupo = new Set(cupos.filter(c => Number(c.libres) > 0).map(c => c.hora));
+    const porHacer = lista.filter(x =>
+      x.estado === 'pagada' ||
+      (x.estado === 'lista_espera' && conCupo.has(x.hora))).length;
     const globo = $('#globo-mens');
     globo.hidden = porHacer === 0;
     globo.textContent = String(porHacer);
@@ -3804,13 +3840,43 @@ const CONFIG = {
       return;
     }
 
-    $('#mens-lista').innerHTML = lista.map(x => {
+    /* EN SECCIONES, Y LA COLA NUMERADA.
+       Damián: «importante que la lista de espera sí muestre a la gente
+       que está en espera, para tenerlos en prioridad».
+
+       Salían todas mezcladas en un solo listado. Ordenadas —eso ya lo
+       hacía el servidor— pero sin decir dónde acaba un grupo y empieza
+       el otro, así que la cola no se leía como cola: había que deducir
+       por la etiqueta de cada fila quién estaba esperando y desde
+       cuándo.
+
+       El turno se numera dentro de CADA horario, no del listado entero:
+       las colas de las 6pm y las 7pm son independientes, y un «3º» que
+       mezclara las dos no serviría para llamar a nadie. */
+    const ORDEN = [
+      { k: 'pagada',         t: 'Ya pagaron · pásalas a AdminGym' },
+      { k: 'esperando_pago', t: 'Apartadas, sin pagar' },
+      { k: 'lista_espera',   t: 'Lista de espera · por orden de llegada' },
+      { k: 'atendida',       t: 'Ya procesadas' },
+    ];
+    const turnos = new Map();   // hora → cuántas van numeradas de esa cola
+
+    const fila = (x) => {
       const e = MENS_ESTADOS[x.estado] || { et: x.estado, cl: '', que: '' };
       const hh = (cupos.find(c => c.hora === x.hora) || {}).etiqueta || x.hora;
       const wa = 'https://wa.me/57' + String(x.celular).replace(/\D/g, '');
+      // El turno solo tiene sentido en la cola: en las demás secciones
+      // un número al lado del nombre parecería un orden de prioridad
+      // que no existe.
+      let turno = '';
+      if (x.estado === 'lista_espera') {
+        const n = (turnos.get(x.hora) || 0) + 1;
+        turnos.set(x.hora, n);
+        turno = `<span class="mens-turno">${n}º</span>`;
+      }
       return `<div class="fila mens ${e.cl}">
         <div class="mens-quien">
-          <b>${esc(x.nombre)}</b>
+          ${turno}<b>${esc(x.nombre)}</b>
           <span class="et ${e.cl}">${e.et}</span>
           <div class="ag">${esc(hh)} · ${esc(x.cuando)}` +
             (Number(x.dias) > 0 ? ` · hace ${x.dias} d` : '') + `</div>
@@ -3838,7 +3904,20 @@ const CONFIG = {
               `Ya la procesé</button>`) +
         `</div>
       </div>`;
-    }).join('');
+    };
+
+    // Un grupo vacío no imprime su encabezado: un rótulo sin nada
+    // debajo hace buscar lo que no hay.
+    $('#mens-lista').innerHTML = ORDEN.map(g => {
+      const suyas = lista.filter(x => x.estado === g.k);
+      if (!suyas.length) return '';
+      return `<div class="mens-grupo">${esc(g.t)}` +
+        `<span class="mens-cuantas">${suyas.length}</span></div>` +
+        suyas.map(fila).join('');
+    }).join('') +
+    // Un estado que nadie previó no puede desaparecer del panel sin
+    // dejar rastro: se pinta al final antes que perderlo de vista.
+    lista.filter(x => !ORDEN.some(g => g.k === x.estado)).map(fila).join('');
   }
 
   /* El clic va por delegación en el contenedor, no botón por botón: la
