@@ -278,6 +278,43 @@ ok('las de espera también traen el botón de procesar',
    await p.locator('[data-atender="bbbbbbbb-0000-4000-8000-000000000001"]').count() === 1,
    'ahí quiere decir «ya la llamé»');
 
+/* ═══════════ 6. UNA HORA SUSPENDIDA LO DICE (0076) ═══════════
+
+   El 8 de septiembre Damián suspendió la venta de mensualidad en 6pm y
+   7pm «hasta nueva orden»: quedan en lista de espera. Por dentro eso es
+   un tope de 0, y con tope 0 la tarjeta decía «0 libres · 28 de 0», que
+   se lee como un error del sistema y no como una decisión.
+
+   Se prueba con el caso incómodo: una hora suspendida que ADEMÁS tiene
+   mensualidades pagadas sin pasar a AdminGym. Esa tarea no se puede
+   perder de vista solo porque la hora esté cerrada. */
+lista = { ok: true,
+  cupos: { ok: true, tope: 25, valor_cop: 125000, horas: [
+    { hora: '07:00', etiqueta: '7:00 am', tope: 25, ocupadas: 21,
+      activas: 21, por_procesar: 0, apartadas: 0, en_espera: 0, libres: 4 },
+    { hora: '19:00', etiqueta: '7:00 pm', tope: 0, ocupadas: 28,
+      activas: 25, por_procesar: 3, apartadas: 0, en_espera: 2, libres: 0 },
+  ] },
+  solicitudes: [] };
+
+await p.click('#mens-recargar');
+await p.waitForTimeout(700);
+const sus = (await p.locator('#mens-cupos').innerText()).replace(/\s+/g, ' ');
+
+ok('la hora suspendida lo dice con la palabra',
+   /Suspendida/.test(sus), sus);
+ok('y no como «0 de 0», que parece una avería', !/de 0/.test(sus), sus);
+ok('dice cuántas quedan comprometidas', /28 comprometidas/.test(sus), sus);
+ok('sin perder de vista las que faltan por pasar a AdminGym',
+   /3 por pasar/.test(sus),
+   'que la hora esté cerrada no borra esa tarea');
+ok('ni a quien está haciendo fila', /2 en espera/.test(sus), sus);
+ok('la hora que sigue abierta se pinta como siempre',
+   /4 libres · 7:00 am 21 de 25/.test(sus), sus);
+ok('la tarjeta suspendida se marca aparte',
+   await p.locator('.mens-cupo.suspendida').count() === 1,
+   'borde punteado: cerrada por decisión, no por llenarse');
+
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
 await b.close(); srv.close();

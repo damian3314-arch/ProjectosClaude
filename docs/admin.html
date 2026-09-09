@@ -886,6 +886,12 @@ const CONFIG = {
   .mens-cupo .v{font-size:1.6rem; font-weight:800; color:var(--ok); line-height:1}
   .mens-cupo.lleno .v{color:var(--hot)}
   .mens-cupo .k{font-size:.78rem; margin-top:.15rem}
+  /* Suspendida por decisión, no por estar llena: se dice con la palabra
+     y en gris, para que no se confunda con una hora que se llenó sola y
+     puede volver a abrir cuando alguien se retire. */
+  .mens-cupo.suspendida{border-style:dashed; opacity:.85}
+  .mens-cupo.suspendida .v{color:var(--tx-2)}
+  .mens-cupo .peq-v{font-size:.95rem; letter-spacing:.02em}
   .fila.mens{align-items:flex-start; gap:.8rem}
   .mens-quien{flex:1 1 auto; min-width:0}
   .mens-que{color:var(--gold)}
@@ -3786,6 +3792,11 @@ const CONFIG = {
        persiguen, la comparación con AdminGym se hace sola. */
     $('#mens-cupos').innerHTML = cupos.map(h => {
       const libre = Number(h.libres) > 0;
+      /* SUSPENDIDA. Tope 0 quiere decir que no se vende mensualidad a
+         esa hora hasta nueva orden: quien entre a la página queda en
+         lista de espera. Se dice con la palabra y no con «0 de 0»,
+         que se lee como un error del sistema y no como una decisión. */
+      const suspendida = Number(h.tope) === 0;
       const act = Number(h.activas || 0);
       const pend = Number(h.por_procesar || 0);
       const apart = Number(h.apartadas || 0);
@@ -3809,10 +3820,17 @@ const CONFIG = {
         ? `<div class="ag ${libre ? 'mens-llamar' : 'mens-cola'}">` +
           `${esp} en espera${libre ? ' · ¡llámalas!' : ''}</div>`
         : '';
-      return `<div class="mens-cupo ${libre ? '' : 'lleno'}">` +
-        `<div class="v">${h.libres}</div>` +
-        `<div class="k">libres · ${esc(h.etiqueta)}</div>` +
-        `<div class="ag">${h.ocupadas} de ${h.tope}</div>` +
+      return `<div class="mens-cupo ${suspendida ? 'suspendida' : (libre ? '' : 'lleno')}">` +
+        (suspendida
+          ? `<div class="v peq-v">Suspendida</div>` +
+            `<div class="k">${esc(h.etiqueta)}</div>` +
+            `<div class="ag">${h.ocupadas} comprometidas</div>`
+          : `<div class="v">${h.libres}</div>` +
+            `<div class="k">libres · ${esc(h.etiqueta)}</div>` +
+            `<div class="ag">${h.ocupadas} de ${h.tope}</div>`) +
+        // El desglose va en los dos casos: que la hora esté suspendida
+        // no quita que queden mensualidades por pasar a AdminGym, y esa
+        // es justo la tarea que no se puede perder de vista.
         detalle + cola +
       `</div>`;
     }).join('') || '<p class="suave">Sin horarios configurados.</p>';
