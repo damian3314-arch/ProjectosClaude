@@ -1140,6 +1140,29 @@ export default {
       } else if (ruta === '/api/mensualidad') {
         r = await rpc(env, 'mensualidad_lista', { p_token: token });
 
+      /* «Ya la procesé». Cierra el círculo de una solicitud: la pagada
+         que ya se pasó a AdminGym, o la de lista de espera a la que ya
+         se llamó.
+
+         No es solo una marca de orden. Mientras una pagada no pueda
+         decir que ya está en AdminGym, el cupo la cuenta aparte para
+         siempre, y el día que alguien la pase a membresías se cuenta
+         DOS veces: el 9 de septiembre el panel decía 30 a las 7pm donde
+         había 28. Este botón es lo que hace que ese número cierre. */
+      } else if (ruta === '/api/mensualidad/atender') {
+        const id = UUID(b.id);
+        if (!id) {
+          return json({ ok: false, error: 'FALTA_ID',
+            mensaje: 'No se dijo cuál solicitud.' }, 400, origen);
+        }
+        // `txt()` es del bloque de rutas públicas y aquí no existe. Se
+        // recorta a mano: la nota va a una columna de texto libre y sin
+        // tope se le puede mandar un archivo entero.
+        const nota = b.nota == null ? '' : String(b.nota).trim().slice(0, 200);
+        r = await rpc(env, 'mensualidad_atender', {
+          p_token: token, p_id: id, p_nota: nota || null,
+        });
+
       } else if (ruta === '/api/dia') {
         r = await rpc(env, 'caja_del_dia', {
           p_token: token,

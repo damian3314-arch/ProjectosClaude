@@ -29,6 +29,7 @@ const SUITES = [
   'deposito-a-caja',
   'juntar-depositos',
   'mensualidad-pagina',
+  'mensualidad-procesar',
   'pulso-ingesta',
   'tarjeta-sabado',
   'tirilla-de-la-duena',

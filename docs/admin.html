@@ -889,6 +889,12 @@ const CONFIG = {
   .fila.mens{align-items:flex-start; gap:.8rem}
   .mens-quien{flex:1 1 auto; min-width:0}
   .mens-que{color:var(--gold)}
+  /* Los dos botones de la fila, uno debajo del otro y del mismo ancho.
+     En el celular la fila ya va justa: en línea, «Ya la procesé» empuja
+     el nombre hasta partirlo. */
+  .mens-botones{display:flex; flex-direction:column; gap:.35rem;
+    flex:0 0 auto; align-items:stretch}
+  .mens-botones .btn{text-align:center; white-space:nowrap}
   .fila.mens .et{font-size:.66rem; font-weight:800; letter-spacing:.04em;
     padding:.1rem .4rem; border-radius:999px; margin-left:.4rem;
     background:var(--bg-3); color:var(--tx-2)}
@@ -3749,14 +3755,38 @@ const CONFIG = {
     const cupos = (d.cupos && d.cupos.horas) || [];
     const lista = d.solicitudes || [];
 
-    // Los cupos primero: es lo que hay que mirar antes de prometerle
-    // nada a nadie por WhatsApp.
+    /* Los cupos primero: es lo que hay que mirar antes de prometerle
+       nada a nadie por WhatsApp.
+
+       EL NÚMERO DICE DE DÓNDE SALE (0074). El 9 de septiembre esta
+       tarjeta decía 30 a las 7:00 pm y el listado de AdminGym decía 25,
+       y no había forma de saber cuál creer. Eran 25 membresías activas
+       más 5 mensualidades pagadas por la página que todavía no estaban
+       en AdminGym — y dos de esas cinco ya se habían pasado a mano, así
+       que se contaban dos veces.
+
+       Ahora las dos mitades se enseñan por separado: lo que AdminGym ya
+       tiene y lo que falta por pasarle. Cuando las dos cifras se
+       persiguen, la comparación con AdminGym se hace sola. */
     $('#mens-cupos').innerHTML = cupos.map(h => {
       const libre = Number(h.libres) > 0;
+      const act = Number(h.activas || 0);
+      const pend = Number(h.por_procesar || 0);
+      const apart = Number(h.apartadas || 0);
+      // Solo se desglosa cuando hay algo que desglosar: en un horario
+      // sin pendientes, «25 de 25» ya lo dice todo y una segunda línea
+      // repitiendo el mismo número enseña a no leer la tarjeta.
+      const detalle = (pend || apart)
+        ? `<div class="ag">${act} en AdminGym` +
+          (pend ? ` · ${pend} por pasar` : '') +
+          (apart ? ` · ${apart} apartado${apart === 1 ? '' : 's'}` : '') +
+          `</div>`
+        : '';
       return `<div class="mens-cupo ${libre ? '' : 'lleno'}">` +
         `<div class="v">${h.libres}</div>` +
         `<div class="k">libres · ${esc(h.etiqueta)}</div>` +
         `<div class="ag">${h.ocupadas} de ${h.tope}</div>` +
+        detalle +
       `</div>`;
     }).join('') || '<p class="suave">Sin horarios configurados.</p>';
 
@@ -3791,10 +3821,56 @@ const CONFIG = {
             ? `<div class="ag">ref ${esc(x.referencia)}</div>` : '') +
           (e.que ? `<div class="ag mens-que">${e.que}</div>` : '') +
         `</div>
-        <a class="btn chico" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>
+        <div class="mens-botones">
+          <a class="btn chico" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` +
+          /* «YA LA PROCESÉ». Lo pidió Damián y no es solo orden: mientras
+             una pagada no pueda decir que ya está en AdminGym, el cupo la
+             cuenta aparte para siempre, y el día que alguien la pase a
+             membresías queda contada dos veces. Este botón es lo que hace
+             que el número de arriba cierre.
+
+             Sirve igual para una de lista de espera: ahí quiere decir «ya
+             la llamé». Una ya atendida no lo enseña —no hay nada que
+             hacer— y una anulada tampoco. */
+          (x.estado === 'atendida' || x.estado === 'anulada'
+            ? ''
+            : `<button class="btn chico" type="button" data-atender="${esc(x.id)}">` +
+              `Ya la procesé</button>`) +
+        `</div>
       </div>`;
     }).join('');
   }
+
+  /* El clic va por delegación en el contenedor, no botón por botón: la
+     lista se repinta entera en cada carga y los escuchas colgados de
+     cada botón se perderían con el repintado. */
+  $('#mens-lista').addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-atender]');
+    if (!b) return;
+    const fila = (mensDatos && mensDatos.solicitudes || [])
+      .find(x => x.id === b.dataset.atender);
+    // Se pregunta porque es la acción que retira a alguien de la lista
+    // de pendientes: hacerlo por un roce del dedo en el celular sería
+    // perder a una clienta sin enterarse.
+    const quien = fila ? fila.nombre : 'esta solicitud';
+    if (!confirm(`¿Ya procesaste a ${quien}?\n\n` +
+                 `Sale de la lista de pendientes y deja de contar aparte ` +
+                 `en el cupo.`)) return;
+    b.disabled = true;
+    try {
+      const r = await alWorker('mensualidad/atender', { id: b.dataset.atender });
+      await cargarMensualidad(true);
+      nota(r.ya_estaba ? 'Ya estaba procesada' : 'Procesada', 'bien',
+           esc(r.nombre || quien) +
+           (r.ya_estaba ? ' · alguien la marcó antes'
+                        : r.estado_antes === 'pagada'
+                          ? ' · ya cuenta solo por AdminGym'
+                          : ' · sale de la lista de espera'));
+    } catch (e) {
+      b.disabled = false;
+      nota('No se pudo', 'mal', e.message || 'Vuelve a intentarlo.');
+    }
+  });
 
   $('#tab-mensualidad').addEventListener('click',
     () => { verPanel('mensualidad'); cargarMensualidad(); });
