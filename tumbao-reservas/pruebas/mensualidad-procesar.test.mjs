@@ -280,10 +280,14 @@ ok('las de espera también traen el botón de procesar',
 
 /* ═══════════ 6. UNA HORA SUSPENDIDA LO DICE (0076) ═══════════
 
-   El 8 de septiembre Damián suspendió la venta de mensualidad en 6pm y
-   7pm «hasta nueva orden»: quedan en lista de espera. Por dentro eso es
-   un tope de 0, y con tope 0 la tarjeta decía «0 libres · 28 de 0», que
-   se lee como un error del sistema y no como una decisión.
+   El 8 de septiembre Damián cerró la venta de mensualidad en 6pm y 7pm
+   «hasta nueva orden»: quedan en lista de espera. Por dentro eso es un
+   tope de 0, y con tope 0 la tarjeta decía «0 libres · 28 de 0», que se
+   lee como un error del sistema y no como una decisión.
+
+   Y decía «Suspendida» a secas, hasta que él tuvo que aclarar: «lo de
+   suspensión es solo para la venta de mensualidad; la clase sí va a
+   seguir dando con normalidad». Si él lo leyó así, la cajera también.
 
    Se prueba con el caso incómodo: una hora suspendida que ADEMÁS tiene
    mensualidades pagadas sin pasar a AdminGym. Esa tarea no se puede
@@ -301,8 +305,16 @@ await p.click('#mens-recargar');
 await p.waitForTimeout(700);
 const sus = (await p.locator('#mens-cupos').innerText()).replace(/\s+/g, ' ');
 
-ok('la hora suspendida lo dice con la palabra',
-   /Suspendida/.test(sus), sus);
+ok('la hora cerrada lo dice con palabras',
+   /Venta cerrada/.test(sus), sus);
+// Damián tuvo que preguntar si la CLASE también quedaba suspendida. Si
+// él lo leyó así, la cajera también: el papel tiene que decir las dos
+// cosas, qué se cerró y qué no.
+ok('y aclara que la clase sigue dictándose',
+   /la clase sigue normal/.test(sus),
+   'lo que se cierra es la venta de mensualidad, no la clase');
+ok('sin usar «suspendida» a secas, que se lee como clase cancelada',
+   !/Suspendida/.test(sus), sus);
 ok('y no como «0 de 0», que parece una avería', !/de 0/.test(sus), sus);
 ok('dice cuántas quedan comprometidas', /28 comprometidas/.test(sus), sus);
 ok('sin perder de vista las que faltan por pasar a AdminGym',
