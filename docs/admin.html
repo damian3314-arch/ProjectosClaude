@@ -4392,9 +4392,18 @@ const CONFIG = {
     const total      = ing.total;
 
     /* ── el cajón ───────────────────────────────────────────────────
-       Solo efectivo: la transferencia no pasa por aquí. "Gastos /
-       retiros" junta los dos que sacan billetes del cajón —lo que se
-       gastó y lo que se llevó al cerrar—, que es como lo pidió ella.
+       Solo efectivo: la transferencia no pasa por aquí.
+
+       DOS RENGLONES, NO UNO. Antes decía «Gastos / retiros» y sumaba lo
+       que se gastó con lo que se llevó el dueño al cerrar. Damián:
+
+         «Que la tirilla discrimine los egresos, porque debe mostrar
+          cuándo salió para pagar a un profesor o gasto, y la plata que
+          sí está saliendo de caja para entregar al dueño.»
+
+       Y tiene razón contable: pagarle al profesor es un COSTO; que el
+       dueño se lleve la plata no lo es, es la misma plata cambiando de
+       bolsillo. Juntarlas hacía imposible saber cuánto costó el día.
 
        El saldo se CALCULA, no se copia de `dejado_cop`: así el renglón
        de arriba y el de abajo no pueden contradecirse. En un cierre
@@ -4403,10 +4412,34 @@ const CONFIG = {
     // 0069: `egreso_efectivo` es ya SOLO el de la caja menor, que es lo
     // único que sale de este cajón. Lo que se pagó con plata de la
     // empresa va aparte y no entra en esta resta.
-    const gastos = Number(d.egreso_efectivo || 0) + Number(c.retirado_cop || 0);
+    const gastosCajon = Number(d.egreso_efectivo || 0);
+    const entregado   = Number(c.retirado_cop || 0);
     const cajaMayor = Number(d.egreso_caja_mayor_efectivo || 0)
                     + Number(d.egreso_transferencia || 0);
-    const saldo = base + enEfectivo - gastos;
+    // La misma resta de siempre, solo que ahora se ve en dos partes.
+    const saldo = base + enEfectivo - gastosCajon - entregado;
+
+    /* EL DESGLOSE DE LO QUE SALIÓ DEL CAJÓN, por concepto.
+       Solo efectivo y solo caja menor: lo que se pagó con plata de la
+       empresa no sale de este cajón y ya tiene su renglón debajo del
+       saldo. `origen` llegó en la 0077 — un cierre viejo servido por un
+       servidor anterior no lo trae, y ahí se asume caja menor, que es lo
+       que era todo antes de que la caja mayor existiera.
+
+       Y SE COMPRUEBA QUE SUME. Si los renglones no dan exactamente
+       `egreso_efectivo` se imprime el total sin desglosar: un desglose
+       que no cuadra con su total es peor que no tener desglose, porque
+       se lee como si faltara plata. */
+    const salidas = [];
+    for (const x of (Array.isArray(d.resumen_conceptos) ? d.resumen_conceptos : [])) {
+      if (x.sentido !== 'egreso' || x.medio !== 'efectivo') continue;
+      if ((x.origen || 'caja_menor') !== 'caja_menor') continue;
+      salidas.push({ nom: nombreConcepto(x.concepto), cop: Number(x.valor_cop || 0) });
+    }
+    salidas.sort((a, z) => z.cop - a.cop);
+    const salidasCuadran =
+      salidas.length > 0 &&
+      salidas.reduce((s, x) => s + x.cop, 0) === gastosCajon;
 
     // El descuadre del arqueo. NO estaba en el dibujo de ella y sale
     // solo cuando lo hay: en un día que cuadra la hoja queda tal cual
@@ -4501,7 +4534,18 @@ const CONFIG = {
       grupo('Movimiento de caja física') +
       g('Base inicial', pesos(base)) +
       g('Entradas en efectivo', pesos(enEfectivo)) +
-      g('Gastos / retiros', pesos(gastos)) +
+
+      /* Lo que se gastó, por concepto cuando se puede. El renglón sale
+         SIEMPRE, aunque sea $0: uno que desaparece no se distingue de
+         uno que a nadie se le ocurrió mirar. */
+      (salidasCuadran
+        ? grupo('Salidas de caja') +
+          salidas.map(x => g('  ' + x.nom, pesos(x.cop))).join('')
+        : g('Salidas de caja', pesos(gastosCajon))) +
+
+      // Y lo que se llevó el dueño, que no es un gasto: es la misma
+      // plata cambiando de bolsillo.
+      g('Entregado al dueño', pesos(entregado)) +
       `<hr>` +
       g('SALDO FINAL EN CAJA', pesos(saldo), true) +
       (dif !== 0

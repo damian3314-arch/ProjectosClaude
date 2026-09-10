@@ -1153,7 +1153,8 @@ const t = hojaTexto('hoja-cierre');
 // El cajón solo cuenta billetes: 95.000 de base + 295.000 que entraron
 // en efectivo − 50.000 de gastos y retiros = 340.000.
 /Base inicial\$95\.000/.test(t) && /Entradas en efectivo\$295\.000/.test(t)
- && /Gastos \/ retiros\$50\.000/.test(t) && /SALDO FINAL EN CAJA\$340\.000/.test(t)
+ && /Salidas de caja/.test(t) && /Entregado al dueño/.test(t)
+ && /SALDO FINAL EN CAJA\$340\.000/.test(t)
   ? bien('el movimiento del cajón cierra en su saldo')
   : falla('el movimiento de caja física', t.slice(0, 600));
 

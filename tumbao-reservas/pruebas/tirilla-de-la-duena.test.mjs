@@ -145,8 +145,16 @@ ok('el movimiento de caja arranca en la base',
 ok('mete solo el efectivo, no lo del banco',
    /Entradasenefectivo\$140\.000/.test(j),
    'la transferencia no pasa por el cajón');
-ok('gastos y retiros van juntos, como en su dibujo',
-   /Gastos\/retiros\$140\.000/.test(j), '0 de gastos + 140.000 que se llevó al cerrar');
+// LOS DOS RENGLONES, SEPARADOS (0077). Antes iban juntos en «Gastos /
+// retiros». Damián pidió partirlos porque son cosas distintas: pagarle
+// al profesor es un costo; que el dueño se lleve la plata no lo es.
+ok('lo que salió del cajón va en su renglón',
+   /Salidasdecaja\$0/.test(j), 'este día no hubo gastos');
+ok('y lo que se llevó el dueño en otro',
+   /Entregadoaldueño\$140\.000/.test(j));
+ok('el renglón de salidas sale aunque sea cero',
+   /Salidas de caja/.test(t),
+   'uno que desaparece no se distingue de uno que nadie miró');
 ok('y el saldo final es lo que de verdad se dejó',
    /SALDOFINALENCAJA\$100\.000/.test(j),
    '100.000 + 140.000 − 140.000, que es el dejado_cop real');
@@ -320,7 +328,8 @@ ok('y sigue cerrando en el saldo', /SALDO FINAL EN CAJA/.test(t));
   egreso_caja_mayor_efectivo: 500000,
   egreso_transferencia: 300000 }));
 ok('el gasto del cajón sí baja el saldo',
-   /Gastos\/retiros\$160\.000/.test(j), '20.000 del cajón + 140.000 retirados');
+   /Salidasdecaja\$20\.000/.test(j) && /Entregadoaldueño\$140\.000/.test(j),
+   '20.000 del cajón y 140.000 al dueño, cada uno en su renglón');
 ok('y el saldo queda descontándolo',
    /SALDOFINALENCAJA\$80\.000/.test(j), '100.000 + 140.000 − 160.000');
 ok('lo pagado con caja mayor se reporta aparte',
@@ -328,6 +337,85 @@ ok('lo pagado con caja mayor se reporta aparte',
 ok('y se dice que no salió de este cajón', /no sale de este cajón/.test(t));
 ok('va debajo del saldo, fuera de la resta',
    t.indexOf('SALDO FINAL EN CAJA') < t.indexOf('Pagado con caja mayor'));
+
+/* ── LOS EGRESOS, DISCRIMINADOS POR CONCEPTO (0077) ──────────────
+   Damián: «debe mostrar cuándo salió para pagar a un profesor o gasto,
+   y la plata que sí está saliendo de caja para entregar al dueño».
+
+   El caso que lo prueba es el de verdad, del 9 de septiembre: $60.000
+   al profesor y $190.000 que se llevó el dueño, que en el papel viejo
+   salían sumados como «$250.000» sin decir qué era qué. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  egreso_efectivo: 70000,
+  cierre: { ...REAL.cierre, retirado_cop: 190000 },
+  resumen_conceptos: [
+    ...REAL.resumen_conceptos,
+    { concepto: 'profesores', medio: 'efectivo', sentido: 'egreso',
+      origen: 'caja_menor', n: 1, valor_cop: 60000 },
+    { concepto: 'aseo', medio: 'efectivo', sentido: 'egreso',
+      origen: 'caja_menor', n: 1, valor_cop: 10000 },
+  ] }));
+ok('el papel dice a qué se fue cada gasto del cajón',
+   /Profesores\$60\.000/.test(j) && /Aseo\$10\.000/.test(j),
+   'antes solo salía el total');
+ok('y lo del dueño va aparte, no mezclado con los gastos',
+   /Entregadoaldueño\$190\.000/.test(j),
+   'no es un costo: es la misma plata cambiando de bolsillo');
+ok('el gasto mayor va primero', t.indexOf('Profesores') < t.indexOf('Aseo'));
+ok('el saldo sigue siendo la misma resta de siempre',
+   /SALDOFINALENCAJA\$-?[\d.]+/.test(j) &&
+   /SALDOFINALENCAJA\$-20\.000/.test(j),
+   '100.000 + 140.000 − 70.000 − 190.000');
+
+/* SI EL DESGLOSE NO CUADRA, NO SE IMPRIME. Un desglose que no da su
+   total se lee como si faltara plata, y es peor que no tener desglose.
+   Aquí los conceptos suman 60.000 y el cajón dice que salieron 70.000:
+   el papel tiene que rendirse y dar el total a secas. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  egreso_efectivo: 70000,
+  cierre: { ...REAL.cierre, retirado_cop: 0 },
+  resumen_conceptos: [
+    ...REAL.resumen_conceptos,
+    { concepto: 'profesores', medio: 'efectivo', sentido: 'egreso',
+      origen: 'caja_menor', n: 1, valor_cop: 60000 },
+  ] }));
+ok('un desglose que no suma no se imprime',
+   !/Profesores/.test(t), 'faltarían 10.000 sin explicación');
+ok('y en su lugar va el total a secas',
+   /Salidasdecaja\$70\.000/.test(j));
+
+/* LO DE LA CAJA MAYOR NO ENTRA EN EL DESGLOSE DEL CAJÓN. Esa plata no
+   salió de ahí —lo arregló la 0069— y ya tiene su renglón debajo del
+   saldo. Si se colara, el desglose volvería a no sumar. */
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  egreso_efectivo: 60000,
+  egreso_caja_mayor_efectivo: 500000,
+  cierre: { ...REAL.cierre, retirado_cop: 0 },
+  resumen_conceptos: [
+    ...REAL.resumen_conceptos,
+    { concepto: 'profesores', medio: 'efectivo', sentido: 'egreso',
+      origen: 'caja_menor', n: 1, valor_cop: 60000 },
+    { concepto: 'profesores', medio: 'efectivo', sentido: 'egreso',
+      origen: 'caja_mayor', n: 1, valor_cop: 500000 },
+  ] }));
+ok('el gasto de la caja mayor no se cuela en el desglose del cajón',
+   /Profesores\$60\.000/.test(j) && !/Profesores\$560\.000/.test(j),
+   'esa plata no salió de este cajón');
+ok('y sigue reportándose debajo del saldo',
+   /Pagadoconcajamayor\$500\.000/.test(j));
+
+// Un cierre viejo, de antes de la 0077, no trae `origen`. Se asume caja
+// menor, que es lo que era todo antes de que la caja mayor existiera.
+({ texto: t, junto: j } = await pintar({ ...REAL,
+  egreso_efectivo: 60000,
+  cierre: { ...REAL.cierre, retirado_cop: 0 },
+  resumen_conceptos: [
+    ...REAL.resumen_conceptos,
+    { concepto: 'profesores', medio: 'efectivo', sentido: 'egreso',
+      n: 1, valor_cop: 60000 },
+  ] }));
+ok('un cierre viejo sin `origen` se desglosa igual',
+   /Profesores\$60\.000/.test(j), 'antes de la caja mayor todo salía del cajón');
 
 // Sin gastos de la empresa el renglón no aparece: uno que casi siempre
 // diría $0 enseña a no leer el papel.
