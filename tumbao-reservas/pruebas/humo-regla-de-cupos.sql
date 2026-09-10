@@ -97,7 +97,46 @@ select chk('las 7:00 pm siguen con la venta cerrada',
     where h->>'hora' = '19:00'), 0);
 
 \echo ''
-\echo '-- 5. El aforo, y lo que la regla admite pasarse ---------------------'
+\echo '-- 5. La regla llega de verdad a la página de reservas ---------------'
+-- Lo que la página vende NO es `cupo_total` a secas: `clases_para`
+-- devuelve `coalesce(cupo_sueltas, cupo_total)`. `cupo_sueltas` es la
+-- tapa por tipo que puso la 0058 para partir el sábado en 20 sueltas y
+-- 15 afiliadas. Si alguien la pusiera en un día de semana, taparía la
+-- regla sin que nada fallara: la tabla diría 11 y la página vendería
+-- otra cosa. Este es el chequeo que lo impide.
+
+select chk('la regla ya está vigente, no en el futuro',
+  (select valor::date <= (now() at time zone 'America/Bogota')::date
+     from ajustes where clave = 'suelta_cupos_desde'), true);
+
+select chk('ninguna clase futura tiene una tapa por tipo que contradiga la regla',
+  (select coalesce(string_agg(
+            to_char(c.fecha_hora at time zone 'America/Bogota','DD/MM HH24:MI')
+            || ' vende ' || c.cupo_sueltas || ' y la regla dice '
+            || cupo_suelta_de(c.fecha_hora), '; '), '(ninguna)')
+     from clases c
+    where c.fecha_hora > now()
+      and c.cupo_sueltas is not null
+      and cupo_suelta_de(c.fecha_hora) is not null
+      and c.cupo_sueltas <> cupo_suelta_de(c.fecha_hora)),
+  '(ninguna)');
+
+select chk('lo que vende la página es exactamente lo que dice la regla',
+  (select coalesce(string_agg(
+            to_char(c.fecha_hora at time zone 'America/Bogota','DD/MM HH24:MI')
+            || ' vende ' || coalesce(c.cupo_sueltas, c.cupo_total)
+            || ' y la regla dice ' || cupo_suelta_de(c.fecha_hora), '; '), '(cuadran todas)')
+     from clases c
+    where c.fecha_hora > now()
+      and cupo_suelta_de(c.fecha_hora) is not null
+      -- Una clase con más reservas que el cupo nuevo no es un fallo: el
+      -- cupo nunca baja de lo ya vendido, y esa es la regla que manda.
+      and c.cupo_tomado <= cupo_suelta_de(c.fecha_hora)
+      and coalesce(c.cupo_sueltas, c.cupo_total) <> cupo_suelta_de(c.fecha_hora)),
+  '(cuadran todas)');
+
+\echo ''
+\echo '-- 6. El aforo, y lo que la regla admite pasarse ---------------------'
 -- El aforo de todas las clases futuras es 35. Y se deja dicho, sin que
 -- sea un fallo, cuánto podría pasarse la sala si TODAS las afiliadas
 -- asistieran: es la sobreventa que la regla acepta a propósito.
