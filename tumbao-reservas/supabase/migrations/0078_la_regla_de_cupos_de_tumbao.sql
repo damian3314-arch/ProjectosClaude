@@ -1,0 +1,80 @@
+-- 0078 · La regla de cupos de Tumbao, tal como la fijó Damián.
+--
+-- Esta migración no arregla un fallo: escribe una POLÍTICA. Hasta ahora
+-- los cupos salían de la demanda medida y de decisiones sueltas; desde
+-- aquí salen de una regla que el dueño puso por escrito el 10 de
+-- septiembre de 2026, y este archivo es donde vive esa regla.
+--
+-- ── LA REGLA, PALABRA POR PALABRA ───────────────────────────────────
+--
+--   «Cada clase tiene un aforo máximo real de 35 cupos.
+--
+--    Horarios de 6:00 p.m. y 7:00 p.m.
+--    Por estrategia comercial, el sistema podrá manejar una sobreventa
+--    controlada de mensualidades por horario, teniendo en cuenta que no
+--    todas las usuarias asisten todos los días.
+--      · Máximo 20 a 26 mensualidades activas por horario.
+--      · Dejar disponibles 11 cupos para clases sueltas.
+--      · El aforo real de cada clase no debe superar 35 personas.
+--      · Toda asistencia en horario diferente debe validarse previamente
+--        según disponibilidad.
+--
+--    Horario de 7:00 a.m.
+--      · 20 a 26 cupos para mensualidad completa.
+--      · 5 cupos para clases sueltas.
+--      · El aforo real de la clase no debe superar 35 personas.»
+--
+-- ── CÓMO SE TRADUCE ─────────────────────────────────────────────────
+--
+--   `suelta_cupos`       07:00=5, 18:00=11, 19:00=11
+--   `mensualidad_topes`  07:00=26  (18:00 y 19:00 siguen en 0, ver abajo)
+--
+-- Cambia lo que se fijó el 8 de septiembre (4 / 10 / 12), que salía del
+-- P80 de la demanda medida más uno. La regla del dueño manda sobre esa
+-- estimación: era una propuesta, esto es una decisión.
+--
+-- La fecha de corte NO se toca: sigue siendo el 15 de septiembre, que es
+-- cuando él dijo que entraran a regir los cupos nuevos. Cambiar los
+-- números no cambia el día en que empiezan.
+--
+-- ── LAS 6:00 PM Y 7:00 PM SIGUEN CON LA VENTA CERRADA ───────────────
+--
+-- El 8 de septiembre Damián ordenó: «hasta nueva orden suspendidas las
+-- mensualidades de 6pm y 7pm, quedan en lista de espera». Esta regla
+-- dice cuál es el TECHO de mensualidades (26), no que se reabra la
+-- venta, así que la suspensión se queda hasta que él la levante.
+--
+-- Y hoy la aritmética le da la razón: el 7pm tiene 27 comprometidas —26
+-- activas más una por pasar a AdminGym—, o sea que ya está UNA por
+-- encima del techo de la regla. Reabrir ahí sería vender por encima de
+-- lo que él mismo acaba de fijar.
+--
+-- Las 7:00 am nunca se suspendieron, así que sí suben de 25 a 26.
+--
+-- ── LO QUE ESTA REGLA NO PUEDE HACER SOLA ───────────────────────────
+--
+-- «El aforo real no debe superar 35 personas» es una condición sobre
+-- quién ENTRA al salón, y el sistema no mide eso: las mensualidades no
+-- generan reserva, así que nadie sabe cuántas afiliadas asistieron. Lo
+-- que el sistema garantiza es el techo de lo VENDIDO. Con la regla en su
+-- tope —26 mensualidades + 11 sueltas = 37— el papel permite vender 2
+-- por encima del aforo, y esa es exactamente la «sobreventa controlada»
+-- que la regla nombra: se apoya en que no todas asisten.
+--
+-- Lo mismo con «toda asistencia en horario diferente debe validarse
+-- previamente»: eso lo hace recepción mirando la disponibilidad, no hay
+-- nada que el sistema pueda impedir mientras no marque asistencia de
+-- mensualidad.
+--
+-- No hace falta tocar ninguna función: `cupo_suelta_de` y
+-- `mensualidad_cupos` ya leen estos ajustes desde la 0074 y la 0076.
+
+insert into ajustes (clave, valor) values
+  ('suelta_cupos',      '07:00=5,18:00=11,19:00=11'),
+  ('mensualidad_topes', '07:00=26,18:00=0,19:00=0')
+on conflict (clave) do update set valor = excluded.valor;
+
+-- Se aplica a lo que ya existe. Las clases del 15 en adelante todavía no
+-- están creadas, así que hoy esto no mueve nada; corre igual para dejar
+-- el estado consistente el día que sí las haya.
+select recalcular_cupos();
