@@ -120,49 +120,57 @@ const txt = () => p.locator('#fichas-resumen').innerText()
   .then(s => s.replace(/\s+/g, ' '));
 let t = await txt();
 
-/* ═══════════ 2. hoy ═══════════ */
+/* ═══════════ 2. SOLO VALORES ═══════════
+   Damián, 12 de septiembre: «muy cargado todooo… las tarjetas de los
+   valores también tienen como una explicación, no la necesito en esta
+   versión, solo valores y si vas a poner algún texto, que sea muy poco».
+
+   Así que aquí se comprueban dos cosas al tiempo: que los números están,
+   y que las frases NO. Sin la segunda mitad, las explicaciones vuelven a
+   colarse a la primera tarjeta que alguien retoque. */
 
 ok('la tarjeta de hoy dice lo que entró', /\$995\.000/.test(t), t.slice(0, 160));
-ok('y cuánta gente entró a clase suelta', /34 personas/.test(t));
-ok('y de dónde salió la plata',
-   /\$575\.000 en caja/.test(t) && /\$420\.000 por la página/.test(t));
-// Un renglón que dice «$0 apuntado a mano» hay que leerlo para descubrir
-// que no dice nada. Los ceros no se imprimen.
-ok('sin renglones en cero, que solo se leen para nada',
-   !/\$0 apuntado a mano/.test(t), t);
-ok('se compara contra el mismo día de la semana pasada',
-   /\+232%/.test(t), 'de 300.000 a 995.000');
+ok('y cuánta gente', /34 personas/.test(t));
+ok('y el comparativo, como porcentaje y ya', /\+232%/.test(t));
+ok('sin la frase de contra qué se compara',
+   !/sábado pasado/.test(t) && !/que el/.test(t), t);
+ok('sin el desglose de de dónde salió la plata',
+   !/en caja/.test(t) && !/por la página/.test(t), t);
 
-/* ═══════════ 3. el comparativo del mes, con su advertencia ═══════════
-   ESTE es el chequeo que importa. El +180% es cierto y es engañoso a la
-   vez: compara doce días de septiembre contra tres de agosto, porque la
-   Caja no existía antes del 10. Sin el aviso al lado, ese número se lee
-   como que el negocio casi triplicó. */
+/* ═══════════ 3. el comparativo del mes ═══════════
+   El +180% es cierto y engañoso a la vez: compara doce días de
+   septiembre contra tres de agosto, porque la Caja no existía antes del
+   10. El párrafo que lo explicaba se fue, pero el aviso NO: queda en una
+   palabra con el detalle en el title. Quitarlo del todo no sería
+   simplificar, sería dejar que ese número se lea como que el negocio
+   casi triplicó. */
 
 ok('el mes se compara contra el mes anterior al mismo día',
    /\+180%/.test(t), 'de 2.340.000 a 6.560.000');
-ok('y avisa de que la comparación todavía no es justa',
-   /todavía no es justo/.test(t), t);
-ok('diciendo desde cuándo hay Caja de verdad',
-   /empezó a registrar el 10 de ago/.test(t), t.slice(300, 700));
-ok('el aviso no tapa el número: se enseñan los dos',
-   /\$6\.560\.000/.test(t) && /\+180%/.test(t));
+ok('el aviso de comparativo injusto queda en una palabra',
+   /parcial/.test(t), t);
+ok('y el párrafo que lo explicaba ya no está',
+   !/todavía no es justo/.test(t) && !/empezó a registrar/.test(t), t);
+ok('el porqué sigue estando, en el title, para quien lo busque',
+   /La Caja empezó a registrar/.test(
+     await p.getAttribute('#fichas-resumen .parcial', 'title') || ''),
+   await p.getAttribute('#fichas-resumen .parcial', 'title'));
 ok('la semana, que sí es comparable, no lleva ese aviso',
-   (t.match(/está incompleto/g) || []).length <= 1, t);
+   await p.locator('#fichas-resumen .parcial').count() === 1,
+   'solo la del mes');
 
-/* ═══════════ 4. ingresos contra gastos, y en qué se fue ═══════════ */
+/* ═══════════ 4. entró menos salió, y las salidas ═══════════ */
 
 ok('dice lo que queda del mes', /\$6\.440\.000/.test(t));
-ok('con las dos puntas a la vista',
-   /Entró \$6\.560\.000/.test(t) && /salió \$120\.000/.test(t));
-// Lo que se le entrega al dueño al cerrar NO es un gasto, y confundirlo
-// haría que el mes pareciera costar el doble de lo que cuesta.
-ok('aclara que lo entregado al dueño no es un gasto',
-   /no es un gasto/.test(t), t);
-ok('el gasto se desglosa por concepto, no en un solo bulto',
-   /Profesores/i.test(t) && /\$120\.000/.test(t), t);
-ok('y dice de qué caja salió', /del cajón de la caja/.test(t), t);
+ok('con las dos puntas, como resta y sin palabras',
+   /\$6\.560\.000 − \$120\.000/.test(t), t);
+ok('sin la explicación de qué no cuenta como gasto',
+   !/no es un gasto/.test(t) && !/cambiando de sitio/.test(t), t);
+ok('las salidas se desglosan por concepto', /Profesores/i.test(t), t);
 ok('con su total, para poder cuadrarlo', /Total \$120\.000/.test(t), t);
+ok('sin decir cuántas salidas ni de qué caja',
+   !/salidas/.test(t.replace(/SALIDAS DEL MES/i, '')) &&
+   !/del cajón/.test(t), t);
 
 /* ═══════════ 5. el porcentaje sobre cero no se inventa ═══════════
    Dividir por cero no da «+100%» ni «+Infinity%»: no da nada. Es el
@@ -177,9 +185,9 @@ t = await txt();
 
 ok('comparar contra cero no escribe un porcentaje falso',
    !/Infinity/.test(t) && !/NaN/.test(t), t);
-ok('lo dice con palabras', /nuevo/.test(t), t);
-ok('y explica que no había nada que comparar',
-   /no hubo nada que comparar/.test(t), t);
+ok('lo dice en una palabra', /nuevo/.test(t), t);
+ok('sin la frase que lo explicaba',
+   !/nada que comparar/.test(t), t);
 
 /* ═══════════ 6. un mes sin nada no se ve como una avería ═══════════ */
 
@@ -194,10 +202,11 @@ await p.waitForTimeout(500);
 t = await txt();
 
 ok('un mes en cero se dibuja en cero, sin romperse', /\$0/.test(t), t);
-ok('y sin gastos lo dice con una frase, no con una tabla vacía',
-   /no se ha registrado ninguna salida/.test(t), t);
-ok('cero contra cero no es «nuevo»: es igual',
-   /nada entonces, nada ahora/.test(t), t);
+// Sin salidas la tarjeta enseña un cero, no una frase disculpándose.
+ok('y sin salidas enseña un cero, no una frase',
+   /\$0/.test(t) && !/no se ha registrado/.test(t), t);
+ok('cero contra cero es una raya, no «nuevo»',
+   !/nuevo/.test(t), t);
 
 /* ═══════════ 7. un mes peor se ve peor ═══════════
    La mitad del valor del comparativo está en que una caída se note. Si
@@ -216,13 +225,14 @@ await p.click('#resumen-recargar');
 await p.waitForTimeout(500);
 t = await txt();
 
-ok('una caída se dice como caída', /−50%/.test(t), t.slice(300, 620));
-ok('y cuánta plata es, no solo el porcentaje',
-   /abajo \$1\.170\.000/.test(t));
+ok('una caída se dice como caída', /−50%/.test(t), t.slice(0, 400));
 const bajas = await p.locator('#fichas-resumen .delta.baja').count();
 ok('pintada distinto de una subida', bajas === 1, `${bajas} en rojo`);
+// `queda_cop` llega a propósito con el valor viejo, que ya no cuadra con
+// ingreso − egreso: la tarjeta hace la resta ella misma en vez de
+// creerse un total que le llega aparte.
 ok('los tres números de la tarjeta cuadran entre ellos',
-   /\$1\.050\.000 Entró \$1\.170\.000 · salió \$120\.000/.test(t),
+   /\$1\.050\.000 \$1\.170\.000 − \$120\.000/.test(t),
    'la resta se hace en la tarjeta, no se cree un total de fuera');
 
 /* ═══════════ 8. la cajera no ve la plata del negocio ═══════════

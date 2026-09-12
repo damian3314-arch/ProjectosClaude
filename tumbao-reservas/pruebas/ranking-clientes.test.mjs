@@ -146,68 +146,76 @@ ok('arranca pidiendo los últimos 90 días',
    pedidos.length >= 1 && pedidos[0].dias === 90, JSON.stringify(pedidos[0]));
 ok('y pide diez, no la base entera', pedidos[0].limite === 10);
 
-/* ═══════════ 2. lo que dice cada fila ═══════════ */
+/* ═══════════ 2. SOLO VALORES, cuatro por fila ═══════════
+   Damián, 12 de septiembre: «muy cargado todooo… necesitamos es algo
+   sencillo pero que yo tenga presente a esos buenos clientes… si vas a
+   poner algún texto, que sea muy poco».
 
-ok('el primero es quien más días vino', /Ludys Herazo/.test(t), t.slice(0, 200));
-// La etiqueta la pinta el CSS en mayúscula (text-transform), y eso sale
-// en innerText: se compara sin distinguir caja para no atar la prueba a
-// una decisión de estilo.
-ok('con los días, que es por lo que está ordenado', /\b8\s*días\b/i.test(t),
-   t.slice(0, 120));
-ok('y lo que lleva pagado en sueltas',
-   /\$120\.000\s*en sueltas/i.test(t), t.slice(0, 200));
-ok('con el teléfono, que es para llamarla', /3118708421/.test(t));
-ok('dice cuándo fue la última vez, en palabras',
-   /vino ayer/.test(t), 'un "hace 1 días" hay que restarlo mentalmente');
-ok('y «vino hoy» cuando es hoy', /vino hoy/.test(t), t);
-ok('para el resto, cuántos días hace', /hace 25 días/.test(t), t);
-ok('y a qué hora viene casi siempre', /7:00 pm/.test(t), t);
+   Se comprueba que los cuatro datos están y que las frases NO. Sin la
+   segunda mitad, la prosa vuelve a colarse a la primera vez que alguien
+   toque esta lista. */
+
+ok('cada fila dice cuántas veces vino', /\b8\b/.test(t), t.slice(0, 140));
+ok('quién es', /Ludys Herazo/.test(t));
+ok('su teléfono, que es para llamarla', /3118708421/.test(t));
+ok('y lo que lleva pagado', /\$120\.000/.test(t));
+// La fecha es el mismo dato que «vino ayer» en menos sitio.
+ok('la última visita va como fecha, no como frase',
+   /11 de sept/i.test(t) && !/vino ayer/.test(t) && !/vino hoy/.test(t), t);
+ok('sin «hace N días»', !/hace \d+ días/.test(t), t);
+ok('sin la hora a la que viene casi siempre',
+   !/casi siempre/.test(t) && !/7:00 pm/.test(t), t);
+ok('sin la coletilla «en sueltas» en cada renglón',
+   !/en sueltas/.test(t), t);
 
 /* ═══════════ 3. quien ya tiene plan se marca ═══════════
    Es la diferencia entre una clienta a la que venderle una mensualidad y
-   una a la que ya se le vendió. Sin esta marca se la llama para ofrecerle
-   lo que ya compró. */
+   una a la que ya se le vendió. La marca se queda, en una palabra. */
 
 ok('quien ya es afiliada lleva su marca',
    await p.locator('.tiene-plan').count() === 1, 'María Fernanda ya compró plan');
-ok('y dice qué significa', /ya tiene plan/.test(t), t);
+// innerText pega la marca al nombre —«vidalesplan»— porque el espacio lo
+// pone el CSS; se mira el elemento, no el texto corrido.
+ok('y cabe en una palabra',
+   (await p.locator('.tiene-plan').innerText()).trim() === 'plan' &&
+   !/ya tiene plan/.test(t), t);
 
-/* ═══════════ 4. EL AVISO: el límite de la regla, a la vista ═══════════
-   Esto es lo que impide que «8 días» se lea como un número exacto. Ludys
-   tiene dos escrituras con errata que la regla no junta, y si el panel no
-   lo dijera, nadie sabría que sus días están partidos. */
+/* ═══════════ 4. EL AVISO, reducido a un asterisco ═══════════
+   Ludys tiene dos escrituras con errata que la regla no junta. El
+   párrafo que lo explicaba se fue —nadie lo leía— pero la marca NO:
+   sin ninguna, «8 veces» se lee como exacto cuando no lo es. */
 
-ok('avisa de los teléfonos con varias fichas',
-   /tienen varias fichas/.test(t), t);
-ok('nombrando las fichas, para poder mirarlas',
-   /Ludys haerazo/.test(t) && /LUDIS HERAZO/.test(t), t);
-ok('y explica las DOS lecturas posibles, sin decidir por él',
-   /grupo de amigas/.test(t) && /partidos/.test(t), t);
-ok('la fila de la lista también lo marca',
-   /comparte teléfono con 3 fichas/.test(t), t);
-ok('en singular cuando es una sola',
-   /comparte teléfono con 1 ficha\b/.test(t), t);
-// Quien no tiene nada raro no lleva ruido encima.
-ok('quien tiene una sola ficha no dice nada',
-   !/comparte teléfono con 0/.test(t), t);
-// Avisar de los sesenta teléfonos que hay sería una pared que nadie lee:
-// solo los que salen en la lista.
-ok('no avisa de teléfonos que no están en la lista',
-   !/Fulana/.test(t), 'el aviso se limita a lo que se está mirando');
+ok('quien comparte teléfono lleva un asterisco',
+   await p.locator('.cliente-fila .marca').count() === 4,
+   'cuatro de las cinco lo comparten');
+ok('quien no lo comparte, no lo lleva',
+   await p.locator('.cliente-fila').nth(2).locator('.marca').count() === 0,
+   'María Fernanda tiene una sola ficha');
+ok('el porqué sigue en el title, para quien lo busque',
+   /otras fichas/.test(await p.getAttribute('.cliente-fila .marca', 'title') || ''),
+   await p.getAttribute('.cliente-fila .marca', 'title'));
+ok('y el párrafo de antes ya no está',
+   !/tienen varias fichas/.test(t) && !/grupo de amigas/.test(t), t);
+ok('sin listar los teléfonos repetidos debajo',
+   !/Fulana/.test(t) && !/LUDIS HERAZO/.test(t), t);
 
-/* ═══════════ 5. LO QUE NO SE MIDE, dicho en pantalla ═══════════
-   Sin esta frase el ranking se lee como «mis mejores clientas», y es
-   falso: las que más vienen son las afiliadas y no pueden estar aquí. */
+/* ═══════════ 5. lo que no se mide, en dos palabras ═══════════
+   Sin esto la lista se lee como «mis mejores clientas», y es falso: las
+   que más vienen son las afiliadas y no pueden estar aquí. */
 
-ok('dice que solo cuenta clase suelta', /Solo clase suelta/.test(t), t);
-ok('y por qué las afiliadas no están',
-   /no generan reserva/.test(t), t);
+ok('el título dice que es clase suelta', /clase suelta/i.test(t), t);
+ok('sin el párrafo que lo explicaba',
+   !/no generan reserva/.test(t), t);
+ok('el porqué sigue en el title',
+   /no generan reserva/.test(
+     await p.getAttribute('.cab-ranking .parcial', 'title') || ''),
+   await p.getAttribute('.cab-ranking .parcial', 'title'));
 
 /* ═══════════ 6. cambiar la ventana ═══════════ */
 
 await p.click('[data-ventana="30"]');
 await p.waitForTimeout(400);
-ok('el botón de 30 días pide 30 días',
+ok('el botón de 30 d pide 30 días',
    pedidos[pedidos.length - 1].dias === 30, JSON.stringify(pedidos));
 ok('y se marca cuál está puesta',
    await p.locator('[data-ventana="30"].puesta').count() === 1);
@@ -229,10 +237,10 @@ ranking = { ok: true, hoy: '2026-09-12', clientes: [], telefonos_compartidos: []
 await p.click('[data-ventana="30"]');
 await p.waitForTimeout(450);
 t = await txt();
-ok('sin clientas lo dice con una frase',
-   /Todavía no hay clases sueltas en este plazo/.test(t), t);
-ok('y no deja el aviso de fichas colgando',
-   !/tienen varias fichas/.test(t), t);
+ok('sin clientas lo dice en una línea corta',
+   /Sin clases sueltas en este plazo/.test(t), t);
+ok('y no deja filas colgando',
+   await p.locator('.cliente-fila').count() === 0);
 
 /* ═══════════ 8. la cajera no ve esto ═══════════ */
 

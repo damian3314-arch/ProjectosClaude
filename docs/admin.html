@@ -448,108 +448,103 @@ const CONFIG = {
      El color se raciona igual que en Caja: aquí solo lo lleva la
      comparación —subió o bajó—, que es lo único que hace levantar la
      vista. El número del mes no va en verde por ser grande. */
-  .fichas{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+  /* Dos por fila en el celular. Con una sola columna había que bajar
+     cinco tarjetas antes de llegar a la lista de clientes, que es lo que
+     se viene a mirar. La de salidas ocupa el ancho entero porque es una
+     lista, no un número. */
+  .fichas{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr))}
   .ficha{
     background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:1rem 1.05rem;
+    padding:.85rem .95rem;
   }
+  .ficha.ancha{grid-column:1/-1}
   .ficha .cab{
-    font-size:.72rem;color:var(--tx-3);text-transform:uppercase;
-    letter-spacing:.05em;margin-bottom:.5rem;
+    font-size:.7rem;color:var(--tx-3);text-transform:uppercase;
+    letter-spacing:.05em;margin-bottom:.4rem;
   }
   .ficha .gordo{
-    font-size:2rem;font-weight:800;line-height:1.05;
+    font-size:1.5rem;font-weight:800;line-height:1.05;
     font-variant-numeric:tabular-nums;letter-spacing:-.02em;
   }
-  .ficha .bajo{font-size:.82rem;color:var(--tx-2);margin-top:.35rem}
-  .ficha .vs{
-    display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;
-    font-size:.8rem;color:var(--tx-3);margin-top:.65rem;
-    padding-top:.6rem;border-top:1px solid var(--line);
+  @media (max-width:480px){
+    .ficha{padding:.7rem .75rem}
+    .ficha .gordo{font-size:1.3rem}
+    .ficha .bajo{font-size:.74rem}
   }
-  .ficha .delta{font-weight:700;font-variant-numeric:tabular-nums}
+  .ficha .bajo{
+    font-size:.8rem;color:var(--tx-2);margin-top:.3rem;
+    font-variant-numeric:tabular-nums;
+  }
+  .ficha .vs{
+    display:flex;align-items:baseline;gap:.45rem;flex-wrap:wrap;
+    margin-top:.55rem;
+  }
+  .ficha .delta{font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums}
   .ficha .delta.sube{color:var(--ok)}
   .ficha .delta.baja{color:var(--bad)}
-  .ficha .delta.igual{color:var(--tx-2)}
-  /* Un comparativo que no es justo todavía. En oro y no en rojo: no es
-     un error, es un "todavía no te lo creas". */
-  .ficha .ojo-aviso{
-    font-size:.75rem;color:var(--gold);margin-top:.5rem;line-height:1.4;
+  .ficha .delta.igual{color:var(--tx-3)}
+  /* Una palabra, en oro, con el por qué en el title. No es un error —es
+     un «todavía no te lo creas»— así que no va en rojo ni ocupa un
+     párrafo: el párrafo que había antes nadie lo leía. */
+  .parcial{
+    font-size:.68rem;color:var(--gold);border-bottom:1px dotted currentColor;
+    cursor:help;font-weight:600;letter-spacing:.01em;
   }
-  /* La lista de gastos. Nombre a la izquierda, plata a la derecha, y la
-     plata alineada por la coma para poder compararla de un vistazo. */
+  /* La lista de salidas: concepto a la izquierda, plata a la derecha,
+     alineada por la coma para compararla de un vistazo. */
   .ficha .renglones{
-    display:grid;grid-template-columns:1fr max-content;gap:.3rem .8rem;
+    display:grid;grid-template-columns:1fr max-content;gap:.32rem .8rem;
     font-size:.85rem;margin-top:.2rem;
   }
   .ficha .renglones b{font-variant-numeric:tabular-nums;font-weight:700}
-  .ficha .renglones .de{grid-column:1/-1;font-size:.72rem;color:var(--tx-3);
-    margin:-.15rem 0 .25rem}
-  .ficha .nada{font-size:.85rem;color:var(--tx-3);font-style:italic}
 
   /* ---------- quiénes vienen más ----------
      Una fila por persona, el número de días a la izquierda porque es por
      lo que está ordenada y es lo que se va a comparar de un vistazo. En
      el celular el nombre manda y el resto baja a una segunda línea. */
-  .ranking{margin-top:1.6rem}
+  .ranking{margin-top:1.5rem}
   .cab-ranking{
-    display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;
-    padding-bottom:.2rem;
+    display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;
+    margin-bottom:.3rem;
   }
-  .cab-ranking h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
-  .cab-ranking .ventanas{display:flex;gap:.35rem;margin-left:auto}
-  .cab-ranking .ventanas .btn.puesta{
-    border-color:var(--hot);color:var(--hot-2);
-  }
-  .nota-ranking{
-    font-size:.75rem;color:var(--tx-3);margin:.25rem 0 .9rem;line-height:1.45;
-  }
+  .cab-ranking h3{margin:0;font-size:1rem;letter-spacing:-.01em}
+  .cab-ranking .ventanas{display:flex;gap:.3rem;margin-left:auto}
+  .cab-ranking .ventanas .btn.puesta{border-color:var(--hot);color:var(--hot-2)}
+  /* Una fila, cuatro datos, ninguna frase. Las veces a la izquierda
+     porque es por lo que está ordenada. */
   .cliente-fila{
-    display:grid;grid-template-columns:2.6rem 1fr max-content;
-    align-items:center;gap:.2rem .8rem;
-    padding:.6rem 0;border-bottom:1px solid var(--line);
+    display:grid;grid-template-columns:1.9rem 1fr max-content;
+    align-items:center;gap:0 .7rem;
+    padding:.5rem 0;border-bottom:1px solid var(--line);
   }
   .cliente-fila .veces{
-    font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums;
-    text-align:right;line-height:1;
-  }
-  .cliente-fila .veces small{
-    display:block;font-size:.6rem;font-weight:600;color:var(--tx-3);
-    text-transform:uppercase;letter-spacing:.04em;margin-top:.1rem;
+    font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;
+    text-align:right;line-height:1;color:var(--tx-2);
   }
   .cliente-fila .quien{min-width:0}
   .cliente-fila .quien b{font-weight:700}
-  .cliente-fila .sub{color:var(--tx-3);font-size:.76rem;margin-top:.15rem}
+  .cliente-fila .sub{
+    color:var(--tx-3);font-size:.74rem;margin-top:.1rem;
+    font-variant-numeric:tabular-nums;
+  }
   .cliente-fila .plata{
-    font-variant-numeric:tabular-nums;font-weight:700;font-size:.9rem;
-    text-align:right;
+    font-variant-numeric:tabular-nums;font-weight:700;font-size:.88rem;
+    text-align:right;line-height:1.2;
   }
   .cliente-fila .plata small{
     display:block;font-weight:400;font-size:.7rem;color:var(--tx-3);
   }
-  /* Quien ya tiene plan no es candidata a venderle uno. Se marca para no
-     llamarla por equivocación. */
+  /* Quien ya tiene plan no es candidata a venderle uno. */
   .cliente-fila .tiene-plan{
-    font-size:.68rem;padding:.08rem .4rem;border-radius:99px;
-    background:var(--bg-3);color:var(--tx-2);margin-left:.35rem;
+    font-size:.64rem;padding:.05rem .35rem;border-radius:99px;
+    background:var(--bg-3);color:var(--tx-2);margin-left:.3rem;
     vertical-align:middle;white-space:nowrap;
   }
-  /* Solo se enciende lo que pide mirar algo: una ficha que podría estar
-     partida en dos. Lo demás es lectura. */
-  .cliente-fila .ojo{color:var(--gold)}
-  @media (max-width:420px){
-    .cliente-fila{grid-template-columns:2.4rem 1fr}
-    .cliente-fila .plata{grid-column:2;text-align:left;margin-top:.2rem}
-    .cliente-fila .plata small{display:inline;margin-left:.3rem}
+  /* Lo único que queda del aviso largo: comparte teléfono con otra ficha,
+     así que ese número de veces puede estar partido. */
+  .cliente-fila .marca{
+    color:var(--gold);font-weight:800;cursor:help;margin-left:.15rem;
   }
-  .repes{
-    margin-top:.9rem;padding:.7rem .8rem;font-size:.76rem;line-height:1.5;
-    background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
-    color:var(--tx-2);
-  }
-  .repes b{color:var(--gold)}
-  .repes ul{margin:.4rem 0 0;padding-left:1.1rem}
-  .repes li{margin-bottom:.2rem}
 
   /* La pestaña de usuarios: una fila por persona, el rol y el estado a
      la vista, las acciones a la derecha. */
@@ -1232,21 +1227,21 @@ const CONFIG = {
            vez de por día. -->
       <div class="ranking" id="ranking-clientes">
         <div class="cab-ranking">
-          <h3>Quiénes vienen más</h3>
+          <!-- «Clase suelta» se queda porque sin eso la lista se lee como
+               «mis mejores clientas», y es falso: las afiliadas no generan
+               reserva y no pueden estar aquí. Dos palabras, el resto en el
+               title. -->
+          <h3>Vienen más <span class="parcial"
+            title="Solo clase suelta. Las afiliadas no generan reserva, así que no se puede saber cuántas veces vienen.">clase suelta</span></h3>
           <div class="ventanas" role="group" aria-label="Desde cuándo">
-            <button class="btn chico" data-ventana="30">30 días</button>
-            <button class="btn chico" data-ventana="90">90 días</button>
+            <button class="btn chico" data-ventana="30">30 d</button>
+            <button class="btn chico" data-ventana="90">90 d</button>
             <button class="btn chico" data-ventana="0">Todo</button>
           </div>
         </div>
-        <p class="nota-ranking">
-          Solo clase suelta. Las afiliadas no generan reserva, así que no
-          se puede saber cuántas veces vienen.
-        </p>
         <div class="cargando" id="cargando-ranking" hidden>Cargando…</div>
         <div class="aviso" id="msg-ranking" hidden></div>
         <div id="lista-ranking"></div>
-        <div id="repes-ranking"></div>
       </div>
     </div>
 
@@ -5955,26 +5950,31 @@ const CONFIG = {
     } finally { $('#cargando-resumen').hidden = true; }
   }
 
-  /* El comparativo. Un porcentaje sobre cero no existe —no es "infinito"
-     ni "+100%"—, así que cuando la referencia es cero se dice con
-     palabras en vez de inventar un número. */
+  /* El comparativo, en una sola pieza: el porcentaje y nada más.
+     Un porcentaje sobre cero no existe —no es "infinito" ni "+100%"— así
+     que ahí va una raya. Es más honesto que un número inventado y no
+     ocupa sitio. */
   function compara(ahora, antes) {
     const a = Number(ahora || 0), b = Number(antes || 0);
-    if (b === 0) {
-      if (a === 0) return { clase: 'igual', txt: 'igual', largo: 'nada entonces, nada ahora' };
-      return { clase: 'sube', txt: 'nuevo', largo: 'entonces no hubo nada que comparar' };
-    }
+    if (b === 0) return { clase: 'igual', txt: a === 0 ? '—' : 'nuevo' };
     const pct = Math.round(((a - b) / b) * 100);
-    if (pct === 0) return { clase: 'igual', txt: 'igual', largo: 'lo mismo' };
-    return {
-      clase: pct > 0 ? 'sube' : 'baja',
-      txt: (pct > 0 ? '+' : '−') + Math.abs(pct) + '%',
-      largo: (pct > 0 ? 'arriba' : 'abajo') + ' ' + pesos(Math.abs(a - b)),
-    };
+    if (pct === 0) return { clase: 'igual', txt: '=' };
+    return { clase: pct > 0 ? 'sube' : 'baja',
+             txt: (pct > 0 ? '+' : '−') + Math.abs(pct) + '%' };
   }
 
-  const gente = n => Number(n || 0) === 1 ? '1 persona' : Number(n || 0) + ' personas';
+  /* LAS TARJETAS VAN EN VALORES, SIN EXPLICACIONES.
+     Damián, 12 de septiembre: «muy cargado todooo… las tarjetas de los
+     valores también tienen como una explicación, no la necesito en esta
+     versión, solo valores y si vas a poner algún texto, que sea muy
+     poco».
 
+     Lo que antes era una frase ahora es un dato o no está. Los dos
+     avisos que de verdad cambian cómo se lee un número —que el mes
+     pasado está incompleto, y que el ranking solo mide clase suelta— se
+     quedan reducidos a una palabra con el detalle en el `title`: sin
+     ellos el +180% se lee como si el negocio casi hubiera triplicado, y
+     eso no es simplificar, es equivocarse más rápido. */
   function pintarResumen() {
     const r = resumen;
     if (!r) return;
@@ -5988,121 +5988,62 @@ const CONFIG = {
     const cSem = compara(sem.ingreso_cop, semAntes.ingreso_cop);
     const cMes = compara(mes.ingreso_cop, mesAntes.ingreso_cop);
 
-    // Un rango en una línea: "7 – 12 sep". Si es un solo día, el día.
     const rango = (v) => !v || !v.desde ? '—'
       : (v.desde === v.hasta ? fmtCorto(v.desde)
                              : fmtCorto(v.desde) + ' – ' + fmtCorto(v.hasta));
 
-    // El aviso de comparativo injusto. No se esconde el número: se pone
-    // al lado lo que hay que saber para no creérselo. Esconder el dato
-    // sería decidir por él.
-    const avisoMes = r.mes_antes_parcial
-      ? `<div class="ojo-aviso">Ojo: la Caja empezó a registrar el
-           ${esc(fmtCorto(r.primer_caja))}, así que
-           ${esc(rango(mesAntes))} está incompleto y el comparativo todavía
-           no es justo.</div>`
-      : '';
-    const avisoSem = r.semana_antes_parcial
-      ? `<div class="ojo-aviso">Ojo: ${esc(rango(semAntes))} está
-           incompleto, la Caja empezó el ${esc(fmtCorto(r.primer_caja))}.</div>`
-      : '';
-
-    // De dónde salió la plata. Solo los renglones que tienen algo: un
-    // "$0 a mano" es una línea que hay que leer para descubrir que no
-    // dice nada.
-    const deDonde = (v) => [
-      Number(v.de_caja_cop || 0)   ? pesos(v.de_caja_cop) + ' en caja' : null,
-      Number(v.de_pagina_cop || 0) ? pesos(v.de_pagina_cop) + ' por la página' : null,
-      Number(v.a_mano_cop || 0)    ? pesos(v.a_mano_cop) + ' apuntado a mano' : null,
-    ].filter(Boolean).join(' · ');
+    // Una palabra, y el por qué en el title para quien lo quiera.
+    const parcial = (hay, desde) => !hay ? '' :
+      `<span class="parcial" title="La Caja empezó a registrar el ${
+        esc(fmtCorto(r.primer_caja))}, así que ${esc(desde)} está incompleto.">parcial</span>`;
 
     const gastos = Array.isArray(r.gastos_mes) ? r.gastos_mes : [];
-
-    const fichas = [];
-
-    // 1 · Hoy
-    fichas.push(`
-      <div class="ficha">
-        <div class="cab">Hoy · ${esc(fmtCorto(r.hoy))}</div>
-        <div class="gordo">${esc(pesos(dia.ingreso_cop))}</div>
-        <div class="bajo">${esc(gente(dia.personas))} en clase suelta${
-          deDonde(dia) ? '<br>' + esc(deDonde(dia)) : ''}</div>
-        <div class="vs">
-          <span class="delta ${cDia.clase}">${esc(cDia.txt)}</span>
-          <span>que el ${esc(fmtDia(diaAntes.desde || r.hoy))} pasado
-            (${esc(pesos(diaAntes.ingreso_cop))})</span>
-        </div>
-      </div>`);
-
-    // 2 · Esta semana
-    fichas.push(`
-      <div class="ficha">
-        <div class="cab">Esta semana · ${esc(rango(sem))}</div>
-        <div class="gordo">${esc(pesos(sem.ingreso_cop))}</div>
-        <div class="bajo">${esc(gente(sem.personas))} · ${
-          esc(String(sem.mensualidades_n || 0))} mensualidades</div>
-        <div class="vs">
-          <span class="delta ${cSem.clase}">${esc(cSem.txt)}</span>
-          <span>que ${esc(rango(semAntes))} (${esc(pesos(semAntes.ingreso_cop))})</span>
-        </div>
-        ${avisoSem}
-      </div>`);
-
-    // 3 · Este mes contra el anterior — el comparativo que pidió
-    fichas.push(`
-      <div class="ficha">
-        <div class="cab">Este mes · ${esc(rango(mes))}</div>
-        <div class="gordo">${esc(pesos(mes.ingreso_cop))}</div>
-        <div class="bajo">${esc(gente(mes.personas))} · ${
-          esc(String(mes.mensualidades_n || 0))} mensualidades por
-          ${esc(pesos(mes.mensualidades_cop))}</div>
-        <div class="vs">
-          <span class="delta ${cMes.clase}">${esc(cMes.txt)}</span>
-          <span>que ${esc(rango(mesAntes))} (${esc(pesos(mesAntes.ingreso_cop))})
-            — ${esc(cMes.largo)}</span>
-        </div>
-        ${avisoMes}
-      </div>`);
-
-    // 4 · Ingresos contra gastos del mes
-    // La resta se hace aquí y no se lee `queda_cop`, aunque la base lo
-    // mande: así los tres números de la tarjeta SIEMPRE cuadran entre
-    // ellos. Si se pintara un total que viene aparte, bastaría una
-    // respuesta a medias para enseñar una resta que no da, y eso es
-    // justo la clase de descuadre que ya costó una mañana de dudas.
+    // La resta se hace aquí y no se lee `queda_cop`: así los tres números
+    // de la tarjeta siempre cuadran entre ellos, aunque llegue una
+    // respuesta a medias.
     const queda = Number(mes.ingreso_cop || 0) - Number(mes.egreso_cop || 0);
-    fichas.push(`
-      <div class="ficha">
-        <div class="cab">Entró menos salió, este mes</div>
-        <div class="gordo">${esc(pesos(queda))}</div>
-        <div class="bajo">
-          Entró ${esc(pesos(mes.ingreso_cop))} · salió ${esc(pesos(mes.egreso_cop))}
-        </div>
-        <div class="vs">
-          <span>No cuenta lo que se le entrega al dueño en el cierre: eso no
-            es un gasto, es la misma plata cambiando de sitio.</span>
-        </div>
-      </div>`);
 
-    // 5 · En qué se fue
-    fichas.push(`
+    const tarjeta = (cab, gordo, bajo, delta, extra) => `
       <div class="ficha">
-        <div class="cab">En qué se fue, este mes</div>
-        ${gastos.length ? `
-          <div class="renglones">
-            ${gastos.map(g => `
-              <span>${esc(nombreConcepto(g.concepto))}</span>
-              <b>${esc(pesos(g.cop))}</b>
-              <span class="de">${esc(String(g.n))} ${
-                Number(g.n) === 1 ? 'salida' : 'salidas'}${
-                g.de_caja_menor ? ' · del cajón de la caja' : ' · de la caja mayor'}</span>`).join('')}
-            <span><b>Total</b></span>
-            <b>${esc(pesos(mes.egreso_cop))}</b>
-          </div>`
-        : '<p class="nada">Este mes no se ha registrado ninguna salida.</p>'}
-      </div>`);
+        <div class="cab">${cab}</div>
+        <div class="gordo">${esc(gordo)}</div>
+        ${bajo ? `<div class="bajo">${bajo}</div>` : ''}
+        ${delta ? `<div class="vs"><span class="delta ${delta.clase}">${
+          esc(delta.txt)}</span>${extra || ''}</div>` : ''}
+      </div>`;
 
-    $('#fichas-resumen').innerHTML = fichas.join('');
+    $('#fichas-resumen').innerHTML = [
+      tarjeta('Hoy', pesos(dia.ingreso_cop),
+              esc(String(dia.personas || 0)) + ' personas', cDia),
+
+      // Sin el rango de fechas en el título: es esta semana y este mes,
+      // y la fecha de hoy ya está arriba del panel.
+      tarjeta('Semana', pesos(sem.ingreso_cop),
+              esc(String(sem.personas || 0)) + ' personas · ' +
+              esc(String(sem.mensualidades_n || 0)) + ' mens.', cSem,
+              parcial(r.semana_antes_parcial, rango(semAntes))),
+
+      tarjeta('Mes', pesos(mes.ingreso_cop),
+              esc(String(mes.personas || 0)) + ' personas · ' +
+              esc(String(mes.mensualidades_n || 0)) + ' mens.', cMes,
+              parcial(r.mes_antes_parcial, rango(mesAntes))),
+
+      tarjeta('Entró − salió', pesos(queda),
+              esc(pesos(mes.ingreso_cop)) + ' − ' + esc(pesos(mes.egreso_cop))),
+
+      `<div class="ficha ancha">
+         <div class="cab">Salidas del mes</div>
+         ${gastos.length ? `
+           <div class="renglones">
+             ${gastos.map(g => `
+               <span>${esc(nombreConcepto(g.concepto))}</span>
+               <b>${esc(pesos(g.cop))}</b>`).join('')}
+             <span><b>Total</b></span>
+             <b>${esc(pesos(mes.egreso_cop))}</b>
+           </div>`
+         : '<div class="gordo">' + esc(pesos(0)) + '</div>'}
+       </div>`,
+    ].join('');
   }
 
   /* ═══════════════ quiénes vienen más ═══════════════
@@ -6151,54 +6092,36 @@ const CONFIG = {
     const cont = $('#lista-ranking');
 
     if (!gente.length) {
-      cont.innerHTML = '<p class="vacio">Todavía no hay clases sueltas en este plazo.</p>';
-      $('#repes-ranking').innerHTML = '';
+      cont.innerHTML = '<p class="vacio">Sin clases sueltas en este plazo.</p>';
       return;
     }
 
+    /* Cuatro datos por fila y ninguna frase: veces, nombre, teléfono y lo
+       que lleva pagado. La última visita va como fecha —«11 sep»— y no
+       como «vino ayer»: es el mismo dato en menos sitio.
+
+       El asterisco es lo único que queda del aviso largo. Marca a quien
+       comparte teléfono con otra ficha, que puede ser un grupo de amigas
+       o la misma persona escrita de dos maneras —y entonces sus días
+       están partidos—. Sin ninguna marca, el número se lee como exacto
+       cuando no lo es; con el párrafo de antes, nadie lo leía. */
     cont.innerHTML = gente.map(c => {
       const dias = Number(c.dias || 0);
-      const hace = Number(c.hace_dias || 0);
-      // "Hace cuánto" en palabras: "hoy" y "ayer" se leen de una, un
-      // número de días hay que restarlo mentalmente.
-      const cuando = hace === 0 ? 'vino hoy'
-                   : hace === 1 ? 'vino ayer'
-                   : 'hace ' + hace + ' días';
-      const trozos = [cuando, 'casi siempre a las ' + hora12(c.hora || '00:00')];
-      // Solo se nombra si hay algo que mirar. "1 ficha" no es noticia.
-      if (Number(c.fichas_del_telefono || 1) > 1) {
-        trozos.push('<span class="ojo">comparte teléfono con ' +
-          (Number(c.fichas_del_telefono) - 1) + ' ficha' +
-          (Number(c.fichas_del_telefono) - 1 === 1 ? '' : 's') + '</span>');
-      }
+      const repe = Number(c.fichas_del_telefono || 1) > 1;
       return `
         <div class="cliente-fila">
-          <div class="veces">${dias}<small>${dias === 1 ? 'día' : 'días'}</small></div>
+          <div class="veces">${dias}</div>
           <div class="quien">
-            <b>${esc(c.nombre || '')}</b>${
-              c.afiliada ? '<span class="tiene-plan">ya tiene plan</span>' : ''}
-            <div class="sub">${esc(c.telefono || '')} · ${trozos.join(' · ')}</div>
+            <b>${esc(c.nombre || '')}</b>${repe
+              ? '<span class="marca" title="Este teléfono tiene otras fichas: puede ser un grupo que reserva junto, o la misma persona escrita de dos maneras.">*</span>'
+              : ''}${c.afiliada ? '<span class="tiene-plan">plan</span>' : ''}
+            <div class="sub">${esc(c.telefono || '')}</div>
           </div>
-          <div class="plata">${esc(pesos(c.plata_cop))}<small>en sueltas</small></div>
+          <div class="plata">${esc(pesos(c.plata_cop))}<small>${
+            esc(fmtCorto(c.ultima))}</small></div>
         </div>`;
     }).join('');
 
-    // El aviso de fichas que podrían ser la misma persona. Se limita a
-    // los teléfonos que salen en la lista de arriba: avisar de los 60 que
-    // hay en total sería una pared de texto que nadie lee.
-    const visibles = new Set(gente.map(c => c.telefono));
-    const repes = (Array.isArray(r.telefonos_compartidos) ? r.telefonos_compartidos : [])
-      .filter(x => visibles.has(x.telefono));
-    $('#repes-ranking').innerHTML = !repes.length ? '' : `
-      <div class="repes">
-        <b>Ojo:</b> estos números tienen varias fichas. Puede ser un grupo de
-        amigas que reserva junto —y entonces está bien— o la misma persona
-        escrita de dos maneras, y ahí sus días están partidos.
-        <ul>
-          ${repes.map(x => `<li>${esc(x.telefono)} — ${
-            (Array.isArray(x.nombres) ? x.nombres : []).map(esc).join(', ')}</li>`).join('')}
-        </ul>
-      </div>`;
   }
 
   /* ═══════════════ usuarios (solo propietario) ═══════════════
