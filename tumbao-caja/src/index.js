@@ -372,6 +372,14 @@ const ADMIN = {
   'resumen-gerencia': { fn: 'admin_resumen_gerencia',
                 args: (b) => ({ p_dia: /^\d{4}-\d{2}-\d{2}$/.test(String(b.dia || ''))
                                   ? String(b.dia) : null }) },
+  // Quiénes vienen más. La ventana llega del panel (30 / 90 / todo) y
+  // Postgres la acota sola: un p_dias absurdo no puede pedir un barrido
+  // infinito.
+  'clientes-ranking': { fn: 'admin_clientes_ranking',
+                args: (b) => ({ p_dias:   Number.isFinite(+b.dias) && +b.dias > 0
+                                            ? Math.trunc(+b.dias) : null,
+                                p_limite: Number.isFinite(+b.limite) && +b.limite > 0
+                                            ? Math.trunc(+b.limite) : 10 }) },
   'usuarios-listar': { fn: 'admin_listar_usuarios', args: () => ({}) },
   'usuarios-estado': { fn: 'admin_cambiar_estado_usuario',
                 args: (b) => (UUID(b.id)

@@ -32,6 +32,7 @@ const SUITES = [
   'mensualidad-procesar',
   'pulso-ingesta',
   'tarjeta-sabado',
+  'ranking-clientes',
   'tarjetas-del-dueno',
   'tirilla-de-la-duena',
   'tirilla-cuando-pagaron',

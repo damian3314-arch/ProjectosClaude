@@ -487,6 +487,70 @@ const CONFIG = {
     margin:-.15rem 0 .25rem}
   .ficha .nada{font-size:.85rem;color:var(--tx-3);font-style:italic}
 
+  /* ---------- quiénes vienen más ----------
+     Una fila por persona, el número de días a la izquierda porque es por
+     lo que está ordenada y es lo que se va a comparar de un vistazo. En
+     el celular el nombre manda y el resto baja a una segunda línea. */
+  .ranking{margin-top:1.6rem}
+  .cab-ranking{
+    display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;
+    padding-bottom:.2rem;
+  }
+  .cab-ranking h3{margin:0;font-size:1.05rem;letter-spacing:-.01em}
+  .cab-ranking .ventanas{display:flex;gap:.35rem;margin-left:auto}
+  .cab-ranking .ventanas .btn.puesta{
+    border-color:var(--hot);color:var(--hot-2);
+  }
+  .nota-ranking{
+    font-size:.75rem;color:var(--tx-3);margin:.25rem 0 .9rem;line-height:1.45;
+  }
+  .cliente-fila{
+    display:grid;grid-template-columns:2.6rem 1fr max-content;
+    align-items:center;gap:.2rem .8rem;
+    padding:.6rem 0;border-bottom:1px solid var(--line);
+  }
+  .cliente-fila .veces{
+    font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums;
+    text-align:right;line-height:1;
+  }
+  .cliente-fila .veces small{
+    display:block;font-size:.6rem;font-weight:600;color:var(--tx-3);
+    text-transform:uppercase;letter-spacing:.04em;margin-top:.1rem;
+  }
+  .cliente-fila .quien{min-width:0}
+  .cliente-fila .quien b{font-weight:700}
+  .cliente-fila .sub{color:var(--tx-3);font-size:.76rem;margin-top:.15rem}
+  .cliente-fila .plata{
+    font-variant-numeric:tabular-nums;font-weight:700;font-size:.9rem;
+    text-align:right;
+  }
+  .cliente-fila .plata small{
+    display:block;font-weight:400;font-size:.7rem;color:var(--tx-3);
+  }
+  /* Quien ya tiene plan no es candidata a venderle uno. Se marca para no
+     llamarla por equivocación. */
+  .cliente-fila .tiene-plan{
+    font-size:.68rem;padding:.08rem .4rem;border-radius:99px;
+    background:var(--bg-3);color:var(--tx-2);margin-left:.35rem;
+    vertical-align:middle;white-space:nowrap;
+  }
+  /* Solo se enciende lo que pide mirar algo: una ficha que podría estar
+     partida en dos. Lo demás es lectura. */
+  .cliente-fila .ojo{color:var(--gold)}
+  @media (max-width:420px){
+    .cliente-fila{grid-template-columns:2.4rem 1fr}
+    .cliente-fila .plata{grid-column:2;text-align:left;margin-top:.2rem}
+    .cliente-fila .plata small{display:inline;margin-left:.3rem}
+  }
+  .repes{
+    margin-top:.9rem;padding:.7rem .8rem;font-size:.76rem;line-height:1.5;
+    background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
+    color:var(--tx-2);
+  }
+  .repes b{color:var(--gold)}
+  .repes ul{margin:.4rem 0 0;padding-left:1.1rem}
+  .repes li{margin-bottom:.2rem}
+
   /* La pestaña de usuarios: una fila por persona, el rol y el estado a
      la vista, las acciones a la derecha. */
   .usuario-fila{
@@ -1161,6 +1225,29 @@ const CONFIG = {
       <div class="aviso" id="msg-resumen" hidden></div>
       <div class="cargando" id="cargando-resumen" hidden>Cargando…</div>
       <div class="fichas" id="fichas-resumen"></div>
+
+      <!-- ── quiénes vienen más ──
+           Va debajo de las tarjetas y no en una pestaña aparte: es la
+           misma pregunta —«cómo va el negocio»— contada por persona en
+           vez de por día. -->
+      <div class="ranking" id="ranking-clientes">
+        <div class="cab-ranking">
+          <h3>Quiénes vienen más</h3>
+          <div class="ventanas" role="group" aria-label="Desde cuándo">
+            <button class="btn chico" data-ventana="30">30 días</button>
+            <button class="btn chico" data-ventana="90">90 días</button>
+            <button class="btn chico" data-ventana="0">Todo</button>
+          </div>
+        </div>
+        <p class="nota-ranking">
+          Solo clase suelta. Las afiliadas no generan reserva, así que no
+          se puede saber cuántas veces vienen.
+        </p>
+        <div class="cargando" id="cargando-ranking" hidden>Cargando…</div>
+        <div class="aviso" id="msg-ranking" hidden></div>
+        <div id="lista-ranking"></div>
+        <div id="repes-ranking"></div>
+      </div>
     </div>
 
     <!-- ── tablero ── -->
@@ -1851,7 +1938,7 @@ const CONFIG = {
     const arranque = panelDeArranque();
     verPanel(arranque);
     // Sin await: que el panel se vea de una y estas vayan llegando.
-    if (arranque === 'resumen') cargarResumen();
+    if (arranque === 'resumen') { cargarResumen(); cargarRanking(); }
     cargarTablero();
     cargarPendientes();
   }
@@ -1998,7 +2085,7 @@ const CONFIG = {
     else if (panelActual === 'caja')  cargarCaja();
     else if (panelActual === 'tablero') cargarTablero();
     else if (panelActual === 'disfrutar') cargarDisfrutar();
-    else if (panelActual === 'resumen')   cargarResumen();
+    else if (panelActual === 'resumen')   { cargarResumen(); cargarRanking(); }
     // El horario no cambia solo: lo escribe una persona y ya.
   }
 
@@ -2052,8 +2139,11 @@ const CONFIG = {
   // El resumen son totales del mes: no cambia de un pestañeo y cada
   // consulta barre treinta días. Dos minutos sobra, y evita que mirar el
   // celular un rato se convierta en cientos de llamadas.
+  // El ranking es una cuenta de meses: cinco minutos sobra de largo, y
+  // así cambiar de ventana (30 / 90 / todo) y volver no repite la
+  // consulta más pesada del panel.
   const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000, disfrutar: 45000,
-                      resumen: 120000 };
+                      resumen: 120000, ranking: 300000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -5844,8 +5934,12 @@ const CONFIG = {
      contradecir. */
   let resumen = null;
 
-  $('#tab-resumen').addEventListener('click', () => { verPanel('resumen'); cargarResumen(); });
-  $('#resumen-recargar').addEventListener('click', () => cargarResumen(true));
+  $('#tab-resumen').addEventListener('click', () => {
+    verPanel('resumen'); cargarResumen(); cargarRanking();
+  });
+  $('#resumen-recargar').addEventListener('click', () => {
+    cargarResumen(true); cargarRanking(true);
+  });
 
   async function cargarResumen(forzar) {
     if (!forzar && esReciente('resumen')) return;
@@ -6009,6 +6103,102 @@ const CONFIG = {
       </div>`);
 
     $('#fichas-resumen').innerHTML = fichas.join('');
+  }
+
+  /* ═══════════════ quiénes vienen más ═══════════════
+     La identidad la fijó Damián: celular + nombre. Quien la calcula es
+     Postgres (cliente_clave, 0083) y no esta pantalla, porque es una
+     decisión de negocio —qué filas son la misma persona— y tiene que dar
+     el mismo resultado a quien pregunte por la API.
+
+     Lo que sí vive aquí es enseñar el límite de la regla: una errata de
+     tecleo parte a una persona en dos fichas y ninguna regla honesta lo
+     arregla sola. El aviso de abajo es eso. */
+  let ranking = null;
+  let ventanaRanking = 90;   // lo de los últimos tres meses, por defecto
+
+  $('#ranking-clientes').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-ventana]');
+    if (!b) return;
+    ventanaRanking = Number(b.getAttribute('data-ventana'));
+    cargarRanking(true);
+  });
+
+  async function cargarRanking(forzar) {
+    const clave = 'ranking:' + ventanaRanking;
+    if (!forzar && esReciente(clave)) return;
+    traido.set(clave, Date.now());
+    $('#cargando-ranking').hidden = false;
+    aviso($('#msg-ranking'), '');
+    try {
+      // dias 0 quiere decir "todo": Postgres lo entiende como null.
+      const d = await api('clientes-ranking',
+        { dias: ventanaRanking || null, limite: 10 });
+      ranking = d;
+      pintarRanking();
+    } catch (e) {
+      aviso($('#msg-ranking'), esc(e.message), 'mal');
+    } finally { $('#cargando-ranking').hidden = true; }
+  }
+
+  function pintarRanking() {
+    for (const b of document.querySelectorAll('[data-ventana]')) {
+      b.classList.toggle('puesta', Number(b.getAttribute('data-ventana')) === ventanaRanking);
+    }
+    const r = ranking;
+    if (!r) return;
+    const gente = Array.isArray(r.clientes) ? r.clientes : [];
+    const cont = $('#lista-ranking');
+
+    if (!gente.length) {
+      cont.innerHTML = '<p class="vacio">Todavía no hay clases sueltas en este plazo.</p>';
+      $('#repes-ranking').innerHTML = '';
+      return;
+    }
+
+    cont.innerHTML = gente.map(c => {
+      const dias = Number(c.dias || 0);
+      const hace = Number(c.hace_dias || 0);
+      // "Hace cuánto" en palabras: "hoy" y "ayer" se leen de una, un
+      // número de días hay que restarlo mentalmente.
+      const cuando = hace === 0 ? 'vino hoy'
+                   : hace === 1 ? 'vino ayer'
+                   : 'hace ' + hace + ' días';
+      const trozos = [cuando, 'casi siempre a las ' + hora12(c.hora || '00:00')];
+      // Solo se nombra si hay algo que mirar. "1 ficha" no es noticia.
+      if (Number(c.fichas_del_telefono || 1) > 1) {
+        trozos.push('<span class="ojo">comparte teléfono con ' +
+          (Number(c.fichas_del_telefono) - 1) + ' ficha' +
+          (Number(c.fichas_del_telefono) - 1 === 1 ? '' : 's') + '</span>');
+      }
+      return `
+        <div class="cliente-fila">
+          <div class="veces">${dias}<small>${dias === 1 ? 'día' : 'días'}</small></div>
+          <div class="quien">
+            <b>${esc(c.nombre || '')}</b>${
+              c.afiliada ? '<span class="tiene-plan">ya tiene plan</span>' : ''}
+            <div class="sub">${esc(c.telefono || '')} · ${trozos.join(' · ')}</div>
+          </div>
+          <div class="plata">${esc(pesos(c.plata_cop))}<small>en sueltas</small></div>
+        </div>`;
+    }).join('');
+
+    // El aviso de fichas que podrían ser la misma persona. Se limita a
+    // los teléfonos que salen en la lista de arriba: avisar de los 60 que
+    // hay en total sería una pared de texto que nadie lee.
+    const visibles = new Set(gente.map(c => c.telefono));
+    const repes = (Array.isArray(r.telefonos_compartidos) ? r.telefonos_compartidos : [])
+      .filter(x => visibles.has(x.telefono));
+    $('#repes-ranking').innerHTML = !repes.length ? '' : `
+      <div class="repes">
+        <b>Ojo:</b> estos números tienen varias fichas. Puede ser un grupo de
+        amigas que reserva junto —y entonces está bien— o la misma persona
+        escrita de dos maneras, y ahí sus días están partidos.
+        <ul>
+          ${repes.map(x => `<li>${esc(x.telefono)} — ${
+            (Array.isArray(x.nombres) ? x.nombres : []).map(esc).join(', ')}</li>`).join('')}
+        </ul>
+      </div>`;
   }
 
   /* ═══════════════ usuarios (solo propietario) ═══════════════
