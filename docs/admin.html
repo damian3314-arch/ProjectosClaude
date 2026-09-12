@@ -6072,9 +6072,11 @@ const CONFIG = {
     $('#cargando-ranking').hidden = false;
     aviso($('#msg-ranking'), '');
     try {
+      // Cinco, los que pidió. Con diez había que bajar para verlos y los
+      // cinco de abajo no cambian ninguna decisión.
       // dias 0 quiere decir "todo": Postgres lo entiende como null.
       const d = await api('clientes-ranking',
-        { dias: ventanaRanking || null, limite: 10 });
+        { dias: ventanaRanking || null, limite: 5 });
       ranking = d;
       pintarRanking();
     } catch (e) {

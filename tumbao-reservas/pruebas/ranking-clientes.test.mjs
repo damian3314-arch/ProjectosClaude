@@ -144,7 +144,8 @@ ok('el ranking se pinta al abrir el resumen, sin tocar nada',
    await p.locator('.cliente-fila').count() + ' filas');
 ok('arranca pidiendo los últimos 90 días',
    pedidos.length >= 1 && pedidos[0].dias === 90, JSON.stringify(pedidos[0]));
-ok('y pide diez, no la base entera', pedidos[0].limite === 10);
+ok('y pide cinco, los que pidió', pedidos[0].limite === 5,
+   JSON.stringify(pedidos[0]));
 
 /* ═══════════ 2. SOLO VALORES, cuatro por fila ═══════════
    Damián, 12 de septiembre: «muy cargado todooo… necesitamos es algo
