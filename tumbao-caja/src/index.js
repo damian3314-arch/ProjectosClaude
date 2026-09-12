@@ -139,6 +139,49 @@ async function auth(env, ruta, cuerpo, tokenUsuario, metodo) {
 }
 
 /* ---------------------------------------------------------------------
+ * Por qué falló el correo, dicho en español
+ *
+ * Las invitaciones de Luisa y Tanya se perdieron el 24 de agosto y
+ * nadie supo por qué durante tres semanas: el Worker contestaba "no se
+ * pudo mandar el correo de invitación" y ahí terminaba la pista. GoTrue
+ * sí dice el motivo —viene en `error_code` o en `msg`— y el motivo
+ * decide qué hacer, así que tiene que llegar hasta la pantalla.
+ *
+ * El caso que importa es el del límite: el correo que manda Supabase de
+ * fábrica está racionado a unos pocos por hora y no es para producción.
+ * Cuando es eso, insistirle al botón no sirve de nada; lo que sirve es
+ * copiar el enlace y mandarlo por WhatsApp, y eso hay que decirlo.
+ * ------------------------------------------------------------------- */
+function porQueFalloElCorreo(inv) {
+  const d = inv.datos || {};
+  const codigo = String(d.error_code || d.code || '');
+  const crudo  = String(d.msg || d.message || d.error_description || '').trim();
+
+  if (inv.status === 429 || /rate_limit|rate limit|too many/i.test(codigo + ' ' + crudo)) {
+    return {
+      error: 'CORREO_RACIONADO',
+      mensaje: 'Supabase solo deja mandar unos pocos correos por hora y ya se ' +
+               'agotaron. Usa "Copiar enlace" y mándalo por WhatsApp.',
+      detalle: crudo || codigo || null,
+    };
+  }
+  if (/error sending|smtp|mail/i.test(codigo + ' ' + crudo)) {
+    return {
+      error: 'CORREO_NO_SALE',
+      mensaje: 'Supabase no pudo entregar el correo. Usa "Copiar enlace" y ' +
+               'mándalo por WhatsApp.',
+      detalle: crudo || codigo || null,
+    };
+  }
+  return {
+    error: 'CORREO_FALLO',
+    mensaje: 'No se pudo mandar el correo. Usa "Copiar enlace" y mándalo por ' +
+             'WhatsApp.',
+    detalle: crudo || codigo || ('http ' + inv.status),
+  };
+}
+
+/* ---------------------------------------------------------------------
  * /salud — ¿está bien la página?
  *
  * PARA QUÉ
@@ -323,6 +366,12 @@ const ADMIN = {
   // token sea de un propietario; aquí solo se le da forma a lo que
   // llega. "usuarios_crear" no está en esta tabla porque además manda
   // la invitación por Supabase Auth: tiene su propia ruta más abajo.
+  // Las tarjetas del dueño: hoy, la semana, el mes y contra qué. Quien
+  // decide si se pueden ver es Postgres —un cajero no ve la plata del
+  // negocio—, igual que con todo lo demás de esta tabla.
+  'resumen-gerencia': { fn: 'admin_resumen_gerencia',
+                args: (b) => ({ p_dia: /^\d{4}-\d{2}-\d{2}$/.test(String(b.dia || ''))
+                                  ? String(b.dia) : null }) },
   'usuarios-listar': { fn: 'admin_listar_usuarios', args: () => ({}) },
   'usuarios-estado': { fn: 'admin_cambiar_estado_usuario',
                 args: (b) => (UUID(b.id)
@@ -1108,11 +1157,110 @@ export default {
         });
         if (r.ok) {
           const inv = await auth(env, `invite?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`, { email });
-          r.mensaje = inv.ok
-            ? 'Listo. Le llega un correo a ' + email + ' para poner su contraseña.'
-            : 'El usuario quedó creado, pero no se pudo mandar el correo de invitación.';
+          if (inv.ok) {
+            r.mensaje = 'Listo. Le llega un correo a ' + email + ' para poner su contraseña.';
+            r.invitado = true;
+          } else {
+            // Esto es exactamente lo que pasó con Luisa y Tanya: la fila
+            // quedó y la cuenta de Auth no, porque GoTrue deshace la
+            // creación si el correo no sale. Antes se decía en una línea
+            // sin motivo y sin salida; ahora dice las dos cosas.
+            const por = porQueFalloElCorreo(inv);
+            r.invitado = false;
+            r.aviso_error = por.error;
+            r.detalle = por.detalle;
+            r.mensaje = 'Quedó en la lista, pero ' + por.mensaje.charAt(0).toLowerCase() +
+                        por.mensaje.slice(1);
+          }
         }
         return json(r, r && r.ok === false ? 400 : 200, origen);
+      }
+
+      /* ───────────────────────────────────────────────────────────
+       * Volver a invitar
+       *
+       * Hace falta porque la invitación puede quedarse a medias de dos
+       * maneras distintas, y cada una necesita una cosa distinta:
+       *
+       *   · la cuenta de Auth no existe  → `invite`, que la crea
+       *   · existe y no tiene contraseña → `recover`, el enlace de
+       *     "pon tu contraseña"; un `invite` sobre una cuenta que ya
+       *     existe devuelve error y no manda nada
+       *
+       * Quién es cada quién lo dice Postgres (admin_usuario_a_invitar),
+       * que además comprueba que quien pide esto sea propietario. El
+       * Worker solo tiene la llave de servicio, que abre todo: si la
+       * decisión del permiso viviera aquí, no habría quien la revisara.
+       * ─────────────────────────────────────────────────────────── */
+      if (ruta === '/api/admin/usuarios-invitar') {
+        if (!UUID(b.id)) {
+          return json({ ok: false, error: 'FALTA_ID',
+            mensaje: 'No se sabe a quién invitar. Recarga la página.' }, 400, origen);
+        }
+        const quien = await rpc(env, 'admin_usuario_a_invitar',
+          { p_token: token, p_id: UUID(b.id) });
+        if (!quien || quien.ok === false) return json(quien, 403, origen);
+
+        const inv = quien.en_auth
+          ? await auth(env, `recover?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`,
+                       { email: quien.email })
+          : await auth(env, `invite?redirect_to=${encodeURIComponent(REDIRECT_ADMIN)}`,
+                       { email: quien.email });
+
+        if (!inv.ok) {
+          const por = porQueFalloElCorreo(inv);
+          return json({ ok: false, ...por }, 502, origen);
+        }
+        return json({ ok: true,
+          mensaje: 'Correo enviado a ' + quien.email + '. El enlace sirve una sola vez.',
+        }, 200, origen);
+      }
+
+      /* ───────────────────────────────────────────────────────────
+       * El enlace, sin correo de por medio
+       *
+       * Este es el que de verdad desatasca el problema. El correo que
+       * manda Supabase de fábrica está racionado y no siempre llega
+       * —Hotmail lo rechaza a menudo—, así que mientras no haya un
+       * servidor de correo propio configurado, depender del correo es
+       * depender de algo que ya falló.
+       *
+       * `admin/generate_link` fabrica el mismo enlace que iría dentro
+       * del correo y NO manda nada. El propietario lo copia y lo pasa
+       * por WhatsApp, que es el canal por el que esta academia ya habla
+       * con todo el mundo.
+       *
+       * El enlace es una credencial: quien lo tenga puede poner la
+       * contraseña de esa cuenta. Se devuelve solo al propietario —que
+       * de todos modos puede reinvitar a cualquiera— y no se escribe en
+       * ningún registro.
+       * ─────────────────────────────────────────────────────────── */
+      if (ruta === '/api/admin/usuarios-enlace') {
+        if (!UUID(b.id)) {
+          return json({ ok: false, error: 'FALTA_ID',
+            mensaje: 'No se sabe de quién es el enlace. Recarga la página.' }, 400, origen);
+        }
+        const quien = await rpc(env, 'admin_usuario_a_invitar',
+          { p_token: token, p_id: UUID(b.id) });
+        if (!quien || quien.ok === false) return json(quien, 403, origen);
+
+        // `invite` crea la cuenta que falta; `recovery` sirve para una
+        // que ya existe, tenga contraseña o no.
+        const tipo = quien.en_auth ? 'recovery' : 'invite';
+        const gen = await auth(env, 'admin/generate_link', {
+          type: tipo, email: quien.email, redirect_to: REDIRECT_ADMIN,
+        });
+        const enlace = gen.datos && (gen.datos.action_link || gen.datos.properties?.action_link);
+        if (!gen.ok || !enlace) {
+          const d = gen.datos || {};
+          return json({ ok: false, error: 'SIN_ENLACE',
+            mensaje: 'Supabase no devolvió el enlace. Vuelve a intentar.',
+            detalle: String(d.msg || d.message || ('http ' + gen.status)),
+          }, 502, origen);
+        }
+        return json({ ok: true, enlace, email: quien.email, tipo,
+          mensaje: 'Mándale este enlace por WhatsApp. Sirve una sola vez.',
+        }, 200, origen);
       }
 
       // ── el panel de admin ──

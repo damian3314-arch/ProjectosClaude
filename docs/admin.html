@@ -439,6 +439,54 @@ const CONFIG = {
      tomados en vez de ir todo del mismo gris. */
   .reparto .quedan{color:var(--ok);font-variant-numeric:tabular-nums}
 
+  /* ---------- las tarjetas del resumen ----------
+     Pensadas para un celular sostenido con una mano: una sola columna
+     hasta que la pantalla da para dos, cada tarjeta con UN número grande
+     y el resto en letra pequeña debajo. Si hubiera tres números del
+     mismo tamaño no habría ninguno.
+
+     El color se raciona igual que en Caja: aquí solo lo lleva la
+     comparación —subió o bajó—, que es lo único que hace levantar la
+     vista. El número del mes no va en verde por ser grande. */
+  .fichas{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+  .ficha{
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:1rem 1.05rem;
+  }
+  .ficha .cab{
+    font-size:.72rem;color:var(--tx-3);text-transform:uppercase;
+    letter-spacing:.05em;margin-bottom:.5rem;
+  }
+  .ficha .gordo{
+    font-size:2rem;font-weight:800;line-height:1.05;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+  }
+  .ficha .bajo{font-size:.82rem;color:var(--tx-2);margin-top:.35rem}
+  .ficha .vs{
+    display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;
+    font-size:.8rem;color:var(--tx-3);margin-top:.65rem;
+    padding-top:.6rem;border-top:1px solid var(--line);
+  }
+  .ficha .delta{font-weight:700;font-variant-numeric:tabular-nums}
+  .ficha .delta.sube{color:var(--ok)}
+  .ficha .delta.baja{color:var(--bad)}
+  .ficha .delta.igual{color:var(--tx-2)}
+  /* Un comparativo que no es justo todavía. En oro y no en rojo: no es
+     un error, es un "todavía no te lo creas". */
+  .ficha .ojo-aviso{
+    font-size:.75rem;color:var(--gold);margin-top:.5rem;line-height:1.4;
+  }
+  /* La lista de gastos. Nombre a la izquierda, plata a la derecha, y la
+     plata alineada por la coma para poder compararla de un vistazo. */
+  .ficha .renglones{
+    display:grid;grid-template-columns:1fr max-content;gap:.3rem .8rem;
+    font-size:.85rem;margin-top:.2rem;
+  }
+  .ficha .renglones b{font-variant-numeric:tabular-nums;font-weight:700}
+  .ficha .renglones .de{grid-column:1/-1;font-size:.72rem;color:var(--tx-3);
+    margin:-.15rem 0 .25rem}
+  .ficha .nada{font-size:.85rem;color:var(--tx-3);font-style:italic}
+
   /* La pestaña de usuarios: una fila por persona, el rol y el estado a
      la vista, las acciones a la derecha. */
   .usuario-fila{
@@ -451,7 +499,28 @@ const CONFIG = {
     background:var(--bg-3);color:var(--tx-2);margin-left:.4rem;vertical-align:middle;
   }
   .rol-pill.mal{color:var(--bad)}
-  .fila-acciones{display:flex;align-items:center;gap:.5rem}
+  .rol-pill.ojo{color:var(--gold)}
+  .fila-acciones{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+
+  /* El enlace de "pon tu contraseña", para copiarlo a mano.
+     Se enseña entero y seleccionable porque el portapapeles falla más de
+     lo que parece —permisos del navegador, vista privada— y si lo único
+     que hubiera fuera un botón de copiar, el día que no copie no queda
+     nada que hacer. Con el texto a la vista siempre hay salida. */
+  .enlace-caja{
+    flex:1 0 100%;margin-top:.6rem;padding:.7rem .8rem;
+    background:var(--bg-3);border:1px solid var(--line-2);border-radius:10px;
+  }
+  .enlace-caja .que{font-size:.78rem;color:var(--tx-2);margin-bottom:.45rem}
+  .enlace-caja textarea{
+    width:100%;min-height:4.2rem;resize:vertical;font-family:var(--mono);
+    font-size:.72rem;line-height:1.35;color:var(--tx);
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.5rem;
+  }
+  .enlace-caja .pie{
+    display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.5rem;
+    font-size:.72rem;color:var(--tx-3);
+  }
 
   .desglose{font-size:.75rem;color:var(--tx-3);display:flex;gap:.7rem;flex-wrap:wrap}
   .desglose .ok{color:var(--ok)}
@@ -1061,6 +1130,9 @@ const CONFIG = {
   <!-- ══════════ panel ══════════ -->
   <div id="app" hidden>
     <div class="tabs" role="tablist">
+      <!-- Primera a propósito: en el celular es la que abre, y es la
+           única pantalla pensada para quien no está en el mostrador. -->
+      <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>Resumen</button>
       <button class="tab" role="tab" id="tab-tablero" aria-selected="true">Tablero</button>
       <button class="tab" role="tab" id="tab-horario" aria-selected="false">Horario</button>
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
@@ -1074,6 +1146,21 @@ const CONFIG = {
         Mensualidad<span class="globo" id="globo-mens" hidden></span>
       </button>
       <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>Usuarios</button>
+    </div>
+
+    <!-- ── resumen: las tarjetas del dueño ──
+         No hay botones de acción aquí a propósito. Es la pantalla que se
+         mira en dos minutos desde el celular, no desde la que se opera:
+         para cambiar algo están las otras pestañas. -->
+    <div class="panel" id="p-resumen">
+      <div class="semana-bar">
+        <span class="rango" id="resumen-rango">—</span>
+        <span class="sp"></span>
+        <button class="btn chico" id="resumen-recargar">Recargar</button>
+      </div>
+      <div class="aviso" id="msg-resumen" hidden></div>
+      <div class="cargando" id="cargando-resumen" hidden>Cargando…</div>
+      <div class="fichas" id="fichas-resumen"></div>
     </div>
 
     <!-- ── tablero ── -->
@@ -1689,6 +1776,10 @@ const CONFIG = {
       // sepa qué campo marcar. El mensaje suelto no dice cuál es.
       const err = new Error(datos.mensaje || datos.error || `Error ${res.status}`);
       err.clave = datos.error;
+      // El motivo crudo de un servicio de fuera —Supabase Auth, sobre
+      // todo— cuando lo hay. El mensaje en español dice qué hacer; esto
+      // dice por qué, y sin ello no hay forma de diagnosticar nada.
+      err.detalle = datos.detalle || null;
       throw err;
     }
     return datos;
@@ -1723,7 +1814,24 @@ const CONFIG = {
     $('#tab-horario').hidden = esCajero;
     $('#tab-disfrutar').hidden = esCajero;
     $('#tab-usuarios').hidden = !vePropietario;
-    if (esCajero && (panelActual === 'horario' || panelActual === 'disfrutar')) verPanel('tablero');
+    // El resumen es la plata del negocio: propietario y administrador. La
+    // cajera no lo ve, y Postgres lo rebota igual si se llegara a la ruta
+    // (admin_resumen_gerencia contesta SIN_PERMISO a un token de cajero).
+    $('#tab-resumen').hidden = esCajero;
+    if (esCajero && ['horario', 'disfrutar', 'resumen'].includes(panelActual)) verPanel('tablero');
+  }
+
+  /* En el celular el resumen es lo primero; en el escritorio sigue
+     abriendo el Tablero. Quien entra desde el teléfono no viene a operar
+     el mostrador —para eso hay que estar en el mostrador— sino a mirar
+     cómo va el día, y obligarle a buscar la pestaña cada vez es obligarle
+     a no mirarla. */
+  function panelDeArranque() {
+    const enCelular = (() => {
+      try { return window.matchMedia('(max-width: 640px)').matches; }
+      catch (_) { return false; }
+    })();
+    return (enCelular && rol !== 'cajero') ? 'resumen' : 'tablero';
   }
 
   async function entrar(tk, rolNuevo, nombreNuevo) {
@@ -1740,8 +1848,10 @@ const CONFIG = {
     $('#app').hidden = false;
     $('#salir').hidden = false;
     diaTablero = hoyBogota();
-    verPanel('tablero');
-    // Sin await: que el panel se vea de una y estas dos vayan llegando.
+    const arranque = panelDeArranque();
+    verPanel(arranque);
+    // Sin await: que el panel se vea de una y estas vayan llegando.
+    if (arranque === 'resumen') cargarResumen();
     cargarTablero();
     cargarPendientes();
   }
@@ -1845,7 +1955,7 @@ const CONFIG = {
   });
 
   /* ---------- pestañas ---------- */
-  const PANELES = ['tablero', 'horario', 'pendientes', 'disfrutar', 'caja',
+  const PANELES = ['resumen', 'tablero', 'horario', 'pendientes', 'disfrutar', 'caja',
                    'mensualidad', 'usuarios'];
   let panelActual = 'tablero';
   function verPanel(cual) {
@@ -1888,6 +1998,7 @@ const CONFIG = {
     else if (panelActual === 'caja')  cargarCaja();
     else if (panelActual === 'tablero') cargarTablero();
     else if (panelActual === 'disfrutar') cargarDisfrutar();
+    else if (panelActual === 'resumen')   cargarResumen();
     // El horario no cambia solo: lo escribe una persona y ya.
   }
 
@@ -1938,7 +2049,11 @@ const CONFIG = {
   // llegue a notarlo.
   // La caja se mira despacio y se trabaja encima: 30 segundos evita que
   // la pantalla parpadee mientras se cobra, sin dejarla envejecer.
-  const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000, disfrutar: 45000 };
+  // El resumen son totales del mes: no cambia de un pestañeo y cada
+  // consulta barre treinta días. Dos minutos sobra, y evita que mirar el
+  // celular un rato se convierta en cientos de llamadas.
+  const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000, disfrutar: 45000,
+                      resumen: 120000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -5716,6 +5831,186 @@ const CONFIG = {
     } finally { $('#modal-guardar').disabled = false; }
   });
 
+  /* ═══════════════ resumen: las tarjetas del dueño ═══════════════
+     Cinco tarjetas y ninguna más. Damián lo pidió así —«pueden ser unas
+     4 a 5 tarjetas»— y tiene razón por un motivo que vale escribir: esta
+     pantalla se mira de pie, con el celular en una mano, entre dos
+     clases. Lo que no se lee en veinte segundos no se lee.
+
+     Lo que NO hace esta pantalla: cuadrar caja. Eso ya lo hace la
+     tirilla de cierre, con más detalle y con los nombres. Aquí solo se
+     responde "¿cómo vamos?". Las cifras salen de `ventas_entre`, que es
+     la misma regla de la tirilla, así que las dos pantallas no se pueden
+     contradecir. */
+  let resumen = null;
+
+  $('#tab-resumen').addEventListener('click', () => { verPanel('resumen'); cargarResumen(); });
+  $('#resumen-recargar').addEventListener('click', () => cargarResumen(true));
+
+  async function cargarResumen(forzar) {
+    if (!forzar && esReciente('resumen')) return;
+    traido.set('resumen', Date.now());
+    $('#cargando-resumen').hidden = false;
+    aviso($('#msg-resumen'), '');
+    try {
+      const d = await api('resumen-gerencia', {});
+      resumen = d;
+      pintarResumen();
+    } catch (e) {
+      aviso($('#msg-resumen'), esc(e.message), 'mal');
+    } finally { $('#cargando-resumen').hidden = true; }
+  }
+
+  /* El comparativo. Un porcentaje sobre cero no existe —no es "infinito"
+     ni "+100%"—, así que cuando la referencia es cero se dice con
+     palabras en vez de inventar un número. */
+  function compara(ahora, antes) {
+    const a = Number(ahora || 0), b = Number(antes || 0);
+    if (b === 0) {
+      if (a === 0) return { clase: 'igual', txt: 'igual', largo: 'nada entonces, nada ahora' };
+      return { clase: 'sube', txt: 'nuevo', largo: 'entonces no hubo nada que comparar' };
+    }
+    const pct = Math.round(((a - b) / b) * 100);
+    if (pct === 0) return { clase: 'igual', txt: 'igual', largo: 'lo mismo' };
+    return {
+      clase: pct > 0 ? 'sube' : 'baja',
+      txt: (pct > 0 ? '+' : '−') + Math.abs(pct) + '%',
+      largo: (pct > 0 ? 'arriba' : 'abajo') + ' ' + pesos(Math.abs(a - b)),
+    };
+  }
+
+  const gente = n => Number(n || 0) === 1 ? '1 persona' : Number(n || 0) + ' personas';
+
+  function pintarResumen() {
+    const r = resumen;
+    if (!r) return;
+    $('#resumen-rango').textContent = fmtLargo(r.hoy);
+
+    const dia = r.dia || {}, diaAntes = r.dia_semana_antes || {};
+    const sem = r.semana || {}, semAntes = r.semana_antes || {};
+    const mes = r.mes || {}, mesAntes = r.mes_antes || {};
+
+    const cDia = compara(dia.ingreso_cop, diaAntes.ingreso_cop);
+    const cSem = compara(sem.ingreso_cop, semAntes.ingreso_cop);
+    const cMes = compara(mes.ingreso_cop, mesAntes.ingreso_cop);
+
+    // Un rango en una línea: "7 – 12 sep". Si es un solo día, el día.
+    const rango = (v) => !v || !v.desde ? '—'
+      : (v.desde === v.hasta ? fmtCorto(v.desde)
+                             : fmtCorto(v.desde) + ' – ' + fmtCorto(v.hasta));
+
+    // El aviso de comparativo injusto. No se esconde el número: se pone
+    // al lado lo que hay que saber para no creérselo. Esconder el dato
+    // sería decidir por él.
+    const avisoMes = r.mes_antes_parcial
+      ? `<div class="ojo-aviso">Ojo: la Caja empezó a registrar el
+           ${esc(fmtCorto(r.primer_caja))}, así que
+           ${esc(rango(mesAntes))} está incompleto y el comparativo todavía
+           no es justo.</div>`
+      : '';
+    const avisoSem = r.semana_antes_parcial
+      ? `<div class="ojo-aviso">Ojo: ${esc(rango(semAntes))} está
+           incompleto, la Caja empezó el ${esc(fmtCorto(r.primer_caja))}.</div>`
+      : '';
+
+    // De dónde salió la plata. Solo los renglones que tienen algo: un
+    // "$0 a mano" es una línea que hay que leer para descubrir que no
+    // dice nada.
+    const deDonde = (v) => [
+      Number(v.de_caja_cop || 0)   ? pesos(v.de_caja_cop) + ' en caja' : null,
+      Number(v.de_pagina_cop || 0) ? pesos(v.de_pagina_cop) + ' por la página' : null,
+      Number(v.a_mano_cop || 0)    ? pesos(v.a_mano_cop) + ' apuntado a mano' : null,
+    ].filter(Boolean).join(' · ');
+
+    const gastos = Array.isArray(r.gastos_mes) ? r.gastos_mes : [];
+
+    const fichas = [];
+
+    // 1 · Hoy
+    fichas.push(`
+      <div class="ficha">
+        <div class="cab">Hoy · ${esc(fmtCorto(r.hoy))}</div>
+        <div class="gordo">${esc(pesos(dia.ingreso_cop))}</div>
+        <div class="bajo">${esc(gente(dia.personas))} en clase suelta${
+          deDonde(dia) ? '<br>' + esc(deDonde(dia)) : ''}</div>
+        <div class="vs">
+          <span class="delta ${cDia.clase}">${esc(cDia.txt)}</span>
+          <span>que el ${esc(fmtDia(diaAntes.desde || r.hoy))} pasado
+            (${esc(pesos(diaAntes.ingreso_cop))})</span>
+        </div>
+      </div>`);
+
+    // 2 · Esta semana
+    fichas.push(`
+      <div class="ficha">
+        <div class="cab">Esta semana · ${esc(rango(sem))}</div>
+        <div class="gordo">${esc(pesos(sem.ingreso_cop))}</div>
+        <div class="bajo">${esc(gente(sem.personas))} · ${
+          esc(String(sem.mensualidades_n || 0))} mensualidades</div>
+        <div class="vs">
+          <span class="delta ${cSem.clase}">${esc(cSem.txt)}</span>
+          <span>que ${esc(rango(semAntes))} (${esc(pesos(semAntes.ingreso_cop))})</span>
+        </div>
+        ${avisoSem}
+      </div>`);
+
+    // 3 · Este mes contra el anterior — el comparativo que pidió
+    fichas.push(`
+      <div class="ficha">
+        <div class="cab">Este mes · ${esc(rango(mes))}</div>
+        <div class="gordo">${esc(pesos(mes.ingreso_cop))}</div>
+        <div class="bajo">${esc(gente(mes.personas))} · ${
+          esc(String(mes.mensualidades_n || 0))} mensualidades por
+          ${esc(pesos(mes.mensualidades_cop))}</div>
+        <div class="vs">
+          <span class="delta ${cMes.clase}">${esc(cMes.txt)}</span>
+          <span>que ${esc(rango(mesAntes))} (${esc(pesos(mesAntes.ingreso_cop))})
+            — ${esc(cMes.largo)}</span>
+        </div>
+        ${avisoMes}
+      </div>`);
+
+    // 4 · Ingresos contra gastos del mes
+    // La resta se hace aquí y no se lee `queda_cop`, aunque la base lo
+    // mande: así los tres números de la tarjeta SIEMPRE cuadran entre
+    // ellos. Si se pintara un total que viene aparte, bastaría una
+    // respuesta a medias para enseñar una resta que no da, y eso es
+    // justo la clase de descuadre que ya costó una mañana de dudas.
+    const queda = Number(mes.ingreso_cop || 0) - Number(mes.egreso_cop || 0);
+    fichas.push(`
+      <div class="ficha">
+        <div class="cab">Entró menos salió, este mes</div>
+        <div class="gordo">${esc(pesos(queda))}</div>
+        <div class="bajo">
+          Entró ${esc(pesos(mes.ingreso_cop))} · salió ${esc(pesos(mes.egreso_cop))}
+        </div>
+        <div class="vs">
+          <span>No cuenta lo que se le entrega al dueño en el cierre: eso no
+            es un gasto, es la misma plata cambiando de sitio.</span>
+        </div>
+      </div>`);
+
+    // 5 · En qué se fue
+    fichas.push(`
+      <div class="ficha">
+        <div class="cab">En qué se fue, este mes</div>
+        ${gastos.length ? `
+          <div class="renglones">
+            ${gastos.map(g => `
+              <span>${esc(nombreConcepto(g.concepto))}</span>
+              <b>${esc(pesos(g.cop))}</b>
+              <span class="de">${esc(String(g.n))} ${
+                Number(g.n) === 1 ? 'salida' : 'salidas'}${
+                g.de_caja_menor ? ' · del cajón de la caja' : ' · de la caja mayor'}</span>`).join('')}
+            <span><b>Total</b></span>
+            <b>${esc(pesos(mes.egreso_cop))}</b>
+          </div>`
+        : '<p class="nada">Este mes no se ha registrado ninguna salida.</p>'}
+      </div>`);
+
+    $('#fichas-resumen').innerHTML = fichas.join('');
+  }
+
   /* ═══════════════ usuarios (solo propietario) ═══════════════
      Postgres es quien de verdad exige el rol — esta pestaña ni siquiera
      se muestra a quien no es propietario (aplicarRol()), pero si alguien
@@ -5741,21 +6036,65 @@ const CONFIG = {
     } finally { $('#cargando-usuarios').hidden = true; }
   }
 
+  /* En qué punto está cada persona. Antes había un solo cartel
+     —"Invitación pendiente"— para tres situaciones que piden cosas
+     distintas, y por eso nadie se dio cuenta en tres semanas de que a
+     Luisa y a Tanya no les había salido nunca la invitación.
+
+     El color se raciona igual que en Caja: solo lleva color lo que pide
+     que alguien haga algo. "Lista para entrar" y "activo" no piden nada,
+     así que van en gris o sin cartel. */
+  const ESTADO_USUARIO = {
+    sin_invitar: { txt: 'Sin invitación', clase: 'mal',
+                   pista: 'Nunca le salió el correo. Mándale el enlace.' },
+    invitado:    { txt: 'Sin contraseña', clase: 'ojo',
+                   pista: 'Le falta abrir el enlace y escribir su clave.' },
+    listo:       { txt: 'Lista para entrar', clase: '',
+                   pista: 'Ya tiene contraseña y todavía no ha entrado.' },
+    activo:      { txt: '', clase: '', pista: '' },
+  };
+
+  const fDiaCorto = new Intl.DateTimeFormat('es-CO',
+    { timeZone: 'America/Bogota', day: 'numeric', month: 'short' });
+  function cuando(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d) ? null : fDiaCorto.format(d);
+  }
+
   function pintarUsuarios() {
     const cont = $('#lista-usuarios');
     if (!usuarios.length) {
       cont.innerHTML = '<p class="vacio">Todavía no hay nadie dado de alta.</p>';
       return;
     }
-    cont.innerHTML = usuarios.map(u => `
+    cont.innerHTML = usuarios.map(u => {
+      // `estado` lo manda la base desde la 0081. Un panel viejo en caché
+      // no lo trae, y entonces se cae a lo de antes en vez de romperse.
+      const est = ESTADO_USUARIO[u.estado] ||
+        (u.tiene_acceso ? ESTADO_USUARIO.activo : ESTADO_USUARIO.sin_invitar);
+      // Un panel viejo en caché no trae `estado`. Ahí se cae a
+      // `tiene_acceso`, que es lo único que había: sin esto, a quien ya
+      // usa el panel se le ofrecía reenviarle una invitación que no
+      // necesita.
+      const yaEntra = u.estado ? u.estado === 'activo' : !!u.tiene_acceso;
+      const entro = cuando(u.ultimo_ingreso);
+      const invit = cuando(u.invitado_at);
+      const detalle = yaEntra
+        ? (entro ? 'Última entrada: ' + entro : '')
+        : (est.pista + (invit ? ' Invitada el ' + invit + '.' : ''));
+      return `
       <div class="usuario-fila">
         <div>
           <b>${esc(u.nombre)}</b> <span class="rol-pill">${esc(ROL_ETIQUETA[u.rol] || u.rol)}</span>
           ${u.activo ? '' : '<span class="rol-pill mal">Desactivado</span>'}
-          ${u.tiene_acceso ? '' : '<span class="rol-pill">Invitación pendiente</span>'}
-          <div class="sub">${esc(u.email)}</div>
+          ${est.txt ? `<span class="rol-pill ${est.clase}">${esc(est.txt)}</span>` : ''}
+          <div class="sub">${esc(u.email)}${detalle ? ' · ' + esc(detalle) : ''}</div>
         </div>
         <div class="fila-acciones">
+          ${yaEntra || !u.activo ? '' : `
+            <button class="btn chico" data-invitar="${esc(u.id)}">Reenviar invitación</button>
+            <button class="btn chico" data-enlace="${esc(u.id)}">Copiar enlace</button>`}
           <select data-cambiar-rol="${esc(u.id)}" ${u.activo ? '' : 'disabled'}>
             <option value="cajero"${u.rol === 'cajero' ? ' selected' : ''}>Cajero</option>
             <option value="administrador"${u.rol === 'administrador' ? ' selected' : ''}>Administrador</option>
@@ -5765,7 +6104,8 @@ const CONFIG = {
             ${u.activo ? 'Desactivar' : 'Reactivar'}
           </button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   $('#lista-usuarios').addEventListener('change', async (ev) => {
@@ -5777,6 +6117,91 @@ const CONFIG = {
       nota('Rol cambiado', 'bien', ROL_ETIQUETA[nuevoRol]);
       cargarUsuarios(true);
     } catch (e) { fallo(e, 'No se pudo cambiar el rol'); cargarUsuarios(true); }
+  });
+
+  /* Volver a mandar la invitación. El correo de fábrica de Supabase está
+     racionado, así que esto puede fallar de verdad: cuando falla, lo que
+     se pinta es el motivo que devolvió el Worker, no un "no se pudo". */
+  $('#lista-usuarios').addEventListener('click', async (ev) => {
+    const boton = ev.target.closest('[data-invitar]');
+    if (!boton) return;
+    const id = boton.getAttribute('data-invitar');
+    const antes = boton.textContent;
+    boton.disabled = true; boton.textContent = 'Mandando…';
+    try {
+      const d = await api('usuarios-invitar', { id });
+      // Primero se recarga y LUEGO se escribe el aviso: cargarUsuarios()
+      // limpia `#msg-usuarios` al arrancar, así que al revés el mensaje
+      // de «correo enviado» aparecía y se borraba solo. Nadie lo veía.
+      await cargarUsuarios(true);
+      aviso($('#msg-usuarios'), esc(d.mensaje || 'Correo enviado.'), 'bien');
+    } catch (e) {
+      // El detalle crudo de Supabase se deja a la vista: es lo único que
+      // permite distinguir "se agotó la cuota" de "ese correo no existe",
+      // y sin eso se vuelve a adivinar.
+      aviso($('#msg-usuarios'),
+        esc(e.message) + (e.detalle ? ' <span class="sub">(' + esc(e.detalle) + ')</span>' : ''),
+        'mal');
+      boton.disabled = false; boton.textContent = antes;
+    }
+  });
+
+  /* El enlace para mandarlo por WhatsApp. No manda correo: lo fabrica y
+     lo muestra. Es la salida cuando el correo no llega, que es el caso
+     en el que llevamos tres semanas. */
+  $('#lista-usuarios').addEventListener('click', async (ev) => {
+    const boton = ev.target.closest('[data-enlace]');
+    if (!boton) return;
+    const id = boton.getAttribute('data-enlace');
+    const fila = boton.closest('.usuario-fila');
+    const antes = boton.textContent;
+    boton.disabled = true; boton.textContent = 'Generando…';
+    try {
+      const d = await api('usuarios-enlace', { id });
+      const vieja = fila.querySelector('.enlace-caja');
+      if (vieja) vieja.remove();
+      const caja = document.createElement('div');
+      caja.className = 'enlace-caja';
+      caja.innerHTML = `
+        <div class="que">Enlace para <b>${esc(d.email || '')}</b>. Mándaselo por
+          WhatsApp. Sirve una sola vez: con él pone su contraseña y ya entra
+          con su correo.</div>
+        <textarea readonly rows="3"></textarea>
+        <div class="pie">
+          <button class="btn chico" data-copiar>Copiar</button>
+          <button class="btn chico" data-cerrar-enlace>Ocultar</button>
+          <span data-copiado hidden>Copiado.</span>
+        </div>`;
+      // Por propiedad y no dentro del HTML: un enlace con & y = dentro de
+      // una plantilla es justo donde se cuela un escapado a medias.
+      caja.querySelector('textarea').value = d.enlace || '';
+      fila.appendChild(caja);
+      caja.querySelector('textarea').select();
+    } catch (e) {
+      aviso($('#msg-usuarios'),
+        esc(e.message) + (e.detalle ? ' <span class="sub">(' + esc(e.detalle) + ')</span>' : ''),
+        'mal');
+    } finally { boton.disabled = false; boton.textContent = antes; }
+  });
+
+  $('#lista-usuarios').addEventListener('click', async (ev) => {
+    if (ev.target.closest('[data-cerrar-enlace]')) {
+      ev.target.closest('.enlace-caja').remove();
+      return;
+    }
+    const boton = ev.target.closest('[data-copiar]');
+    if (!boton) return;
+    const caja = boton.closest('.enlace-caja');
+    const area = caja.querySelector('textarea');
+    area.select();
+    try {
+      await navigator.clipboard.writeText(area.value);
+      caja.querySelector('[data-copiado]').hidden = false;
+    } catch (_) {
+      // Sin portapapeles queda seleccionado, que es lo que hace falta
+      // para copiar a mano. No se avisa de un fallo que no bloquea nada.
+      caja.querySelector('[data-copiado]').hidden = true;
+    }
   });
 
   $('#lista-usuarios').addEventListener('click', async (ev) => {

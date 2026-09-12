@@ -32,8 +32,10 @@ const SUITES = [
   'mensualidad-procesar',
   'pulso-ingesta',
   'tarjeta-sabado',
+  'tarjetas-del-dueno',
   'tirilla-de-la-duena',
   'tirilla-cuando-pagaron',
+  'usuarios-invitacion',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,
