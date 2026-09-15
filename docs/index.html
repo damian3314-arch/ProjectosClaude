@@ -46,6 +46,31 @@ const CONFIG = {
     banco:   'Bancolombia',
     cuenta:  '91289724619',
     titular: 'Luz Alejandra Santiago García'
+  },
+  /* ── LA FRANJA DE ANIVERSARIO ──────────────────────────────────
+     Sale entre el logo y los pasos de la reserva. Es lo primero que ve
+     quien entra a apartar su clase, que es justo la gente a la que hay
+     que contarle que viene algo.
+
+     `activo: false` a propósito. Encenderla es publicar en la página
+     que ven las clientas, y eso se hace cuando Damián lo diga, no
+     cuando se suba el código.
+
+     `titulo` y `linea` se cambian sin tocar nada más: la misma franja
+     sirve para la intriga de hoy («se viene algo»), para el anuncio de
+     la semana que viene («ya están las tiqueteras») y para la cuenta
+     atrás del final. Una franja que hay que reprogramar en cada fase se
+     queda en la primera. */
+  ANIVERSARIO: {
+    activo:  false,
+    ceja:    'Aniversario Tumbao',
+    titulo:  'Se viene algo grande',
+    linea:   'Muy pronto contamos qué es. Ve preparando la agenda.',
+    // Sin enlace, la franja no es pulsable. Con enlace, lleva a donde
+    // se cuente la historia — hoy, el Instagram.
+    enlace:  'https://instagram.com/tumbao.bca',
+    boton:   'Míralo en Instagram',
+    imagen:  'img/aniversario.jpg'
   }
 };
 </script>
@@ -82,6 +107,36 @@ const CONFIG = {
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
   .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
+
+  /* ── la franja de aniversario ──────────────────────────────────
+     En penumbra y con una sola línea. Va antes de los pasos de la
+     reserva porque es lo primero que se mira, y no puede quitarle sitio
+     a lo segundo: quien entró a apartar su clase tiene que seguir
+     viendo el paso 1 sin bajar. De ahí que sea una franja y no un
+     cartel. */
+  .aniv{
+    display:block; text-decoration:none; color:#fff;
+    background-color:#0B0710; background-size:cover; background-position:center;
+    border:1px solid rgba(242,104,42,.45); border-radius:14px;
+    padding:1rem 1.1rem; margin:0 0 1.2rem;
+  }
+  .aniv-ceja{
+    display:block; font-size:.66rem; font-weight:700; letter-spacing:.22em;
+    text-transform:uppercase; color:#F2682A; margin-bottom:.35rem;
+  }
+  .aniv-titulo{display:block; font-size:1.35rem; line-height:1.15; font-weight:800}
+  .aniv-linea{
+    display:block; font-size:.9rem; line-height:1.4;
+    color:rgba(255,255,255,.78); margin-top:.35rem;
+  }
+  .aniv-boton{
+    display:inline-block; margin-top:.7rem; font-size:.82rem; font-weight:700;
+    color:#F2682A; border-bottom:1px solid currentColor;
+  }
+  @media (max-width:420px){
+    .aniv{padding:.9rem 1rem}
+    .aniv-titulo{font-size:1.2rem}
+  }
   .tagline b{color:var(--gold);font-weight:600}
 
   .pasos{display:flex;gap:.35rem;justify-content:center;margin:1.4rem 0 .5rem;list-style:none;padding:0;flex-wrap:wrap}
@@ -412,6 +467,16 @@ const CONFIG = {
     <p class="tagline">Baila pa' sanar · <b>Reserva tu clase</b></p>
   </header>
 
+  <!-- La franja de aniversario. Nace oculta y la enciende CONFIG, no un
+       comentario borrado a mano: así encenderla y apagarla es una línea
+       y no una edición del HTML con prisa. -->
+  <a class="aniv" id="aniv" hidden>
+    <span class="aniv-ceja" id="aniv-ceja"></span>
+    <b class="aniv-titulo" id="aniv-titulo"></b>
+    <span class="aniv-linea" id="aniv-linea"></span>
+    <span class="aniv-boton" id="aniv-boton"></span>
+  </a>
+
   <ol class="pasos" id="pasos">
     <li data-paso="0" aria-current="step"><span class="n">1</span> Tú</li>
     <li data-paso="1"><span class="n">2</span> Horario</li>
@@ -720,6 +785,32 @@ const CONFIG = {
 
   $('#f-ig').href = `https://instagram.com/${CONFIG.INSTAGRAM}`;
   $('#f-wa').href = waUrl('Hola Tumbao 👋');
+
+  /* La franja de aniversario. Si está apagada no se pinta y la foto ni
+     siquiera se descarga: quien entra a reservar desde datos móviles no
+     tiene por qué pagar el peso de una campaña que no está en el aire. */
+  (function franjaAniversario() {
+    const a = CONFIG.ANIVERSARIO;
+    if (!a || !a.activo) return;
+    const caja = $('#aniv');
+    $('#aniv-ceja').textContent   = a.ceja || '';
+    $('#aniv-titulo').textContent = a.titulo || '';
+    $('#aniv-linea').textContent  = a.linea || '';
+    if (a.imagen) caja.style.backgroundImage =
+      `linear-gradient(90deg, rgba(11,7,16,.94) 0%, rgba(11,7,16,.72) 55%, rgba(11,7,16,.45) 100%), url('${a.imagen}')`;
+    if (a.enlace) {
+      caja.href = a.enlace;
+      caja.target = '_blank';
+      caja.rel = 'noopener';
+      $('#aniv-boton').textContent = a.boton || '';
+    } else {
+      // Sin enlace no es un enlace: quitarle el href evita que se
+      // comporte como pulsable y no lleve a ninguna parte.
+      caja.removeAttribute('href');
+      $('#aniv-boton').hidden = true;
+    }
+    caja.hidden = false;
+  })();
   $('#pago-qr').src   = CONFIG.PAGO.qr;
   $('#d-llave').textContent   = CONFIG.PAGO.llave;
   $('#d-banco').textContent   = CONFIG.PAGO.banco;

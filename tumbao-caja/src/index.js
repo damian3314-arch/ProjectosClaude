@@ -1319,6 +1319,36 @@ export default {
           p_token: token, p_id: id, p_nota: nota || null,
         });
 
+      /* «Déjala pasar a pagar». Mueve a alguien de la lista de espera a
+         esperando_pago, y con eso la página la deja pagar cuando vuelva
+         a escribir su celular y su hora.
+
+         Lo que NO hace: avisarle. Devuelve nombre, celular y hora para
+         que el panel arme el mensaje y lo mande una persona desde su
+         WhatsApp. Escribirle a una clienta desde un robot no está en
+         los planes, y menos el mensaje de «ya tienes cupo». */
+      } else if (ruta === '/api/mensualidad/dar-cupo') {
+        const id = UUID(b.id);
+        if (!id) {
+          return json({ ok: false, error: 'FALTA_ID',
+            mensaje: 'No se dijo cuál solicitud.' }, 400, origen);
+        }
+        const nota = b.nota == null ? '' : String(b.nota).trim().slice(0, 200);
+        r = await rpc(env, 'admin_mensualidad_dar_cupo', {
+          p_token: token, p_id: id, p_nota: nota || null,
+        });
+
+      /* Cuántas mensualidades caben en cada hora. Sin `topes` lee; con
+         `topes` valida y guarda. El mando ya existía desde la 0074 pero
+         solo se podía mover entrando a la base de datos a mano. */
+      } else if (ruta === '/api/mensualidad/topes') {
+        // null (no viene) es LEER. Cadena vacía es «quita el tope por
+        // hora», que es una orden distinta y tiene que poder darse.
+        const topes = b.topes == null ? null : String(b.topes).trim().slice(0, 200);
+        r = await rpc(env, 'admin_mensualidad_topes', {
+          p_token: token, p_topes: topes,
+        });
+
       } else if (ruta === '/api/dia') {
         r = await rpc(env, 'caja_del_dia', {
           p_token: token,

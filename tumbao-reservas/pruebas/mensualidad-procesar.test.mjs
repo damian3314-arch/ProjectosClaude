@@ -327,6 +327,106 @@ ok('la tarjeta suspendida se marca aparte',
    await p.locator('.mens-cupo.suspendida').count() === 1,
    'borde punteado: cerrada por decisión, no por llenarse');
 
+/* ═══════════ 6. déjala pasar a pagar (0085) ═══════════
+   Damián, 15 de septiembre: «necesito un control para dar el acceso al
+   pago a los clientes de lista de espera».
+
+   Lo que se comprueba aquí es la mitad que vive en el panel. La otra
+   mitad —que la página la deje pagar cuando vuelva— la comprueba la
+   base: la solicitud nueva nace en `esperando_pago` y con menos de 24
+   horas, que es exactamente lo que `mensualidad_solicitar` ya sabe
+   devolver. Aquí no se puede fingir eso sin fingir Postgres entero. */
+
+const dado = [];
+await p.route('**/api/mensualidad/dar-cupo', async r => {
+  dado.push(JSON.parse(r.request().postData() || '{}'));
+  await r.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ ok: true, id: 'nueva', id_anterior: 'vieja',
+      nombre: 'Leslie Otálora', celular: '3004445566', hora: '19:00',
+      etiqueta: '7:00 pm', valor_cop: 125000, espero_dias: 8,
+      horas_de_plazo: 24, ocupadas: 29, tope: 28, sobre_el_tope: true }) });
+});
+
+lista = { ok: true, cupos: CUPOS, solicitudes: SOLIS };
+await p.click('#mens-recargar');
+await p.waitForTimeout(500);
+
+ok('quien hace fila tiene el botón de dejarla pasar',
+   await p.locator('[data-cupo]').count() === 1,
+   'una en lista de espera, un botón');
+ok('y quien ya pagó no lo tiene',
+   await p.locator('.fila.mens:has-text("Johanna") [data-cupo]').count() === 0,
+   'no hay nada que abrirle: ya pagó');
+
+// Se avisa del sobrecupo ANTES de pulsar. Una hora con la venta cerrada
+// está cerrada por algo, y quien la abre tiene que saberlo.
+await responder(false);
+await p.click('[data-cupo]');
+await p.waitForTimeout(250);
+const preg = await p.evaluate(() => window.__confirmado.at(-1) || '');
+ok('antes de abrirlo se pregunta', /Le abres el cupo a Leslie/.test(preg), preg);
+ok('y se avisa de que esa hora ya está llena',
+   /30 de 25/.test(preg) && /quedan 31/.test(preg), preg);
+ok('decir que no, no manda nada', dado.length === 0);
+
+await responder(true);
+await p.click('[data-cupo]');
+await p.waitForTimeout(600);
+
+ok('al aceptar se manda el id de esa solicitud',
+   dado.length === 1 && dado[0].id === '22222222-2222-4222-8222-222222222222',
+   JSON.stringify(dado));
+
+/* Y queda en pantalla lo que falta por hacer: avisarle a ella. Eso no lo
+   manda el sistema —es el mensaje de «ya tienes cupo» y va desde el
+   WhatsApp de una persona— así que el panel deja el texto escrito y el
+   enlace puesto. Si esto desapareciera solo a los cuatro segundos, como
+   un aviso cualquiera, la mitad del trabajo se perdería sin que nadie
+   lo notara. */
+const ab = (await p.locator('#mens-abierto').innerText()).replace(/\s+/g, ' ');
+ok('queda el aviso de a quién se le abrió', /Cupo abierto para Leslie/.test(ab), ab);
+ok('con cuánto llevaba esperando', /esperaba hace 8 d/.test(ab), ab);
+ok('y con el plazo que tiene para pagar', /vence en 24 h/.test(ab), ab);
+ok('advierte de que quedó por encima del tope',
+   /29 de 28/.test(ab) && /por encima del tope/.test(ab), ab);
+ok('con el mensaje ya escrito para mandárselo',
+   /pon tu celular y esa misma hora/.test(ab), ab);
+ok('y el mensaje dice cuánto le dura el cupo',
+   /24 horas/.test(ab), ab);
+const wa = await p.getAttribute('#mens-abierto a', 'href');
+ok('el enlace de WhatsApp va a su número',
+   /^https:\/\/wa\.me\/573004445566\?text=/.test(wa || ''), wa);
+ok('y lleva el mensaje dentro',
+   decodeURIComponent((wa || '').split('text=')[1] || '').includes('7:00 pm'), wa);
+
+/* La cajera no abre horas llenas. El servidor la rechaza igual, pero
+   enseñarle un botón que siempre falla es enseñarle a desconfiar del
+   panel. */
+const p3 = await b.newPage({ viewport: { width: 390, height: 900 } });
+await p3.route('**/api/**', r => r.fulfill({ status: 200,
+  contentType: 'application/json',
+  body: JSON.stringify({ ok: true, dias: [], reservas: [], pagos_libres: [],
+                         movimientos: [], resumen_conceptos: [] }) }));
+await p3.route('**/api/mensualidad', r => r.fulfill({ status: 200,
+  contentType: 'application/json', body: JSON.stringify(lista) }));
+await p3.addInitScript(() => {
+  localStorage.setItem('tumbao_admin_token',
+    JSON.stringify({ token: 'x', rol: 'cajero', nombre: 'Caja' }));
+});
+await p3.goto('http://localhost:8126/', { waitUntil: 'load' });
+await p3.waitForTimeout(500);
+await p3.click('#tab-mensualidad');
+await p3.waitForTimeout(600);
+ok('con rol de cajero el botón no está',
+   await p3.locator('[data-cupo]').count() === 0,
+   'abrir una hora llena es decisión de negocio');
+ok('pero «ya la procesé» sí sigue, que es su trabajo',
+   await p3.locator('[data-atender]').count() > 0);
+ok('y el mando de topes tampoco se le enseña',
+   await p3.locator('#mens-topes').isVisible() === false,
+   'el tope lo mueve el propietario');
+await p3.close();
+
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
 await b.close(); srv.close();

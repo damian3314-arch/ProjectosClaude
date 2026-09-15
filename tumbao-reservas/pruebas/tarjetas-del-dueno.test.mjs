@@ -113,8 +113,10 @@ ok('en pantalla de celular el panel abre en el resumen',
 ok('y las tarjetas ya están pintadas sin tocar nada',
    await p.locator('#fichas-resumen .ficha').count() >= 4);
 
-const cuantas = await p.locator('#fichas-resumen .ficha').count();
-ok('son cinco tarjetas, las que pidió', cuantas === 5, `${cuantas} tarjetas`);
+const cifras = await p.locator('#fichas-resumen .ficha:not(.detalle)').count();
+const plegados = await p.locator('#fichas-resumen details.detalle').count();
+ok('son cuatro tarjetas de cifra', cifras === 4, `${cifras} tarjetas`);
+ok('y un solo desplegable con el resto', plegados === 1, `${plegados} desplegables`);
 
 const txt = () => p.locator('#fichas-resumen').innerText()
   .then(s => s.replace(/\s+/g, ' '));
@@ -130,8 +132,17 @@ let t = await txt();
    colarse a la primera tarjeta que alguien retoque. */
 
 ok('la tarjeta de hoy dice lo que entró', /\$995\.000/.test(t), t.slice(0, 160));
-ok('y cuánta gente', /34 personas/.test(t));
 ok('y el comparativo, como porcentaje y ya', /\+232%/.test(t));
+/* Damián, 15 de septiembre: «aún no me termina de convencer la vista
+   administrativa de las tarjetas, siento todo muy cargado».
+
+   La ronda anterior quitó las frases pero dejó tres cifras por tarjeta.
+   Ahora la cara de la tarjeta lleva UNA cifra y su comparativo; cuántas
+   personas fueron sigue existiendo, pero plegado. Las dos mitades se
+   comprueban juntas: que no está arriba, y que sí está abajo. Sin la
+   segunda, «simplificar» sería un sinónimo educado de perder el dato. */
+ok('cuántas personas ya no estorba en la cara de la tarjeta',
+   !/34 personas/.test(t), t);
 ok('sin la frase de contra qué se compara',
    !/sábado pasado/.test(t) && !/que el/.test(t), t);
 ok('sin el desglose de de dónde salió la plata',
@@ -162,15 +173,27 @@ ok('la semana, que sí es comparable, no lleva ese aviso',
 /* ═══════════ 4. entró menos salió, y las salidas ═══════════ */
 
 ok('dice lo que queda del mes', /\$6\.440\.000/.test(t));
-ok('con las dos puntas, como resta y sin palabras',
-   /\$6\.560\.000 − \$120\.000/.test(t), t);
+ok('sin la resta escrita al lado', !/\$6\.560\.000 − \$120\.000/.test(t), t);
 ok('sin la explicación de qué no cuenta como gasto',
    !/no es un gasto/.test(t) && !/cambiando de sitio/.test(t), t);
-ok('las salidas se desglosan por concepto', /Profesores/i.test(t), t);
-ok('con su total, para poder cuadrarlo', /Total \$120\.000/.test(t), t);
-ok('sin decir cuántas salidas ni de qué caja',
-   !/salidas/.test(t.replace(/SALIDAS DEL MES/i, '')) &&
-   !/del cajón/.test(t), t);
+ok('la lista de salidas no está abierta de entrada',
+   !/Profesores/i.test(t), t);
+
+/* Y lo que se plegó tiene que seguir ahí. Se abre el desplegable y se
+   comprueba lo mismo que antes se comprobaba en la cara. */
+await p.click('#fichas-resumen details.detalle summary');
+await p.waitForTimeout(150);
+let d = await txt();
+
+ok('abriendo el detalle vuelven las personas', /34/.test(d), d.slice(0, 200));
+ok('y las mensualidades del mes', /Mensualidades del mes/i.test(d), d);
+ok('las salidas se desglosan por concepto', /Profesores/i.test(d), d);
+ok('con su total, para poder cuadrarlo',
+   /Salidas del mes \$120\.000/i.test(d), d);
+ok('sin decir cuántas salidas ni de qué caja', !/del cajón/.test(d), d);
+
+await p.click('#fichas-resumen details.detalle summary');
+await p.waitForTimeout(150);
 
 /* ═══════════ 5. el porcentaje sobre cero no se inventa ═══════════
    Dividir por cero no da «+100%» ni «+Infinity%»: no da nada. Es el
@@ -230,10 +253,12 @@ const bajas = await p.locator('#fichas-resumen .delta.baja').count();
 ok('pintada distinto de una subida', bajas === 1, `${bajas} en rojo`);
 // `queda_cop` llega a propósito con el valor viejo, que ya no cuadra con
 // ingreso − egreso: la tarjeta hace la resta ella misma en vez de
-// creerse un total que le llega aparte.
-ok('los tres números de la tarjeta cuadran entre ellos',
-   /\$1\.050\.000 \$1\.170\.000 − \$120\.000/.test(t),
-   'la resta se hace en la tarjeta, no se cree un total de fuera');
+// creerse un total que le llega aparte. La resta ya no se escribe en la
+// cara, así que se comprueba contra las dos puntas: la del mes arriba y
+// la de salidas dentro del detalle.
+ok('la tarjeta hace la resta ella misma, no se cree un total de fuera',
+   /\$1\.170\.000/.test(t) && /\$1\.050\.000/.test(t) && !/\$6\.440\.000/.test(t),
+   t.slice(0, 300));
 
 /* ═══════════ 8. la cajera no ve la plata del negocio ═══════════
    En pestaña aparte y no recargando esta: el addInitScript del arranque

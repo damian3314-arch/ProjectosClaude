@@ -497,6 +497,17 @@ const CONFIG = {
     font-size:.85rem;margin-top:.2rem;
   }
   .ficha .renglones b{font-variant-numeric:tabular-nums;font-weight:700}
+  /* El detalle, plegado. Lo de todos los días son las cuatro cifras de
+     arriba; esto es para el día que haga falta mirar de dónde salen. */
+  .ficha.detalle{padding:.6rem .95rem}
+  .ficha.detalle summary{
+    cursor:pointer;font-size:.7rem;color:var(--tx-3);text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .ficha.detalle[open] summary{margin-bottom:.6rem}
+  .ficha .renglones.sep{
+    margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--line);
+  }
 
   /* ---------- quiénes vienen más ----------
      Una fila por persona, el número de días a la izquierda porque es por
@@ -1048,6 +1059,34 @@ const CONFIG = {
      llamada por hacer hoy. */
   .mens-llamar{color:var(--gold); font-weight:700}
   .mens-cola{color:var(--tx-3)}
+  /* «Déjala pasar» en dorado: no es la acción de todos los días —abre
+     una puerta que está cerrada— y tiene que distinguirse de «Ya la
+     procesé», que está justo encima y hace lo contrario. */
+  .btn.dejar{border-color:var(--gold); color:var(--gold)}
+  /* Lo que queda en pantalla después de abrir el cupo. Se queda hasta
+     que se pulse «Listo»: avisarle a ella es la otra mitad del trabajo. */
+  #mens-abierto{background:var(--bg-2); border:1px solid var(--gold);
+    border-radius:var(--r); padding:.8rem; margin-bottom:1rem}
+  .abierto-cab{display:flex; flex-direction:column; gap:.15rem; margin-bottom:.5rem}
+  .abierto-ojo{color:var(--hot); margin-bottom:.4rem}
+  .abierto-texto{background:var(--bg-3); border-radius:var(--r);
+    padding:.6rem; font-size:.82rem; line-height:1.45; margin-bottom:.6rem}
+  .abierto-botones{display:flex; flex-wrap:wrap; gap:.4rem}
+  /* El tope por hora, plegado. Se mueve cada varios meses: abierto todo
+     el tiempo sería un formulario estorbando en la pantalla que se mira
+     todos los días. */
+  #mens-topes{margin-bottom:1rem}
+  #mens-topes summary{cursor:pointer; font-size:.78rem; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase; color:var(--tx-3)}
+  .topes-cuerpo{padding-top:.7rem}
+  .topes-campos{display:grid; grid-template-columns:repeat(auto-fit,minmax(7rem,1fr));
+    gap:.6rem}
+  .topes-campo{display:flex; flex-direction:column; gap:.2rem; font-size:.78rem}
+  .topes-campo input{width:100%; padding:.4rem .5rem; border-radius:var(--r);
+    border:1px solid var(--line); background:var(--bg-3); color:var(--tx);
+    font-size:1rem; font-variant-numeric:tabular-nums}
+  .topes-pie{display:flex; align-items:center; gap:.6rem; margin-top:.7rem;
+    flex-wrap:wrap}
   .fila.mens .et{font-size:.66rem; font-weight:800; letter-spacing:.04em;
     padding:.1rem .4rem; border-radius:999px; margin-left:.4rem;
     background:var(--bg-3); color:var(--tx-2)}
@@ -1420,6 +1459,22 @@ const CONFIG = {
         <button class="btn chico" id="mens-recargar">Actualizar</button>
       </div>
       <div id="mens-cupos" class="mens-cupos"></div>
+      <!-- Lo que queda después de abrirle el cupo a alguien: el mensaje
+           escrito y el enlace para mandárselo. No se va solo a los
+           cuatro segundos como un aviso, porque avisarle a ella es la
+           mitad del trabajo y esa mitad la hace una persona. -->
+      <div id="mens-abierto" hidden></div>
+      <!-- Cuántas mensualidades caben por hora. Solo el propietario. -->
+      <details id="mens-topes" hidden>
+        <summary>Cuántas caben por hora</summary>
+        <div class="topes-cuerpo">
+          <div id="topes-campos" class="topes-campos"></div>
+          <div class="topes-pie">
+            <button class="btn primario chico" id="topes-guardar">Guardar</button>
+            <span class="suave" id="topes-estado"></span>
+          </div>
+        </div>
+      </details>
       <div id="mens-lista"></div>
     </div>
 
@@ -4131,6 +4186,18 @@ const CONFIG = {
             ? ''
             : `<button class="btn chico" type="button" data-atender="${esc(x.id)}">` +
               `Ya la procesé</button>`) +
+          /* «DÉJALA PASAR A PAGAR». Solo para quien está haciendo fila, y
+             solo para quien puede decidirlo: la cajera no abre horas
+             llenas, y el servidor la rechaza igual si lo intenta.
+
+             Lo que hace de verdad: le aparta el cupo por 24 horas y, la
+             próxima vez que ella entre a la página y escriba su celular
+             y su hora, la página la lleva directo a pagar en vez de
+             volver a dejarla en la lista. */
+          (x.estado === 'lista_espera' && rol !== 'cajero'
+            ? `<button class="btn chico dejar" type="button" data-cupo="${esc(x.id)}">` +
+              `Déjala pasar</button>`
+            : '') +
         `</div>
       </div>`;
     };
@@ -4152,6 +4219,47 @@ const CONFIG = {
   /* El clic va por delegación en el contenedor, no botón por botón: la
      lista se repinta entera en cada carga y los escuchas colgados de
      cada botón se perderían con el repintado. */
+  /* Liberarle el cupo a quien espera. Va aparte del escucha de «ya la
+     procesé» porque hace lo contrario: aquel cierra una solicitud, este
+     la abre.
+
+     Después de liberar, el panel deja el mensaje escrito y el enlace de
+     WhatsApp listo. El aviso lo manda una persona: es el mensaje de «ya
+     tienes cupo» y merece ir con nombre propio, no desde un robot. */
+  $('#mens-lista').addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-cupo]');
+    if (!b) return;
+    const fila = (mensDatos && mensDatos.solicitudes || [])
+      .find(x => x.id === b.dataset.cupo);
+    const quien = fila ? fila.nombre : 'esta persona';
+    const suHora = fila ? fila.hora : '';
+    // Se avisa del sobrecupo ANTES, no después: una hora con la venta
+    // cerrada está cerrada por algo, y el que pulsa tiene que saber que
+    // la está pasando por encima.
+    const h = (mensDatos && mensDatos.cupos && mensDatos.cupos.horas || [])
+      .find(c => c.hora === suHora);
+    const apretado = h && Number(h.ocupadas) >= Number(h.tope);
+    if (!confirm(`¿Le abres el cupo a ${quien}?\n\n` +
+                 `Podrá pagar por la página durante 24 horas.` +
+                 (apretado
+                   ? `\n\nOJO: las ${h.etiqueta} ya están en ${h.ocupadas} de ` +
+                     `${h.tope}. Con esta quedan ${Number(h.ocupadas) + 1}.`
+                   : ''))) return;
+    b.disabled = true;
+    try {
+      const r = await alWorker('mensualidad/dar-cupo', { id: b.dataset.cupo });
+      await cargarMensualidad(true);
+      pintarCupoAbierto(r);
+      nota('Cupo abierto', r.sobre_el_tope ? 'ojo' : 'bien',
+        r.nombre + ' · ' + r.etiqueta +
+        (r.sobre_el_tope ? ` · esa hora queda en ${r.ocupadas} de ${r.tope}` : '') +
+        ' · abajo tienes el mensaje para mandarle.');
+    } catch (e) {
+      b.disabled = false;
+      nota('No se pudo', 'mal', e.message || 'Vuelve a intentarlo.');
+    }
+  });
+
   $('#mens-lista').addEventListener('click', async ev => {
     const b = ev.target.closest('[data-atender]');
     if (!b) return;
@@ -4180,8 +4288,104 @@ const CONFIG = {
     }
   });
 
+  /* El mensaje ya escrito, con el enlace que lo abre en WhatsApp con el
+     texto puesto. Se escribe entero aquí y no en el servidor porque es
+     copy, no regla de negocio: cambiarlo no puede pedir una migración.
+
+     La dirección de la página sale de `location.origin`, así que en
+     pruebas apunta a pruebas y en producción a producción. Escribirla a
+     mano es cómo se mandan enlaces rotos. */
+  function pintarCupoAbierto(r) {
+    const caja = $('#mens-abierto');
+    const tel = String(r.celular || '').replace(/\D/g, '');
+    const texto =
+      `Hola ${r.nombre}, te escribimos de Tumbao. Se liberó el cupo de ` +
+      `mensualidad de las ${r.etiqueta} y te lo apartamos a ti. Entra a ` +
+      `${location.origin}/mensualidad.html, pon tu celular y esa misma hora, ` +
+      `y te aparece para pagar. Te lo guardamos 24 horas.`;
+    caja.innerHTML =
+      `<div class="abierto-cab"><b>Cupo abierto para ${esc(r.nombre)}</b>` +
+        `<span class="ag">${esc(r.etiqueta)} · esperaba hace ${
+          esc(String(r.espero_dias || 0))} d · vence en 24 h</span></div>` +
+      (r.sobre_el_tope
+        ? `<div class="ag abierto-ojo">Esa hora queda en ${esc(String(r.ocupadas))} ` +
+          `de ${esc(String(r.tope))}: va por encima del tope.</div>`
+        : '') +
+      `<div class="abierto-texto" id="abierto-texto">${esc(texto)}</div>` +
+      `<div class="abierto-botones">` +
+        `<a class="btn primario chico" target="_blank" rel="noopener" href="https://wa.me/57${
+          esc(tel)}?text=${encodeURIComponent(texto)}">Abrir WhatsApp</a>` +
+        `<button class="btn chico copiar" data-copiar="abierto-texto">Copiar</button>` +
+        `<button class="btn chico" type="button" id="abierto-cerrar">Listo</button>` +
+      `</div>`;
+    caja.hidden = false;
+    caja.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('#mens-abierto').addEventListener('click', async ev => {
+    if (ev.target.id === 'abierto-cerrar') { $('#mens-abierto').hidden = true; return; }
+    const c = ev.target.closest('[data-copiar]');
+    if (!c) return;
+    try {
+      await navigator.clipboard.writeText($('#' + c.dataset.copiar).textContent);
+      c.textContent = '¡Copiado!';
+      setTimeout(() => { c.textContent = 'Copiar'; }, 1800);
+    } catch (e) { nota('No se pudo copiar', 'ojo', 'Selecciona el texto a mano.'); }
+  });
+
+  /* ── cuántas caben por hora ──────────────────────────────────────
+     El ajuste `mensualidad_topes` existe desde la 0074 y hasta hoy solo
+     se podía mover entrando a la base de datos. Esto es ese mando.
+
+     Tope 0 no es «apagado»: es «no se vende mensualidad a esa hora», y
+     así lo pinta la tarjeta de arriba («Venta cerrada»). Quien entre a
+     la página a esa hora cae en lista de espera — que es justo de donde
+     sale la gente a la que se le abre el cupo con el botón de al lado.
+     Los dos mandos se explican uno al otro. */
+  async function cargarTopes() {
+    if (rol !== 'propietario' && rol != null) { $('#mens-topes').hidden = true; return; }
+    $('#mens-topes').hidden = false;
+    try {
+      const d = await alWorker('mensualidad/topes', {});
+      pintarTopes(d);
+    } catch (e) {
+      $('#topes-estado').textContent = e.message || 'No se pudieron leer.';
+    }
+  }
+
+  function pintarTopes(d) {
+    const cupos = (d.cupos && d.cupos.horas) || [];
+    $('#topes-campos').innerHTML = cupos.map(h => `
+      <label class="topes-campo">
+        <span>${esc(h.etiqueta)}</span>
+        <input type="number" min="0" max="35" step="1"
+               data-hora="${esc(h.hora)}" value="${esc(String(h.tope))}">
+        <span class="ag">${esc(String(h.ocupadas))} comprometidas</span>
+      </label>`).join('');
+    $('#topes-estado').textContent = d.topes
+      ? 'Por hora: ' + d.topes
+      : 'Sin tope por hora: manda ' + d.tope_general + ' para todas.';
+  }
+
+  $('#topes-guardar').addEventListener('click', async () => {
+    const campos = [...document.querySelectorAll('#topes-campos input[data-hora]')];
+    const topes = campos.map(i => i.dataset.hora + '=' + String(i.value).trim()).join(',');
+    const btn = $('#topes-guardar');
+    btn.disabled = true;
+    try {
+      const d = await alWorker('mensualidad/topes', { topes });
+      pintarTopes(d);
+      // Las tarjetas de arriba salen del mismo cálculo: si no se
+      // recargan, el panel enseña el tope nuevo y los cupos viejos.
+      await cargarMensualidad(true);
+      nota('Topes guardados', 'bien', d.topes || 'sin tope por hora');
+    } catch (e) {
+      nota('No se pudo guardar', 'mal', e.message || 'Revisa los números.');
+    } finally { btn.disabled = false; }
+  });
+
   $('#tab-mensualidad').addEventListener('click',
-    () => { verPanel('mensualidad'); cargarMensualidad(); });
+    () => { verPanel('mensualidad'); cargarMensualidad(); cargarTopes(); });
   $('#mens-recargar').addEventListener('click', () => cargarMensualidad());
   $('#caja-recargar').addEventListener('click', () => cargarCaja(true));
 
@@ -6003,46 +6207,55 @@ const CONFIG = {
     // respuesta a medias.
     const queda = Number(mes.ingreso_cop || 0) - Number(mes.egreso_cop || 0);
 
-    const tarjeta = (cab, gordo, bajo, delta, extra) => `
+    /* CUATRO NÚMEROS Y NADA MÁS.
+       Damián, 15 de septiembre: «aún no me termina de convencer la vista
+       administrativa de las tarjetas, siento todo muy cargado».
+
+       La versión anterior ya había quitado las frases, pero seguía
+       poniendo tres datos en cada tarjeta —la plata, las personas y el
+       comparativo— más una quinta tarjeta con el desglose de gastos
+       abierto. Eso son once cifras en una pantalla que se mira de pie
+       entre dos clases.
+
+       Ahora cada tarjeta tiene UNA cifra y su comparativo. Las personas,
+       las mensualidades y el detalle de salidas no se borran: bajan a un
+       desplegable cerrado. Borrarlas habría sido más fácil y peor —el
+       día que él quiera saber cuántas personas fueron, el dato tiene que
+       estar— pero no tienen por qué estorbar todos los días. */
+    const tarjeta = (cab, gordo, delta, extra) => `
       <div class="ficha">
         <div class="cab">${cab}</div>
         <div class="gordo">${esc(gordo)}</div>
-        ${bajo ? `<div class="bajo">${bajo}</div>` : ''}
         ${delta ? `<div class="vs"><span class="delta ${delta.clase}">${
           esc(delta.txt)}</span>${extra || ''}</div>` : ''}
       </div>`;
 
+    const linea = (k, v) => `<span>${k}</span><b>${v}</b>`;
+
     $('#fichas-resumen').innerHTML = [
-      tarjeta('Hoy', pesos(dia.ingreso_cop),
-              esc(String(dia.personas || 0)) + ' personas', cDia),
-
-      // Sin el rango de fechas en el título: es esta semana y este mes,
-      // y la fecha de hoy ya está arriba del panel.
-      tarjeta('Semana', pesos(sem.ingreso_cop),
-              esc(String(sem.personas || 0)) + ' personas · ' +
-              esc(String(sem.mensualidades_n || 0)) + ' mens.', cSem,
+      tarjeta('Hoy',   pesos(dia.ingreso_cop), cDia),
+      tarjeta('Semana', pesos(sem.ingreso_cop), cSem,
               parcial(r.semana_antes_parcial, rango(semAntes))),
-
-      tarjeta('Mes', pesos(mes.ingreso_cop),
-              esc(String(mes.personas || 0)) + ' personas · ' +
-              esc(String(mes.mensualidades_n || 0)) + ' mens.', cMes,
+      tarjeta('Mes',   pesos(mes.ingreso_cop), cMes,
               parcial(r.mes_antes_parcial, rango(mesAntes))),
+      // Sin comparativo: lo que importa de este número es si es positivo,
+      // no si es mejor que el mes pasado.
+      tarjeta('Queda', pesos(queda), null),
 
-      tarjeta('Entró − salió', pesos(queda),
-              esc(pesos(mes.ingreso_cop)) + ' − ' + esc(pesos(mes.egreso_cop))),
-
-      `<div class="ficha ancha">
-         <div class="cab">Salidas del mes</div>
-         ${gastos.length ? `
-           <div class="renglones">
-             ${gastos.map(g => `
-               <span>${esc(nombreConcepto(g.concepto))}</span>
-               <b>${esc(pesos(g.cop))}</b>`).join('')}
-             <span><b>Total</b></span>
-             <b>${esc(pesos(mes.egreso_cop))}</b>
-           </div>`
-         : '<div class="gordo">' + esc(pesos(0)) + '</div>'}
-       </div>`,
+      `<details class="ficha ancha detalle">
+         <summary>Ver detalle</summary>
+         <div class="renglones">
+           ${linea('Personas hoy', esc(String(dia.personas || 0)))}
+           ${linea('Personas en la semana', esc(String(sem.personas || 0)))}
+           ${linea('Personas en el mes', esc(String(mes.personas || 0)))}
+           ${linea('Mensualidades del mes', esc(String(mes.mensualidades_n || 0)))}
+         </div>
+         <div class="renglones sep">
+           ${gastos.map(g => linea(esc(nombreConcepto(g.concepto)),
+                                   esc(pesos(g.cop)))).join('')}
+           ${linea('<b>Salidas del mes</b>', esc(pesos(mes.egreso_cop)))}
+         </div>
+       </details>`,
     ].join('');
   }
 
