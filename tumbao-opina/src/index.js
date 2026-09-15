@@ -62,6 +62,34 @@ const TEMAS = {
       '¿Qué le dirías a alguien que está pensando en venir por primera vez?',
     ],
   },
+  /* LA CAMPAÑA DE HOY, y la que hace el bot por defecto.
+     Damián, 15 de septiembre: «una campaña para que la gente nos cuente
+     qué le gusta, qué podemos mejorar y qué les gustaría encontrar en
+     Tumbao. Escucharlos, y trabajar en hacer el espacio para seguir
+     gozando. Y esa debe ser la conversación con el bot.»
+
+     Sustituye a `opinion` como tema por defecto, así que lo mismo
+     pregunta quien entra por el banner que quien pulsa la burbuja. Dos
+     conversaciones distintas según por dónde entras sería un sistema
+     con dos caras. */
+  escuchamos: {
+    saludo:
+      '¡Hola! Somos Tumbao 🧡 Queremos hacer de este un mejor espacio ' +
+      'para seguir gozando, y para eso necesitamos oírte a ti. Lo que ' +
+      'escribas aquí lo leemos nosotras, no un robot, y con una frase ' +
+      'basta.',
+    trabajo:
+      'Estás escuchando a gente que ya viene a clases para mejorar la ' +
+      'academia. No vienen a quejarse ni a llenar una encuesta: te están ' +
+      'ayudando. Recibe cada cosa que digan —lo bueno y lo malo— con la ' +
+      'misma atención, y sobre todo NO te pongas a la defensiva cuando ' +
+      'señalen algo que está mal.',
+    preguntas: [
+      '¿Qué es lo que más te gusta de Tumbao?',
+      '¿Qué crees que podemos mejorar?',
+      '¿Qué te gustaría encontrar aquí que todavía no está?',
+    ],
+  },
   aniversario: {
     // Arranca con la pregunta abierta y sin pedir nada: quien llega aquí
     // viene de un banner que le dijo «cuéntanos tu idea», no de una
@@ -82,7 +110,9 @@ const TEMAS = {
   },
 };
 
-const TEMA_POR_DEFECTO = 'opinion';
+// `escuchamos` desde el 15 de septiembre. `opinion` —las tres preguntas
+// de retención— sigue existiendo y volver a ella es cambiar esta línea.
+const TEMA_POR_DEFECTO = 'escuchamos';
 // Un tema que no existe no puede romper la conversación ni elegir por su
 // cuenta: cae en el de siempre.
 const elTema = (t) => TEMAS[String(t || '')] ? String(t) : TEMA_POR_DEFECTO;

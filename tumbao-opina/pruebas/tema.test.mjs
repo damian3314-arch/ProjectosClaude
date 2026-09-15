@@ -2,14 +2,19 @@
  * El tema de la conversación — prueba
  *
  * POR QUÉ EXISTE
- * Damián puso un banner en la página que invita a contar ideas para el
- * aniversario. Si quien pulsa ese banner recibe «¿qué te hizo volver la
- * segunda vez?», cierra la pestaña. Y no es una suposición: de 53
- * personas que abrieron la burbuja, 38 no llegaron a escribir nada.
+ * La franja de la página promete una conversación, y el bot tiene que
+ * hacer ESA. Si alguien pulsa «cuéntanos qué mejoramos» y recibe «¿qué
+ * te hizo volver la segunda vez?», cierra la pestaña. Y no es una
+ * suposición: de 53 personas que abrieron la burbuja, 38 no llegaron a
+ * escribir nada.
+ *
+ * Por eso la campaña es un dato —un `tema`— y no tres ediciones a mano
+ * del guion cada vez que Damián cambia de idea. Ya cambió dos veces en
+ * un día: del aniversario a la escucha.
  *
  * Lo que se prueba aquí es que el tema de verdad cambia lo que pregunta
- * el bot, que se queda guardado con la conversación, y que un tema
- * inventado no rompe nada.
+ * el bot, que se queda guardado con la conversación, que los temas
+ * viejos siguen disponibles y que uno inventado no rompe nada.
  *
  *   node pruebas/tema.test.mjs
  */
@@ -31,15 +36,28 @@ const CONV_C = 'cccccccc-3333-4333-8333-cccccccccccc';
 // los turnos caen en el guion de ensayo, que también depende del tema.
 const { env, base } = entorno({ conModelo: false });
 
-titulo('1. Sin tema, el bot pregunta lo de siempre');
+titulo('1. Sin tema, el bot escucha (la campaña del 15 de septiembre)');
 
+/* Damián: «una campaña para que la gente nos cuente qué le gusta, qué
+   podemos mejorar y qué les gustaría encontrar… y esa debe ser la
+   conversación con el bot». Por defecto, no solo por la franja: quien
+   pulsa la burbuja flotante tiene que encontrar lo mismo. */
 const siempre = chat(worker, env, CONV_A);
 const s1 = await siempre.abrir();
 ok('saluda presentándose',
    /Somos Tumbao/.test(s1.respuesta), s1.respuesta.slice(0, 60));
-ok('y arranca con la pregunta de retención',
-   /¿Qué te hizo volver la segunda vez\?/.test(s1.respuesta), s1.respuesta.slice(-60));
+ok('dice para qué pregunta',
+   /mejor espacio/.test(s1.respuesta), s1.respuesta.slice(0, 110));
+ok('y arranca por lo que más le gusta',
+   /¿Qué es lo que más te gusta de Tumbao\?/.test(s1.respuesta), s1.respuesta.slice(-60));
 ok('sin hablar del aniversario', !/aniversario/i.test(s1.respuesta));
+
+const s2 = await siempre.escribir('La energía de las clases');
+ok('la segunda pregunta es qué mejorar',
+   /podemos mejorar/i.test(s2.respuesta), s2.respuesta.slice(0, 90));
+const s3 = await siempre.escribir('El sonido a veces se escucha bajo');
+ok('y la tercera, qué les gustaría encontrar',
+   /te gustaría encontrar/i.test(s3.respuesta), s3.respuesta.slice(0, 110));
 
 titulo('2. Con tema aniversario, pregunta por la fiesta');
 
@@ -65,8 +83,8 @@ const fila = (id) => base.crudo
   .prepare('select tema from conversaciones where id = ?').get(id);
 ok('la del aniversario queda marcada',
    fila(CONV_B).tema === 'aniversario', JSON.stringify(fila(CONV_B)));
-ok('y la de siempre queda como opinión',
-   fila(CONV_A).tema === 'opinion', JSON.stringify(fila(CONV_A)));
+ok('y la de la burbuja queda como escuchamos',
+   fila(CONV_A).tema === 'escuchamos', JSON.stringify(fila(CONV_A)));
 
 // Sin esto, el reporte del lunes mezcla dos preguntas distintas en la
 // misma bolsa y ninguna de las dos se puede leer.
@@ -79,10 +97,19 @@ titulo('4. Un tema inventado no rompe nada');
 
 const raro = chat(worker, env, CONV_C, 'lo-que-sea');
 const r1 = await raro.abrir();
-ok('cae en el de siempre, no en un guion vacío',
-   /¿Qué te hizo volver la segunda vez\?/.test(r1.respuesta), r1.respuesta.slice(-60));
-ok('y se guarda como opinión, no como «lo-que-sea»',
-   fila(CONV_C).tema === 'opinion', JSON.stringify(fila(CONV_C)));
+ok('cae en el de por defecto, no en un guion vacío',
+   /¿Qué es lo que más te gusta de Tumbao\?/.test(r1.respuesta), r1.respuesta.slice(-60));
+ok('y se guarda como escuchamos, no como «lo-que-sea»',
+   fila(CONV_C).tema === 'escuchamos', JSON.stringify(fila(CONV_C)));
+
+/* Las tres preguntas de retención no se borraron: siguen ahí y volver a
+   ellas es una línea. Perderlas habría sido tirar el trabajo del 21 de
+   agosto por un cambio de campaña. */
+const D = 'dddddddd-4444-4444-8444-dddddddddddd';
+const retencion = chat(worker, env, D, 'opinion');
+const d1 = await retencion.abrir();
+ok('el tema de retención sigue disponible',
+   /¿Qué te hizo volver la segunda vez\?/.test(d1.respuesta), d1.respuesta.slice(-60));
 
 titulo('5. La academia está donde está');
 

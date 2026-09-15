@@ -47,36 +47,28 @@ const CONFIG = {
     cuenta:  '91289724619',
     titular: 'Luz Alejandra Santiago García'
   },
-  /* ── LA FRANJA DE ANIVERSARIO ──────────────────────────────────
-     Sale entre el logo y los pasos de la reserva. Es lo primero que ve
-     quien entra a apartar su clase, que es justo la gente a la que hay
-     que contarle que viene algo.
+  /* LA FRANJA DE CAMPAÑA ────────────────────────────────────────
+     Sale entre el logo y los pasos de la reserva: lo primero que ve
+     quien entra a apartar su clase.
 
-     `activo: false` a propósito. Encenderla es publicar en la página
-     que ven las clientas, y eso se hace cuando Damián lo diga, no
-     cuando se suba el código.
+     Es genérica a propósito. Hoy lleva la campaña de escucha; ayer
+     llevó la del aniversario, que Damián apagó el 15 de septiembre.
+     Cambiarla es cambiar estas líneas —el título, el texto y el `tema`
+     del chat—, no reprogramar nada.
 
-     `titulo` y `linea` se cambian sin tocar nada más: la misma franja
-     sirve para la intriga de hoy («se viene algo»), para el anuncio de
-     la semana que viene («ya están las tiqueteras») y para la cuenta
-     atrás del final. Una franja que hay que reprogramar en cada fase se
-     queda en la primera. */
-  ANIVERSARIO: {
+     `tema` decide QUÉ pregunta el bot al abrirse. Va escrito aunque hoy
+     coincida con el tema por defecto, porque lo que tiene que viajar
+     junto es la promesa de la franja y la primera pregunta del chat: si
+     un día cambia el defecto, esta franja seguiría preguntando lo que
+     aquí prometió. */
+  FRANJA: {
     activo:  true,
-    ceja:    'Muy pronto',
-    // La frase la escribió Damián y va tal cual. Es la misma en la
-    // página, en el estado de WhatsApp y en el cartel: una campaña con
-    // tres frases parecidas no se recuerda como una campaña.
-    titulo:  '¡Prepárate porque este aniversario es de todos!',
-    // Y aquí no se anuncia: se pregunta. Que sea «de todos» y que nadie
-    // pueda decir nada sería una frase vacía, y la gente lo nota.
-    linea:   '¿Cómo sería un aniversario genial para ti? Cuéntanos tu idea aquí mismo, en el chat.',
-    boton:   'Cuéntanos tu idea',
-    // `tema` cambia lo que pregunta el bot del chat. Sin esto abriría
-    // preguntando «¿qué te hizo volver la segunda vez?» a quien vino a
-    // proponer para la fiesta, que es la mejor forma de que cierre.
-    tema:    'aniversario',
-    imagen:  'img/aniversario.jpg'
+    ceja:    'Te escuchamos',
+    titulo:  'Ayúdanos a hacer un mejor Tumbao',
+    linea:   'Qué te gusta, qué podemos mejorar y qué te gustaría encontrar aquí. Cuéntanos en el chat — con una frase basta.',
+    boton:   'Cuéntanos',
+    tema:    'escuchamos',
+    imagen:  'img/franja.jpg'
   }
 };
 </script>
@@ -114,34 +106,34 @@ const CONFIG = {
   }
   .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
 
-  /* ── la franja de aniversario ──────────────────────────────────
+  /* ── la franja de campaña ──────────────────────────────────────
      En penumbra y con una sola línea. Va antes de los pasos de la
      reserva porque es lo primero que se mira, y no puede quitarle sitio
      a lo segundo: quien entró a apartar su clase tiene que seguir
      viendo el paso 1 sin bajar. De ahí que sea una franja y no un
      cartel. */
-  .aniv{
+  .franja{
     display:block; text-decoration:none; color:#fff; cursor:pointer;
     background-color:#0B0710; background-size:cover; background-position:center;
     border:1px solid rgba(242,104,42,.45); border-radius:14px;
     padding:1rem 1.1rem; margin:0 0 1.2rem;
   }
-  .aniv-ceja{
+  .franja-ceja{
     display:block; font-size:.66rem; font-weight:700; letter-spacing:.22em;
     text-transform:uppercase; color:#F2682A; margin-bottom:.35rem;
   }
-  .aniv-titulo{display:block; font-size:1.35rem; line-height:1.15; font-weight:800}
-  .aniv-linea{
+  .franja-titulo{display:block; font-size:1.35rem; line-height:1.15; font-weight:800}
+  .franja-linea{
     display:block; font-size:.9rem; line-height:1.4;
     color:rgba(255,255,255,.78); margin-top:.35rem;
   }
-  .aniv-boton{
+  .franja-boton{
     display:inline-block; margin-top:.7rem; font-size:.82rem; font-weight:700;
     color:#F2682A; border-bottom:1px solid currentColor;
   }
   @media (max-width:420px){
-    .aniv{padding:.9rem 1rem}
-    .aniv-titulo{font-size:1.2rem}
+    .franja{padding:.9rem 1rem}
+    .franja-titulo{font-size:1.2rem}
   }
   .tagline b{color:var(--gold);font-weight:600}
 
@@ -473,14 +465,14 @@ const CONFIG = {
     <p class="tagline">Baila pa' sanar · <b>Reserva tu clase</b></p>
   </header>
 
-  <!-- La franja de aniversario. Nace oculta y la enciende CONFIG, no un
+  <!-- La franja de campaña. Nace oculta y la enciende CONFIG, no un
        comentario borrado a mano: así encenderla y apagarla es una línea
        y no una edición del HTML con prisa. -->
-  <a class="aniv" id="aniv" hidden>
-    <span class="aniv-ceja" id="aniv-ceja"></span>
-    <b class="aniv-titulo" id="aniv-titulo"></b>
-    <span class="aniv-linea" id="aniv-linea"></span>
-    <span class="aniv-boton" id="aniv-boton"></span>
+  <a class="franja" id="franja" hidden>
+    <span class="franja-ceja" id="franja-ceja"></span>
+    <b class="franja-titulo" id="franja-titulo"></b>
+    <span class="franja-linea" id="franja-linea"></span>
+    <span class="franja-boton" id="franja-boton"></span>
   </a>
 
   <ol class="pasos" id="pasos">
@@ -737,11 +729,11 @@ const CONFIG = {
      El iframe se crea al abrirlo, no al cargar la página: quien viene a
      reservar no tiene por qué pagar la descarga de un chat que no pidió.
 -->
-<div id="burbuja-pista" hidden>¿Ya vienes a Tumbao? Cuéntanos en una frase cómo te ha ido 💬</div>
-<button id="burbuja" type="button" aria-label="Contarnos cómo te ha ido"
-        title="Contarnos cómo te ha ido">💬</button>
+<div id="burbuja-pista" hidden>¿Qué mejorarías de Tumbao? Cuéntanos en una frase 💬</div>
+<button id="burbuja" type="button" aria-label="Contarnos qué mejoramos"
+        title="Contarnos qué mejoramos">💬</button>
 
-<div id="opina" hidden role="dialog" aria-modal="true" aria-label="Cuéntanos cómo te ha ido">
+<div id="opina" hidden role="dialog" aria-modal="true" aria-label="Cuéntanos cómo hacemos un mejor Tumbao">
   <div class="cab">
     <b>Cuéntanos</b>
     <span class="sp"></span>
@@ -769,7 +761,7 @@ const CONFIG = {
    * hay que cambiar la otra. Se repite a propósito en vez de pedírsela al
    * Worker — una llamada más, y en red lenta, para enseñar una frase que
    * cambia una vez al año. */
-  const PREGUNTA_OPINA = '¿Qué te hizo volver la segunda vez?';
+  const PREGUNTA_OPINA = '¿Qué te gustaría que mejoráramos?';
 
   function ofrecerOpinar(mostrar){
     const caja = $('#ok-opina');
@@ -792,19 +784,19 @@ const CONFIG = {
   $('#f-ig').href = `https://instagram.com/${CONFIG.INSTAGRAM}`;
   $('#f-wa').href = waUrl('Hola Tumbao 👋');
 
-  /* La franja de aniversario. Si está apagada no se pinta y la foto ni
+  /* La franja de campaña. Si está apagada no se pinta y la foto ni
      siquiera se descarga: quien entra a reservar desde datos móviles no
      tiene por qué pagar el peso de una campaña que no está en el aire. */
-  (function franjaAniversario() {
-    const a = CONFIG.ANIVERSARIO;
+  (function franjaDeCampana() {
+    const a = CONFIG.FRANJA;
     if (!a || !a.activo) return;
-    const caja = $('#aniv');
-    $('#aniv-ceja').textContent   = a.ceja || '';
-    $('#aniv-titulo').textContent = a.titulo || '';
-    $('#aniv-linea').textContent  = a.linea || '';
+    const caja = $('#franja');
+    $('#franja-ceja').textContent   = a.ceja || '';
+    $('#franja-titulo').textContent = a.titulo || '';
+    $('#franja-linea').textContent  = a.linea || '';
     if (a.imagen) caja.style.backgroundImage =
       `linear-gradient(90deg, rgba(11,7,16,.94) 0%, rgba(11,7,16,.72) 55%, rgba(11,7,16,.45) 100%), url('${a.imagen}')`;
-    $('#aniv-boton').textContent = a.boton || '';
+    $('#franja-boton').textContent = a.boton || '';
     if (a.tema) {
       // Abre el chat con el tema puesto. No es un enlace a ninguna
       // parte: la conversación pasa aquí mismo, sin sacar a nadie de la
@@ -825,7 +817,7 @@ const CONFIG = {
       // Sin enlace y sin tema no es pulsable: quitarle el href evita que
       // se comporte como algo que lleva a alguna parte.
       caja.removeAttribute('href');
-      $('#aniv-boton').hidden = true;
+      $('#franja-boton').hidden = true;
     }
     caja.hidden = false;
   })();
@@ -1105,11 +1097,11 @@ const CONFIG = {
     const pista = $('#burbuja-pista');
     let montado = false;
 
-    /* `tema` decide QUÉ pregunta el bot. Sin tema hace las tres de
-       siempre —por qué volviste, por qué te irías—; con 'aniversario'
-       pregunta por la fiesta. El iframe se monta una sola vez, así que
-       manda el tema del primer clic: quien entra por el banner del
-       aniversario va a contar su idea, no a que le pregunten otra cosa. */
+    /* `tema` decide QUÉ pregunta el bot: hoy el de por defecto pregunta
+       qué te gusta, qué mejoramos y qué te gustaría encontrar. El iframe
+       se monta UNA sola vez, así que manda el tema del primer clic —
+       quien entra por la franja tiene que encontrar lo que ella le
+       prometió, no otra pregunta. */
     abrirOpina = (tema) => {
       if (!montado) {
         // Se crea al abrirlo. Cargarlo con la página sería descargarle
@@ -1117,9 +1109,7 @@ const CONFIG = {
         const marco = document.createElement('iframe');
         marco.src = `${CONFIG.OPINA}/?burbuja=1` +
           (tema ? `&tema=${encodeURIComponent(tema)}` : '');
-        marco.title = tema === 'aniversario'
-          ? 'Cuéntanos tu idea para el aniversario'
-          : 'Cuéntanos cómo te ha ido';
+        marco.title = 'Cuéntanos cómo hacemos un mejor Tumbao';
         marco.allow = 'microphone';   // las notas de voz
         caja.appendChild(marco);
         montado = true;
