@@ -1,0 +1,4 @@
+# Las piezas se sacan con `node sacar.mjs`. Guardar el PNG además del
+# código sería tener dos verdades: el día que cambie la frase, una de las
+# dos se queda vieja sin avisar.
+marca-*.png

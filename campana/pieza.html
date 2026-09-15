@@ -1,0 +1,132 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tumbao · expectativa</title>
+<style>
+  @font-face{font-family:Fredoka;src:url(fuentes/Fredoka-400.ttf);font-weight:400}
+  @font-face{font-family:Fredoka;src:url(fuentes/Fredoka-500.ttf);font-weight:500}
+  @font-face{font-family:Fredoka;src:url(fuentes/Fredoka-600.ttf);font-weight:600}
+  @font-face{font-family:Fredoka;src:url(fuentes/Fredoka-700.ttf);font-weight:700}
+  @font-face{font-family:Caveat;src:url(fuentes/Caveat-600.ttf);font-weight:600}
+  @font-face{font-family:Caveat;src:url(fuentes/Caveat-700.ttf);font-weight:700}
+
+  /* LOS COLORES SON LOS DE LA MARCA, no una paleta bonita que se le
+     parezca. Salen del logo y del perfil: el lila del fondo de la foto de
+     perfil, el naranja del logotipo y el magenta de «Baila pa' sanar». */
+  :root{
+    --lila:#EADCFA;        /* el fondo de siempre */
+    --naranja:#EE6B31;     /* el logotipo */
+    --magenta:#E8226A;     /* «Baila pa' sanar» */
+    --morado:#3B2258;      /* para leer, cuando el naranja no contrasta */
+    --amarillo:#F7DE4A;    /* el del subrayado, el único adorno que queda */
+    --margen:96px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;overflow:hidden}
+  body{background:var(--lila);color:var(--morado);
+       font-family:Fredoka,sans-serif;-webkit-font-smoothing:antialiased;
+       position:relative}
+
+  /* La foto, cuando la pieza la lleva. Va arriba y a sangre, con el lila
+     comiéndosela por abajo: así el texto siempre cae sobre color plano y
+     no hay que rezar para que se lea. */
+  #foto{position:absolute;left:0;right:0;top:0;height:900px;
+        background-size:cover;background-position:center}
+  #fundido{position:absolute;left:0;right:0;top:560px;height:360px;
+           background:linear-gradient(to bottom,
+             rgba(234,220,250,0) 0%, rgba(234,220,250,.86) 60%, var(--lila) 100%)}
+
+  .zona{position:absolute;left:var(--margen);right:var(--margen)}
+  #marca{top:250px}
+  /* El bloque de la frase se centra ÓPTICAMENTE, un poco por encima del
+     centro geométrico: centrado exacto, un texto vertical siempre parece
+     caído. Y el @ va pegado abajo, no colgando de la frase, para que el
+     hueco quede repartido y no todo en un sitio. */
+  #cuerpo{top:50%;transform:translateY(-54%)}
+  #arroba{bottom:300px}
+
+  /* CON FOTO LA RETÍCULA CAMBIA, y cambia aquí y no con estilos puestos a
+     mano desde el JS. La versión anterior empujaba tres bloques por
+     separado y se montaban unos encima de otros: la marca acababa
+     escrita sobre el titular. Con foto hay UN solo bloque que fluye
+     —marca, frase, trazo, frase a mano— y así no hay nada que cuadrar. */
+  body.confoto #marca{position:static;margin-bottom:34px}
+  body.confoto #cuerpo{top:990px;bottom:auto;transform:none}
+  body.confoto h1{font-size:100px;margin-bottom:26px}
+  body.confoto .trazo{height:24px;margin:-4px 0 30px}
+  body.confoto .abajo{font-size:50px}
+
+  /* El logotipo escrito, no la imagen: así la pieza pesa nada y el
+     tamaño se elige, no se hereda de un PNG. */
+  .logo{font-size:64px;font-weight:600;color:var(--naranja);letter-spacing:.01em;
+        line-height:1}
+  .lema{font-family:Caveat,cursive;font-size:44px;font-weight:700;
+        color:var(--magenta);margin-top:-6px}
+
+  h1{font-size:150px;font-weight:600;line-height:.98;letter-spacing:-.01em;
+     color:var(--naranja);margin-bottom:34px}
+  h1 em{font-style:normal;color:var(--magenta)}
+
+  /* El subrayado a mano. Es el ÚNICO adorno que se deja: es la firma de
+     Tumbao —está en todas sus piezas— y sin él esto podría ser de
+     cualquiera. Un trazo, no un montón de garabatos. */
+  .trazo{display:block;width:100%;height:30px;margin:-6px 0 40px}
+  .trazo path{fill:none;stroke:var(--amarillo);stroke-width:14;
+              stroke-linecap:round}
+
+  .abajo{font-family:Caveat,cursive;font-size:56px;font-weight:700;
+         color:var(--magenta);line-height:1.15}
+  .arroba{font-size:34px;font-weight:500;color:var(--morado);opacity:.62}
+</style>
+
+<div id="foto" hidden></div>
+<div id="fundido" hidden></div>
+
+<div class="zona" id="marca">
+  <div class="logo">TUMBAO</div>
+  <div class="lema">Baila pa' sanar</div>
+</div>
+
+<div class="zona" id="cuerpo">
+  <h1 id="titular"></h1>
+  <svg class="trazo" id="trazo" viewBox="0 0 600 26" preserveAspectRatio="none" hidden>
+    <path d="M6 18 C 120 6, 240 22, 360 11 S 520 6, 594 15"/>
+  </svg>
+  <div class="abajo" id="abajo"></div>
+</div>
+
+<div class="zona arroba" id="arroba">@tumbao.bca</div>
+
+<script>
+/* LA FRASE DE LA CAMPAÑA vive en un solo sitio. Cambiarla es cambiar esta
+   línea y volver a sacar las tres piezas: no hay que retocar nada a mano
+   en ninguna imagen. */
+const FRASE = ['CRECER', 'TAMBIÉN', '<em>SE BAILA</em>'];
+
+const PIEZAS = {
+  p1: { titular: FRASE, trazo: true, abajo: '' },
+  p2: { titular: FRASE, trazo: true, abajo: 'se vienen sorpresas…', foto: 'neon.jpg' },
+  p3: { titular: ['UN AÑO', 'DE <em>ESTO</em>'], trazo: true,
+        abajo: 'y apenas vamos a empezar', foto: 'neon.jpg' }
+};
+
+function pintar(id) {
+  const p = PIEZAS[id];
+  document.getElementById('titular').innerHTML = p.titular.join('<br>');
+  document.getElementById('trazo').hidden = !p.trazo;
+  document.getElementById('abajo').textContent = p.abajo || '';
+  document.getElementById('abajo').hidden = !p.abajo;
+  if (p.foto) {
+    document.body.classList.add('confoto');
+    const f = document.getElementById('foto');
+    f.style.backgroundImage = 'url(' + p.foto + ')';
+    f.hidden = false;
+    document.getElementById('fundido').hidden = false;
+    // La marca se mete DENTRO del bloque que fluye, para que el titular
+    // empiece donde ella termina y no donde diga un número.
+    const c = document.getElementById('cuerpo');
+    c.insertBefore(document.getElementById('marca'), c.firstChild);
+  }
+}
+window.pintar = pintar;
+pintar(new URLSearchParams(location.search).get('p') || 'p1');
+</script>

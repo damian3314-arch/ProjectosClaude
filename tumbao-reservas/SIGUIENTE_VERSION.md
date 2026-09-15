@@ -381,3 +381,29 @@ Conviene decirlo claro para no construir con una expectativa falsa.
    trabajo es otro.
 3. Entonces sí, RLS y las dos lecturas.
 
+
+---
+
+## Apuntado y sin empezar — la lista de la camiseta del aniversario
+
+Damián, 15 de septiembre: «se me acaba de ocurrir una lista de personas
+que quieran la camiseta para saber, bueno eso es aparte solo lo quiero
+dejar apuntado».
+
+Queda anotado aquí y **no se construye todavía**. Lo que haría falta el
+día que se haga:
+
+- Una tabla `camiseta_interes` (nombre, celular, talla, cuándo), o una
+  columna en algo que ya exista si resulta que no hace falta tabla nueva.
+- Un formulario, que puede ser una sección más de la página de
+  mensualidad —ya tiene el patrón de recoger nombre y celular con
+  autorización de datos— o un enlace aparte para mandar por WhatsApp.
+- Una pestaña en el panel para verla y cerrar cada renglón.
+
+**Lo que hay que decidir antes de escribir una línea:** si se pide talla.
+Pedirla convierte la lista en un pedido a la fábrica y ahorra una ronda de
+preguntas por WhatsApp; no pedirla baja la fricción y recoge más nombres.
+No es una decisión técnica.
+
+Y la regla de la casa aplica igual: esto no se construye hasta que haya
+gente preguntando por la camiseta. Una lista vacía no dice nada.
