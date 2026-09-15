@@ -62,18 +62,20 @@ const CONFIG = {
      atrás del final. Una franja que hay que reprogramar en cada fase se
      queda en la primera. */
   ANIVERSARIO: {
-    activo:  false,
-    ceja:    'Se vienen sorpresas',
-    // La frase de la campaña. Es hermana de «Baila pa' sanar» a
-    // propósito: misma voz, misma forma. Lo que dice —que aquí se crece
-    // y que crecer se disfruta— es lo que Damián pidió que definiera la
-    // campaña, y sale igual en la página, en el estado y en el cartel.
-    titulo:  'Crecer también se baila',
-    linea:   'Estamos preparando algo para nuestro aniversario. Muy pronto te contamos.',
-    // Sin enlace, la franja no es pulsable. Con enlace, lleva a donde
-    // se cuente la historia — hoy, el Instagram.
-    enlace:  'https://instagram.com/tumbao.bca',
-    boton:   'Míralo en Instagram',
+    activo:  true,
+    ceja:    'Muy pronto',
+    // La frase la escribió Damián y va tal cual. Es la misma en la
+    // página, en el estado de WhatsApp y en el cartel: una campaña con
+    // tres frases parecidas no se recuerda como una campaña.
+    titulo:  '¡Prepárate porque este aniversario es de todos!',
+    // Y aquí no se anuncia: se pregunta. Que sea «de todos» y que nadie
+    // pueda decir nada sería una frase vacía, y la gente lo nota.
+    linea:   '¿Cómo sería un aniversario genial para ti? Cuéntanos tu idea aquí mismo, en el chat.',
+    boton:   'Cuéntanos tu idea',
+    // `tema` cambia lo que pregunta el bot del chat. Sin esto abriría
+    // preguntando «¿qué te hizo volver la segunda vez?» a quien vino a
+    // proponer para la fiesta, que es la mejor forma de que cierre.
+    tema:    'aniversario',
     imagen:  'img/aniversario.jpg'
   }
 };
@@ -119,7 +121,7 @@ const CONFIG = {
      viendo el paso 1 sin bajar. De ahí que sea una franja y no un
      cartel. */
   .aniv{
-    display:block; text-decoration:none; color:#fff;
+    display:block; text-decoration:none; color:#fff; cursor:pointer;
     background-color:#0B0710; background-size:cover; background-position:center;
     border:1px solid rgba(242,104,42,.45); border-radius:14px;
     padding:1rem 1.1rem; margin:0 0 1.2rem;
@@ -802,14 +804,26 @@ const CONFIG = {
     $('#aniv-linea').textContent  = a.linea || '';
     if (a.imagen) caja.style.backgroundImage =
       `linear-gradient(90deg, rgba(11,7,16,.94) 0%, rgba(11,7,16,.72) 55%, rgba(11,7,16,.45) 100%), url('${a.imagen}')`;
-    if (a.enlace) {
+    $('#aniv-boton').textContent = a.boton || '';
+    if (a.tema) {
+      // Abre el chat con el tema puesto. No es un enlace a ninguna
+      // parte: la conversación pasa aquí mismo, sin sacar a nadie de la
+      // página que vino a usar.
+      caja.removeAttribute('href');
+      caja.setAttribute('role', 'button');
+      caja.tabIndex = 0;
+      const ir = (ev) => { ev.preventDefault(); abrirOpina(a.tema); };
+      caja.addEventListener('click', ir);
+      caja.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') ir(ev);
+      });
+    } else if (a.enlace) {
       caja.href = a.enlace;
       caja.target = '_blank';
       caja.rel = 'noopener';
-      $('#aniv-boton').textContent = a.boton || '';
     } else {
-      // Sin enlace no es un enlace: quitarle el href evita que se
-      // comporte como pulsable y no lleve a ninguna parte.
+      // Sin enlace y sin tema no es pulsable: quitarle el href evita que
+      // se comporte como algo que lleva a alguna parte.
       caja.removeAttribute('href');
       $('#aniv-boton').hidden = true;
     }
@@ -1091,13 +1105,21 @@ const CONFIG = {
     const pista = $('#burbuja-pista');
     let montado = false;
 
-    abrirOpina = () => {
+    /* `tema` decide QUÉ pregunta el bot. Sin tema hace las tres de
+       siempre —por qué volviste, por qué te irías—; con 'aniversario'
+       pregunta por la fiesta. El iframe se monta una sola vez, así que
+       manda el tema del primer clic: quien entra por el banner del
+       aniversario va a contar su idea, no a que le pregunten otra cosa. */
+    abrirOpina = (tema) => {
       if (!montado) {
         // Se crea al abrirlo. Cargarlo con la página sería descargarle
         // un chat entero a quien solo vino a mirar horarios.
         const marco = document.createElement('iframe');
-        marco.src = `${CONFIG.OPINA}/?burbuja=1`;
-        marco.title = 'Cuéntanos cómo te ha ido';
+        marco.src = `${CONFIG.OPINA}/?burbuja=1` +
+          (tema ? `&tema=${encodeURIComponent(tema)}` : '');
+        marco.title = tema === 'aniversario'
+          ? 'Cuéntanos tu idea para el aniversario'
+          : 'Cuéntanos cómo te ha ido';
         marco.allow = 'microphone';   // las notas de voz
         caja.appendChild(marco);
         montado = true;
@@ -1113,9 +1135,9 @@ const CONFIG = {
     };
     const cerrar = () => { caja.hidden = true; bot.hidden = false; };
 
-    bot.addEventListener('click', abrirOpina);
+    bot.addEventListener('click', () => abrirOpina());
     $('#opina-cerrar').addEventListener('click', cerrar);
-    $('#ok-opina-ir').addEventListener('click', abrirOpina);
+    $('#ok-opina-ir').addEventListener('click', () => abrirOpina());
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !caja.hidden) cerrar();
     });

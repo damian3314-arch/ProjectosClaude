@@ -142,20 +142,20 @@ export async function abrirLeer(worker, env, token) {
  * navegador. Lo importante es lo que NO hace: no llama a /api/cerrar
  * salvo que se le pida. Cerrar la pestaña es, exactamente, dejar de
  * llamar. */
-export function chat(worker, env, id = CONV) {
+export function chat(worker, env, id = CONV, tema) {
   const historia = [];
   return {
     id,
     historia,
     async abrir() {
       const d = await postear(worker, env, '/api/mensaje',
-        { conversacion: id, historia, texto: '' });
+        { conversacion: id, historia, texto: '', tema });
       historia.push({ role: 'assistant', content: d.cuerpo.respuesta });
       return d.cuerpo;
     },
     async escribir(texto) {
       const d = await postear(worker, env, '/api/mensaje',
-        { conversacion: id, historia, texto, medio: 'texto' });
+        { conversacion: id, historia, texto, medio: 'texto', tema });
       historia.push({ role: 'user', content: texto });
       historia.push({ role: 'assistant', content: d.cuerpo.respuesta });
       return d.cuerpo;

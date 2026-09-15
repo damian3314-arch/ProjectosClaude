@@ -161,9 +161,19 @@
 const $ = s => document.querySelector(s);
 const hilo = $('#hilo');
 
+// De qué va esta conversación. Lo dice quien abre el chat: la burbuja
+// del aniversario manda ?tema=aniversario y el bot pregunta por la
+// fiesta en vez de por qué volvió.
+const TEMA = (new URLSearchParams(location.search).get('tema') || '').trim();
+
 // Un id por conversación, en el navegador. Si recarga, sigue la misma.
+//
+// El tema va en la LLAVE a propósito: quien ya opinó en agosto y hoy
+// entra a contar su idea del aniversario tiene que empezar una
+// conversación nueva. Con una sola llave, su idea caería dentro de una
+// charla ya cerrada y no saldría en ningún reporte.
 const CONV = (() => {
-  const k = 'tumbao_opina_id';
+  const k = TEMA ? 'tumbao_opina_id_' + TEMA : 'tumbao_opina_id';
   let v = null;
   try { v = localStorage.getItem(k); } catch (_) {}
   if (!v) {
@@ -224,7 +234,7 @@ async function turno(texto, medio){
   if (texto) burbuja('yo', texto, medio);
   pensando(true);
   try {
-    const d = await api('/api/mensaje', { conversacion: CONV, historia, texto, medio });
+    const d = await api('/api/mensaje', { conversacion: CONV, historia, texto, medio, tema: TEMA });
     pensando(false);
     if (texto) historia.push({ role:'user', content: texto });
     historia.push({ role:'assistant', content: d.respuesta });

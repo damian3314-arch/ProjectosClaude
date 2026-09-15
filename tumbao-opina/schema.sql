@@ -56,3 +56,11 @@ create table if not exists mensajes (
 
 create index if not exists mensajes_por_conversacion
   on mensajes (conversacion, id);
+
+-- De qué va la conversación: 'opinion' (las tres preguntas de siempre) o
+-- 'aniversario' (las ideas para la fiesta). Se guarda en el primer turno
+-- y no se vuelve a tocar.
+--
+-- Sin esto, las ideas de la campaña y las opiniones de retención caen en
+-- la misma bolsa y el reporte del lunes mezcla dos preguntas distintas.
+alter table conversaciones add column tema text;

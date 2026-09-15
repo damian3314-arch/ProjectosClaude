@@ -31,11 +31,62 @@ const ahora = () => new Date().toISOString();
    El guion. Esto es el producto: el resto es plomería.
    ───────────────────────────────────────────────────────────── */
 
-const LAS_TRES = [
-  '¿Qué te hizo volver la segunda vez?',
-  'Si mañana dejaras de venir a Tumbao, ¿cuál sería la razón más probable?',
-  '¿Qué le dirías a alguien que está pensando en venir por primera vez?',
-];
+/* ─────────────────────────────────────────────────────────────
+   DOS CONVERSACIONES DISTINTAS, UNA SOLA MÁQUINA
+
+   El bot nació para una cosa: entender por qué la gente vuelve y por qué
+   se iría. Esas tres preguntas siguen siendo las de siempre y son el
+   tema por defecto.
+
+   Para el aniversario hace falta preguntar otra cosa —«¿cómo sería un
+   aniversario genial para ti?»— y no se puede colgar de las mismas tres:
+   quien entra desde el banner del aniversario esperando contar su idea y
+   recibe «¿qué te hizo volver la segunda vez?» cierra la pestaña. Ya
+   pasa: de 53 personas que abrieron la burbuja, 38 no escribieron nada.
+
+   Así que el tema viaja en la URL (`?tema=aniversario`), se guarda con la
+   conversación y decide el saludo y las tres preguntas. Todo lo demás
+   —la ficha, el cierre, el barrido, el reporte— es el mismo código. Un
+   bot aparte para la campaña habría sido dos bots que se despegan. */
+const TEMAS = {
+  opinion: {
+    saludo:
+      '¡Hola! Somos Tumbao 🧡 Queremos mejorar un par de cosas de la ' +
+      'academia y preferimos preguntarte a ti antes que adivinar. Lo que ' +
+      'escribas aquí lo leemos nosotras, no un robot, y con una frase ' +
+      'basta.',
+    trabajo: 'Estás recogiendo opiniones de gente que ya viene a clases.',
+    preguntas: [
+      '¿Qué te hizo volver la segunda vez?',
+      'Si mañana dejaras de venir a Tumbao, ¿cuál sería la razón más probable?',
+      '¿Qué le dirías a alguien que está pensando en venir por primera vez?',
+    ],
+  },
+  aniversario: {
+    // Arranca con la pregunta abierta y sin pedir nada: quien llega aquí
+    // viene de un banner que le dijo «cuéntanos tu idea», no de una
+    // encuesta. Pedirle datos primero es la forma más rápida de perderlo.
+    saludo:
+      '¡Hola! Somos Tumbao 🧡 Se viene nuestro aniversario y queremos que ' +
+      'sea de todos, así que lo estamos armando con ustedes. Cuéntanos lo ' +
+      'que se te ocurra, aunque sea una idea suelta.',
+    trabajo:
+      'Estás recogiendo ideas para la fiesta de aniversario de la ' +
+      'academia. La gente que escribe aquí ya viene a clases y está ' +
+      'proponiendo, no quejándose: recibe cada idea con ganas.',
+    preguntas: [
+      '¿Cómo sería un aniversario genial para ti?',
+      '¿Qué es lo que no puede faltar ese día?',
+      '¿Con quién te gustaría venir?',
+    ],
+  },
+};
+
+const TEMA_POR_DEFECTO = 'opinion';
+// Un tema que no existe no puede romper la conversación ni elegir por su
+// cuenta: cae en el de siempre.
+const elTema = (t) => TEMAS[String(t || '')] ? String(t) : TEMA_POR_DEFECTO;
+const guionDe = (t) => TEMAS[elTema(t)];
 
 // El primer mensaje siempre es el mismo, así que no se le pide a ningún
 // modelo. Tres razones: la persona abre un enlace de WhatsApp sin saber
@@ -76,17 +127,22 @@ const LAS_TRES = [
 //   3. cuánto cuesta — «con una frase basta», dicho antes de la
 //      pregunta, no después.
 //
-// Y termina en LAS_TRES[0], que se contesta en tres palabras. Por eso el
+// Y termina en la primera pregunta del tema, que se contesta en tres
+// palabras. Por eso el
 // saludo y la primera pregunta del guion no pueden separarse.
-const SALUDO =
-  '¡Hola! Somos Tumbao 🧡 Queremos mejorar un par de cosas de la ' +
-  'academia y preferimos preguntarte a ti antes que adivinar. Lo que ' +
-  'escribas aquí lo leemos nosotras, no un robot, y con una frase ' +
-  'basta.\n\n' + LAS_TRES[0];
+const saludoDe = (tema) => {
+  const g = guionDe(tema);
+  return `${g.saludo}\n\n${g.preguntas[0]}`;
+};
 
-const INSTRUCCIONES = `
-Eres el asistente de Tumbao, una academia de baile en Bucaramanga,
-Colombia. Estás recogiendo opiniones de gente que ya viene a clases.
+// Barrancabermeja, no la otra. Estuvo mal escrito desde el primer
+// día: el bot le decía a las clientas que la academia está en otra
+// ciudad, a 120 km de donde bailan.
+const instruccionesDe = (tema) => {
+  const g = guionDe(tema);
+  return `
+Eres el asistente de Tumbao, una academia de baile en Barrancabermeja,
+Colombia. ${g.trabajo}
 
 TU TRABAJO
 Llevar una conversación corta y cálida en la que la persona te cuente
@@ -101,9 +157,9 @@ Todavía no sabes cómo se llama, y está bien: el nombre se pide al final.
 No lo preguntes antes ni lo inventes.
 
 LAS TRES PREGUNTAS, EN ESTE ORDEN
-1. ${LAS_TRES[0]}   ← ya la hiciste tú en el saludo
-2. ${LAS_TRES[1]}
-3. ${LAS_TRES[2]}
+1. ${g.preguntas[0]}   ← ya la hiciste tú en el saludo
+2. ${g.preguntas[1]}
+3. ${g.preguntas[2]}
 
 Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
 mira la conversación y pregúntate cuál de las tres falta. Si la persona
@@ -150,7 +206,7 @@ CÓMO CONVERSAR
   contesta corto sigo con la otra)" ni "ahora le pregunto lo último".
   La persona ve todo lo que escribes.
 - Mensajes cortos: dos o tres líneas. Esto se lee en un celular.
-- Tutea. Habla como se habla en Bucaramanga, sin ser caricatura. Nada
+- Tutea. Habla como se habla en Barrancabermeja, sin ser caricatura. Nada
   de "¡Qué chévere parcero!" forzado.
 - Escribe en español de Colombia. Nada de "feedback", "tips", "staff"
   ni "apreciar tu input": se dice "lo que nos contaste", "consejos",
@@ -196,6 +252,7 @@ REGLAS DE [FIN], QUE NO SE ROMPEN
 - Nunca [FIN] antes de tener las tres respuestas.
 - Nunca [FIN] en el mismo mensaje donde te contaron algo delicado.
 `.trim();
+};
 
 /* ─────────────────────────────────────────────────────────────
    Que no le pase por encima a lo que la persona escribió
@@ -267,12 +324,12 @@ const ACUSE = 'Gracias por contarme.';
  *
  * Solo mira el arranque: un mensaje que empieza con palabras ya trae su
  * acuse, y meterle otro encima lo volvería redundante. */
-export function conAcuse(respuesta) {
+export function conAcuse(respuesta, tema) {
   const r = String(respuesta || '').trim();
   if (!r) return r;
   const primera = r.split('\n')[0].trim();
   const pelada = primera.startsWith('¿') ||
-    LAS_TRES.some((q) => primera.startsWith(q.slice(0, 22)));
+    guionDe(tema).preguntas.some((q) => primera.startsWith(q.slice(0, 22)));
   return pelada ? `${ACUSE}\n\n${r}` : r;
 }
 
@@ -322,11 +379,12 @@ const hayCF = (env) => Boolean(env.AI && typeof env.AI.run === 'function');
 // avanzar cuando la persona apenas saludó—. Va pegada al system y no
 // como un mensaje más de la conversación: si entrara en la historia
 // quedaría escrito ahí algo que nadie dijo.
-async function conversar(env, historia, nota = '') {
-  const guion = nota ? `${INSTRUCCIONES}\n\n${nota}` : INSTRUCCIONES;
+async function conversar(env, historia, nota = '', tema) {
+  const base = instruccionesDe(tema);
+  const guion = nota ? `${base}\n\n${nota}` : base;
 
   if (!env.OPENAI_API_KEY) {
-    if (!hayCF(env)) return ensayo(historia);
+    if (!hayCF(env)) return ensayo(historia, tema);
     const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
       messages: [{ role: 'system', content: guion }, ...historia],
       max_tokens: 220,
@@ -365,13 +423,14 @@ async function conversar(env, historia, nota = '') {
 // Y los saludos no cuentan como respuesta, igual que en el camino con
 // modelo: si lo único que llegó fue "buenas tardes", se vuelve a poner
 // la pregunta 1, no la 2.
-function ensayo(historia) {
+function ensayo(historia, tema) {
+  const preg = guionDe(tema).preguntas;
   const dichas = historia.filter(
     (m) => m.role === 'user' && !esArranque(m.content)).length;
   const guion = [
-    `¡Hola! Qué bueno leerte. Cuéntame con una frase: ${LAS_TRES[0]}`,
-    `Qué bueno saberlo. Ahora una más difícil: ${LAS_TRES[1]}`,
-    `Gracias por la franqueza. Última: ${LAS_TRES[2]}`,
+    `¡Hola! Qué bueno leerte. Cuéntame con una frase: ${preg[0]}`,
+    `Qué bueno saberlo. Ahora una más: ${preg[1]}`,
+    `Gracias por contarme. Última: ${preg[2]}`,
     'Mil gracias. Si quieres agregar algo, mándame una nota de voz.\n\n' +
       'Y si nos dejas tu nombre y tu celular te podemos responder. Es ' +
       'opcional, y solo para eso.',
@@ -700,11 +759,11 @@ async function guardarMensaje(env, conv, de, texto, medio) {
   ).bind(conv, de, texto, medio || 'texto', ahora()).run();
 }
 
-async function asegurarConversacion(env, conv) {
+async function asegurarConversacion(env, conv, tema) {
   await env.DB.prepare(
-    `insert into conversaciones (id, empezada_at) values (?1, ?2)
+    `insert into conversaciones (id, empezada_at, tema) values (?1, ?2, ?3)
      on conflict(id) do nothing`
-  ).bind(conv, ahora()).run();
+  ).bind(conv, ahora(), elTema(tema)).run();
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -924,7 +983,7 @@ export async function completarAbandonadas(env, limite = 8) {
 const MINIMO_PARA_ANALIZAR = 2;
 
 const ANALIZAR = `
-Eres el analista de Tumbao, una academia de baile en Bucaramanga,
+Eres el analista de Tumbao, una academia de baile en Barrancabermeja,
 Colombia. Te llega lo que los clientes contaron por el chat de
 opiniones y sacas las TRES cosas que la dueña tiene que saber.
 
@@ -1278,7 +1337,12 @@ export default {
         // el recorte, o sea que una conversación larga se habría
         // guardado a medias.
         const entera = Array.isArray(b.historia) ? b.historia.slice(0, 200) : [];
-        await asegurarConversacion(env, conv);
+        // El tema lo manda la página según de dónde venga la persona. Se
+        // guarda con la conversación en el PRIMER turno y no se vuelve a
+        // tocar: si alguien cambiara de tema a mitad, el reporte contaría
+        // la misma charla en dos campañas.
+        const tema = elTema(b.tema);
+        await asegurarConversacion(env, conv, tema);
 
         const suyo = String(b.texto || '').slice(0, 4000);
         if (suyo) {
@@ -1297,8 +1361,8 @@ export default {
         // así la persona que abre el enlace sabe de una quién le habla y
         // para qué, en vez de recibir un "Hola, ¿cómo te llamas?" pelado.
         const cruda = entera.length === 0
-          ? SALUDO
-          : await conversar(env, entera.slice(-24), arranque ? NOTA_ESCUCHA : '');
+          ? saludoDe(tema)
+          : await conversar(env, entera.slice(-24), arranque ? NOTA_ESCUCHA : '', tema);
 
         // Red de seguridad contra el cierre prematuro. Un modelo puede
         // querer despedirse justo cuando la persona acaba de contar algo
@@ -1320,7 +1384,7 @@ export default {
         // "hola" suena a máquina, que es lo contrario de lo que busca.
         const respuesta = arranque || !suyo
           ? cruda.replace('[FIN]', '').trim()
-          : conAcuse(cruda.replace('[FIN]', '').trim());
+          : conAcuse(cruda.replace('[FIN]', '').trim(), tema);
 
         await guardarMensaje(env, conv, 'bot', respuesta, 'texto');
         entera.push({ role: 'assistant', content: respuesta });
