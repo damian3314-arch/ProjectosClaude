@@ -91,18 +91,96 @@ const CONFIG = {
   #entrar .btn{width:100%;margin-top:.9rem}
 
   /* ---------- pestañas ---------- */
-  .tabs{display:flex;gap:.4rem;margin:0 0 1.3rem;border-bottom:1px solid var(--line)}
-  .tab{
-    background:none;border:0;border-bottom:2px solid transparent;color:var(--tx-3);
-    padding:.6rem .9rem;font-size:.95rem;margin-bottom:-1px;
+  /* ---------- la navegación ----------
+     UNA sola nav para las dos formas. En el escritorio es una columna a
+     la izquierda con los grupos escritos; en el celular, la misma lista
+     se tumba y se pega abajo como la barra de una app.
+
+     Dos navegaciones distintas habrían sido dos sitios donde añadir cada
+     sección nueva, y el día que se olvide uno, media app desaparece en
+     una de las dos pantallas. */
+  .lateral{display:flex;flex-direction:column;gap:.15rem}
+  .lat-grupo{
+    font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--tx-3);padding:.9rem .75rem .3rem;
   }
-  .tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--hot);font-weight:600}
+  .lat-grupo:first-child{padding-top:.2rem}
+  .tab{
+    position:relative;   /* el globo del celular se cuelga de aquí */
+    display:flex;align-items:center;gap:.6rem;width:100%;
+    background:none;border:0;border-radius:var(--r);color:var(--tx-2);
+    padding:.55rem .75rem;font-size:.95rem;text-align:left;
+  }
+  .tab .ic{
+    flex:0 0 1.35rem;text-align:center;font-size:.95rem;
+    color:var(--tx-3);line-height:1;
+  }
+  .tab:hover{background:var(--bg-2);color:var(--tx)}
+  .tab[aria-selected="true"]{background:var(--bg-2);color:var(--tx);font-weight:600}
+  .tab[aria-selected="true"] .ic{color:var(--hot)}
   .tab .globo{
-    display:inline-block;min-width:1.3rem;padding:0 .35rem;margin-left:.4rem;
+    display:inline-block;min-width:1.3rem;padding:0 .35rem;margin-left:auto;
     background:var(--hot);color:#2a1206;border-radius:99px;
     font-size:.72rem;font-weight:700;line-height:1.3rem;text-align:center;
   }
   .tab .globo:empty,.tab .globo[hidden]{display:none}
+
+  /* Dónde estoy. Con nueve secciones, sin un título el panel se ve igual
+     desde cualquiera de ellas. */
+  .donde{
+    font-size:1.35rem;font-weight:800;letter-spacing:-.02em;
+    margin:0 0 1.1rem;
+  }
+
+  /* ---------- escritorio: la columna a un lado ---------- */
+  @media (min-width:900px){
+    /* La columna va fija y el contenido se aparta con un padding: así no
+       hay que envolver los ocho paneles en un div nuevo, que es justo
+       donde se rompen estas reestructuraciones. */
+    .lateral{
+      position:fixed;left:0;top:0;bottom:0;width:13rem;z-index:5;
+      padding:1rem .6rem;overflow-y:auto;
+      background:var(--bg-2);border-right:1px solid var(--line);
+    }
+    /* La cabecera también se aparta: vive FUERA de #app —está antes,
+       porque también se ve en la pantalla de entrar— y sin esto la
+       columna se le montaba encima y se comía el logotipo. */
+    #app, body > header{padding-left:14.6rem}
+    /* Una línea de texto de 1.200px no se lee: se barre. */
+    #app{max-width:80rem}
+    .tab:hover,.tab[aria-selected="true"]{background:var(--bg-3)}
+    /* El selector de mes no necesita el ancho entero de la pantalla. */
+    .tes-mes{max-width:14rem}
+  }
+
+  /* ---------- celular: la barra de abajo ---------- */
+  @media (max-width:899px){
+    .lateral{
+      position:fixed;left:0;right:0;bottom:0;z-index:30;
+      flex-direction:row;gap:0;padding:.3rem .4rem calc(.3rem + env(safe-area-inset-bottom));
+      background:var(--bg-2);border-top:1px solid var(--line);
+      overflow-x:auto;scrollbar-width:none;
+    }
+    .lateral::-webkit-scrollbar{display:none}
+    /* Los rótulos de grupo no caben en una barra de abajo, y tampoco
+       hacen falta: ahí lo que se lee es el icono. */
+    .lat-grupo{display:none}
+    .tab{
+      flex:0 0 auto;flex-direction:column;gap:.15rem;width:auto;min-width:4.6rem;
+      padding:.4rem .5rem;font-size:.66rem;text-align:center;line-height:1.15;
+    }
+    .tab .ic{flex:none;font-size:1.15rem}
+    .tab .globo{
+      position:absolute;transform:translate(1.1rem,-.2rem);margin:0;
+      min-width:1.1rem;font-size:.62rem;line-height:1.1rem;
+    }
+    .tab[aria-selected="true"]{background:none}
+    .tab[aria-selected="true"] .ic{color:var(--hot)}
+    /* El contenido tiene que poder llegar hasta el final sin quedarse
+       debajo de la barra. */
+    #app{padding-bottom:5rem}
+    .donde{font-size:1.2rem}
+  }
 
   .panel{display:none}
   .panel.on{display:block}
@@ -508,6 +586,93 @@ const CONFIG = {
   .ficha .renglones.sep{
     margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--line);
   }
+
+
+  /* ---------- tesorería ----------
+     Las tres cifras de arriba son la respuesta corta —entró, salió,
+     queda— y las otras dos secciones son el porqué. La utilidad se pinta
+     en verde o en rojo porque es el único número de todo el panel donde
+     el signo cambia la decisión del día. */
+  .tes-mes{
+    background:var(--bg-3);color:var(--tx);border:1px solid var(--line);
+    border-radius:var(--r);padding:.35rem .5rem;font:inherit;font-size:.85rem;
+  }
+  .ficha .gordo.bueno{color:var(--ok)}
+  .ficha .gordo.malo{color:var(--bad)}
+
+  /* Qué revisar. En oro y no en rojo: no son errores, son cosas que hay
+     que mirar antes de creerse el número de arriba. */
+  .revisar{
+    background:var(--bg-2);border:1px solid var(--gold);border-radius:var(--r);
+    padding:.8rem .9rem;margin:1.1rem 0;
+  }
+  .revisar h3{
+    font-size:.7rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 .6rem;
+  }
+  .revisar ul{list-style:none;margin:0;padding:0;display:grid;gap:.7rem}
+  .revisar li{display:grid;gap:.15rem}
+  .revisar .qué{font-weight:600;font-size:.92rem}
+  .revisar .cuanto{
+    color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums;
+    margin-left:.4rem;
+  }
+  .revisar .porqué{font-size:.83rem;color:var(--tx-2);line-height:1.45}
+
+  /* En qué se fue. Una barra por categoría: la proporción se lee de un
+     vistazo y el número exacto queda al lado para quien lo necesite. */
+  .cats{display:grid;gap:.55rem;margin:1.2rem 0}
+  .cats h3{
+    font-size:.7rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--tx-3);margin:0 0 .2rem;
+  }
+  .cat{display:grid;grid-template-columns:1fr max-content;gap:.1rem .7rem;align-items:baseline}
+  .cat .nom{font-size:.9rem}
+  .cat .et{
+    display:inline-block;margin-left:.4rem;padding:0 .4rem;border-radius:99px;
+    background:var(--bg-3);color:var(--tx-3);font-size:.68rem;font-weight:700;
+  }
+  .cat .val{font-variant-numeric:tabular-nums;font-weight:700;font-size:.9rem}
+  .cat .barra{
+    grid-column:1/-1;height:.38rem;border-radius:99px;background:var(--bg-3);
+    overflow:hidden;
+  }
+  .cat .barra i{display:block;height:100%;background:var(--hot);border-radius:99px}
+  .cat .vs{grid-column:1/-1;font-size:.76rem;color:var(--tx-3)}
+  .cat .vs .sube{color:var(--bad)}   /* un gasto que sube es malo */
+  .cat .vs .baja{color:var(--ok)}
+
+  /* El detalle, plegado. */
+  #tes-detalle,#tes-nuevo{margin-top:1.2rem}
+  #tes-detalle summary,#tes-nuevo summary{
+    cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--tx-3);
+  }
+  .gasto-fila{
+    display:grid;grid-template-columns:2.9rem 1fr max-content;gap:.2rem .7rem;
+    align-items:baseline;padding:.55rem 0;border-bottom:1px solid var(--line);
+  }
+  .gasto-fila .dia{font-size:.78rem;color:var(--tx-3);font-variant-numeric:tabular-nums}
+  .gasto-fila .qué{font-size:.9rem}
+  .gasto-fila .val{font-variant-numeric:tabular-nums;font-weight:700}
+  .gasto-fila .sub{grid-column:2/-1;font-size:.76rem;color:var(--tx-3)}
+  .gasto-fila .et{
+    display:inline-block;padding:0 .35rem;border-radius:99px;margin-left:.35rem;
+    font-size:.66rem;font-weight:700;background:var(--bg-3);color:var(--tx-2);
+  }
+  .gasto-fila .et.ojo{background:rgba(224,168,42,.18);color:var(--gold)}
+
+  .gasto-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+    gap:.6rem;margin:.8rem 0}
+  .gasto-form label{display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;
+    color:var(--tx-2)}
+  .gasto-form label.ancho{grid-column:1/-1}
+  .gasto-form label.check{grid-column:1/-1;flex-direction:row;align-items:center;gap:.45rem}
+  .gasto-form input,.gasto-form select{
+    background:var(--bg-3);color:var(--tx);border:1px solid var(--line);
+    border-radius:var(--r);padding:.45rem .55rem;font:inherit;font-size:.95rem;
+  }
+  .gasto-form label.check input{width:auto}
 
   /* ---------- quiénes vienen más ----------
      Una fila por persona, el número de días a la izquierda porque es por
@@ -1227,29 +1392,132 @@ const CONFIG = {
 
   <!-- ══════════ panel ══════════ -->
   <div id="app" hidden>
-    <div class="tabs" role="tablist">
-      <!-- Primera a propósito: en el celular es la que abre, y es la
-           única pantalla pensada para quien no está en el mostrador. -->
-      <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>Resumen</button>
-      <button class="tab" role="tab" id="tab-tablero" aria-selected="true">Tablero</button>
-      <button class="tab" role="tab" id="tab-horario" aria-selected="false">Horario</button>
+
+    <!-- ── la navegación ─────────────────────────────────────────────
+         Damián, 19 de septiembre: «que sea el orden como una aplicación,
+         donde se tengan secciones para cada módulo».
+
+         Eran nueve pestañas en una fila. En el celular esa fila se
+         partía en dos y «Por validar» acababa debajo de «Horario», así
+         que encontrar algo era leerlas todas. Nueve cosas en fila no son
+         un menú: son una lista.
+
+         Ahora son TRES GRUPOS y cada uno responde a una pregunta:
+           HOY      · lo del turno, lo que mira recepción mientras atiende
+           NEGOCIO  · la plata y los clientes, lo que mira el dueño
+           AJUSTES  · lo que se toca una vez al mes
+
+         Los MISMOS botones sirven a las dos navegaciones —la columna del
+         escritorio y la barra de abajo del celular— porque los `#tab-*`
+         son los de siempre: los escuchas colgados de ellos no se enteran
+         de que ahora viven en otro sitio. La barra de abajo no duplica
+         lógica, le da clic al de arriba. -->
+    <nav class="lateral" role="tablist" aria-label="Secciones">
+      <div class="lat-grupo">Hoy</div>
+      <button class="tab" role="tab" id="tab-tablero" aria-selected="true">
+        <span class="ic" aria-hidden="true">▦</span>Tablero</button>
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
-        Por validar<span class="globo" id="globo-pend" hidden></span>
+        <span class="ic" aria-hidden="true">✓</span>Por validar<span class="globo" id="globo-pend" hidden></span>
       </button>
       <button class="tab" role="tab" id="tab-disfrutar" aria-selected="false">
-        Por disfrutar<span class="globo" id="globo-disf" hidden></span>
+        <span class="ic" aria-hidden="true">♪</span>Por disfrutar<span class="globo" id="globo-disf" hidden></span>
       </button>
-      <button class="tab" role="tab" id="tab-caja" aria-selected="false">Caja</button>
+      <button class="tab" role="tab" id="tab-caja" aria-selected="false">
+        <span class="ic" aria-hidden="true">▤</span>Caja</button>
       <button class="tab" role="tab" id="tab-mensualidad" aria-selected="false">
-        Mensualidad<span class="globo" id="globo-mens" hidden></span>
+        <span class="ic" aria-hidden="true">◎</span>Mensualidad<span class="globo" id="globo-mens" hidden></span>
       </button>
-      <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>Usuarios</button>
-    </div>
+
+      <div class="lat-grupo" id="grupo-negocio">Negocio</div>
+      <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true">◈</span>Resumen</button>
+      <button class="tab" role="tab" id="tab-tesoreria" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true">$</span>Tesorería</button>
+
+      <div class="lat-grupo" id="grupo-ajustes">Ajustes</div>
+      <button class="tab" role="tab" id="tab-horario" aria-selected="false">
+        <span class="ic" aria-hidden="true">▥</span>Horario</button>
+      <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true">☺</span>Usuarios</button>
+    </nav>
+
+    <!-- El nombre de dónde estás. En una columna de nueve secciones, sin
+         un título arriba hay que mirar el menú para saber qué se está
+         viendo — y en el celular el menú ni siquiera está a la vista. -->
+    <div class="donde" id="donde" aria-live="polite"></div>
 
     <!-- ── resumen: las tarjetas del dueño ──
          No hay botones de acción aquí a propósito. Es la pantalla que se
          mira en dos minutos desde el celular, no desde la que se opera:
          para cambiar algo están las otras pestañas. -->
+    <!-- ── tesorería ──
+         Damián, 19 de septiembre: «cómo está el negocio, entradas vs
+         salidas, y qué cosas se deben revisar para tener más utilidad».
+
+         El orden de la pantalla ES la respuesta a esa frase, en ese
+         orden: primero las tres cifras, después qué revisar, y al final
+         en qué se fue la plata. Lo que hay que revisar va ARRIBA del
+         desglose a propósito: un número malo que nadie sabe que es malo
+         hace más daño que no tenerlo. -->
+    <div class="panel" id="p-tesoreria">
+      <div class="semana-bar">
+        <span class="rango" id="tes-rango">—</span>
+        <span class="sp"></span>
+        <select id="tes-mes" class="tes-mes" aria-label="Mes"></select>
+        <button class="btn chico" id="tes-recargar">Recargar</button>
+      </div>
+      <div class="aviso" id="msg-tesoreria" hidden></div>
+      <div class="cargando" id="cargando-tesoreria" hidden>Cargando…</div>
+
+      <div class="fichas" id="tes-fichas"></div>
+      <div id="tes-revisar"></div>
+      <div id="tes-categorias"></div>
+
+      <details id="tes-detalle">
+        <summary>Ver todos los gastos, uno por uno</summary>
+        <div class="cargando" id="cargando-gastos" hidden>Cargando…</div>
+        <div id="tes-lista"></div>
+      </details>
+
+      <!-- Apuntar un gasto a mano. Plegado: cargar el resto del año es
+           una tarea de un rato, no algo de todos los días, y abierto
+           sería un formulario estorbando en la pantalla que se mira para
+           decidir. -->
+      <details id="tes-nuevo">
+        <summary>Apuntar un gasto</summary>
+        <div class="gasto-form">
+          <label>Día<input type="date" id="g-dia"></label>
+          <label>Valor<input type="number" id="g-cop" min="1" step="1000" inputmode="numeric" placeholder="60000"></label>
+          <label class="ancho">Qué se pagó<input type="text" id="g-concepto" maxlength="200" placeholder="clase profe Nagle"></label>
+          <label>Categoría
+            <select id="g-categoria">
+              <option value="profesores">Profesores</option>
+              <option value="nomina">Nómina</option>
+              <option value="arriendo">Arriendo</option>
+              <option value="sistema">Sistema</option>
+              <option value="mercadeo">Mercadeo</option>
+              <option value="talleres">Talleres</option>
+              <option value="viaticos">Viáticos</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="impuestos">Impuestos</option>
+              <option value="otros">Otros</option>
+            </select>
+          </label>
+          <label>Medio
+            <select id="g-medio">
+              <option value="">—</option>
+              <option value="banco">Banco</option>
+              <option value="efectivo">Efectivo</option>
+            </select>
+          </label>
+          <label>A quién<input type="text" id="g-quien" maxlength="60" placeholder="Nagle"></label>
+          <label class="check"><input type="checkbox" id="g-adelanto">
+            Es un adelanto que se descuenta después</label>
+        </div>
+        <button class="btn primario chico" id="g-guardar">Apuntar</button>
+      </details>
+    </div>
+
     <div class="panel" id="p-resumen">
       <div class="semana-bar">
         <span class="rango" id="resumen-rango">—</span>
@@ -1955,7 +2223,15 @@ const CONFIG = {
     // cajera no lo ve, y Postgres lo rebota igual si se llegara a la ruta
     // (admin_resumen_gerencia contesta SIN_PERMISO a un token de cajero).
     $('#tab-resumen').hidden = esCajero;
-    if (esCajero && ['horario', 'disfrutar', 'resumen'].includes(panelActual)) verPanel('tablero');
+    // La tesorería lleva la nómina de todo el mundo. La cajera no la ve
+    // en la barra, y Postgres la rebota igual si se llegara a la ruta.
+    $('#tab-tesoreria').hidden = esCajero;
+    // Un rótulo de grupo con todo lo suyo oculto es un rótulo suelto.
+    $('#grupo-negocio').hidden = esCajero;
+    $('#grupo-ajustes').hidden = esCajero && !vePropietario;
+    if (esCajero && ['horario', 'disfrutar', 'resumen', 'tesoreria'].includes(panelActual)) {
+      verPanel('tablero');
+    }
   }
 
   /* En el celular el resumen es lo primero; en el escritorio sigue
@@ -2092,14 +2368,30 @@ const CONFIG = {
   });
 
   /* ---------- pestañas ---------- */
-  const PANELES = ['resumen', 'tablero', 'horario', 'pendientes', 'disfrutar', 'caja',
-                   'mensualidad', 'usuarios'];
+  const PANELES = ['resumen', 'tesoreria', 'tablero', 'horario', 'pendientes',
+                   'disfrutar', 'caja', 'mensualidad', 'usuarios'];
+  // El nombre de cada sección, para el título de arriba. Vive aquí y no
+  // en el HTML porque en el celular el botón dice «Tesorería» en letra
+  // pequeña y el título tiene que poder decir algo más largo.
+  const NOMBRES = {
+    resumen: 'Resumen', tesoreria: 'Tesorería', tablero: 'Tablero',
+    horario: 'Horario', pendientes: 'Por validar', disfrutar: 'Por disfrutar',
+    caja: 'Caja', mensualidad: 'Mensualidad', usuarios: 'Usuarios',
+  };
   let panelActual = 'tablero';
   function verPanel(cual) {
     panelActual = cual;
     for (const p of PANELES) {
       $('#tab-' + p).setAttribute('aria-selected', String(p === cual));
       $('#p-' + p).classList.toggle('on', p === cual);
+    }
+    $('#donde').textContent = NOMBRES[cual] || '';
+    // En el celular la barra de abajo se desplaza: si la sección elegida
+    // quedó fuera de la vista, no se ve cuál está activa y parece que el
+    // toque no hizo nada.
+    const b = $('#tab-' + cual);
+    if (b && window.innerWidth < 900) {
+      b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
   }
 
@@ -2136,6 +2428,7 @@ const CONFIG = {
     else if (panelActual === 'tablero') cargarTablero();
     else if (panelActual === 'disfrutar') cargarDisfrutar();
     else if (panelActual === 'resumen')   { cargarResumen(); cargarRanking(); }
+    else if (panelActual === 'tesoreria') { cargarTesoreria(); }
     // El horario no cambia solo: lo escribe una persona y ya.
   }
 
@@ -2193,7 +2486,10 @@ const CONFIG = {
   // así cambiar de ventana (30 / 90 / todo) y volver no repite la
   // consulta más pesada del panel.
   const FRESCO_MS = { tablero: 45000, pendientes: 10000, caja: 30000, disfrutar: 45000,
-                      resumen: 120000, ranking: 300000 };
+                      resumen: 120000, ranking: 300000,
+                      // La tesorería son totales de un mes: no cambia de
+                      // un pestañeo, y el gasto se apunta a mano.
+                      tesoreria: 300000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -6258,6 +6554,218 @@ const CONFIG = {
        </details>`,
     ].join('');
   }
+
+  /* ═══════════════ tesorería ═══════════════
+     Damián, 19 de septiembre: «cómo está el negocio, entradas vs
+     salidas, y qué cosas se deben revisar para tener más utilidad».
+
+     El gasto real del negocio —nómina, arriendo, profes, sistema— vivía
+     en un grupo de WhatsApp y no entraba a ninguna parte. El panel creía
+     que en septiembre se habían gastado $120.000 (la caja menor) cuando
+     iban $7.282.990. Con esa mitad ausente, la tarjeta «Queda» del
+     resumen decía que quedaban nueve millones cuando quedaban dos.
+
+     Las entradas NO se recalculan aquí: salen de `ventas_entre`, que es
+     la misma regla de la tirilla de cierre. Dos pantallas que sumen
+     distinto el mismo día es el problema del 5 de septiembre. */
+  let tesoreria = null;
+  let mesTes = null;      // 'AAAA-MM' o null = el mes en curso
+
+  // dd/mm. En una lista de setenta renglones, «19 de sept» ocupa dos
+  // líneas y la fecha deja de ser una referencia para volverse ruido.
+  const diaCorto = (f) => {
+    const [, m, d] = String(f || '').split('-');
+    return d && m ? d + '/' + m : '';
+  };
+
+  const NOMBRE_CAT = {
+    nomina: 'Nómina', profesores: 'Profesores', arriendo: 'Arriendo',
+    sistema: 'Sistema', mercadeo: 'Mercadeo', talleres: 'Talleres',
+    viaticos: 'Viáticos', mantenimiento: 'Mantenimiento',
+    impuestos: 'Impuestos', otros: 'Otros',
+  };
+
+  /* Los meses que se pueden mirar: desde que hay datos hasta hoy. Se
+     arma en el navegador con la fecha, no con una lista escrita a mano,
+     porque el 1 de enero una lista escrita a mano se queda sin enero. */
+  function llenarMeses() {
+    const sel = $('#tes-mes');
+    if (sel.options.length) return;
+    const hoy = new Date();
+    const partes = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const v = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      partes.push(`<option value="${v}">${
+        d.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}</option>`);
+    }
+    sel.innerHTML = partes.join('');
+  }
+
+  // Del 'AAAA-MM' del selector al rango que entiende el servidor. El mes
+  // en curso se corta HOY: pedir hasta el 30 cuando estamos a 19 haría
+  // que la comparación con el mes pasado fuera de 19 días contra 30.
+  function rangoDelMes(v) {
+    if (!v) return {};
+    const [a, m] = v.split('-').map(Number);
+    const hoy = new Date();
+    const finMes = new Date(a, m, 0);
+    const esEste = a === hoy.getFullYear() && m === hoy.getMonth() + 1;
+    const fin = esEste ? hoy : finMes;
+    const dos = (n) => String(n).padStart(2, '0');
+    return { desde: `${a}-${dos(m)}-01`,
+             hasta: `${fin.getFullYear()}-${dos(fin.getMonth() + 1)}-${dos(fin.getDate())}` };
+  }
+
+  async function cargarTesoreria(forzar) {
+    const clave = 'tesoreria:' + (mesTes || 'hoy');
+    if (!forzar && esReciente(clave)) return;
+    traido.set(clave, Date.now());
+    $('#cargando-tesoreria').hidden = false;
+    aviso($('#msg-tesoreria'), '');
+    try {
+      const d = await api('tesoreria', rangoDelMes(mesTes));
+      tesoreria = d;
+      pintarTesoreria();
+    } catch (e) {
+      aviso($('#msg-tesoreria'), esc(e.message), 'mal');
+    } finally { $('#cargando-tesoreria').hidden = true; }
+  }
+
+  function pintarTesoreria() {
+    const d = tesoreria;
+    if (!d) return;
+    const ent = d.entradas || {}, entA = d.entradas_antes || {};
+    $('#tes-rango').textContent = fmtCorto(d.desde) + ' – ' + fmtCorto(d.hasta);
+
+    const util = Number(d.utilidad_cop || 0);
+    const cDelta = compara(ent.ingreso_cop, entA.ingreso_cop);
+    const sDelta = compara(d.salidas_cop, d.salidas_antes_cop);
+    /* En un gasto, subir es malo. `compara` pinta de verde lo que crece
+       porque nació para las ventas; aquí se le da la vuelta en vez de
+       escribir otra función que haga lo mismo al revés. */
+    const alReves = (c) => c === 'sube' ? 'baja' : c === 'baja' ? 'sube' : 'igual';
+
+    /* Tres tarjetas y ninguna más. Entró, salió, queda. Es la frase que
+       él escribió, en tres números. */
+    $('#tes-fichas').innerHTML = [
+      `<div class="ficha"><div class="cab">Entró</div>
+         <div class="gordo">${esc(pesos(ent.ingreso_cop))}</div>
+         <div class="vs"><span class="delta ${cDelta.clase}">${esc(cDelta.txt)}</span></div></div>`,
+      `<div class="ficha"><div class="cab">Salió</div>
+         <div class="gordo">${esc(pesos(d.salidas_cop))}</div>
+         <div class="vs"><span class="delta ${alReves(sDelta.clase)}">${
+           esc(sDelta.txt)}</span></div></div>`,
+      `<div class="ficha ancha"><div class="cab">Utilidad</div>
+         <div class="gordo ${util >= 0 ? 'bueno' : 'malo'}">${esc(pesos(util))}</div>
+         ${d.margen_pct == null ? '' :
+           `<div class="vs"><span class="delta ${util >= 0 ? 'sube' : 'baja'}">${
+             esc(d.margen_pct)}% de lo que entró</span></div>`}</div>`,
+    ].join('');
+
+    // ── qué revisar ──
+    const rev = Array.isArray(d.revisar) ? d.revisar : [];
+    $('#tes-revisar').innerHTML = !rev.length ? '' :
+      `<div class="revisar"><h3>Qué revisar para que quede más</h3><ul>` +
+      rev.map(r => `<li>
+          <div class="qué">${esc(r.titulo)}${Number(r.cop) ?
+            `<span class="cuanto">${esc(pesos(r.cop))}</span>` : ''}</div>
+          <div class="porqué">${esc(r.detalle)}</div>
+        </li>`).join('') + `</ul></div>`;
+
+    // ── en qué se fue ──
+    const cats = (Array.isArray(d.categorias) ? d.categorias : [])
+      .filter(c => Number(c.cop) > 0);
+    const mayor = Math.max(1, ...cats.map(c => Number(c.cop) || 0));
+    $('#tes-categorias').innerHTML = !cats.length ? '' :
+      `<div class="cats"><h3>En qué se fue</h3>` +
+      cats.map(c => {
+        const cop = Number(c.cop) || 0, antes = Number(c.cop_antes) || 0;
+        const dif = cop - antes;
+        return `<div class="cat">
+          <div class="nom">${esc(NOMBRE_CAT[c.categoria] || c.categoria)}
+            <span class="et">${esc(c.n)}</span></div>
+          <div class="val">${esc(pesos(cop))}</div>
+          <div class="barra"><i style="width:${Math.round(cop / mayor * 100)}%"></i></div>
+          ${antes ? `<div class="vs">${dif === 0 ? 'igual que el mes pasado' :
+            `<span class="${dif > 0 ? 'sube' : 'baja'}">${dif > 0 ? '+' : '−'}${
+              esc(pesos(Math.abs(dif)))}</span> que el mes pasado`}</div>` :
+            '<div class="vs">no hubo el mes pasado</div>'}
+        </div>`;
+      }).join('') + `</div>`;
+  }
+
+  /* El detalle se pide solo cuando se abre el desplegable. Son 71
+     renglones para pintar nueve totales: traerlos siempre sería pagar el
+     detalle en cada visita. */
+  $('#tes-detalle').addEventListener('toggle', async () => {
+    if (!$('#tes-detalle').open) return;
+    $('#cargando-gastos').hidden = false;
+    try {
+      const d = await api('gastos-lista', rangoDelMes(mesTes));
+      const g = Array.isArray(d.gastos) ? d.gastos : [];
+      const menor = Array.isArray(d.caja_menor) ? d.caja_menor : [];
+      const filas = g.map(x => `
+        <div class="gasto-fila">
+          <div class="dia">${esc(diaCorto(x.dia))}</div>
+          <div class="qué">${esc(x.concepto)}
+            <span class="et">${esc(NOMBRE_CAT[x.categoria] || x.categoria)}</span>
+            ${x.es_adelanto ? '<span class="et ojo">adelanto</span>' : ''}</div>
+          <div class="val">${esc(pesos(x.cop))}</div>
+          ${x.revisar ? `<div class="sub">${esc(x.revisar)}</div>` : ''}
+        </div>`).join('')
+        + menor.map(x => `
+        <div class="gasto-fila">
+          <div class="dia">${esc(diaCorto(x.dia))}</div>
+          <div class="qué">${esc(nombreConcepto(x.concepto))}
+            <span class="et">caja menor</span></div>
+          <div class="val">${esc(pesos(x.cop))}</div>
+        </div>`).join('');
+      $('#tes-lista').innerHTML = filas ||
+        '<p class="suave">Sin gastos apuntados en este mes.</p>';
+    } catch (e) {
+      $('#tes-lista').innerHTML = `<div class="aviso mal">${esc(e.message)}</div>`;
+    } finally { $('#cargando-gastos').hidden = true; }
+  });
+
+  $('#g-guardar').addEventListener('click', async () => {
+    const btn = $('#g-guardar');
+    const cuerpo = {
+      dia: $('#g-dia').value,
+      cop: Number($('#g-cop').value),
+      concepto: $('#g-concepto').value.trim(),
+      categoria: $('#g-categoria').value,
+      medio: $('#g-medio').value || null,
+      a_quien: $('#g-quien').value.trim() || null,
+      adelanto: $('#g-adelanto').checked,
+    };
+    btn.disabled = true;
+    try {
+      await alWorker('admin/gasto-apuntar', cuerpo);
+      // Los campos que cambian en cada gasto se limpian; el día y la
+      // categoría se quedan, que es lo que se repite cuando se está
+      // cargando un mes entero de una sentada.
+      $('#g-cop').value = ''; $('#g-concepto').value = ''; $('#g-quien').value = '';
+      $('#g-adelanto').checked = false;
+      await cargarTesoreria(true);
+      if ($('#tes-detalle').open) {
+        $('#tes-detalle').open = false; $('#tes-detalle').open = true;
+      }
+      nota('Gasto apuntado', 'bien', pesos(cuerpo.cop) + ' · ' + cuerpo.concepto);
+    } catch (e) {
+      nota('No se pudo apuntar', 'mal', e.message || 'Revisa los datos.');
+    } finally { btn.disabled = false; }
+  });
+
+  $('#tes-mes').addEventListener('change', () => {
+    mesTes = $('#tes-mes').value;
+    $('#tes-detalle').open = false;
+    cargarTesoreria(true);
+  });
+  $('#tes-recargar').addEventListener('click', () => cargarTesoreria(true));
+  $('#tab-tesoreria').addEventListener('click', () => {
+    llenarMeses(); verPanel('tesoreria'); cargarTesoreria();
+  });
 
   /* ═══════════════ quiénes vienen más ═══════════════
      La identidad la fijó Damián: celular + nombre. Quien la calcula es

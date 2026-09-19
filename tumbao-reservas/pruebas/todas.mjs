@@ -34,6 +34,7 @@ const SUITES = [
   'tarjeta-sabado',
   'ranking-clientes',
   'tarjetas-del-dueno',
+  'tesoreria',
   'tirilla-de-la-duena',
   'tirilla-cuando-pagaron',
   'usuarios-invitacion',

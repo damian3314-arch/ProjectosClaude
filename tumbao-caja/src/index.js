@@ -380,6 +380,33 @@ const ADMIN = {
                                             ? Math.trunc(+b.dias) : null,
                                 p_limite: Number.isFinite(+b.limite) && +b.limite > 0
                                             ? Math.trunc(+b.limite) : 10 }) },
+  /* TESORERÍA. Las tres rutas del módulo de plata del negocio.
+     `FECHA()` devuelve null si no viene: sin rango, Postgres contesta el
+     mes en curso hasta hoy, que es lo que se mira al abrir la pestaña. */
+  'tesoreria': { fn: 'admin_tesoreria',
+                args: (b) => ({ p_desde: FECHA(b.desde), p_hasta: FECHA(b.hasta) }) },
+  'gastos-lista': { fn: 'admin_gastos_lista',
+                args: (b) => ({ p_desde: FECHA(b.desde), p_hasta: FECHA(b.hasta),
+                                p_categoria: TXT(b.categoria, 20) }) },
+  'gasto-apuntar': { fn: 'admin_gasto_apuntar',
+                args: (b) => {
+                  // La validación de verdad la hace Postgres. Aquí solo se
+                  // recorta y se convierte, para no mandarle un archivo
+                  // entero en el concepto ni un número que no es número.
+                  const dia = FECHA(b.dia);
+                  if (!dia) return { _error: 'FECHA' };
+                  const cop = Math.trunc(Number(b.cop));
+                  if (!Number.isFinite(cop) || cop <= 0) return { _error: 'VALOR' };
+                  return {
+                    p_dia: dia, p_valor_cop: cop,
+                    p_concepto:  String(b.concepto || '').trim().slice(0, 200),
+                    p_categoria: String(b.categoria || '').trim().slice(0, 20),
+                    p_medio:     TXT(b.medio, 10),
+                    p_a_quien:   TXT(b.a_quien, 60),
+                    p_adelanto:  b.adelanto === true,
+                  };
+                } },
+
   'usuarios-listar': { fn: 'admin_listar_usuarios', args: () => ({}) },
   'usuarios-estado': { fn: 'admin_cambiar_estado_usuario',
                 args: (b) => (UUID(b.id)
