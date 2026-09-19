@@ -7,9 +7,12 @@
  * totales: es que esta pantalla es la primera del panel donde un número
  * puede estar MAL sin que nada falle.
  *
- *   · Un adelanto de quincena sumado y luego pagado completo se cuenta
- *     dos veces, y la utilidad sale peor de lo que es. En agosto son
- *     $950.000 así.
+ *   · Un adelanto de quincena que nadie ha emparejado con su saldo deja
+ *     una pregunta abierta sobre la nómina. Los que SÍ se emparejaron
+ *     (350.000 + 600.000 el 6 y el 15 de agosto; 300.000 + 650.000 el 12
+ *     y el 15 de septiembre, los dos de 950.000) no son ningún misterio:
+ *     salieron una vez y están bien contados. Avisar de esos era ruido, y
+ *     ruido que no se podía apagar.
  *   · Un gasto que sube se pinta de verde si se reusa el comparativo de
  *     las ventas sin darle la vuelta — y gastar más se leería como una
  *     buena noticia.
@@ -44,8 +47,11 @@ const REAL = {
   entradas:       { ingreso_cop: 9335000, egreso_cop: 120000, personas: 258 },
   entradas_antes: { ingreso_cop: 4305000, egreso_cop: 0, personas: 120 },
   salidas_cop: 7402990, salidas_antes_cop: 8756900,
-  caja_menor_cop: 120000, adelantos_cop: 300000,
-  utilidad_cop: 1932010, utilidad_sin_adelantos_cop: 2232010,
+  // Los 300.000 del 12 de septiembre quedaron cuadrados con el saldo del
+  // 15, así que ya no cuentan como adelanto abierto y las dos utilidades
+  // son la misma. Antes esta segunda cifra estaba 300.000 por encima.
+  caja_menor_cop: 120000, adelantos_cop: 0,
+  utilidad_cop: 1932010, utilidad_sin_adelantos_cop: 1932010,
   utilidad_antes_cop: -4451900, margen_pct: 21,
   categorias: [
     { categoria: 'nomina',        cop: 2872400, n: 6,  cop_antes: 2955000 },
@@ -56,11 +62,6 @@ const REAL = {
     { categoria: 'mercadeo',      cop: 0,       n: 0,  cop_antes: 830000 },
   ],
   revisar: [
-    { clave: 'adelantos', peso: 1, cop: 300000,
-      titulo: 'Adelantos de quincena que pueden estar contados dos veces',
-      detalle: '1 pago de adelanto. Si la quincena se pagó después completa, ' +
-        'este dinero salió una vez pero está sumado dos, y la utilidad sale ' +
-        'peor de lo que es.' },
     { clave: 'repetidos', peso: 3, cop: 120000,
       titulo: '2 pagos repetidos el mismo día por el mismo valor',
       detalle: 'Puede ser correcto o puede ser el mismo pago anotado dos veces.' },
@@ -75,9 +76,15 @@ const GASTOS = {
   gastos: [
     { id: '1', dia: '2026-09-16', concepto: 'sistema tumbao', categoria: 'sistema',
       cop: 1250000, medio: 'banco', a_quien: null, es_adelanto: false, revisar: null, fuente: 'whatsapp' },
+    // Sigue marcado como adelanto —lo fue— pero ya sin nota de revisar:
+    // el saldo del 15 lo cuadró. Que `es_adelanto` y `revisar` puedan ir
+    // por separado es justo lo que hace que el aviso se pueda apagar.
     { id: '2', dia: '2026-09-12', concepto: 'adelanto Fabián', categoria: 'nomina',
       cop: 300000, medio: 'banco', a_quien: 'Fabián', es_adelanto: true,
-      revisar: 'Adelanto. El 15 se pagó «saldo nómina quincena» de $650.000.',
+      revisar: null, fuente: 'whatsapp' },
+    { id: '3', dia: '2026-08-10', concepto: 'adelanto Luisa', categoria: 'nomina',
+      cop: 250000, medio: 'banco', a_quien: 'Luisa', es_adelanto: true,
+      revisar: 'Sus tres quincenas se pagaron enteras y ninguna dice «saldo».',
       fuente: 'whatsapp' },
   ],
   caja_menor: [{ dia: '2026-09-12', concepto: 'profesores', cop: 60000, medio: 'efectivo' }],
@@ -137,10 +144,16 @@ ok('y gastar menos se pinta como algo bueno',
 /* ═══════════ 2. qué revisar, arriba del desglose ═══════════ */
 
 t = await txt('#tes-revisar');
-ok('avisa de los adelantos', /Adelantos de quincena/.test(t), t.slice(0, 120));
-ok('con cuánto hay en juego', /\$300\.000/.test(t));
-ok('y explica por qué importa',
-   /contados dos veces/.test(t) && /sale peor de lo que es/.test(t));
+
+/* Un adelanto ya cuadrado con su saldo no se avisa. Esto es lo que pidió
+   Damián el 19 de septiembre —«dejar eso validado»— y es la diferencia
+   entre una lista que se vacía cuando trabajas y una que te grita lo
+   mismo todos los meses hasta que dejas de mirarla. */
+ok('un adelanto ya cuadrado no vuelve a aparecer',
+   !/[Aa]delanto/.test(t), t.slice(0, 160));
+ok('y la utilidad es una sola cifra, no dos',
+   !/sin adelantos/i.test(await txt('#tes-fichas')));
+
 ok('avisa de los pagos repetidos el mismo día', /repetidos el mismo día/.test(t));
 ok('y dice qué categoría se disparó', /profesores/.test(t) && /\$320\.000/.test(t));
 
@@ -171,12 +184,52 @@ await p.waitForTimeout(400);
 t = await txt('#tes-lista');
 ok('al abrirlo trae los gastos', /sistema tumbao/.test(t), t.slice(0, 120));
 ok('con su categoría', /Sistema/.test(t));
-ok('marca los adelantos', /adelanto/i.test(t));
-ok('y trae la nota de qué revisar', /saldo nómina quincena/.test(t));
+ok('marca los adelantos', /adelanto/i.test(t),
+   'aunque ya esté cuadrado, sigue siendo un adelanto y el libro lo dice');
+ok('y trae la nota de qué revisar del que sí sigue abierto',
+   /ninguna dice «saldo»/.test(t));
 ok('la caja menor sale en la misma lista y marcada', /caja menor/.test(t),
    'si saliera aparte, el total de arriba no cuadraría con lo de abajo');
 
-/* ═══════════ 5. un mes sin gastos no es un mes sin gastos ═══════════
+/* ═══════════ 5. el adelanto que SÍ sigue abierto ═══════════
+   Apagar el aviso de los cuadrados no sirve de nada si de paso apaga los
+   otros. Agosto es el caso real: quedan dos sin emparejar —los 250.000 de
+   Luisa del 10/8 y los 350.000 del «ajuste» del 15/8— por $600.000. Esta
+   es la respuesta que devolvió producción el 19 de septiembre. */
+
+tes = {
+  ...REAL, desde: '2026-08-01', hasta: '2026-08-31', dias: 31,
+  antes_desde: '2026-07-01', antes_hasta: '2026-07-31',
+  salidas_cop: 11986900, adelantos_cop: 600000,
+  utilidad_cop: -2171900, utilidad_sin_adelantos_cop: -1571900,
+  margen_pct: -22,
+  revisar: [
+    { clave: 'adelantos', peso: 1, cop: 600000,
+      titulo: 'Adelantos sin cuadrar con su quincena',
+      detalle: '2 adelantos sin descontar de ninguna quincena. La plata ' +
+        'salió, eso no se discute; falta saber si se recupera o ya se ' +
+        'descontó. Ábrelos abajo: cada uno dice qué mirar.' },
+    { clave: 'con_nota', peso: 2, cop: 2400000,
+      titulo: '3 gastos con algo por confirmar',
+      detalle: 'Ábrelos abajo: cada uno dice qué hay que mirar.' },
+  ],
+};
+await p.click('#tes-recargar');
+await p.waitForTimeout(500);
+t = await txt('#tes-revisar');
+ok('el que sigue abierto sí se avisa',
+   /Adelantos sin cuadrar/.test(t), t.slice(0, 140));
+ok('con cuánto hay en juego', /\$600\.000/.test(t));
+
+/* El aviso ya no dice «contados dos veces»: eso era falso. Cada renglón
+   es una transferencia distinta y el gasto del mes siempre estuvo bien.
+   Lo que falta es saber a qué quincena pertenece cada mitad. */
+ok('sin acusar de doble conteo, que era lo que estaba mal',
+   !/dos veces/.test(t) && /sin descontar/.test(t));
+ok('y en buen castellano', !/no se ve descontados/.test(t),
+   'la concordancia se rompía al pluralizar solo una de las dos palabras');
+
+/* ═══════════ 6. un mes sin gastos no es un mes sin gastos ═══════════
    Es el error más caro de esta pantalla: enseñar los ingresos completos
    menos la caja menor y llamar a eso utilidad. */
 
