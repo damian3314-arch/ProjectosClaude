@@ -1557,8 +1557,20 @@ const CONFIG = {
             'soporte por WhatsApp y lo validamos a mano.'
           : esc(d.mensaje || 'Escríbenos por WhatsApp y lo resolvemos.'));
 
-    // El boton cambia segun el caso: si hay que validar a mano, el
-    // mensaje ya viene escrito pidiendo el soporte.
+    /* A quien le SALIÓ BIEN no se le ofrece escribir. Suena a detalle y
+       no lo es: en las últimas ocho semanas 553 reservas se confirmaron
+       solas y ninguna quedó pendiente de validar, así que este botón se
+       le estaba enseñando a 553 personas que no tenían nada que
+       preguntar. Muchas escribían igual —«ya pagué»— y cada uno de esos
+       mensajes hay que leerlo y contestarlo a mano para acabar diciendo
+       «sí, ya nos llegó». El soporte de pago en el chat sirve cuando el
+       pago NO se pudo validar; cuando sí, pedirlo es trabajo inventado
+       para las dos partes.
+
+       Se queda para los otros dos casos, que son los que de verdad
+       necesitan una persona: `pendiente_validacion` (el pago no cruzó
+       solo y el soporte lo resuelve) y rechazada/expirada. */
+    $('#ok-wa').hidden = confirmada;
     $('#ok-wa').textContent = pendiente
       ? 'Compartir soporte por WhatsApp' : 'Escribirnos por WhatsApp';
     $('#ok-wa').className = pendiente ? 'btn' : 'btn-ghost';

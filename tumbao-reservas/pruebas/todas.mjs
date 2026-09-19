@@ -33,6 +33,7 @@ const SUITES = [
   'pulso-ingesta',
   'tarjeta-sabado',
   'ranking-clientes',
+  'soporte-solo-si-hace-falta',
   'tarjetas-del-dueno',
   'tesoreria',
   'tirilla-de-la-duena',
