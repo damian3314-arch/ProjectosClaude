@@ -120,6 +120,42 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   await p.close();
 }
 
+// ═══════ cuando hay MÁS vendidas que el tope ═════════════════════
+/* Damián lo planteó al fijar los topes (35 a las 7am, 25 a las 6pm, 27 a
+   las 7pm): «puede pasar que se tenga más mensualidades vendidas de las
+   que estoy diciéndote aquí». Pasa de verdad —AdminGym vende en el
+   mostrador sin preguntarle a esta página— y el tope no puede echar a
+   nadie: lo único que hace es dejar de vender más.
+
+   Lo que no puede salir de aquí es un «−3 cupos». `mensualidad_cupos`
+   ya lo corta en el servidor con greatest(tope − ocupadas, 0); esto pide
+   que la página tampoco se lo invente por su cuenta. */
+{
+  const { p, errs } = await abrir({
+    cupos: { ok: true, tope: 27, valor_cop: 125000, horas: [
+      { hora: '07:00', etiqueta: '7:00 am', ocupadas: 22, tope: 35, libres: 13 },
+      { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 23, tope: 25, libres: 2 },
+      // Treinta vendidas donde caben 27. El servidor ya mandó libres: 0.
+      { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 30, tope: 27, libres: 0 },
+    ] },
+  });
+  const txt = await p.evaluate(() =>
+    [...document.querySelectorAll('.hora')].map(h => h.innerText).join(' ~ '));
+
+  ok('la hora pasada de tope no ofrece cupo',
+     /Sin cupo/.test(txt) && /lista de espera/i.test(txt), txt);
+  ok('y no inventa un número negativo', !/-\s*\d|−\s*\d/.test(txt), txt);
+  ok('las que van por debajo del tope sí venden',
+     /\b13 cupos\b/.test(txt) && /\b2 cupos\b/.test(txt), txt);
+
+  // Que una hora esté pasada no puede cerrar las otras dos.
+  await p.click('.hora[data-hora="07:00"]');
+  ok('y se puede entrar a comprar en las que sí tienen',
+     /apartamos el cupo/.test(await p.locator('#sub1').innerText()));
+  ok('sin errores de JS', errs.length === 0, errs.join(' | '));
+  await p.close();
+}
+
 // ═══════ se dice ANTES de pedir los datos ════════════════════════
 {
   const { p } = await abrir();
