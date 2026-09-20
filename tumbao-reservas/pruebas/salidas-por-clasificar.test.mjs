@@ -88,6 +88,15 @@ const PENDIENTES = {
       dia: '2026-09-19', cuenta_destino: null, destinatario: null,
       confianza: 'baja', sugerencia: null, quizas_repetida: null },
   ],
+  /* Lo que la máquina clasificó sola desde que conoce la cuenta. Ya
+     cuentan en la tesorería; están aquí para poder pillarle un error
+     antes de que lo repita. */
+  solas: [
+    { id: '44444444-4444-4444-8444-444444444444',
+      valor_cop: 60000, ocurrio_at: '2026-09-20T09:00:00-05:00',
+      dia: '2026-09-20', cuenta_destino: '3222608325',
+      concepto: 'clase profe Nagle', categoria: 'profesores', a_quien: 'Nagle' },
+  ],
 };
 
 const enviado = [];
@@ -103,7 +112,8 @@ async function abrir({ rol = 'propietario', datos = PENDIENTES } = {}) {
                            movimientos: [], resumen_conceptos: [], rol }) }));
   await p.route('**/api/admin/salidas-pendientes', r => r.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify(datos) }));
-  for (const ruta of ['salida-clasificar', 'salida-descartar']) {
+  for (const ruta of ['salida-clasificar', 'salida-descartar',
+                      'salida-corregir']) {
     await p.route(`**/api/admin/${ruta}`, r => {
       enviado.push({ ruta, cuerpo: JSON.parse(r.request().postData() || '{}') });
       return r.fulfill({ status: 200, contentType: 'application/json',
@@ -207,10 +217,43 @@ ok('con la razón sí, y la razón viaja', enviado.length === 1 &&
    enviado[0].cuerpo.nota === 'ya estaba en el chat de gastos',
    JSON.stringify(enviado[0] && enviado[0].cuerpo));
 
+titulo('6. Lo que se clasificó solo se ve, y se puede corregir');
+
+/* Damián: «salida debe ser inteligente… solo debe quedar pendiente
+   cuando se envíe dinero a una cuenta o persona que nunca se ha
+   enviado». El servidor ya lo hace; lo que esta pantalla no puede hacer
+   es esconderlo. Si se equivoca y nadie lo ve, la siguiente
+   transferencia a esa cuenta repite el error: el aprendizaje sale de
+   ahí. */
+ok('hay una sección para lo automático',
+   await p.locator('#sal-solas').count() === 1);
+ok('con cuántas van', (await p.locator('#sal-solas-n').textContent()).trim() === '1');
+ok('va cerrada, para no competir con lo que sí hay que atender',
+   await p.locator('#sal-solas').evaluate(e => !e.open));
+
+await p.locator('#sal-solas summary').click();
+await p.waitForTimeout(250);
+const tSolas = (await p.locator('#sal-solas-lista').innerText()).replace(/\s+/g, ' ');
+ok('dice qué entendió', /clase profe Nagle/.test(tSolas), tSolas.slice(0, 90));
+ok('y en qué categoría lo metió', /Profesores/.test(tSolas));
+
+enviado.length = 0;
+let respondidos = 0;
+p.on('dialog', d => { respondidos++;
+  d.accept(respondidos === 1 ? 'taller de salsa' : 'talleres'); });
+await p.locator('[data-sal="44444444-4444-4444-8444-444444444444"]')
+       .locator('[data-hacer="corregir"]').click();
+await p.waitForTimeout(600);
+ok('se puede corregir, y la corrección viaja entera',
+   enviado.length === 1 && enviado[0].ruta === 'salida-corregir' &&
+   enviado[0].cuerpo.concepto === 'taller de salsa' &&
+   enviado[0].cuerpo.categoria === 'talleres',
+   JSON.stringify(enviado[0] && enviado[0].cuerpo));
+
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 await p.close();
 
-titulo('6. Vacía no asusta');
+titulo('7. Vacía no asusta');
 
 ({ p, errs } = await abrir({ datos: { ok: true, cuantas: 0, cop: 0, salidas: [] } }));
 await p.click('#tab-salidas');
@@ -222,7 +265,7 @@ ok('y el globo desaparece',
 ok('sin errores de JS', errs.length === 0, errs.join(' | '));
 await p.close();
 
-titulo('7. Recepción sí la ve');
+titulo('8. Recepción sí la ve');
 
 /* Es de quien es el trabajo. La tesorería se le esconde porque lleva la
    nómina de sus compañeros; esto no: es decir a qué corresponde un

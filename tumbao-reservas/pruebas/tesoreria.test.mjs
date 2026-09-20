@@ -229,6 +229,50 @@ ok('sin acusar de doble conteo, que era lo que estaba mal',
 ok('y en buen castellano', !/no se ve descontados/.test(t),
    'la concordancia se rompía al pluralizar solo una de las dos palabras');
 
+/* ═══════════ 5b. resumen y tesorería cuentan igual ═══════════
+   Damián, 20 de septiembre: «veo que resumen no tiene los mismos valores
+   en salidas que tesorería».
+
+   Había dos definiciones de «salió» conviviendo: el resumen leía
+   `ventas_entre().egreso_cop`, que es SOLO la caja menor, y la tesorería
+   sumaba los gastos también. En septiembre eso era $120.000 contra
+   $7.402.990 — la misma pantalla, el mismo mes, dos cifras que se
+   llevaban sesenta veces.
+
+   El arreglo vive en el servidor: `plata_entre()` es una sola función y
+   las dos vistas la llaman, así que ya no hay dos cuentas que puedan
+   separarse. Eso se comprobó contra producción comparando
+   `admin_resumen_gerencia`, `admin_tesoreria` y `plata_entre` sobre el
+   mismo rango: las tres dieron 9.145.000 y 7.402.990.
+
+   Lo que se vigila AQUÍ es lo otro: que el panel no se vuelva a inventar
+   la resta. Es una comprobación sobre el CÓDIGO y no sobre la pantalla,
+   porque el resumen solo se pinta al arrancar en ancho de celular y hay
+   que atravesar `aplicarRol()` para llegar a él; la pantalla en sí ya la
+   cubre tarjetas-del-dueno.test.mjs, que fue justo quien cazó el error
+   que tuvo este cambio: las variables nuevas se declararon DEBAJO del
+   comparativo que las usa, y `pintarResumen` reventaba entero sin pintar
+   una sola tarjeta. */
+{
+  const fuente = await readFile(PANEL, 'utf8');
+
+  ok('la tarjeta del resumen lee la cifra compartida',
+     /const pMes = r\.plata_mes/.test(fuente),
+     'si esto desaparece, el resumen volvió a llevar su propia cuenta');
+  ok('«Queda» sale de la utilidad del servidor',
+     /pMes\.utilidad_cop != null \? pMes\.utilidad_cop/.test(fuente));
+  ok('y «Salidas del mes» también',
+     /pesos\(salioMes\)/.test(fuente),
+     'antes ponía mes.egreso_cop, que es solo la caja menor');
+
+  /* La fórmula vieja puede quedarse SOLO como respaldo, detrás del `:`
+     de un ternario, para que un panel nuevo contra un servidor viejo no
+     se quede en blanco. Lo que no puede es volver a ser la principal. */
+  const restaSuelta = /const queda = Number\(mes\.ingreso_cop/.test(fuente);
+  ok('la resta vieja ya no manda', !restaSuelta,
+     'solo vale como respaldo dentro del ternario');
+}
+
 /* ═══════════ 6. la cifra de «entró» sale del mostrador ═══════════
    La Caja no existía antes del 10/8, así que agosto enseñaba 9.815.000
    de entradas y una pérdida de 2.171.900 que nunca ocurrió: le faltaban

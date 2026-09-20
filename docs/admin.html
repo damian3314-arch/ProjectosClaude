@@ -1767,6 +1767,13 @@ const CONFIG = {
         <span class="suave" id="sal-resumen"></span>
       </div>
       <div id="sal-lista"></div>
+      <!-- Clasificar solo sin poder corregir sería peor que no
+           clasificar: el error se vuelve invisible y se repite en cada
+           transferencia siguiente a esa cuenta. -->
+      <details id="sal-solas" hidden>
+        <summary>Clasificadas solas (<span id="sal-solas-n">0</span>)</summary>
+        <div id="sal-solas-lista"></div>
+      </details>
     </div>
 
     <div class="panel" id="p-usuarios">
@@ -6522,9 +6529,32 @@ const CONFIG = {
     const sem = r.semana || {}, semAntes = r.semana_antes || {};
     const mes = r.mes || {}, mesAntes = r.mes_antes || {};
 
+    /* 0094: LAS TRES PANTALLAS CUENTAN IGUAL.
+       Damián, 20 de septiembre: «veo que resumen no tiene los mismos
+       valores en salidas que tesorería».
+
+       Tenía razón, y la causa era que aquí «salió» quería decir SOLO la
+       caja menor —los 120.000 del mes— mientras la tesorería sumaba los
+       gastos también: 7.402.990. La misma pantalla, el mismo mes, dos
+       cifras que se llevaban sesenta veces.
+
+       Ahora las dos leen `plata_entre()`, que es una sola función en el
+       servidor. El `||` deja funcionando un panel viejo contra un
+       servidor viejo, pero lo que manda es `plata_*`. */
+    const pMes = r.plata_mes || {}, pMesA = r.plata_mes_antes || {};
+    const pSem = r.plata_semana || {}, pSemA = r.plata_semana_antes || {};
+
+    const entroMes = pMes.entro_cop != null ? pMes.entro_cop : mes.ingreso_cop;
+    const entroSem = pSem.entro_cop != null ? pSem.entro_cop : sem.ingreso_cop;
+    const salioMes = pMes.salio_cop != null ? pMes.salio_cop : mes.egreso_cop;
+    const queda = pMes.utilidad_cop != null ? pMes.utilidad_cop
+      : Number(mes.ingreso_cop || 0) - Number(mes.egreso_cop || 0);
+
     const cDia = compara(dia.ingreso_cop, diaAntes.ingreso_cop);
-    const cSem = compara(sem.ingreso_cop, semAntes.ingreso_cop);
-    const cMes = compara(mes.ingreso_cop, mesAntes.ingreso_cop);
+    const cSem = compara(pSem.entro_cop != null ? pSem.entro_cop : sem.ingreso_cop,
+                         pSemA.entro_cop != null ? pSemA.entro_cop : semAntes.ingreso_cop);
+    const cMes = compara(pMes.entro_cop != null ? pMes.entro_cop : mes.ingreso_cop,
+                         pMesA.entro_cop != null ? pMesA.entro_cop : mesAntes.ingreso_cop);
 
     const rango = (v) => !v || !v.desde ? '—'
       : (v.desde === v.hasta ? fmtCorto(v.desde)
@@ -6536,10 +6566,7 @@ const CONFIG = {
         esc(fmtCorto(r.primer_caja))}, así que ${esc(desde)} está incompleto.">parcial</span>`;
 
     const gastos = Array.isArray(r.gastos_mes) ? r.gastos_mes : [];
-    // La resta se hace aquí y no se lee `queda_cop`: así los tres números
-    // de la tarjeta siempre cuadran entre ellos, aunque llegue una
-    // respuesta a medias.
-    const queda = Number(mes.ingreso_cop || 0) - Number(mes.egreso_cop || 0);
+
 
     /* CUATRO NÚMEROS Y NADA MÁS.
        Damián, 15 de septiembre: «aún no me termina de convencer la vista
@@ -6568,9 +6595,9 @@ const CONFIG = {
 
     $('#fichas-resumen').innerHTML = [
       tarjeta('Hoy',   pesos(dia.ingreso_cop), cDia),
-      tarjeta('Semana', pesos(sem.ingreso_cop), cSem,
+      tarjeta('Semana', pesos(entroSem), cSem,
               parcial(r.semana_antes_parcial, rango(semAntes))),
-      tarjeta('Mes',   pesos(mes.ingreso_cop), cMes,
+      tarjeta('Mes',   pesos(entroMes), cMes,
               parcial(r.mes_antes_parcial, rango(mesAntes))),
       // Sin comparativo: lo que importa de este número es si es positivo,
       // no si es mejor que el mes pasado.
@@ -6587,7 +6614,7 @@ const CONFIG = {
          <div class="renglones sep">
            ${gastos.map(g => linea(esc(nombreConcepto(g.concepto)),
                                    esc(pesos(g.cop)))).join('')}
-           ${linea('<b>Salidas del mes</b>', esc(pesos(mes.egreso_cop)))}
+           ${linea('<b>Salidas del mes</b>', esc(pesos(salioMes)))}
          </div>
        </details>`,
     ].join('');
@@ -6853,6 +6880,29 @@ const CONFIG = {
     $('#sal-resumen').textContent = !lista.length ? ''
       : `${lista.length} sin clasificar · ${pesos(d.cop)}`;
 
+    /* Lo que la máquina clasificó sola. No son pendientes —ya cuentan en
+       la tesorería— pero tienen que verse: si se equivocó, la siguiente
+       transferencia a esa cuenta repetirá el error, porque aprende de
+       aquí. Va cerrado para no competir con lo que sí hay que atender. */
+    const solas = Array.isArray(d.solas) ? d.solas : [];
+    $('#sal-solas').hidden = !solas.length;
+    if (solas.length) {
+      $('#sal-solas-n').textContent = solas.length;
+      $('#sal-solas-lista').innerHTML = solas.map(x => `
+        <div class="fila mens" data-sal="${esc(x.id)}" data-sola="1">
+          <div class="cuerpo">
+            <div class="nom">${esc(pesos(x.valor_cop))}
+              <span class="et">${esc(fmtCorto(x.dia))}</span>
+              <span class="et bien">${esc(NOMBRE_CAT[x.categoria] || x.categoria)}</span></div>
+            <div class="ag">${esc(x.concepto)}${
+              x.a_quien ? ' · ' + esc(x.a_quien) : ''}</div>
+            <div class="topes-pie">
+              <button class="btn-min" data-hacer="corregir">No era eso</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+
     if (!lista.length) {
       $('#sal-lista').innerHTML =
         `<p class="vacio">Todas las salidas de la cuenta están clasificadas.</p>`;
@@ -6903,7 +6953,7 @@ const CONFIG = {
     }).join('');
   }
 
-  $('#sal-lista').addEventListener('click', async (ev) => {
+  async function accionSalida(ev) {
     const btn = ev.target.closest('[data-hacer]');
     if (!btn) return;
     const fila = btn.closest('[data-sal]');
@@ -6920,6 +6970,21 @@ const CONFIG = {
         await api('salida-clasificar', { id, concepto,
           categoria: val('categoria'), a_quien: val('a_quien').trim() || null });
         nota('Salida clasificada', 'bien', 'Ya cuenta como gasto en la tesorería.');
+      } else if (btn.dataset.hacer === 'corregir') {
+        /* La corrección no es solo cosmética: `salidas_banco` es de
+           donde sale lo que se aprende, así que arreglar ésta arregla
+           también la próxima transferencia a la misma cuenta. */
+        const q = prompt('¿Qué era en realidad?\nEscribe el concepto:');
+        if (q === null || !q.trim()) { btn.disabled = false; return; }
+        const c = prompt('¿Y la categoría?\n' +
+          Object.keys(NOMBRE_CAT).join(', '), 'profesores');
+        if (c === null || !NOMBRE_CAT[c.trim()]) {
+          nota('Categoría no válida', 'ojo', 'Tiene que ser una de la lista.');
+          btn.disabled = false; return;
+        }
+        await api('salida-corregir', { id, concepto: q.trim(),
+                                       categoria: c.trim() });
+        nota('Corregida', 'bien', 'La próxima a esa cuenta ya sale bien.');
       } else {
         /* Se pide el porqué, y el servidor también lo exige. Una salida
            descartada sin razón es un agujero que dentro de tres meses
@@ -6939,7 +7004,9 @@ const CONFIG = {
       fallo(e, 'No se pudo guardar');
       btn.disabled = false;
     }
-  });
+  }
+  $('#sal-lista').addEventListener('click', accionSalida);
+  $('#sal-solas-lista').addEventListener('click', accionSalida);
 
   $('#tab-salidas').addEventListener('click',
     () => { verPanel('salidas'); cargarSalidas(); });

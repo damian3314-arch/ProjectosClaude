@@ -419,6 +419,16 @@ const ADMIN = {
                       p_concepto:  String(b.concepto || '').trim().slice(0, 200),
                       p_a_quien:   TXT(b.a_quien, 60) }
                   : { _error: 'ID_INVALIDO' }) },
+  /* Corregir lo que la máquina clasificó sola. No es cosmético: de
+     `salidas_banco` sale lo que se aprende, así que esto también arregla
+     la próxima transferencia a esa misma cuenta. */
+  'salida-corregir': { fn: 'admin_salida_corregir',
+                args: (b) => (UUID(b.id)
+                  ? { p_id: UUID(b.id),
+                      p_categoria: String(b.categoria || '').trim().slice(0, 20),
+                      p_concepto:  String(b.concepto || '').trim().slice(0, 200),
+                      p_a_quien:   TXT(b.a_quien, 60) }
+                  : { _error: 'ID_INVALIDO' }) },
   'salida-descartar': { fn: 'admin_salida_descartar',
                 args: (b) => (UUID(b.id)
                   ? { p_id: UUID(b.id), p_nota: String(b.nota || '').trim().slice(0, 200) }
