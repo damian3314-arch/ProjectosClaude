@@ -407,6 +407,23 @@ const ADMIN = {
                   };
                 } },
 
+  /* Las salidas de la cuenta que todavía nadie identificó. A diferencia
+     del resto de la tesorería, esto sí lo ve recepción: clasificar una
+     salida no es ver la nómina, es decir a qué corresponde un movimiento
+     que ya ocurrió. El permiso lo decide Postgres, no esta tabla. */
+  'salidas-pendientes': { fn: 'admin_salidas_pendientes', args: () => ({}) },
+  'salida-clasificar': { fn: 'admin_salida_clasificar',
+                args: (b) => (UUID(b.id)
+                  ? { p_id: UUID(b.id),
+                      p_categoria: String(b.categoria || '').trim().slice(0, 20),
+                      p_concepto:  String(b.concepto || '').trim().slice(0, 200),
+                      p_a_quien:   TXT(b.a_quien, 60) }
+                  : { _error: 'ID_INVALIDO' }) },
+  'salida-descartar': { fn: 'admin_salida_descartar',
+                args: (b) => (UUID(b.id)
+                  ? { p_id: UUID(b.id), p_nota: String(b.nota || '').trim().slice(0, 200) }
+                  : { _error: 'ID_INVALIDO' }) },
+
   'usuarios-listar': { fn: 'admin_listar_usuarios', args: () => ({}) },
   'usuarios-estado': { fn: 'admin_cambiar_estado_usuario',
                 args: (b) => (UUID(b.id)

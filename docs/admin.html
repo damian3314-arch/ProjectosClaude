@@ -1427,6 +1427,12 @@ const CONFIG = {
       <button class="tab" role="tab" id="tab-mensualidad" aria-selected="false">
         <span class="ic" aria-hidden="true">◎</span>Mensualidad<span class="globo" id="globo-mens" hidden></span>
       </button>
+      <!-- Va en «Hoy» y no en «Negocio» a propósito: esto lo atiende
+           recepción. Clasificar una salida no es ver la nómina; es decir
+           a qué corresponde un movimiento que el banco ya avisó. -->
+      <button class="tab" role="tab" id="tab-salidas" aria-selected="false">
+        <span class="ic" aria-hidden="true">↗</span>Salidas<span class="globo" id="globo-sal" hidden></span>
+      </button>
 
       <div class="lat-grupo" id="grupo-negocio">Negocio</div>
       <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>
@@ -1744,6 +1750,23 @@ const CONFIG = {
         </div>
       </details>
       <div id="mens-lista"></div>
+    </div>
+
+    <!-- ═══ salidas de la cuenta por clasificar ═══
+         Damián, 20 de septiembre: «cada vez que sale dinero de la cuenta
+         de Tumbao llega ese correo del banco… que exista como algo de
+         notificación que hay gastos sin procesar, y que al tomar esa
+         información se pueda poner el gasto a que corresponde».
+
+         El correo trae el monto, la cuenta de destino y la hora. Lo que
+         no trae es a quién: en una transferencia solo viene el número.
+         Por eso esta pantalla existe — alguien tiene que decirlo. -->
+    <div class="panel" id="p-salidas">
+      <div class="semana-bar">
+        <button class="btn-min" id="sal-recargar">Recargar</button>
+        <span class="suave" id="sal-resumen"></span>
+      </div>
+      <div id="sal-lista"></div>
     </div>
 
     <div class="panel" id="p-usuarios">
@@ -2267,6 +2290,9 @@ const CONFIG = {
     if (arranque === 'resumen') { cargarResumen(); cargarRanking(); }
     cargarTablero();
     cargarPendientes();
+    // Para que el globo de salidas esté puesto al abrir el panel y no
+    // quince segundos después, cuando ya nadie está mirando la barra.
+    cargarSalidas();
   }
 
   $('#btn-entrar').addEventListener('click', async () => {
@@ -2369,7 +2395,7 @@ const CONFIG = {
 
   /* ---------- pestañas ---------- */
   const PANELES = ['resumen', 'tesoreria', 'tablero', 'horario', 'pendientes',
-                   'disfrutar', 'caja', 'mensualidad', 'usuarios'];
+                   'disfrutar', 'caja', 'mensualidad', 'salidas', 'usuarios'];
   // El nombre de cada sección, para el título de arriba. Vive aquí y no
   // en el HTML porque en el celular el botón dice «Tesorería» en letra
   // pequeña y el título tiene que poder decir algo más largo.
@@ -2377,6 +2403,7 @@ const CONFIG = {
     resumen: 'Resumen', tesoreria: 'Tesorería', tablero: 'Tablero',
     horario: 'Horario', pendientes: 'Por validar', disfrutar: 'Por disfrutar',
     caja: 'Caja', mensualidad: 'Mensualidad', usuarios: 'Usuarios',
+    salidas: 'Salidas por clasificar',
   };
   let panelActual = 'tablero';
   function verPanel(cual) {
@@ -2429,7 +2456,15 @@ const CONFIG = {
     else if (panelActual === 'disfrutar') cargarDisfrutar();
     else if (panelActual === 'resumen')   { cargarResumen(); cargarRanking(); }
     else if (panelActual === 'tesoreria') { cargarTesoreria(); }
+    else if (panelActual === 'salidas')   { cargarSalidas(); }
     // El horario no cambia solo: lo escribe una persona y ya.
+
+    /* Y el globo de salidas se refresca aunque la pestaña esté cerrada.
+       Es el punto de todo esto: que se NOTE que hay plata sin
+       identificar. Un contador que solo aparece al entrar a mirarlo no
+       avisa de nada. Su propia ventana de frescura lo frena, así que
+       esto no añade llamadas extra. */
+    if (panelActual !== 'salidas') cargarSalidas();
   }
 
   setInterval(latido, LATIDO_MS);
@@ -2489,7 +2524,10 @@ const CONFIG = {
                       resumen: 120000, ranking: 300000,
                       // La tesorería son totales de un mes: no cambia de
                       // un pestañeo, y el gasto se apunta a mano.
-                      tesoreria: 300000 };
+                      tesoreria: 300000,
+                      // Las salidas llegan cuando el banco manda el correo,
+                      // que es varias veces al día pero no cada minuto.
+                      salidas: 60000 };
   const traido = new Map();
   // Qué día hay dibujado ahora mismo en el tablero.
   let diaPintado = null;
@@ -6774,6 +6812,138 @@ const CONFIG = {
   $('#tab-tesoreria').addEventListener('click', () => {
     llenarMeses(); verPanel('tesoreria'); cargarTesoreria();
   });
+
+  /* ═══════════════ salidas de la cuenta por clasificar ═══════════════
+     El correo del banco ya llegaba y ya se guardaba; el parser incluso
+     lo reconocía, y lo botaba. De cada veinte correos, cuatro eran
+     salidas: una quinta parte de los movimientos de la cuenta no tenía
+     nombre.
+
+     Esta pantalla la atiende recepción, y por eso NO muestra ningún
+     total: no es la tesorería, es una bandeja. Cada salida trae dos
+     ayudas que vienen del servidor: qué se dijo la última vez que salió
+     plata a esa misma cuenta, y si ya hay un gasto del mismo valor por
+     esas fechas —que es el aviso de «esto ya lo reportó Tanya». */
+  let salidas = null;
+
+  async function cargarSalidas(forzar) {
+    if (!forzar && esReciente('salidas')) return;
+    traido.set('salidas', Date.now());
+    try {
+      salidas = await api('salidas-pendientes', {});
+      pintarSalidas();
+    } catch (e) {
+      traido.delete('salidas');
+      fallo(e, 'No se pudieron leer las salidas');
+    }
+  }
+
+  function globoSalidas(n) {
+    const g = $('#globo-sal');
+    g.textContent = n > 99 ? '99+' : String(n);
+    g.hidden = !n;
+  }
+
+  function pintarSalidas() {
+    const d = salidas;
+    if (!d) return;
+    const lista = Array.isArray(d.salidas) ? d.salidas : [];
+    globoSalidas(lista.length);
+
+    $('#sal-resumen').textContent = !lista.length ? ''
+      : `${lista.length} sin clasificar · ${pesos(d.cop)}`;
+
+    if (!lista.length) {
+      $('#sal-lista').innerHTML =
+        `<p class="vacio">Todas las salidas de la cuenta están clasificadas.</p>`;
+      return;
+    }
+
+    const opciones = (sel) => Object.entries(NOMBRE_CAT)
+      .map(([k, v]) => `<option value="${esc(k)}"${k === sel ? ' selected' : ''}>${
+        esc(v)}</option>`).join('');
+
+    $('#sal-lista').innerHTML = lista.map(s => {
+      const sug = s.sugerencia || null;
+      const rep = s.quizas_repetida || null;
+      return `<div class="fila mens" data-sal="${esc(s.id)}">
+        <div class="cuerpo">
+          <div class="nom">${esc(pesos(s.valor_cop))}
+            <span class="et">${esc(fmtCorto(s.dia))}</span>
+            ${s.confianza === 'baja'
+              ? '<span class="et ojo">revisar el correo</span>' : ''}</div>
+          <div class="ag">${s.destinatario
+            ? esc(s.destinatario)
+            : (s.cuenta_destino ? 'a la cuenta ' + esc(s.cuenta_destino)
+                                : 'sin destino en el correo')}</div>
+          ${rep ? `<div class="ag mens-cola">Ya hay un gasto de este valor el
+             ${esc(fmtCorto(rep.dia))}: «${esc(rep.concepto)}». Si es el mismo,
+             descártala.</div>` : ''}
+          ${sug ? `<div class="ag mens-llamar">La última vez a esta cuenta fue
+             «${esc(sug.concepto)}»${sug.a_quien ? ' · ' + esc(sug.a_quien) : ''}</div>`
+            : ''}
+          <div class="topes-campos" style="margin-top:.5rem">
+            <label class="topes-campo"><span>A qué corresponde</span>
+              <input type="text" data-campo="concepto" maxlength="200"
+                     value="${esc(sug ? sug.concepto : '')}"
+                     placeholder="clase profe Nagle"></label>
+            <label class="topes-campo"><span>Categoría</span>
+              <select data-campo="categoria">${
+                opciones(sug ? sug.categoria : 'profesores')}</select></label>
+            <label class="topes-campo"><span>A quién (opcional)</span>
+              <input type="text" data-campo="a_quien" maxlength="60"
+                     value="${esc(sug && sug.a_quien ? sug.a_quien : '')}"></label>
+          </div>
+          <div class="topes-pie">
+            <button class="btn primario chico" data-hacer="clasificar">Guardar</button>
+            <button class="btn-min" data-hacer="descartar">Ya estaba registrada</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  $('#sal-lista').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('[data-hacer]');
+    if (!btn) return;
+    const fila = btn.closest('[data-sal]');
+    const id = fila.dataset.sal;
+    const val = (c) => (fila.querySelector(`[data-campo="${c}"]`) || {}).value || '';
+    btn.disabled = true;
+    try {
+      if (btn.dataset.hacer === 'clasificar') {
+        const concepto = val('concepto').trim();
+        if (!concepto) {
+          nota('Falta decir qué era', 'ojo', 'Escribe a qué corresponde la salida.');
+          btn.disabled = false; return;
+        }
+        await api('salida-clasificar', { id, concepto,
+          categoria: val('categoria'), a_quien: val('a_quien').trim() || null });
+        nota('Salida clasificada', 'bien', 'Ya cuenta como gasto en la tesorería.');
+      } else {
+        /* Se pide el porqué, y el servidor también lo exige. Una salida
+           descartada sin razón es un agujero que dentro de tres meses
+           nadie sabe tapar. */
+        const nota_ = prompt('¿Por qué se descarta?\n' +
+          'Ej.: «ya estaba en el chat de gastos», «fue un traslado entre cuentas».');
+        if (nota_ === null) { btn.disabled = false; return; }
+        if (!nota_.trim()) {
+          nota('Falta la razón', 'ojo', 'Sin el porqué no se puede descartar.');
+          btn.disabled = false; return;
+        }
+        await api('salida-descartar', { id, nota: nota_.trim() });
+        nota('Salida descartada', 'bien', nota_.trim());
+      }
+      await cargarSalidas(true);
+    } catch (e) {
+      fallo(e, 'No se pudo guardar');
+      btn.disabled = false;
+    }
+  });
+
+  $('#tab-salidas').addEventListener('click',
+    () => { verPanel('salidas'); cargarSalidas(); });
+  $('#sal-recargar').addEventListener('click', () => cargarSalidas(true));
 
   /* ═══════════════ quiénes vienen más ═══════════════
      La identidad la fijó Damián: celular + nombre. Quien la calcula es

@@ -197,6 +197,50 @@ async function registrarPago(env, analisis, idMensaje, textoLimpio) {
   return { resultado, barrido };
 }
 
+
+/**
+ * Apunta una SALIDA de la cuenta para que alguien la clasifique.
+ *
+ * Damián, 20 de septiembre: «cada vez que sale dinero de la cuenta de
+ * Tumbao llega ese correo del banco… que exista como algo de
+ * notificación que hay gastos sin procesar».
+ *
+ * Esto NO crea un gasto. Crea un aviso de que salió plata, y ya. El
+ * gasto lo crea la persona que lo clasifica, y por una razón concreta:
+ * Tanya reporta esos mismos pagos en el chat, y de ahí salieron los
+ * renglones que ya están cargados. Si la salida entrara sola a `gastos`,
+ * cada pago quedaría dos veces.
+ *
+ * Es idempotente por el message-id, igual que los pagos.
+ */
+async function registrarSalida(env, analisis, idMensaje, textoLimpio) {
+  const r = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/rpc/banco_salida_apuntar`, {
+      method: 'POST',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_ref: idMensaje,
+        p_valor_cop: analisis.valor_cop,
+        p_ocurrio_at: analisis.ocurrio_at,
+        p_cuenta_origen: analisis.cuenta_origen,
+        p_cuenta_destino: analisis.cuenta_destino,
+        p_destinatario: analisis.destinatario,
+        p_patron: analisis.patron,
+        p_confianza: analisis.confianza,
+        p_raw: String(textoLimpio || '').slice(0, 4000),
+      }),
+    });
+  const texto = await r.text();
+  if (!r.ok) {
+    throw new Error(`banco_salida_apuntar ${r.status}: ${texto.slice(0, 200)}`);
+  }
+  try { return JSON.parse(texto); } catch (_) { return {}; }
+}
+
 function json(datos, estado = 200) {
   return new Response(JSON.stringify(datos, null, 2), {
     status: estado,
@@ -307,6 +351,28 @@ export default {
         clave, JSON.stringify(registro),
         { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
     }
+
+    // Y si es dinero SALIENDO, a la bandeja de por clasificar. Mismas
+    // tres condiciones y mismo orden: el correo ya está guardado antes
+    // de tocar Supabase, así que si la base falla no se pierde nada y
+    // se puede reprocesar.
+    //
+    // Va en su propio `if` y no en un `else` a propósito: los dos
+    // caminos son independientes y un fallo en éste no puede arrastrar
+    // al de los pagos, que es el que sostiene las reservas.
+    if (env.REGISTRAR === '1' && delBanco && analisis && analisis.es_salida) {
+      try {
+        registro.salida = await registrarSalida(
+          env, analisis, idMensaje, texto);
+      } catch (e) {
+        registro.salida = {
+          error: String(e && e.message ? e.message : e).slice(0, 300),
+        };
+      }
+      await env.BUZON.put(
+        clave, JSON.stringify(registro),
+        { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
+    }
   },
 
   /* ── leer lo que llegó ───────────────────────────────────────────
@@ -386,6 +452,10 @@ export default {
             procedencia: c.procedencia,
             analisis: c.analisis,
             registrado: c.registrado,
+            // El aviso de arriba va en serio: éste es el equivalente de
+            // `registrado` para las salidas. Sin él, diagnosticar por qué
+            // una salida no llegó a la bandeja sería a ciegas.
+            salida: c.salida,
             fallo: c.fallo,
           })),
         });
