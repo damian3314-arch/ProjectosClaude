@@ -6639,7 +6639,15 @@ const CONFIG = {
     $('#tes-rango').textContent = fmtCorto(d.desde) + ' – ' + fmtCorto(d.hasta);
 
     const util = Number(d.utilidad_cop || 0);
-    const cDelta = compara(ent.ingreso_cop, entA.ingreso_cop);
+    /* 0091: la cifra de «entró» sale del reporte del mostrador, no de la
+       Caja. La Caja no existía antes del 10/8 y por eso agosto salía con
+       una pérdida de 2.171.900 que nunca ocurrió. `entradas` se sigue
+       recibiendo —es el desglose de lo que pasó por la página y el banco,
+       que es con lo que se concilia— pero ya no manda en la tarjeta.
+       El `??` deja funcionando un panel viejo contra un servidor nuevo. */
+    const entro  = d.ingreso_cop       ?? ent.ingreso_cop;
+    const entroA = d.ingreso_antes_cop ?? entA.ingreso_cop;
+    const cDelta = compara(entro, entroA);
     const sDelta = compara(d.salidas_cop, d.salidas_antes_cop);
     /* En un gasto, subir es malo. `compara` pinta de verde lo que crece
        porque nació para las ventas; aquí se le da la vuelta en vez de
@@ -6650,7 +6658,7 @@ const CONFIG = {
        él escribió, en tres números. */
     $('#tes-fichas').innerHTML = [
       `<div class="ficha"><div class="cab">Entró</div>
-         <div class="gordo">${esc(pesos(ent.ingreso_cop))}</div>
+         <div class="gordo">${esc(pesos(entro))}</div>
          <div class="vs"><span class="delta ${cDelta.clase}">${esc(cDelta.txt)}</span></div></div>`,
       `<div class="ficha"><div class="cab">Salió</div>
          <div class="gordo">${esc(pesos(d.salidas_cop))}</div>

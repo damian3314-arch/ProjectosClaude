@@ -229,7 +229,73 @@ ok('sin acusar de doble conteo, que era lo que estaba mal',
 ok('y en buen castellano', !/no se ve descontados/.test(t),
    'la concordancia se rompía al pluralizar solo una de las dos palabras');
 
-/* ═══════════ 6. un mes sin gastos no es un mes sin gastos ═══════════
+/* ═══════════ 6. la cifra de «entró» sale del mostrador ═══════════
+   La Caja no existía antes del 10/8, así que agosto enseñaba 9.815.000
+   de entradas y una pérdida de 2.171.900 que nunca ocurrió: le faltaban
+   los nueve primeros días. Con el reporte de AdminGym cargado, agosto
+   entró 14.170.000 y dejó 2.183.100.
+
+   `entradas` se sigue recibiendo y no desaparece —es el desglose de lo
+   que pasó por la página y el banco, que es con lo que se concilia— pero
+   ya no manda en la tarjeta. Esta prueba es justo eso: que cuando las
+   dos cifras discrepan, gana la del mostrador. */
+
+tes = {
+  ...REAL, desde: '2026-08-01', hasta: '2026-08-31', dias: 31,
+  ingreso_cop: 14170000, ingreso_antes_cop: 16161000,
+  fuente_ingreso: 'mostrador', mostrador_hasta: '2026-09-19',
+  // Lo que decía la Caja, que es 4.355.000 menos.
+  entradas: { ingreso_cop: 9815000, egreso_cop: 0, personas: 247 },
+  entradas_antes: { ingreso_cop: 30000, egreso_cop: 0, personas: 15 },
+  salidas_cop: 11986900, adelantos_cop: 600000,
+  utilidad_cop: 2183100, utilidad_sin_adelantos_cop: 2783100,
+  margen_pct: 15, categorias: [], revisar: [],
+};
+await p.click('#tes-recargar');
+await p.waitForTimeout(500);
+t = await txt('#tes-fichas');
+ok('la tarjeta enseña lo del mostrador', /\$14\.170\.000/.test(t), t.replace(/\s+/g, ' '));
+ok('y no lo que veía la Caja', !/\$9\.815\.000/.test(t),
+   'esa cifra era la que ponía agosto en pérdida');
+ok('con la utilidad en positivo', /\$2\.183\.100/.test(t));
+ok('pintada como algo bueno',
+   await p.locator('#tes-fichas .gordo.bueno').count() === 1);
+
+/* Un panel viejo contra un servidor viejo tiene que seguir andando: si
+   no llega `ingreso_cop`, se cae a `entradas`. */
+tes = { ...REAL, ingreso_cop: undefined, ingreso_antes_cop: undefined };
+await p.click('#tes-recargar');
+await p.waitForTimeout(500);
+ok('sin la cifra nueva, se cae a la de la Caja',
+   /\$9\.335\.000/.test(await txt('#tes-fichas')));
+
+/* ═══════════ 7. faltan gastos de media que nadie ve ═══════════
+   Es el error más caro de esta pantalla, y volvió disfrazado. Junio
+   tiene el ingreso del mes entero contra los gastos de diez días —el
+   chat arranca el 21— y daba 69% de margen sin un solo aviso, porque el
+   de `sin_gastos` solo salta cuando no hay NINGUNO. */
+
+tes = {
+  ...REAL, desde: '2026-06-01', hasta: '2026-06-30', dias: 30,
+  ingreso_cop: 12310000, ingreso_antes_cop: 12230000,
+  salidas_cop: 3781200, utilidad_cop: 8528800, margen_pct: 69,
+  categorias: [],
+  revisar: [{ clave: 'gastos_a_medias', peso: 0, cop: 0,
+    titulo: 'Faltan los gastos de los primeros 20 días del periodo',
+    detalle: 'El primer gasto cargado es del 21/06, pero aquí se está ' +
+      'contando el ingreso desde el 01/06. La utilidad y el margen de ' +
+      'arriba salen mejores de lo que fueron.' }],
+};
+await p.click('#tes-recargar');
+await p.waitForTimeout(500);
+t = await txt('#tes-revisar');
+ok('avisa de que los gastos no cubren el periodo',
+   /Faltan los gastos/.test(t), t.slice(0, 120));
+ok('diciendo cuántos días', /20 días/.test(t));
+ok('y que el margen de arriba miente',
+   /mejores de lo que fueron/.test(t));
+
+/* ═══════════ 8. un mes sin gastos no es un mes sin gastos ═══════════
    Es el error más caro de esta pantalla: enseñar los ingresos completos
    menos la caja menor y llamar a eso utilidad. */
 
