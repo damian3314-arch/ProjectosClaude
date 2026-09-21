@@ -58,8 +58,15 @@ console.log('\n-- 3. Nunca una pregunta pelada -----------------------------');
 ok('a una pregunta sola se le antepone el acuse',
    conAcuse('¿Qué le dirías a alguien que está pensando en venir?')
      .startsWith('Gracias por contarme.'));
+/* Esta pregunta es del guion de retención, así que hay que decir de qué
+   tema es: `conAcuse` reconoce una pregunta del guion comparándola con
+   las del tema que se le pase, y sin decirlo compara contra el de por
+   defecto —que desde el 15 de septiembre es la campaña de escucha— y no
+   la encuentra. Antes daba igual porque retención ERA el de por
+   defecto. */
 ok('también si la pregunta no arranca con el signo',
-   conAcuse('Si mañana dejaras de venir a Tumbao, ¿cuál sería la razón más probable?')
+   conAcuse('Si mañana dejaras de venir a Tumbao, ¿cuál sería la razón más probable?',
+            'opinion')
      .startsWith('Gracias por contarme.'));
 ok('si el bot ya acusó recibo, no se le mete otro encima',
    conAcuse('Uy, qué bueno leer eso. ¿Y si dejaras de venir?')
@@ -72,8 +79,14 @@ ok('y una respuesta vacía no se convierte en un acuse suelto',
 
 console.log('\n-- 4. El saludo, en el Worker de verdad ---------------------');
 {
+  /* Del guion de RETENCIÓN, dicho a propósito. Antes era el de por
+     defecto y bastaba con no pasar tema; desde el 15 de septiembre lo es
+     la campaña de escucha, que tiene su propio saludo y su propia
+     primera pregunta —y esa la cubre tema.test.mjs—. Lo que se comprueba
+     aquí es la FORMA del saludo: para qué se pregunta, que hay alguien
+     detrás, lo poco que cuesta, y que acaba en la pregunta. */
   const { env } = entorno();
-  const c = chat(worker, env);
+  const c = chat(worker, env, undefined, 'opinion');
   const d = await c.abrir();
   ok('dice para qué se pregunta', /adivinar/.test(d.respuesta));
   // No se comprueba un nombre propio: quien lea el chat puede cambiar.

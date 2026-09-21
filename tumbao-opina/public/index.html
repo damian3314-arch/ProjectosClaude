@@ -193,9 +193,24 @@ function burbuja(de, texto, medio){
   d.className = 'msg ' + (de === 'bot' ? 'bot' : 'yo');
   const etiqueta = medio === 'voz' ? '🎙️ nota de voz'
                  : medio === 'imagen' ? '🖼️ imagen' : '';
+  /* El texto se escapa SIEMPRE, y solo después se vuelve clicable un
+     enlace de WhatsApp. En ese orden y con ese patrón tan cerrado a
+     propósito: lo que escribe el bot pasa por un modelo, así que aquí
+     no se puede confiar en que sea inofensivo. Escapar primero y
+     reconstruir solo wa.me deja el resto inerte.
+
+     Existe porque el chat recibía problemas que no se resuelven aquí
+     —«pagué y cerré la página sin mandar el comprobante»— y decirle a
+     alguien «escríbenos al WhatsApp» sin un enlace que pueda pulsar es
+     pedirle que copie un número a mano desde el celular. */
+  const seguro = texto.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const conEnlace = seguro.replace(
+    /https:\/\/wa\.me\/[0-9]{10,15}(?:\?text=[A-Za-z0-9%._~-]*)?/g,
+    u => '<a href="' + u + '" target="_blank" rel="noopener">escríbenos por WhatsApp</a>');
+
   d.innerHTML = '<div class="burbuja">' +
     (etiqueta ? '<span class="medio">' + etiqueta + '</span>' : '') +
-    texto.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) +
+    conEnlace +
     '</div>';
   hilo.appendChild(d);
   hilo.scrollTop = hilo.scrollHeight;
