@@ -1,0 +1,37 @@
+name: Desplegar tumbao-caja
+
+# Antes esto lo corría Claude a mano con `wrangler deploy`, pegando el
+# token de Cloudflare en el chat cada vez que el contenedor se reiniciaba.
+# Con esto, cada push a la rama de trabajo que toque tumbao-caja/ se
+# publica solo. El único requisito es un secreto en este repo:
+#
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Nombre:  CLOUDFLARE_API_TOKEN
+#   Valor:   un token de Cloudflare con permiso "Edit Cloudflare Workers"
+#            (créalo en https://dash.cloudflare.com/profile/api-tokens)
+#
+# Ese token nunca vuelve a pasar por el chat.
+
+on:
+  push:
+    branches: [claude/tumbao-reservas-n8n-831zit]
+    paths:
+      - 'tumbao-caja/**'
+      - '.github/workflows/deploy-caja.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-caja
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
+          workingDirectory: tumbao-caja
+          command: deploy

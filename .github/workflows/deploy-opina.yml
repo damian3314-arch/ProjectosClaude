@@ -1,0 +1,29 @@
+name: Desplegar tumbao-opina
+
+# El bot de opiniones de WhatsApp. Mismo mecanismo que deploy-caja.yml:
+# push a tumbao-opina/ en la rama de trabajo, lo publica solo con el
+# secreto CLOUDFLARE_API_TOKEN ya configurado en este repo.
+
+on:
+  push:
+    branches: [claude/tumbao-reservas-n8n-831zit]
+    paths:
+      - 'tumbao-opina/**'
+      - '.github/workflows/deploy-opina.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-opina
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
+          workingDirectory: tumbao-opina
+          command: deploy
