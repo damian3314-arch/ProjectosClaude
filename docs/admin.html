@@ -1749,6 +1749,21 @@ const CONFIG = {
           </div>
         </div>
       </details>
+      <!-- Cuántas personas de mensualidad pueden pedir cambio de horario
+           por clase (0095). Solo el propietario. -->
+      <details id="mens-cambios" hidden>
+        <summary>Cambios de horario por clase</summary>
+        <div class="topes-cuerpo">
+          <label class="topes-campo">
+            <span>Máximo de cambios por clase</span>
+            <input type="number" min="0" max="10" step="1" id="cambios-tope-input">
+          </label>
+          <div class="topes-pie">
+            <button class="btn primario chico" id="cambios-guardar">Guardar</button>
+            <span class="suave" id="cambios-estado"></span>
+          </div>
+        </div>
+      </details>
       <div id="mens-lista"></div>
     </div>
 
@@ -4725,8 +4740,36 @@ const CONFIG = {
     } finally { btn.disabled = false; }
   });
 
+  /* Mismo candado que topes: solo el propietario mueve el techo de
+     cuántas mensualidades se salen de su hora a jugar un cupo ajeno. */
+  async function cargarCambiosTope() {
+    if (rol !== 'propietario' && rol != null) { $('#mens-cambios').hidden = true; return; }
+    $('#mens-cambios').hidden = false;
+    try {
+      const d = await alWorker('mensualidad/cambios-tope', {});
+      $('#cambios-tope-input').value = d.tope;
+      $('#cambios-estado').textContent = 'Guardado: ' + d.tope + ' por clase.';
+    } catch (e) {
+      $('#cambios-estado').textContent = e.message || 'No se pudo leer.';
+    }
+  }
+
+  $('#cambios-guardar').addEventListener('click', async () => {
+    const tope = parseInt($('#cambios-tope-input').value, 10);
+    const btn = $('#cambios-guardar');
+    btn.disabled = true;
+    try {
+      const d = await alWorker('mensualidad/cambios-tope', { tope });
+      $('#cambios-tope-input').value = d.tope;
+      $('#cambios-estado').textContent = 'Guardado: ' + d.tope + ' por clase.';
+      nota('Tope de cambios guardado', 'bien', d.tope + ' por clase');
+    } catch (e) {
+      nota('No se pudo guardar', 'mal', e.message || 'Revisa el número.');
+    } finally { btn.disabled = false; }
+  });
+
   $('#tab-mensualidad').addEventListener('click',
-    () => { verPanel('mensualidad'); cargarMensualidad(); cargarTopes(); });
+    () => { verPanel('mensualidad'); cargarMensualidad(); cargarTopes(); cargarCambiosTope(); });
   $('#mens-recargar').addEventListener('click', () => cargarMensualidad());
   $('#caja-recargar').addEventListener('click', () => cargarCaja(true));
 

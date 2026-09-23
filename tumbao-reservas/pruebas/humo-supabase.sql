@@ -151,11 +151,14 @@ begin
     raise exception 'entre semana en su hora deberia decir PLAN_YA_CUBRE, dijo: %', v_r;
   end if;
 
-  -- Entre semana en otra hora: eso es clase suelta.
+  -- Entre semana en otra hora (0095): ya no rebota de una, se prueba un
+  -- cupo aparte de "cambio", chiquito, que no toca cupo_tomado.
   select tomar_cupo(v_clase_lun18, 'Alba Camacho', '3009999991', null, 'web', 'miembro') into v_r;
-  if (v_r->>'ok')::boolean is not false or (v_r->>'error') <> 'OTRO_HORARIO' then
-    raise exception 'entre semana en otra hora deberia decir OTRO_HORARIO, dijo: %', v_r;
+  if (v_r->>'ok')::boolean is not true or (v_r->>'tipo') <> 'cambio' then
+    raise exception 'entre semana en otra hora deberia entrar como cambio, dijo: %', v_r;
   end if;
+  select cupo_tomado into v_n from clases where id = v_clase_lun18;
+  if v_n <> 1 then raise exception 'el cambio de horario no debia sumar a cupo_tomado, quedo en %', v_n; end if;
 
   -- Sabado: reserva sin pagar.
   select tomar_cupo(v_clase_sab, 'Alba Camacho', '3009999991', null, 'web', 'miembro') into v_r;

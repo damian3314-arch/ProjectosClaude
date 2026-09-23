@@ -793,7 +793,7 @@ async function pagina(request, env, ruta, origen, ctx) {
         const mapa = {
           SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410,
           CLASE_YA_PASO: 410, MEMBRESIA_NO_ENCONTRADA: 404,
-          PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409,
+          PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409, CAMBIO_LLENO: 409,
         };
         return json({
           ok: false,
@@ -1401,6 +1401,15 @@ export default {
         const topes = b.topes == null ? null : String(b.topes).trim().slice(0, 200);
         r = await rpc(env, 'admin_mensualidad_topes', {
           p_token: token, p_topes: topes,
+        });
+
+      /* Cuántas personas de mensualidad pueden pedir cambio de horario
+         por clase (0095). Sin `tope` lee; con `tope` valida (0-10) y
+         guarda. Solo propietario puede guardar — lee cualquier token. */
+      } else if (ruta === '/api/mensualidad/cambios-tope') {
+        const tope = b.tope == null ? null : parseInt(b.tope, 10);
+        r = await rpc(env, 'admin_cambios_tope', {
+          p_token: token, p_tope: Number.isInteger(tope) ? tope : null,
         });
 
       } else if (ruta === '/api/dia') {

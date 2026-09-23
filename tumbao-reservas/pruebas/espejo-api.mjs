@@ -173,6 +173,9 @@ const MIEMBROS = {
   '3001111111': 18, '3001111112': 18, '3001111113': 18,
   '3002222221': 7,  '3002222222': 7,
 };
+// 0095: cuántos de mensualidad pueden pedir cambio de horario por clase,
+// sin tocar el cupo de sueltas/miembros. Espejo del default de la 0095.
+const CAMBIOS_TOPE_POR_CLASE = 4;
 const reservas = new Map();
 // Las reservas hechas de una sola vez y pagadas de un solo giro. Una
 // reserva sola es su propio grupo.
@@ -805,7 +808,7 @@ createServer(async (req, res) => {
     if (!c) return json(res, 404, { ok: false, error: 'CLASE_NO_EXISTE', mensaje: 'Esa clase ya no está disponible.' });
 
     const tel = String(b.telefono || '').replace(/\D/g, '');
-    const tipo = b.tipo === 'miembro' ? 'miembro' : 'suelta';
+    let tipo = b.tipo === 'miembro' ? 'miembro' : 'suelta';
 
     if (tipo === 'miembro') {
       const horaPlan = MIEMBROS[tel];
@@ -813,31 +816,47 @@ createServer(async (req, res) => {
         return json(res, 404, { ok: false, error: 'MEMBRESIA_NO_ENCONTRADA',
           mensaje: 'No encontramos una mensualidad activa con ese celular. Si crees que es un error escríbenos por WhatsApp; si vienes por clase suelta, elige esa opción.' });
       }
-      if (c._dow !== 6) {
-        return json(res, 409, horaPlan === c._hora
-          ? { ok: false, error: 'PLAN_YA_CUBRE', mensaje: 'Tu plan ya te cubre esta clase, no necesitas reservar. Solo llega 10 minutos antes.' }
-          : { ok: false, error: 'OTRO_HORARIO', mensaje: 'Tu plan es de las 6:00 pm. Venir a otra hora entre semana es clase suelta: elige esa opción.' });
+      if (c._dow !== 6 && horaPlan === c._hora) {
+        return json(res, 409, { ok: false, error: 'PLAN_YA_CUBRE', mensaje: 'Tu plan ya te cubre esta clase, no necesitas reservar. Solo llega 10 minutos antes.' });
+      }
+      // 0095: otra hora entre semana ya no rebota de una — se prueba un
+      // cupo de "cambio", chiquito y aparte del cupo de sueltas/miembros,
+      // porque no todo el que tiene plan a esa hora llega a ocuparlo.
+      if (c._dow !== 6 && horaPlan !== c._hora) {
+        const cambiosTomados = [...reservas.values()].filter(r =>
+          r.clase_id === c.clase_id && r.tipo === 'cambio' &&
+          !['rechazada', 'expirada'].includes(r.estado)).length;
+        if (cambiosTomados >= CAMBIOS_TOPE_POR_CLASE) {
+          return json(res, 409, { ok: false, error: 'CAMBIO_LLENO',
+            mensaje: 'Ya se llenaron los cambios de horario para esta clase. Escríbenos por WhatsApp y miramos qué se puede hacer.' });
+        }
+        tipo = 'cambio';
       }
     }
 
-    if (c.cupos_disponibles <= 0) {
-      return json(res, 409, { ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó. Elige otro horario.' });
-    }
-    // El tope de su lado, cuando la clase esta partida. El mensaje es el
-    // mismo de siempre a proposito: decir "se acabaron los de afiliados"
-    // le contaria al cliente que hay un reparto.
-    const tope = tipo === 'miembro' ? c.cupo_miembros : c.cupo_sueltas;
-    if (tope != null) {
-      const tomadas = [...reservas.values()].filter(r =>
-        r.clase_id === c.clase_id && r.tipo === tipo &&
-        !['rechazada', 'expirada'].includes(r.estado)).length;
-      if (tomadas >= tope) {
-        return json(res, 409, { ok: false, error: 'SIN_CUPO',
-          mensaje: 'Esa clase se llenó. Elige otro horario.' });
+    // Un cambio no compite por el cupo de la sala: ni lo puede llenar
+    // (no mira SIN_CUPO/el tope de sueltas-miembros), ni lo consume
+    // (no resta de cupos_disponibles), por diseño de la 0095.
+    if (tipo !== 'cambio') {
+      if (c.cupos_disponibles <= 0) {
+        return json(res, 409, { ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó. Elige otro horario.' });
       }
+      // El tope de su lado, cuando la clase esta partida. El mensaje es el
+      // mismo de siempre a proposito: decir "se acabaron los de afiliados"
+      // le contaria al cliente que hay un reparto.
+      const tope = tipo === 'miembro' ? c.cupo_miembros : c.cupo_sueltas;
+      if (tope != null) {
+        const tomadas = [...reservas.values()].filter(r =>
+          r.clase_id === c.clase_id && r.tipo === tipo &&
+          !['rechazada', 'expirada'].includes(r.estado)).length;
+        if (tomadas >= tope) {
+          return json(res, 409, { ok: false, error: 'SIN_CUPO',
+            mensaje: 'Esa clase se llenó. Elige otro horario.' });
+        }
+      }
+      c.cupos_disponibles--;
+      c.agotada = c.cupos_disponibles <= 0;
     }
-    c.cupos_disponibles--;
-    c.agotada = c.cupos_disponibles <= 0;
 
     const cod = codigo();
     const requierePago = tipo === 'suelta';
