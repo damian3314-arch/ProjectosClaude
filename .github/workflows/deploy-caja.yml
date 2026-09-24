@@ -34,4 +34,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
           workingDirectory: tumbao-caja
+          # Sin esto la Action usa una wrangler vieja (3.90) cacheada en
+          # el runner, que no lee bien los comentarios `//` de
+          # wrangler.jsonc y por eso nunca encuentra el `main`.
+          wranglerVersion: '4.126.0'
           command: deploy

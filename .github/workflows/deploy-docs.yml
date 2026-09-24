@@ -30,4 +30,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
+          wranglerVersion: '4.126.0'
           command: pages deploy docs --project-name=tumbao
