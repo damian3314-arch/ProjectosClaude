@@ -502,6 +502,13 @@ const CONFIG = {
           <span class="des">Eliges tu clase, pagas y tu cupo queda confirmado.</span>
         </span>
       </button>
+      <button class="opcion" type="button" data-tipo="tiquetera">
+        <span class="ico" aria-hidden="true">🎫</span>
+        <span>
+          <span class="tit">Tengo tiquetera</span>
+          <span class="des">Ya la pagaste. Reserva con tu código, sin pagar otra vez.</span>
+        </span>
+      </button>
     </div>
     <div class="aviso info" style="margin-top:1.2rem">
       Si tienes mensualidad, tus clases <b>entre semana</b> ya están cubiertas —
@@ -549,6 +556,14 @@ const CONFIG = {
            campo vacío por persona es lo que evita que en la puerta haya
            seis cupos y un solo nombre. -->
       <div id="acompanantes"></div>
+      <div id="caja-codigo-tiquetera" hidden>
+        <label for="codigo-tiquetera">Código de tu tiquetera <span class="req">*</span></label>
+        <input id="codigo-tiquetera" name="codigo_tiquetera" type="text"
+               autocapitalize="characters" maxlength="6" placeholder="ABC123"
+               style="text-transform:uppercase">
+        <p class="hint">Te lo dieron en recepción cuando la compraste.</p>
+        <p class="err-campo" id="e-codigo-tiquetera">Escribe el código de tu tiquetera.</p>
+      </div>
       <div>
         <label for="celular">Celular <span class="req">*</span></label>
         <input id="celular" name="celular" type="tel" inputmode="numeric" autocomplete="tel-national" required maxlength="20" placeholder="300 123 4567">
@@ -847,18 +862,26 @@ const CONFIG = {
   $$('.opcion').forEach(b => b.addEventListener('click', () => {
     tipo = b.dataset.tipo;
     const esMiembro = tipo === 'miembro';
-    $('#chip-pago').hidden = esMiembro;
-    $('#chip-fin').textContent = esMiembro ? '4' : '5';
+    const esTiquetera = tipo === 'tiquetera';
+    $('#chip-pago').hidden = esMiembro || esTiquetera;
+    $('#chip-fin').textContent = (esMiembro || esTiquetera) ? '4' : '5';
     $('#sub-horario').textContent = esMiembro
       ? 'Tus clases entre semana ya están cubiertas. Aquí apartas el sábado.'
+      : esTiquetera
+      ? 'Elige el día y la hora. Tu cupo queda confirmado sin pagar otra vez.'
       : 'Elige el día y la hora. Después pagas y tu cupo queda confirmado.';
     $('#sub-datos').textContent = esMiembro
       ? 'Con tu celular verificamos tu mensualidad.'
+      : esTiquetera
+      ? 'Con tu código descontamos la clase de tu tiquetera.'
       : 'Solo lo necesario para apartarte el cupo.';
     $('#hint-celular').textContent = esMiembro
       ? 'Debe ser el mismo que tienes registrado en Tumbao.'
+      : esTiquetera
+      ? 'El mismo con el que compraste la tiquetera.'
       : 'Ahí te confirmamos por WhatsApp.';
-    $('#enviar').textContent = esMiembro ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
+    $('#caja-codigo-tiquetera').hidden = !esTiquetera;
+    $('#enviar').textContent = (esMiembro || esTiquetera) ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
     irA(1);
     cargar();
   }));
@@ -916,8 +939,11 @@ const CONFIG = {
       // servidor devuelve los cupos de SU lado ya calculados, así que
       // el sábado (que está partido entre afiliados y sueltas) se ve
       // como un número normal y nadie tiene que enterarse del reparto.
+      // La tiquetera juega en el mismo cupo que la clase suelta (0097):
+      // se le enseñan los mismos números, no un tercer conteo aparte.
+      const tipoDeCupo = tipo === 'tiquetera' ? 'suelta' : (tipo || 'suelta');
       const res = await fetch(
-        `${CONFIG.API_BASE}/clases?tipo=${encodeURIComponent(tipo || 'suelta')}`,
+        `${CONFIG.API_BASE}/clases?tipo=${encodeURIComponent(tipoDeCupo)}`,
         { headers:{ Accept:'application/json' } });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
@@ -1160,10 +1186,14 @@ const CONFIG = {
     const nombre  = $('#nombre').value.trim();
     const celular = $('#celular').value.replace(/\D/g,'').replace(/^57(?=\d{10}$)/,'');
     const habeas  = $('#habeas').checked;
+    const codigoTiquetera = $('#codigo-tiquetera').value.trim().toUpperCase();
 
     let malo = false;
     malo = marcar('#nombre','#e-nombre', nombre.length >= 2) || malo;
     malo = marcar('#celular','#e-celular', celular.length === 10) || malo;
+    if (tipo === 'tiquetera') {
+      malo = marcar('#codigo-tiquetera','#e-codigo-tiquetera', codigoTiquetera.length >= 4) || malo;
+    }
     $('#e-habeas').classList.toggle('on', !habeas);
     if (!habeas) malo = true;
 
@@ -1200,6 +1230,7 @@ const CONFIG = {
             body: JSON.stringify({
               clase_id: elegida.clase_id, nombre, telefono: celular,
               email: $('#email').value.trim(), habeas: true, tipo,
+              codigo_tiquetera: tipo === 'tiquetera' ? codigoTiquetera : undefined,
               apellido2: $('#apellido2').value
             })
           });
@@ -1232,7 +1263,8 @@ const CONFIG = {
     }finally{
       enviando = false;
       $('#enviar').disabled = false;
-      $('#enviar').textContent = tipo === 'miembro' ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
+      $('#enviar').textContent = (tipo === 'miembro' || tipo === 'tiquetera')
+        ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
     }
   });
 
@@ -1537,7 +1569,7 @@ const CONFIG = {
     // pago no se confirmó solo, y la persona tiene algo que hacer: hay
     // que decírselo, y de una que no perdió el cupo.
     $('#t5').textContent = confirmada
-      ? (tipo === 'miembro' ? '¡Listo, te esperamos!' : '¡Pago confirmado!')
+      ? ((tipo === 'miembro' || tipo === 'tiquetera') ? '¡Listo, te esperamos!' : '¡Pago confirmado!')
       : (pendiente ? 'No pudimos confirmar tu pago automáticamente'
                    : 'Algo pasó con tu reserva');
 
@@ -1548,7 +1580,10 @@ const CONFIG = {
     $('#ok-codigo').textContent  = d.codigo || '——————';
 
     $('#ok-mensaje').innerHTML = confirmada
-      ? 'Muestra este código en recepción. Llega 10 minutos antes.'
+      ? (tipo === 'tiquetera' && Number.isFinite(d.tiquetera_saldo)
+          ? `Muestra este código en recepción. Llega 10 minutos antes. ` +
+            `Te quedan <b>${d.tiquetera_saldo}</b> clase${d.tiquetera_saldo === 1 ? '' : 's'} en tu tiquetera.`
+          : 'Muestra este código en recepción. Llega 10 minutos antes.')
       : (pendiente
           // Aqui la persona tiene algo QUE HACER, y hay que decirlo sin
           // rodeos: el pago no se confirmo solo y con el soporte se

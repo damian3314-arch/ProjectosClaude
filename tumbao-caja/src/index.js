@@ -443,6 +443,26 @@ const ADMIN = {
                 args: (b) => (UUID(b.id) && ROLES.has(b.rol)
                   ? { p_id: UUID(b.id), p_rol: b.rol }
                   : { _error: 'DATO_INVALIDO' }) },
+
+  // Tiqueteras (0097): cualquier rol de admin puede vender una — es
+  // caja de mostrador, igual que registrar cualquier otro ingreso.
+  'tiquetera-crear': { fn: 'admin_tiquetera_crear',
+                args: (b) => {
+                  const nombre = TXT(b.nombre, 80);
+                  const tel = TXT(String(b.telefono || '').replace(/\D/g, ''), 15);
+                  const clases = enteroPositivo(b.clases);
+                  const vigencia = enteroPositivo(b.vigencia_dias);
+                  if (!nombre || nombre.length < 2 || !tel || !clases || !vigencia) {
+                    return { _error: 'DATO_INVALIDO' };
+                  }
+                  const precio = b.precio_cop == null || b.precio_cop === ''
+                    ? null : enteroPositivo(b.precio_cop);
+                  return { p_nombre: nombre, p_telefono: tel,
+                           p_clases: clases, p_vigencia_dias: vigencia,
+                           p_precio_cop: precio };
+                } },
+  'tiqueteras-listar': { fn: 'admin_tiqueteras_listar',
+                args: (b) => ({ p_estado: b.estado === 'todas' ? 'todas' : 'activas' }) },
 };
 
 /* ---------------------------------------------------------------------
@@ -776,6 +796,18 @@ async function pagina(request, env, ruta, origen, ctx) {
           mensaje: 'Revisa nombre, celular y la autorizacion de datos.' }, 400, origen);
       }
 
+      // 0097: el tercer camino, además de miembro/suelta. Trae su propia
+      // clave -- sin ella ni se intenta, para no gastar un tomar_cupo
+      // en un TIQUETERA_INVALIDA que ya se veía venir aquí.
+      const tipoPedido = txt(b.tipo, 10);
+      const esTiquetera = tipoPedido === 'tiquetera';
+      const codigoTiquetera = esTiquetera
+        ? txt(b.codigo_tiquetera, 10).toUpperCase().trim() : null;
+      if (esTiquetera && !codigoTiquetera) {
+        return json({ ok: false, error: 'CODIGO_REQUERIDO',
+          mensaje: 'Escribe el código de tu tiquetera.' }, 400, origen);
+      }
+
       // SIN REINTENTO, a propósito. tomar_cupo no es idempotente:
       // repetirlo tras un timeout crearía una segunda reserva y se
       // comería dos cupos. Es preferible fallar y que la persona
@@ -786,7 +818,9 @@ async function pagina(request, env, ruta, origen, ctx) {
         p_telefono: tel,
         p_email:    txt(b.email, 120) || null,
         p_origen:   'formulario',
-        p_tipo:     txt(b.tipo, 10) === 'miembro' ? 'miembro' : 'suelta',
+        p_tipo:     tipoPedido === 'miembro' ? 'miembro'
+                  : esTiquetera ? 'tiquetera' : 'suelta',
+        p_codigo_tiquetera: codigoTiquetera,
       });
 
       if (!r || !r.ok) {
@@ -794,6 +828,7 @@ async function pagina(request, env, ruta, origen, ctx) {
           SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410,
           CLASE_YA_PASO: 410, MEMBRESIA_NO_ENCONTRADA: 404,
           PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409, CAMBIO_LLENO: 409,
+          TIQUETERA_INVALIDA: 404,
         };
         return json({
           ok: false,

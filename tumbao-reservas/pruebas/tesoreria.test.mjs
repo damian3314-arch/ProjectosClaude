@@ -390,11 +390,11 @@ await p2.close();
 
 const cuantas = await p.locator('.lateral .tab').count();
 ok('hay una sola navegación', await p.locator('.lateral').count() === 1);
-// Diez desde el 20 de septiembre: entró «Salidas», la bandeja de lo que
-// sale de la cuenta y todavía nadie identificó. Este número se toca a
-// mano a propósito — es el recordatorio de que añadir una sección es una
-// decisión, no un descuido.
-ok('con las diez secciones dentro', cuantas === 10, `${cuantas} botones`);
+// Once desde el 24 de septiembre: entró «Tiqueteras», para vender los
+// paquetes de clases prepago. Este número se toca a mano a propósito —
+// es el recordatorio de que añadir una sección es una decisión, no un
+// descuido.
+ok('con las once secciones dentro', cuantas === 11, `${cuantas} botones`);
 ok('agrupadas en tres bloques',
    await p.locator('.lateral .lat-grupo').count() === 3);
 ok('y el título dice dónde estás',

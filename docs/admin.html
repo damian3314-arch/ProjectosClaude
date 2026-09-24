@@ -1433,6 +1433,10 @@ const CONFIG = {
       <button class="tab" role="tab" id="tab-salidas" aria-selected="false">
         <span class="ic" aria-hidden="true">↗</span>Salidas<span class="globo" id="globo-sal" hidden></span>
       </button>
+      <!-- Va en «Hoy» también: venderla es caja de mostrador, la hace
+           quien esté atendiendo. -->
+      <button class="tab" role="tab" id="tab-tiqueteras" aria-selected="false">
+        <span class="ic" aria-hidden="true">🎫</span>Tiqueteras</button>
 
       <div class="lat-grupo" id="grupo-negocio">Negocio</div>
       <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>
@@ -1789,6 +1793,37 @@ const CONFIG = {
         <summary>Clasificadas solas (<span id="sal-solas-n">0</span>)</summary>
         <div id="sal-solas-lista"></div>
       </details>
+    </div>
+
+    <!-- ═══ tiqueteras (0097) ═══
+         Paquete de clases prepago. Se vende una vez (código nuevo) y se
+         gasta clase por clase, cuando la clienta reserva en la página
+         con ese código -- ahí no pasa por aquí, tomar_cupo lo hace solo. -->
+    <div class="panel" id="p-tiqueteras">
+      <details id="tiq-crear" open>
+        <summary>Vender una tiquetera</summary>
+        <div class="topes-cuerpo">
+          <label class="topes-campo"><span>Nombre</span>
+            <input type="text" id="tiq-nombre" maxlength="80" placeholder="Camila Rojas"></label>
+          <label class="topes-campo"><span>Celular</span>
+            <input type="tel" id="tiq-telefono" maxlength="10" placeholder="3001234567"></label>
+          <label class="topes-campo"><span>Número de clases</span>
+            <input type="number" min="1" max="20" step="1" id="tiq-clases" value="4"></label>
+          <label class="topes-campo"><span>Vigencia (días)</span>
+            <input type="number" min="1" max="365" step="1" id="tiq-vigencia" value="45"></label>
+          <label class="topes-campo"><span>Precio (opcional, para el reporte)</span>
+            <input type="number" min="0" step="1000" id="tiq-precio" placeholder="52000"></label>
+          <div class="topes-pie">
+            <button class="btn primario chico" id="tiq-crear-btn">Vender</button>
+            <span class="suave" id="tiq-crear-estado"></span>
+          </div>
+        </div>
+      </details>
+      <div class="semana-bar">
+        <button class="btn-min" id="tiq-recargar">Recargar</button>
+        <label class="suave"><input type="checkbox" id="tiq-ver-todas"> Ver vencidas y agotadas</label>
+      </div>
+      <div id="tiq-lista"></div>
     </div>
 
     <div class="panel" id="p-usuarios">
@@ -2417,7 +2452,7 @@ const CONFIG = {
 
   /* ---------- pestañas ---------- */
   const PANELES = ['resumen', 'tesoreria', 'tablero', 'horario', 'pendientes',
-                   'disfrutar', 'caja', 'mensualidad', 'salidas', 'usuarios'];
+                   'disfrutar', 'caja', 'mensualidad', 'salidas', 'tiqueteras', 'usuarios'];
   // El nombre de cada sección, para el título de arriba. Vive aquí y no
   // en el HTML porque en el celular el botón dice «Tesorería» en letra
   // pequeña y el título tiene que poder decir algo más largo.
@@ -2425,7 +2460,7 @@ const CONFIG = {
     resumen: 'Resumen', tesoreria: 'Tesorería', tablero: 'Tablero',
     horario: 'Horario', pendientes: 'Por validar', disfrutar: 'Por disfrutar',
     caja: 'Caja', mensualidad: 'Mensualidad', usuarios: 'Usuarios',
-    salidas: 'Salidas por clasificar',
+    salidas: 'Salidas por clasificar', tiqueteras: 'Tiqueteras',
   };
   let panelActual = 'tablero';
   function verPanel(cual) {
@@ -7054,6 +7089,76 @@ const CONFIG = {
   $('#tab-salidas').addEventListener('click',
     () => { verPanel('salidas'); cargarSalidas(); });
   $('#sal-recargar').addEventListener('click', () => cargarSalidas(true));
+
+  /* ═══════════════ tiqueteras (0097) ═══════════════
+     Se venden aquí (genera el código) y se gastan solas en la página
+     pública, clase por clase, cuando la clienta reserva con ese código
+     -- tomar_cupo hace el descuento, esta pantalla solo mira el saldo. */
+  async function cargarTiqueteras(forzar) {
+    if (!forzar && esReciente('tiqueteras')) return;
+    traido.set('tiqueteras', Date.now());
+    try {
+      const estado = $('#tiq-ver-todas').checked ? 'todas' : 'activas';
+      const d = await api('tiqueteras-listar', { estado });
+      pintarTiqueteras(d.tiqueteras || []);
+    } catch (e) {
+      traido.delete('tiqueteras');
+      fallo(e, 'No se pudieron leer las tiqueteras');
+    }
+  }
+
+  function pintarTiqueteras(lista) {
+    if (!lista.length) {
+      $('#tiq-lista').innerHTML = '<p class="suave">No hay tiqueteras para mostrar.</p>';
+      return;
+    }
+    $('#tiq-lista').innerHTML = lista.map(t => `
+      <div class="fila mens">
+        <div class="cuerpo">
+          <div class="nom">${esc(t.nombre)}
+            <span class="et">${esc(t.codigo)}</span>
+            ${!t.activa ? '<span class="et mal">anulada</span>' : ''}
+          </div>
+          <div class="ag">${esc(t.telefono)} · ${t.clases_restantes} de ${t.clases_totales}
+            clase${t.clases_totales === 1 ? '' : 's'} restantes · vence ${esc(fmtCorto(t.vence_el))}
+            ${t.precio_cop ? ' · ' + esc(pesos(t.precio_cop)) : ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  $('#tiq-crear-btn').addEventListener('click', async () => {
+    const btn = $('#tiq-crear-btn');
+    const nombre = $('#tiq-nombre').value.trim();
+    const telefono = $('#tiq-telefono').value.replace(/\D/g, '');
+    const clases = parseInt($('#tiq-clases').value, 10);
+    const vigencia_dias = parseInt($('#tiq-vigencia').value, 10);
+    const precioTxt = $('#tiq-precio').value.trim();
+    const precio_cop = precioTxt ? parseInt(precioTxt, 10) : null;
+    if (nombre.length < 2 || telefono.length !== 10 || !clases || !vigencia_dias) {
+      $('#tiq-crear-estado').textContent = 'Revisa el nombre, el celular y los números.';
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const d = await api('tiquetera-crear', {
+        nombre, telefono, clases, vigencia_dias, precio_cop,
+      });
+      $('#tiq-crear-estado').textContent = '';
+      nota('Tiquetera vendida', 'bien',
+        `Código ${d.codigo} · ${d.clases} clases · vence ${fmtCorto(d.vence_el)}. Mándaselo por WhatsApp.`);
+      $('#tiq-nombre').value = ''; $('#tiq-telefono').value = ''; $('#tiq-precio').value = '';
+      await cargarTiqueteras(true);
+    } catch (e) {
+      fallo(e, 'No se pudo vender la tiquetera');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('#tab-tiqueteras').addEventListener('click',
+    () => { verPanel('tiqueteras'); cargarTiqueteras(); });
+  $('#tiq-recargar').addEventListener('click', () => cargarTiqueteras(true));
+  $('#tiq-ver-todas').addEventListener('change', () => cargarTiqueteras(true));
 
   /* ═══════════════ quiénes vienen más ═══════════════
      La identidad la fijó Damián: celular + nombre. Quien la calcula es

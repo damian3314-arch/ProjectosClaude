@@ -40,6 +40,8 @@ const SUITES = [
   'tirilla-de-la-duena',
   'tirilla-cuando-pagaron',
   'usuarios-invitacion',
+  'tiquetera-reserva',
+  'tiquetera-panel',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,

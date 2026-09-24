@@ -176,6 +176,11 @@ const MIEMBROS = {
 // 0095: cuántos de mensualidad pueden pedir cambio de horario por clase,
 // sin tocar el cupo de sueltas/miembros. Espejo del default de la 0095.
 const CAMBIOS_TOPE_POR_CLASE = 4;
+// 0097: paquetes de clases prepago. Igual que MIEMBROS, un mapa fijo
+// para que las pruebas tengan algo estable con qué toparse.
+const TIQUETERAS = new Map([
+  ['ABC123', { nombre: 'Tiquetera Prueba', clases_totales: 4, clases_usadas: 0 }],
+]);
 const reservas = new Map();
 // Las reservas hechas de una sola vez y pagadas de un solo giro. Una
 // reserva sola es su propio grupo.
@@ -808,7 +813,22 @@ createServer(async (req, res) => {
     if (!c) return json(res, 404, { ok: false, error: 'CLASE_NO_EXISTE', mensaje: 'Esa clase ya no está disponible.' });
 
     const tel = String(b.telefono || '').replace(/\D/g, '');
-    let tipo = b.tipo === 'miembro' ? 'miembro' : 'suelta';
+    let tipo = b.tipo === 'miembro' ? 'miembro'
+      : b.tipo === 'tiquetera' ? 'tiquetera' : 'suelta';
+
+    // 0097: reserva sin cobrar, con su propia clave -- juega en el mismo
+    // cupo que la suelta, no en uno aparte (a diferencia del cambio).
+    let tiquetera = null;
+    if (tipo === 'tiquetera') {
+      const cod = String(b.codigo_tiquetera || '').trim().toUpperCase();
+      tiquetera = TIQUETERAS.get(cod);
+      if (!tiquetera || tiquetera.clases_usadas >= tiquetera.clases_totales) {
+        return json(res, 404, { ok: false, error: 'TIQUETERA_INVALIDA',
+          mensaje: 'Ese código de tiquetera no es válido, ya venció o ya no '
+                + 'tiene clases disponibles. Escríbenos por WhatsApp si '
+                + 'crees que es un error.' });
+      }
+    }
 
     if (tipo === 'miembro') {
       const horaPlan = MIEMBROS[tel];
@@ -846,8 +866,13 @@ createServer(async (req, res) => {
       // le contaria al cliente que hay un reparto.
       const tope = tipo === 'miembro' ? c.cupo_miembros : c.cupo_sueltas;
       if (tope != null) {
+        // 0097: suelta y tiquetera comparten el mismo cupo -- una
+        // tiquetera vendida es, para este conteo, una silla de suelta
+        // que ya se pagó antes.
         const tomadas = [...reservas.values()].filter(r =>
-          r.clase_id === c.clase_id && r.tipo === tipo &&
+          r.clase_id === c.clase_id &&
+          (tipo === 'miembro' ? r.tipo === 'miembro'
+                               : (r.tipo === 'suelta' || r.tipo === 'tiquetera')) &&
           !['rechazada', 'expirada'].includes(r.estado)).length;
         if (tomadas >= tope) {
           return json(res, 409, { ok: false, error: 'SIN_CUPO',
@@ -860,6 +885,8 @@ createServer(async (req, res) => {
 
     const cod = codigo();
     const requierePago = tipo === 'suelta';
+    // 0097: el saldo se descuenta solo cuando la reserva ya existe.
+    if (tiquetera) tiquetera.clases_usadas++;
     reservas.set(cod, {
       codigo: cod, tipo, clase: c.nombre, clase_id: c.clase_id,
       nombre: String(b.nombre || '').trim(), telefono: tel,
@@ -874,6 +901,7 @@ createServer(async (req, res) => {
       codigo: cod, clase: c.nombre, profesor: c.profesor, lugar: c.lugar,
       fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
       hora: hora12(c.fecha_hora), precio_cop: c.precio_cop,
+      tiquetera_saldo: tiquetera ? tiquetera.clases_totales - tiquetera.clases_usadas : null,
     });
   }
 
