@@ -8,6 +8,15 @@ name: Desplegar la página (docs/)
 #
 # Requiere el mismo secreto que deploy-caja.yml:
 #   Settings → Secrets and variables → Actions → CLOUDFLARE_API_TOKEN
+#
+# OJO CON --branch=main: sin esto, wrangler adivina la rama de git (aquí
+# siempre es la de trabajo, claude/tumbao-reservas-n8n-831zit) y Cloudflare
+# publica eso como VISTA PREVIA -- en una URL con el nombre de la rama,
+# nunca en tumbaobaila.com. Así estuvo pasando desde el primer despliegue
+# manual de esta sesión: el código llegaba a Cloudflare, pero nunca a la
+# página que Damián de verdad mira. `--branch=main` le dice a Cloudflare
+# "esto ES la rama de producción", sin importar en qué rama de git esté
+# corriendo quien despliega.
 
 on:
   push:
@@ -31,4 +40,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
           wranglerVersion: '4.126.0'
-          command: pages deploy docs --project-name=tumbao
+          command: pages deploy docs --project-name=tumbao --branch=main
