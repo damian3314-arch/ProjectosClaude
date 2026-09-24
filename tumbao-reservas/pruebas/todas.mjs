@@ -42,6 +42,7 @@ const SUITES = [
   'usuarios-invitacion',
   'tiquetera-reserva',
   'tiquetera-panel',
+  'tiquetera-mensualidad',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,

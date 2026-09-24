@@ -21,7 +21,11 @@
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
   API: 'https://tumbao-caja.damian3314.workers.dev/tumbao/mensualidad',
+  API_TIQUETERA: 'https://tumbao-caja.damian3314.workers.dev/tumbao/tiquetera',
   WHATSAPP: '573017833550',
+  // Cuánto se espera a que el banco confirme antes de mandar a
+  // validación humana. Mismo criterio que la página de reservas.
+  MINUTOS_ESPERA_TIQ: 3,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -244,6 +248,14 @@ const CONFIG = {
   <p class="tagline">Mensualidad · <b>baila pa' sanar</b></p>
 </header>
 
+<!-- 0098: la alternativa a mensualidad, sin mezclarse con su embudo.
+     Vive en secciones propias (#st0.. ) para no arriesgar el flujo de
+     mensualidad, que es el que hoy trae la plata. -->
+<p class="sub" id="ir-a-tiquetera" style="text-align:center;margin:0 0 1.2rem">
+  ¿Buscas algo más flexible? <a href="#" id="link-tiquetera">Compra una tiquetera</a> ·
+  <a href="#" id="link-recuperar">¿Perdiste tu código?</a>
+</p>
+
 <ol class="pasos" id="pasos">
   <li data-paso="0" aria-current="step"><span class="n">1</span>Horario</li>
   <li data-paso="1"><span class="n">2</span>Tus datos</li>
@@ -370,6 +382,120 @@ const CONFIG = {
   <div class="ok-wrap" id="final"></div>
   <a class="btn-ghost" id="wa" href="#" target="_blank" rel="noopener">Escribirnos por WhatsApp</a>
 </section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TIQUETERA (0098) — flujo aparte, mismo mecanismo de pago que una
+     clase suelta: se compra, se avisa "ya pagué", y la página pregunta
+     sola hasta que el banco confirma o se acaba el tiempo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="tiquetera-todo" hidden>
+  <ol class="pasos" id="pasos-tiq">
+    <li data-paso="0" aria-current="step"><span class="n">1</span>Paquete</li>
+    <li data-paso="1"><span class="n">2</span>Tus datos</li>
+    <li data-paso="2"><span class="n">3</span>Pago</li>
+  </ol>
+
+  <!-- ── st0 · elegir paquete ── -->
+  <section id="st0">
+    <h2>Tiquetera Tumbao</h2>
+    <p class="sub">Paga tus clases por adelantado y resérvalas cuando quieras, en
+      cualquier horario, con tu código.</p>
+    <div class="clases" id="tiq-paquetes"><div class="skel"></div><div class="skel"></div></div>
+    <div id="err-t0"></div>
+    <p class="sub" style="text-align:center;margin-top:1.2rem">
+      <a href="#" id="volver-mensualidad-0">← Volver a mensualidad</a>
+    </p>
+  </section>
+
+  <!-- ── st1 · datos ── -->
+  <section id="st1" hidden>
+    <h2>¿Quién eres?</h2>
+    <p class="sub">Con esto activamos tu tiquetera apenas confirmemos el pago.</p>
+    <div class="resumen" id="tiq-resumen"></div>
+    <form id="form-tiq" novalidate autocomplete="on">
+      <div class="trampa" aria-hidden="true">
+        <label for="tiq-apellido2">No llenes esto</label>
+        <input id="tiq-apellido2" type="text" tabindex="-1" autocomplete="off">
+      </div>
+      <div>
+        <label for="tiq-nombre">Nombre y apellido</label>
+        <input id="tiq-nombre" type="text" autocomplete="name" placeholder="María Fernanda Ruiz">
+      </div>
+      <div>
+        <label for="tiq-celular">Celular (WhatsApp)</label>
+        <input id="tiq-celular" type="tel" inputmode="numeric" autocomplete="tel-national"
+               placeholder="3001234567" maxlength="12">
+        <p class="hint">Ahí te mandamos tu código para guardarlo.</p>
+      </div>
+      <div class="check">
+        <input id="tiq-habeas" type="checkbox">
+        <label for="tiq-habeas">Autorizo a Tumbao a guardar y usar mis datos para
+          gestionar mi tiquetera y contactarme por WhatsApp.</label>
+      </div>
+      <button class="btn" type="submit" id="tiq-btn-enviar">Continuar al pago</button>
+      <button class="btn-ghost" type="button" id="tiq-volver0">← Cambiar de paquete</button>
+    </form>
+    <div id="err-t1"></div>
+  </section>
+
+  <!-- ── st2 · pagar ── -->
+  <section id="st2" hidden>
+    <h2>Falta el pago</h2>
+    <p class="sub" id="tiq-sub2"></p>
+    <div class="monto">
+      <small>Tiquetera</small>
+      <b id="tiq-monto">$52.000</b>
+      <span class="ojo">Transfiere exactamente este valor</span>
+    </div>
+    <div class="qr-caja"><img id="tiq-qr" alt="Código QR para pagar" loading="lazy"></div>
+    <p class="hint" style="text-align:center;margin:0 0 1rem">El QR no trae el valor: escríbelo tú al pagar.</p>
+    <div class="datos-pago">
+      <div class="fila-dato"><span class="k">Llave Bre-B</span><span class="v" id="tiq-d-llave"></span>
+        <button class="copiar" type="button" data-copiar="tiq-d-llave">Copiar</button></div>
+      <div class="fila-dato"><span class="k">Banco</span><span class="v" id="tiq-d-banco"></span></div>
+      <div class="fila-dato"><span class="k">Cuenta</span><span class="v" id="tiq-d-cuenta"></span>
+        <button class="copiar" type="button" data-copiar="tiq-d-cuenta">Copiar</button></div>
+      <div class="fila-dato"><span class="k">Titular</span><span class="v" id="tiq-d-titular"></span></div>
+    </div>
+    <div>
+      <label for="tiq-referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
+      <input id="tiq-referencia" type="text" placeholder="Ej: M12621896" maxlength="60">
+    </div>
+    <button class="btn" type="button" id="tiq-btn-pague" style="margin-top:1rem">Ya transferí</button>
+    <div id="err-t2"></div>
+  </section>
+
+  <!-- ── st3 · esperando / listo ── -->
+  <section id="st3" hidden>
+    <div id="tiq-espera">
+      <h2>Confirmando con el banco…</h2>
+      <p class="sub" id="tiq-espera-sub">Esto tarda uno o dos minutos. No cierres esta pantalla.</p>
+    </div>
+    <div class="ok-wrap" id="tiq-final" hidden></div>
+    <a class="btn-ghost" id="tiq-wa" href="#" target="_blank" rel="noopener" hidden>Escribirnos por WhatsApp</a>
+  </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     RECUPERAR CÓDIGO (0098) — por celular, igual de simple que buscar
+     una mensualidad: el celular ya identifica a la clienta.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="recuperar-todo" hidden>
+  <section id="sr0">
+    <h2>¿Perdiste tu código?</h2>
+    <p class="sub">Escribe el celular con el que compraste tu tiquetera.</p>
+    <form id="form-recuperar" novalidate>
+      <div>
+        <label for="rec-celular">Celular</label>
+        <input id="rec-celular" type="tel" inputmode="numeric" placeholder="3001234567" maxlength="12">
+      </div>
+      <button class="btn" type="submit" id="rec-btn">Buscar</button>
+      <button class="btn-ghost" type="button" id="rec-volver">← Volver</button>
+    </form>
+    <div id="err-r0"></div>
+    <div id="rec-resultado"></div>
+  </section>
+</div>
 
 <footer>
   ¿Dudas? <a id="wa2" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a><br>
@@ -626,6 +752,272 @@ const CONFIG = {
     $('#wa').href = waUrl(
       `Hola Tumbao, ya transferí la mensualidad de las ${hh}. Les mando el comprobante.`);
   }
+
+  /* ═══════════════ tiquetera (0098) ═══════════════
+     Flujo aparte, para no arriesgar el de mensualidad. Mismo mecanismo
+     de pago que una clase suelta: se compra, se avisa, y la página
+     pregunta sola. */
+  let tiqPaquetes = [];
+  let tiqPaqueteElegido = null;
+  let tiqCompra = null;      // { id, codigo, precio_cop, clases, vence_el }
+  let tiqTemporizador = null;
+  let tiqSondeo = null;
+
+  const irTiq = (n) => {
+    for (const s of ['#st0', '#st1', '#st2', '#st3']) $(s).hidden = true;
+    $('#st' + n).hidden = false;
+    for (const li of $('#pasos-tiq').children) {
+      const i = Number(li.dataset.paso);
+      li.classList.toggle('hecho', i < n);
+      if (i === Math.min(n, 2)) li.setAttribute('aria-current', 'step');
+      else li.removeAttribute('aria-current');
+      li.querySelector('.n').textContent = i < n ? '✓' : String(i + 1);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  function mostrarTiquetera(mostrar) {
+    $('#ir-a-tiquetera').hidden = mostrar;
+    $('#pasos').hidden = mostrar;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = mostrar || $(s).hidden;
+    $('#tiquetera-todo').hidden = !mostrar;
+    if (mostrar) { irTiq(0); if (!tiqPaquetes.length) cargarPaquetes(); }
+  }
+  $('#link-tiquetera').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarTiquetera(true); ir(0);
+  });
+  $('#volver-mensualidad-0').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarTiquetera(false); ir(0);
+  });
+
+  async function cargarPaquetes() {
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/paquetes');
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error('sin datos');
+      tiqPaquetes = d.paquetes || [];
+      pintarPaquetes();
+    } catch (e) {
+      $('#tiq-paquetes').innerHTML = '';
+      aviso('#err-t0',
+        'No pudimos leer los paquetes. ' +
+        `<a href="${waUrl('Hola Tumbao, quiero comprar una tiquetera pero la página no cargó.')}" ` +
+        'target="_blank" rel="noopener">Escríbenos por WhatsApp</a>.', 'malo');
+    }
+  }
+
+  function pintarPaquetes() {
+    $('#tiq-paquetes').innerHTML = tiqPaquetes.map(p => `
+      <button type="button" class="clase hora" data-clave="${esc(p.clave)}">
+        <span class="hr">${esc(String(p.clases))} clases</span>
+        <span class="info">
+          <span class="nom">${pesos(p.precio_cop)}</span>
+          <span class="meta">Vigente ${esc(String(p.vigencia_dias))} días · ${
+            pesos(Math.round(p.precio_cop / p.clases))} por clase</span>
+        </span>
+      </button>`).join('');
+    for (const b of $('#tiq-paquetes').querySelectorAll('.hora')) {
+      b.addEventListener('click', () => {
+        tiqPaqueteElegido = tiqPaquetes.find(p => p.clave === b.dataset.clave);
+        $('#tiq-resumen').innerHTML =
+          `<strong>Tiquetera de ${esc(String(tiqPaqueteElegido.clases))} clases</strong>` +
+          `<span>${pesos(tiqPaqueteElegido.precio_cop)} · vigente ${esc(String(tiqPaqueteElegido.vigencia_dias))} días</span>`;
+        aviso('#err-t1', '');
+        irTiq(1);
+      });
+    }
+  }
+
+  $('#tiq-volver0').addEventListener('click', () => irTiq(0));
+
+  $('#form-tiq').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if ((document.getElementById('tiq-apellido2').value || '').trim() !== '') return;
+    const nombre = $('#tiq-nombre').value.trim();
+    const tel = limpiarTel($('#tiq-celular').value);
+    const habeas = $('#tiq-habeas').checked;
+
+    for (const id of ['#tiq-nombre', '#tiq-celular']) $(id).classList.remove('mal');
+    if (nombre.length < 2) { $('#tiq-nombre').classList.add('mal');
+      return aviso('#err-t1', 'Escribe tu nombre.', 'malo'); }
+    if (tel.length !== 10) { $('#tiq-celular').classList.add('mal');
+      return aviso('#err-t1', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
+    if (!habeas) return aviso('#err-t1', 'Falta autorizar el uso de tus datos.', 'malo');
+    if (!tiqPaqueteElegido) return irTiq(0);
+
+    aviso('#err-t1', '');
+    const btn = $('#tiq-btn-enviar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/comprar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, celular: tel, paquete: tiqPaqueteElegido.clave,
+          habeas: true, apellido2: $('#tiq-apellido2').value,
+        }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      tiqCompra = d;
+      pintarPagoTiq();
+      irTiq(2);
+    } catch (e) {
+      aviso('#err-t1', (e && e.message) ||
+        'No pudimos iniciar la compra. Inténtalo otra vez.', 'malo');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Continuar al pago';
+    }
+  });
+
+  function pintarPagoTiq() {
+    $('#tiq-sub2').innerHTML =
+      `Tu tiquetera de <b>${esc(String(tiqCompra.clases))} clases</b> te espera. Transfiere y avísanos aquí mismo.`;
+    $('#tiq-monto').textContent = pesos(tiqCompra.precio_cop);
+    $('#tiq-d-llave').textContent = CONFIG.PAGO.llave;
+    $('#tiq-d-banco').textContent = CONFIG.PAGO.banco + ' · ' + CONFIG.PAGO.tipo;
+    $('#tiq-d-cuenta').textContent = CONFIG.PAGO.cuenta;
+    $('#tiq-d-titular').textContent = CONFIG.PAGO.titular;
+    $('#tiq-qr').src = CONFIG.PAGO.qr;
+  }
+
+  $('#tiq-btn-pague').addEventListener('click', async () => {
+    if (!tiqCompra) return;
+    const btn = $('#tiq-btn-pague');
+    btn.disabled = true; btn.textContent = 'Avisando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/pague', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: tiqCompra.codigo,
+                               referencia: $('#tiq-referencia').value.trim() }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      irTiq(3);
+      arrancarEsperaTiq();
+    } catch (e) {
+      aviso('#err-t2', (e && e.message) ||
+        'No pudimos registrar tu aviso. Escríbenos por WhatsApp.', 'malo');
+      btn.disabled = false; btn.textContent = 'Ya transferí';
+    }
+  });
+
+  // Sondeo simple, a intervalo fijo -- el volumen de tiquetera es bajo,
+  // así que no hace falta el calendario de espaciado que usa la página
+  // de reservas para clase suelta (ahí sí importa cada llamada: son
+  // muchísimas más al día).
+  function arrancarEsperaTiq() {
+    const total = CONFIG.MINUTOS_ESPERA_TIQ * 60;
+    let transcurrido = 0;
+    consultarTiq(false);
+    tiqSondeo = setInterval(() => {
+      transcurrido += 5;
+      if (transcurrido >= total) { detenerEsperaTiq(); consultarTiq(true); return; }
+      consultarTiq(false);
+    }, 5000);
+  }
+
+  function detenerEsperaTiq() {
+    clearInterval(tiqSondeo); tiqSondeo = null;
+  }
+
+  async function consultarTiq(vencido) {
+    if (!tiqCompra) return;
+    try {
+      const url = `${CONFIG.API_TIQUETERA}/estado?codigo=${encodeURIComponent(tiqCompra.codigo)}${vencido ? '&vencido=1' : ''}`;
+      const r = await fetch(url);
+      const d = await r.json().catch(() => ({}));
+      if (!d || !d.ok) return;
+      if (d.estado === 'confirmada' || d.estado === 'pendiente_validacion' || d.estado === 'expirada') {
+        detenerEsperaTiq();
+        mostrarResultadoTiq(d);
+      }
+    } catch (e) { console.warn('[tumbao] tiquetera estado:', e); }
+  }
+
+  function mostrarResultadoTiq(d) {
+    $('#tiq-espera').hidden = true;
+    $('#tiq-final').hidden = false;
+    const confirmada = d.estado === 'confirmada';
+    const pendiente = d.estado === 'pendiente_validacion';
+    const guardarUrl = 'https://wa.me/?text=' +
+      encodeURIComponent(`Mi código de tiquetera Tumbao: ${d.codigo}`);
+
+    if (confirmada) {
+      $('#tiq-final').innerHTML =
+        `<div class="tick">✓</div>
+         <h2>¡Listo! Tu tiquetera está activa</h2>
+         <p>Código: <b style="font-size:1.3em;letter-spacing:.05em">${esc(d.codigo)}</b></p>
+         <p>Tienes <b>${esc(String(tiqCompra.clases))} clases</b>. Resérvalas cuando
+            quieras en la <a href="/">página de reservas</a>, eligiendo
+            "Tengo tiquetera" y escribiendo este código.</p>
+         <p><a href="${guardarUrl}" target="_blank" rel="noopener">Guardar el código en WhatsApp</a></p>`;
+      $('#tiq-wa').hidden = true;
+    } else if (pendiente) {
+      $('#tiq-final').innerHTML =
+        `<div class="tick espera-humana">⏳</div>
+         <h2>No pudimos confirmar tu pago automáticamente</h2>
+         <p>Tu compra sigue apartada con el código <b>${esc(d.codigo)}</b>.
+            Escríbenos por WhatsApp con tu comprobante y la activamos a mano.</p>`;
+      $('#tiq-wa').hidden = false;
+      $('#tiq-wa').href = waUrl(
+        `Hola Tumbao, ya transferí mi tiquetera (código ${d.codigo}). Les mando el comprobante.`);
+    } else {
+      $('#tiq-final').innerHTML =
+        `<div class="tick espera-humana">!</div>
+         <h2>Se agotó el tiempo</h2>
+         <p>No vimos el pago a tiempo. Escríbenos por WhatsApp y lo revisamos con tu código
+            <b>${esc(d.codigo)}</b>.</p>`;
+      $('#tiq-wa').hidden = false;
+      $('#tiq-wa').href = waUrl(`Hola Tumbao, mi tiquetera (código ${d.codigo}) no se confirmó.`);
+    }
+  }
+
+  /* ═══════════════ recuperar código (0098) ═══════════════ */
+  function mostrarRecuperar(mostrar) {
+    $('#ir-a-tiquetera').hidden = mostrar;
+    $('#pasos').hidden = mostrar;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = mostrar || $(s).hidden;
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = !mostrar;
+  }
+  $('#link-recuperar').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarRecuperar(true);
+  });
+  $('#rec-volver').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarRecuperar(false); ir(0);
+  });
+
+  $('#form-recuperar').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const tel = limpiarTel($('#rec-celular').value);
+    $('#rec-celular').classList.remove('mal');
+    if (tel.length !== 10) { $('#rec-celular').classList.add('mal');
+      return aviso('#err-r0', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
+    aviso('#err-r0', ''); $('#rec-resultado').innerHTML = '';
+    const btn = $('#rec-btn');
+    btn.disabled = true; btn.textContent = 'Buscando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/recuperar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celular: tel }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'No encontramos una tiquetera activa con ese celular.');
+      $('#rec-resultado').innerHTML = d.tiqueteras.map(t => {
+        const guardarUrl = 'https://wa.me/?text=' +
+          encodeURIComponent(`Mi código de tiquetera Tumbao: ${t.codigo}`);
+        return `<div class="ok-wrap">
+          <p>Código: <b style="font-size:1.3em;letter-spacing:.05em">${esc(t.codigo)}</b></p>
+          <p>Te quedan <b>${esc(String(t.clases_restantes))} clases</b>, vence el ${esc(t.vence_el)}.</p>
+          <p><a href="${guardarUrl}" target="_blank" rel="noopener">Guardar el código en WhatsApp</a></p>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      aviso('#err-r0', (e && e.message) || 'No pudimos buscar tu tiquetera.', 'malo');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Buscar';
+    }
+  });
 
   cargarCupos();
 })();

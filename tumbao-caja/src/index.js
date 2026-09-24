@@ -1017,6 +1017,98 @@ async function pagina(request, env, ruta, origen, ctx) {
       return json(r, 200, origen);
     }
 
+    /* ═══════ TIQUETERA EN LÍNEA (0098) ═══════════════════════════════
+       Mismo mecanismo de pago que una clase suelta: se inicia, se avisa
+       "ya pagué", y se pregunta sola hasta que el banco lo confirma o se
+       acaban los minutos. La diferencia es que aquí no hay clase que
+       reservar todavía -- lo que se compra es el saldo, la clase se
+       reserva después en /tumbao/reservar con tipo=tiquetera. */
+
+    if (ruta === '/tumbao/tiquetera/paquetes' && metodo === 'GET') {
+      const r = await rpc(env, 'tiquetera_paquetes', {});
+      return json({ ok: true, paquetes: r || [] }, 200, origen);
+    }
+
+    if (ruta === '/tumbao/tiquetera/comprar' && metodo === 'POST') {
+      if (txt(b.apellido2, 40) !== '') {
+        return json({ ok: true, codigo: 'OK' }, 200, origen);
+      }
+      let tel = txt(b.celular, 25).replace(/\D/g, '');
+      if (tel.length === 12 && tel.startsWith('57')) tel = tel.slice(2);
+      const nombre = txt(b.nombre, 80);
+      const habeas = b.habeas === true || b.habeas === 'true';
+      if (!(nombre.length >= 2 && tel.length === 10 && habeas)) {
+        return json({ ok: false, error: 'datos_incompletos',
+          mensaje: 'Revisa el nombre, el celular y la autorización de datos.' },
+          400, origen);
+      }
+      const r = await rpc(env, 'iniciar_compra_tiquetera', {
+        p_nombre: nombre, p_telefono: tel, p_paquete: txt(b.paquete, 10),
+      });
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'desconocido',
+          mensaje: (r && r.mensaje) ||
+            'No pudimos iniciar la compra. Escríbenos por WhatsApp.' }, 400, origen);
+      }
+      return json(r, 200, origen);
+    }
+
+    // «Ya transferí». Igual que en mensualidad/suelta: no confirma nada
+    // por sí sola, solo anota la hora para que la ventana de búsqueda
+    // del banco sea más angosta.
+    if (ruta === '/tumbao/tiquetera/pague' && metodo === 'POST') {
+      const codigo = txt(b.codigo, 40);
+      if (!codigo) return json({ ok: false, error: 'CODIGO_INVALIDO' }, 400, origen);
+      const r = await rpc(env, 'tiquetera_reportar_pago', {
+        p_codigo: codigo, p_referencia: txt(b.referencia, 60) || null,
+      });
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'desconocido',
+          mensaje: 'No pudimos registrar tu aviso. Escríbenos por WhatsApp.' },
+          r && r.error === 'no_encontrada' ? 404 : 400, origen);
+      }
+      return json(r, 200, origen);
+    }
+
+    if (ruta === '/tumbao/tiquetera/estado' && metodo === 'GET') {
+      const codigo = txt(q.get('codigo'), 40);
+      const r = q.get('vencido') === '1'
+        ? await rpc(env, 'marcar_tiquetera_pendiente_validacion', { p_codigo: codigo })
+        : await rpc(env, 'conciliar_tiquetera', { p_codigo: codigo });
+
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'no_encontrada' }, 404, origen);
+      }
+      const mensajes = {
+        confirmada: 'Pago confirmado. Ya puedes reservar tu clase con este código.',
+        pendiente_pago: 'Estamos esperando la confirmación del banco.',
+        pendiente_validacion: 'No pudimos confirmar tu pago automáticamente. ' +
+          'Escríbenos por WhatsApp con tu comprobante y lo activamos a mano.',
+        expirada: 'Se agotó el tiempo sin confirmar el pago. Escríbenos por WhatsApp.',
+      };
+      return json({ ok: true, estado: r.estado, codigo: r.codigo,
+        clases: r.clases || null, tiquetera_saldo: r.tiquetera_saldo ?? null,
+        mensaje: mensajes[r.estado] || '' }, 200, origen);
+    }
+
+    // Recuperar el código por celular -- para quien lo perdió. Mismo
+    // criterio de confianza que ya usa la mensualidad: el celular ya es
+    // lo que identifica a la clienta en toda la página.
+    if (ruta === '/tumbao/tiquetera/recuperar' && metodo === 'POST') {
+      let tel = txt(b.celular, 25).replace(/\D/g, '');
+      if (tel.length === 12 && tel.startsWith('57')) tel = tel.slice(2);
+      if (tel.length !== 10) {
+        return json({ ok: false, error: 'CELULAR_INVALIDO',
+          mensaje: 'Escribe tu celular a 10 dígitos.' }, 400, origen);
+      }
+      const r = await rpc(env, 'tiquetera_recuperar', { p_telefono: tel });
+      if (!r || !r.ok) {
+        return json({ ok: false, error: (r && r.error) || 'desconocido',
+          mensaje: (r && r.mensaje) || 'No pudimos buscar tu tiquetera.' }, 404, origen);
+      }
+      return json(r, 200, origen);
+    }
+
     return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);
 
   } catch (e) {
