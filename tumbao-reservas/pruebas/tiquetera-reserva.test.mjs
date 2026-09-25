@@ -81,7 +81,8 @@ titulo('1. Código válido');
 
   await p.waitForSelector('#s5.on', { timeout: 8000 });
   const t = await p.locator('#t5').innerText();
-  ok('dice que quedó lista, no que pagó', /listo|esperamos/i.test(t), t);
+  ok('dice "nos vemos en la pista", igual que cualquier confirmación',
+     /nos vemos en la pista/i.test(t), t);
 
   const cuerpo = await p.locator('#s5').innerText();
   ok('dice cuántas clases le quedan', /3.*clase/i.test(cuerpo), cuerpo.replace(/\n/g, ' '));

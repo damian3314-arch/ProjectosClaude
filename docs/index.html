@@ -1565,11 +1565,14 @@ const CONFIG = {
 
     $('#ok-tick').textContent = confirmada ? '✓' : (pendiente ? '⏳' : '!');
     $('#ok-tick').classList.toggle('espera-humana', !confirmada);
-    // "Recibimos tu aviso" no dice lo que pasó ni qué sigue. Aquí el
-    // pago no se confirmó solo, y la persona tiene algo que hacer: hay
-    // que decírselo, y de una que no perdió el cupo.
+    // Damián, 25 de septiembre: a gente que SÍ pasó la validación
+    // automática le seguía llegando mensaje al WhatsApp con su código y
+    // su soporte de pago -- de una reserva que ya estaba lista. La
+    // pantalla tenía que decirlo sin dejar duda: quedaste, nos vemos en
+    // la pista, no hay nada más que mandar. Por eso el mismo título
+    // siempre que se confirma sola, sin importar el tipo.
     $('#t5').textContent = confirmada
-      ? ((tipo === 'miembro' || tipo === 'tiquetera') ? '¡Listo, te esperamos!' : '¡Pago confirmado!')
+      ? '¡Nos vemos en la pista!'
       : (pendiente ? 'No pudimos confirmar tu pago automáticamente'
                    : 'Algo pasó con tu reserva');
 
@@ -1581,9 +1584,9 @@ const CONFIG = {
 
     $('#ok-mensaje').innerHTML = confirmada
       ? (tipo === 'tiquetera' && Number.isFinite(d.tiquetera_saldo)
-          ? `Muestra este código en recepción. Llega 10 minutos antes. ` +
+          ? `Tu reserva se completó con éxito. Muestra este código en recepción y llega 10 minutos antes. ` +
             `Te quedan <b>${d.tiquetera_saldo}</b> clase${d.tiquetera_saldo === 1 ? '' : 's'} en tu tiquetera.`
-          : 'Muestra este código en recepción. Llega 10 minutos antes.')
+          : 'Tu reserva se completó con éxito. Muestra este código en recepción y llega 10 minutos antes.')
       : (pendiente
           // Aqui la persona tiene algo QUE HACER, y hay que decirlo sin
           // rodeos: el pago no se confirmo solo y con el soporte se

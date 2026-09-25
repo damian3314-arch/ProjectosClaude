@@ -100,8 +100,16 @@ titulo('1. Pago confirmado solo');
 await conEspejo({ RETARDO_BANCO: '1' }, async () => {
   const { p, ctx, errores } = await hastaElFinal();
 
+  // Damián, 25 de septiembre: a quien SÍ pasó la validación automática
+  // le seguía llegando mensaje al WhatsApp con el código y el soporte de
+  // una reserva que ya estaba lista. La pantalla tiene que decirlo sin
+  // dejar duda -- "nos vemos en la pista, tu reserva se completó con
+  // éxito" -- para que nadie sienta que le falta mandar algo.
   const t = await p.locator('#t5').innerText();
-  ok('dice que el pago quedó confirmado', /confirmado|te esperamos/i.test(t), t);
+  ok('dice "nos vemos en la pista"', /nos vemos en la pista/i.test(t), t);
+  const cuerpoOk = await p.locator('#s5').innerText();
+  ok('y que la reserva se completó con éxito',
+     /se completó con éxito/i.test(cuerpoOk), cuerpoOk.replace(/\n/g, ' ').slice(0, 130));
 
   // El corazón de la prueba. `hidden` no basta con mirarlo en el
   // atributo: .btn-ghost trae display:block y una regla de autor le gana
