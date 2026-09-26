@@ -6,6 +6,7 @@
 <title>Reserva tu clase · Tumbao</title>
 <meta name="description" content="Reserva tu clase en Tumbao. Elige el horario, aparta tu cupo y listo.">
 <meta name="theme-color" content="#0d0b0f">
+<link rel="preload" href="fonts/outfit-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc14d'/%3E%3Cstop offset='.55' stop-color='%23ff6b35'/%3E%3Cstop offset='1' stop-color='%23ff4f7d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230d0b0f'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='url(%23g)'%3ET%3C/text%3E%3C/svg%3E">
 <meta property="og:title" content="Reserva tu clase · Tumbao">
 <meta property="og:description" content="Elige tu horario y aparta tu cupo en 30 segundos.">
@@ -65,7 +66,7 @@ const CONFIG = {
     activo:  true,
     ceja:    'Te escuchamos',
     titulo:  'Ayúdanos a hacer un mejor Tumbao',
-    linea:   'Qué te gusta, qué podemos mejorar y qué te gustaría encontrar aquí. Cuéntanos en el chat — con una frase basta.',
+    linea:   'Qué te gusta, qué podemos mejorar y qué te gustaría encontrar aquí. Cuéntanos en el chat, con una frase basta.',
     boton:   'Cuéntanos',
     tema:    'escuchamos',
     imagen:  'img/franja.jpg'
@@ -501,9 +502,243 @@ const CONFIG = {
   footer a{color:var(--tx-2);text-decoration:none}
   footer a:hover{color:var(--gold)}
   .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  /* ═══════════════════════════════════════════════════════════════
+     CAPA DE DISEÑO (26 sep) - la misma en index.html y mensualidad.html
+
+     Hecha con las guías de taste-skill, redesign-skill y web-interface-
+     guidelines, y con la referencia de Spotify de awesome-design: una
+     oscuridad donde manda el contenido y UN solo acento, que se usa
+     para lo que se puede tocar, no para adornar.
+
+     Qué cambia y por qué:
+     - Tipografía: Outfit (OFL, autoalojada en fonts/). La fuente del
+       sistema se ve distinta en cada celular y no tiene carácter.
+     - Un acento: el naranja de marca. El dorado queda como un tono
+       claro del mismo naranja; el degradado se reserva para el logo.
+     - Botones píldora, sólidos, con texto oscuro: el blanco sobre
+       naranja daba 2,9:1 de contraste y no pasa WCAG AA.
+     - Tarjetas sin borde: se separan por el tono de la superficie.
+     - Sin resplandores de neón, sin texto en degradado en los montos.
+     - Formas: tarjetas 14px, campos 10px, botones y pastillas redondos.
+     Esta capa va al final a propósito: quitarla entera devuelve la
+     página a como estaba, sin tocar ninguna regla de arriba.
+     ═══════════════════════════════════════════════════════════════ */
+  @font-face{
+    font-family:'Outfit';font-style:normal;font-weight:100 900;font-display:swap;
+    src:url(fonts/outfit-latin-wght.woff2) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  }
+  :root{
+    --sans:'Outfit',ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --gold:#ffa27a;                 /* tono claro del mismo naranja */
+    --surface:#18141c; --surface-2:#221d27;
+    --on-hot:#1c0b03;               /* texto sobre el naranja: 7,6:1 */
+    --r-card:14px; --r-field:10px; --r-pill:999px;
+    color-scheme:dark;
+  }
+  html{-webkit-tap-highlight-color:transparent}
+  body{letter-spacing:.005em}
+  button,a,.opcion,.clase,.dia,.tarjeta,label{touch-action:manipulation}
+  h1,h2,h3{text-wrap:balance}
+  p,.sub,.des,.desc{text-wrap:pretty}
+
+  /* Un grano muy fino fijo encima del fondo: rompe lo plano sin costar
+     repintados al hacer scroll (va en un pseudo fijo, no en el fondo). */
+  body::after{
+    content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* El logo es la marca: se queda con su degradado de siempre (el único
+     texto en degradado de la página) y solo cambia de letra. */
+  .logo{
+    font-weight:800;letter-spacing:-.035em;
+    background:linear-gradient(100deg,#ffc14d,#ff6b35 55%,#ff4f7d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tagline{font-size:1rem}
+  .tagline b{font-weight:600}
+  h2{font-size:1.45rem;font-weight:700;letter-spacing:-.025em;line-height:1.2}
+  .sub{font-size:.94rem;line-height:1.5}
+
+  .sprite{position:absolute;width:0;height:0;overflow:hidden}
+  svg.ico,svg.ico-i,svg.tic,svg.icono{fill:currentColor;flex:none}
+  svg.ico-i{width:1.05em;height:1.05em;vertical-align:-.16em}
+
+  a{color:var(--hot-2);text-underline-offset:.18em}
+  footer a{color:var(--tx-2)}
+  footer a:hover{color:var(--hot-2)}
+
+  /* ---------- superficies: sin borde, el tono separa ---------- */
+  .opcion,.clase,.dia,.tarjeta,.monto,.datos-pago,.aviso.info,.check,.previa,.codigo{
+    background:var(--surface);border-color:transparent;border-radius:var(--r-card);
+  }
+  .opcion,.clase,.dia,.tarjeta{
+    transition:background-color .18s ease,transform .18s ease;
+  }
+  .opcion:hover,.clase:hover:not(:disabled),.tarjeta:hover,.dia:hover{
+    background:var(--surface-2);border-color:transparent;transform:none;
+  }
+  .opcion:active,.clase:active:not(:disabled),.tarjeta:active{transform:scale(.99)}
+  .resumen,.plan{
+    background:var(--surface);border:0;border-radius:var(--r-card);
+    box-shadow:inset 3px 0 0 var(--hot);
+  }
+  .fila-dato{border-bottom-color:rgba(255,255,255,.05)}
+
+  /* ---------- tarjetas de elección ---------- */
+  .opciones{gap:.6rem}
+  .opcion{padding:1rem 1.05rem;gap:.95rem}
+  .opcion .ico{
+    width:2.75rem;height:2.75rem;padding:.68rem;border-radius:50%;border:0;
+    background:rgba(255,107,53,.12);color:var(--hot-2);
+  }
+  .opcion .tit{font-weight:600;font-size:1.05rem;letter-spacing:-.01em}
+  .opcion .des{color:var(--tx-2);font-size:.85rem;line-height:1.45}
+
+  /* Entrada escalonada: dice "esto es lo que puedes elegir", en orden. */
+  @media (prefers-reduced-motion:no-preference){
+    .opciones .opcion,.eleccion .tarjeta{animation:entra .42s cubic-bezier(.16,1,.3,1) both}
+    .opciones .opcion:nth-child(2),.eleccion .tarjeta:nth-child(2){animation-delay:.06s}
+    .opciones .opcion:nth-child(3),.eleccion .tarjeta:nth-child(3){animation-delay:.12s}
+  }
+  @keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- horarios ---------- */
+  .clase .hora,.clase .hr{color:var(--hot-2)}
+  .clase .nom{font-weight:600}
+  .dia[aria-pressed="true"]{
+    background:var(--hot);border-color:var(--hot);color:var(--on-hot);box-shadow:none;
+  }
+  .dia .num{font-weight:700}
+  .cupos{border:0;background:var(--surface-2)}
+  .cupos.pocos{background:rgba(255,162,122,.14);color:var(--gold)}
+  .cupos.cero{background:rgba(255,107,129,.12)}
+  .pasos li[aria-current] .n{color:var(--on-hot)}
+
+  /* ---------- campos ---------- */
+  input[type=text],input[type=tel],input[type=email],input[type=time],
+  .comprobante input[type="text"],.comprobante input[type="time"]{
+    border-radius:var(--r-field);background:var(--surface);
+    transition:border-color .16s ease,background-color .16s ease;
+  }
+  input:focus{background:var(--surface-2)}
+
+  /* ---------- botones ---------- */
+  .btn{
+    display:block;text-align:center;text-decoration:none;
+    border-radius:var(--r-pill);background:var(--hot);color:var(--on-hot);
+    font-weight:700;letter-spacing:.005em;box-shadow:none;
+    transition:background-color .16s ease,transform .1s ease;
+  }
+  .btn:hover:not(:disabled){filter:none;background:#ff8150}
+  .btn:active:not(:disabled){transform:translateY(1px) scale(.99)}
+  .btn:disabled{background:var(--surface-2);color:var(--tx-3);opacity:1}
+  .btn-ghost{
+    border-radius:var(--r-pill);border-color:var(--line-2);color:var(--tx);
+    transition:border-color .16s ease,background-color .16s ease;
+  }
+  .btn-ghost:hover{border-color:var(--tx-3);background:rgba(255,255,255,.03)}
+  .copiar{
+    border:0;background:var(--surface-2);border-radius:var(--r-pill);color:var(--tx);
+    padding:.4rem .75rem;transition:background-color .16s ease,color .16s ease;
+  }
+  .copiar:hover{background:#2c2632;color:var(--tx)}
+  .copiar.listo{background:rgba(74,222,128,.12)}
+
+  /* ---------- montos: un color, sin degradado ---------- */
+  .monto b,.plan .valor,.tarjeta .precio,.codigo b{
+    background:none;-webkit-background-clip:border-box;background-clip:border-box;
+    color:var(--tx);font-weight:700;letter-spacing:-.02em;
+  }
+  .codigo b{letter-spacing:.14em}
+  .codigo{border:1px dashed var(--line-2)}
+  .monto .ojo{display:inline-flex;align-items:center;gap:.35rem;color:var(--gold)}
+  .tic{width:1.05rem;height:1.05rem;color:var(--ok);margin-top:.18rem}
+  .qr-caja{border-radius:var(--r-card)}
+
+  /* ---------- avisos ---------- */
+  .aviso{border-radius:var(--r-card)}
+  .aviso.malo{border:0;background:rgba(255,107,129,.1)}
+  .aviso-qr{border:0;border-radius:var(--r-field)}
+  .aviso-qr.ojo{background:rgba(255,162,122,.1)}
+
+  /* ---------- resultado ---------- */
+  .tick{border-width:0;background:rgba(74,222,128,.13);color:var(--ok)}
+  .tick.espera-humana{background:rgba(255,162,122,.13);color:var(--gold)}
+  .tick svg.ico{width:2.1rem;height:2.1rem}
+  .barra i{background:var(--hot)}
+  .soltar{border-radius:var(--r-card);transition:border-color .18s ease,background-color .18s ease}
+  .soltar .ico{width:1.9rem;height:1.9rem;color:var(--hot-2)}
+
+  /* ---------- la burbuja y el aviso emergente ---------- */
+  #burbuja{background:var(--hot);color:var(--on-hot);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #burbuja svg.ico{width:1.6rem;height:1.6rem}
+  #promo{background:rgba(6,4,8,.78);overscroll-behavior:contain}
+  #promo .caja{background:var(--surface);border:0;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #promo svg.ico{display:block;width:2.4rem;height:2.4rem;margin:0 auto .4rem;color:var(--hot-2)}
+  #promo h3{font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
+  .franja-promo{border:0;background:var(--surface);box-shadow:inset 3px 0 0 var(--hot);
+    border-radius:var(--r-card);transition:background-color .18s ease}
+  .franja-promo:hover{background:var(--surface-2);transform:none}
+  .franja-promo svg.ico{width:1.5rem;height:1.5rem;color:var(--hot-2)}
+  .franja-promo b{color:var(--tx)}
+  .franja{border-radius:var(--r-card)}
+  .franja-titulo{font-weight:700;letter-spacing:-.02em}
+
+  /* ---------- mensualidad: la elección ----------
+     En escritorio no son "tres tarjetas iguales": la mensualidad ocupa
+     todo el ancho arriba y las dos tiqueteras van lado a lado debajo. */
+  @media (min-width:34rem){
+    .eleccion{grid-template-columns:1fr 1fr}
+    .eleccion .tarjeta[data-elegir="mensualidad"]{grid-column:1/-1}
+  }
+  .tarjeta{padding:1.2rem 1.15rem;gap:.5rem}
+  .tarjeta::before{display:none}
+  .tarjeta .icono{width:1.6rem;height:1.6rem;color:var(--hot-2)}
+  .tarjeta .titulo{font-size:1.1rem;font-weight:600;letter-spacing:-.01em}
+  .tarjeta .precio{font-size:1.75rem}
+  .tarjeta .destacado{
+    background:var(--hot);color:var(--on-hot);border-radius:6px;
+    text-transform:none;letter-spacing:0;font-size:.72rem;padding:.2rem .5rem;
+  }
+  .tarjeta .clave{
+    margin-top:auto;border:0;border-radius:var(--r-field);
+    background:rgba(255,107,53,.1);color:var(--tx-2);font-size:.82rem;
+    align-items:flex-start;gap:.5rem;padding:.65rem .75rem;
+  }
+  .tarjeta .clave b{color:var(--tx)}
+  .tarjeta .clave svg.ico-i{color:var(--hot-2);width:1.1rem;height:1.1rem;margin-top:.05rem}
+  .volver-eleccion{color:var(--tx-2)}
+
+  /* ---------- skeleton y movimiento reducido ---------- */
+  .skel{background-color:var(--surface);border-radius:var(--r-card)}
+  @media (prefers-reduced-motion:reduce){
+    .skel{animation:none}
+    .opcion,.clase,.tarjeta,.btn{transition:none}
+  }
 </style>
 </head>
 <body>
+<!-- Íconos: Phosphor Icons (regular), MIT, https://phosphoricons.com.
+     Se incrustan como <symbol> para no cargar una librería entera por
+     trece glifos; se pintan con currentColor. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="ph-calendar-check" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-38.34-85.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35A8,8,0,0,1,169.66,122.34Z"/></symbol>
+  <symbol id="ph-ticket" viewBox="0 0 256 256"><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></symbol>
+  <symbol id="ph-barcode" viewBox="0 0 256 256"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"/></symbol>
+  <symbol id="ph-chat-circle-dots" viewBox="0 0 256 256"><path d="M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128ZM84,116a12,12,0,1,0,12,12A12,12,0,0,0,84,116Zm88,0a12,12,0,1,0,12,12A12,12,0,0,0,172,116Zm60,12A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Zm-16,0A88,88,0,1,0,51.81,172.06a8,8,0,0,1,.66,6.54L40,216,77.4,203.53a7.85,7.85,0,0,1,2.53-.42,8,8,0,0,1,4,1.08A88,88,0,0,0,216,128Z"/></symbol>
+  <symbol id="ph-camera" viewBox="0 0 256 256"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"/></symbol>
+  <symbol id="ph-lock-simple" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
+  <symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol>
+  <symbol id="ph-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+  <symbol id="ph-hourglass-medium" viewBox="0 0 256 256"><path d="M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.6A16.05,16.05,0,0,0,200,75.64ZM72,40H184V75.64L178.23,80H77.33L72,76Zm56,78L98.67,96h58.4Zm56,98H72V180l48-36v24a8,8,0,0,0,16,0V144.08l48,36.28Z"/></symbol>
+  <symbol id="ph-clock" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></symbol>
+  <symbol id="ph-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+  <symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+  <symbol id="ph-note-pencil" viewBox="0 0 256 256"><path d="M229.66,58.34l-32-32a8,8,0,0,0-11.32,0l-96,96A8,8,0,0,0,88,128v32a8,8,0,0,0,8,8h32a8,8,0,0,0,5.66-2.34l96-96A8,8,0,0,0,229.66,58.34ZM124.69,152H104V131.31l64-64L188.69,88ZM200,76.69,179.31,56,192,43.31,212.69,64ZM224,128v80a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h80a8,8,0,0,1,0,16H48V208H208V128a8,8,0,0,1,16,0Z"/></symbol>
+</svg>
 <div class="wrap">
 
   <header>
@@ -535,21 +770,21 @@ const CONFIG = {
     <p class="sub">De esto depende si te pedimos el soporte de pago.</p>
     <div class="opciones">
       <button class="opcion" type="button" data-tipo="miembro">
-        <span class="ico" aria-hidden="true">💃</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-calendar-check"/></svg>
         <span>
           <span class="tit">Tengo mensualidad</span>
           <span class="des">Plan o media mensualidad activa. No pagas nada.</span>
         </span>
       </button>
       <button class="opcion" type="button" data-tipo="suelta">
-        <span class="ico" aria-hidden="true">🎟️</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
         <span>
           <span class="tit">Clase suelta</span>
           <span class="des">Eliges tu clase, pagas y tu cupo queda confirmado.</span>
         </span>
       </button>
       <button class="opcion" type="button" data-tipo="tiquetera">
-        <span class="ico" aria-hidden="true">🎫</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-barcode"/></svg>
         <span>
           <span class="tit">Tengo tiquetera</span>
           <span class="des">Ya la pagaste. Reserva con tu código, sin pagar otra vez.</span>
@@ -557,12 +792,12 @@ const CONFIG = {
       </button>
     </div>
     <div class="aviso info" style="margin-top:1.2rem">
-      Si tienes mensualidad, tus clases <b>entre semana</b> ya están cubiertas —
+      Si tienes mensualidad, tus clases <b>entre semana</b> ya están cubiertas:
       no necesitas reservar, solo llegar. El <b>sábado</b> sí hay que apartar cupo.
     </div>
 
     <a class="franja-promo" href="mensualidad.html" id="franja-promo">
-      <span class="ico" aria-hidden="true">🎟️</span>
+      <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
       <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
         y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
       <span class="flecha" aria-hidden="true">→</span>
@@ -659,11 +894,11 @@ const CONFIG = {
       <!-- Con varios cupos, el desglose. Ver "$90.000" a secas donde
            siempre decía $15.000 hace dudar de si uno se equivocó. -->
       <small id="pago-cuantos" hidden></small>
-      <span class="ojo">⚠️ El QR no trae el monto — escríbelo tú</span>
+      <span class="ojo"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-warning"/></svg> El QR no trae el monto. Escríbelo tú al pagar.</span>
     </div>
 
     <div class="qr-caja">
-      <img id="pago-qr" alt="Código QR Bre-B de Tumbao" loading="lazy">
+      <img id="pago-qr" alt="Código QR Bre-B de Tumbao" width="560" height="560" loading="lazy">
     </div>
 
     <div class="datos-pago">
@@ -694,12 +929,12 @@ const CONFIG = {
       <h3 class="paso-titulo">Sube tu comprobante</h3>
 
       <label for="archivo" class="soltar" id="soltar">
-        <span class="ico" aria-hidden="true">📷</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-camera"/></svg>
         <span class="tit">Elige la captura del pago</span>
         <span class="des">Leemos la hora y la referencia por ti.</span>
         <input id="archivo" type="file" accept="image/*" hidden>
       </label>
-      <small class="pista privacidad">🔒 La imagen se usa <b>solo para leer
+      <small class="pista privacidad"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-lock-simple"/></svg> La imagen se usa <b>solo para leer
         esos datos</b> y no se guarda en ningún lado.</small>
 
       <div class="aviso-qr" id="aviso-qr" hidden></div>
@@ -755,13 +990,13 @@ const CONFIG = {
   <!-- ═══════ 5 · Resultado ═══════ -->
   <section id="s5" aria-labelledby="t5">
     <div class="ok-wrap">
-      <div class="tick" id="ok-tick" aria-hidden="true">✓</div>
+      <div class="tick" id="ok-tick" aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg></div>
       <h2 id="t5" style="margin-top:0">¡Tu cupo está apartado!</h2>
       <p class="sub" id="ok-detalle"></p>
 
       <div class="codigo">
         <small>Tu código</small>
-        <b id="ok-codigo">——————</b>
+        <b id="ok-codigo">······</b>
       </div>
 
       <p class="sub" id="ok-mensaje"></p>
@@ -797,9 +1032,9 @@ const CONFIG = {
      El iframe se crea al abrirlo, no al cargar la página: quien viene a
      reservar no tiene por qué pagar la descarga de un chat que no pidió.
 -->
-<div id="burbuja-pista" hidden>¿Qué mejorarías de Tumbao? Cuéntanos en una frase 💬</div>
+<div id="burbuja-pista" hidden>¿Qué mejorarías de Tumbao? Cuéntanos en una frase.</div>
 <button id="burbuja" type="button" aria-label="Contarnos qué mejoramos"
-        title="Contarnos qué mejoramos">💬</button>
+        title="Contarnos qué mejoramos"><svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-chat-circle-dots"/></svg></button>
 
 <div id="opina" hidden role="dialog" aria-modal="true" aria-label="Cuéntanos cómo hacemos un mejor Tumbao">
   <div class="cab">
@@ -817,10 +1052,10 @@ const CONFIG = {
 <div id="promo" hidden role="dialog" aria-modal="true" aria-label="Tiquetera y mensualidad">
   <div class="caja">
     <button type="button" class="cerrar" id="promo-cerrar" aria-label="Cerrar">×</button>
-    <div class="ico" aria-hidden="true">🎟️</div>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
     <h3>¿Sabías que puedes ahorrar?</h3>
     <p>Con la <b>tiquetera</b> compras varias clases de una y las reservas
-       cuando quieras, o aparta tu <b>mensualidad</b> con horario fijo —
+       cuando quieras, o aparta tu <b>mensualidad</b> con horario fijo,
        sin volver a pagar clase por clase.</p>
     <a class="btn" id="promo-ir" href="mensualidad.html">Ver tiquetera y mensualidad</a>
     <button type="button" class="btn-ghost" id="promo-ahora-no">Ahora no</button>
@@ -863,6 +1098,9 @@ const CONFIG = {
 
   const waUrl = t => `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(t)}`;
   const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  // Íconos del sprite de Phosphor (arriba del <body>). Se pintan con
+  // currentColor, así que toman el color de donde se pongan.
+  const icono = n => `<svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-${n}"/></svg>`;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
@@ -1145,7 +1383,7 @@ const CONFIG = {
 
     // Cuando va sola, el campo de arriba es "tu nombre" a secas. Con
     // acompañantes hay que numerarlos o nadie sabe cuál es cuál.
-    $('#lbl-nombre').innerHTML = (cuantos > 1 ? 'Persona 1 — tu nombre' : 'Nombre y apellido')
+    $('#lbl-nombre').innerHTML = (cuantos > 1 ? 'Persona 1: tu nombre' : 'Nombre y apellido')
       + ' <span class="req">*</span>';
 
     const cont = $('#acompanantes');
@@ -1485,7 +1723,7 @@ const CONFIG = {
         avisoQr('No pudimos sacarle los datos a esa imagen. ' +
                 'Escríbelos abajo y listo, funciona igual.', 'ojo');
       } else if (!d.hora) {
-        avisoQr('✓ Leído, pero no encontramos la hora. Ponla tú abajo — ' +
+        avisoQr('✓ Leído, pero no encontramos la hora. Ponla tú abajo: ' +
                 'es la que más nos sirve.', 'ojo');
       } else {
         avisoQr('✓ Listo. <b>Revisa abajo que esté bien</b> y dale a Ya pagué.');
@@ -1670,7 +1908,7 @@ const CONFIG = {
     const confirmada = estado === 'confirmada';
     const pendiente  = estado === 'pendiente_validacion';
 
-    $('#ok-tick').textContent = confirmada ? '✓' : (pendiente ? '⏳' : '!');
+    $('#ok-tick').innerHTML = icono(confirmada ? 'check' : (pendiente ? 'hourglass-medium' : 'warning'));
     $('#ok-tick').classList.toggle('espera-humana', !confirmada);
     // Damián, 25 de septiembre: a gente que SÍ pasó la validación
     // automática le seguía llegando mensaje al WhatsApp con su código y
@@ -1687,7 +1925,7 @@ const CONFIG = {
     const fecha = d.fecha || (elegida && cap(elegida.etiqueta)) || '';
     const hora  = d.hora  || (elegida && elegida.hora) || '';
     $('#ok-detalle').textContent = [clase, fecha, hora].filter(Boolean).join(' · ');
-    $('#ok-codigo').textContent  = d.codigo || '——————';
+    $('#ok-codigo').textContent  = d.codigo || '······';
 
     $('#ok-mensaje').innerHTML = confirmada
       ? (tipo === 'tiquetera' && Number.isFinite(d.tiquetera_saldo)
