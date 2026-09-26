@@ -26,6 +26,9 @@ const CONFIG = {
   // Cuánto se espera a que el banco confirme antes de mandar a
   // validación humana. Mismo criterio que la página de reservas.
   MINUTOS_ESPERA_TIQ: 3,
+  // Solo para el "ahorras $X" de las tarjetas de entrada. El precio real
+  // de cada clase lo decide la clase que se reserve, no esto.
+  PRECIO_SUELTA_REF: 15000,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -238,6 +241,68 @@ const CONFIG = {
   footer{text-align:center;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--line);color:var(--tx-3);font-size:.82rem}
   footer a{color:var(--tx-2);text-decoration:none}
   footer a:hover{color:var(--gold)}
+
+  /* ---------- la elección de entrada: mensualidad o tiquetera ----------
+     Antes la tiquetera era un enlace de texto discreto colgado encima
+     del embudo de mensualidad. Esto es lo primero que se ve ahora: tres
+     tarjetas, una decisión, sin que nadie tenga que ir a buscar la
+     segunda opción. */
+  .eleccion{display:grid;gap:.85rem;margin-top:1.3rem}
+  @media (min-width:34rem){.eleccion{grid-template-columns:1fr 1fr 1fr}}
+  .tarjeta{
+    position:relative;text-align:left;background:var(--bg-2);
+    border:1px solid var(--line);border-radius:calc(var(--r) + 2px);
+    padding:1.15rem 1.1rem;color:inherit;font:inherit;cursor:pointer;
+    display:flex;flex-direction:column;gap:.55rem;
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+    overflow:hidden;
+  }
+  /* La línea de arriba es el único toque "más cuidado": sutil, no un
+     cartel, y solo se enciende del todo al pasar el mouse. */
+  .tarjeta::before{
+    content:'';position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,var(--gold),var(--hot));
+    opacity:.5;transition:opacity .18s;
+  }
+  .tarjeta:hover,.tarjeta:focus-visible{
+    border-color:var(--line-2);transform:translateY(-3px);
+    box-shadow:0 14px 34px -16px rgba(0,0,0,.6);
+  }
+  .tarjeta:hover::before,.tarjeta:focus-visible::before{opacity:1}
+  .tarjeta .destacado{
+    position:absolute;top:.7rem;right:.7rem;font-size:.68rem;font-weight:700;
+    letter-spacing:.04em;text-transform:uppercase;color:#2a1206;
+    background:linear-gradient(100deg,var(--gold),var(--hot-2));
+    padding:.22rem .5rem;border-radius:99px;
+  }
+  .tarjeta .icono{font-size:1.5rem;line-height:1}
+  .tarjeta .titulo{font-weight:700;font-size:1.05rem}
+  .tarjeta .precio{
+    font-size:1.5rem;font-weight:800;line-height:1;
+    background:linear-gradient(100deg,var(--gold),var(--hot));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .tarjeta .precio-cada{font-size:.74rem;color:var(--tx-3);font-weight:600}
+  .tarjeta .ahorro{font-size:.76rem;color:var(--ok);font-weight:600}
+  .tarjeta .desc{font-size:.83rem;color:var(--tx-2);margin:0}
+  /* El aviso clave: reservar y la vigencia. Nunca en gris ni al final
+     del todo donde no se lee -- siempre con su propio color, en la
+     tarjeta misma, antes de que la persona decida comprar. */
+  .tarjeta .clave{
+    display:flex;gap:.45rem;align-items:flex-start;font-size:.78rem;
+    color:var(--gold);background:rgba(255,193,77,.08);
+    border:1px solid rgba(255,193,77,.25);border-radius:10px;
+    padding:.5rem .6rem;margin-top:.15rem;line-height:1.4;
+  }
+  .tarjeta .clave b{color:var(--tx)}
+
+  .volver-eleccion{
+    display:inline-flex;align-items:center;gap:.3rem;background:none;border:0;
+    color:var(--tx-3);font:inherit;font-size:.82rem;cursor:pointer;
+    padding:0;margin-bottom:.9rem;transition:.16s;
+  }
+  .volver-eleccion:hover{color:var(--tx)}
 </style>
 </head>
 <body>
@@ -248,22 +313,40 @@ const CONFIG = {
   <p class="tagline">Mensualidad · <b>baila pa' sanar</b></p>
 </header>
 
+<!-- ═══════ elegir · mensualidad o tiquetera ═══════
+     Lo primero que se ve: la decisión, no el embudo de mensualidad
+     empujando por delante. Las tarjetas de tiquetera llevan el precio,
+     el ahorro y --lo más importante-- que hay que reservar cada clase y
+     que vencen a los 30 días, sin que haga falta buscarlo. -->
+<section id="eleccion">
+  <h2>¿Qué quieres comprar?</h2>
+  <p class="sub">Un horario fijo cada mes, o un paquete de clases sueltas para reservar cuando quieras.</p>
+  <div class="eleccion" id="tarjetas-eleccion">
+    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+  </div>
+  <p class="sub" style="margin-top:1.1rem;text-align:center">
+    ¿Ya compraste una tiquetera y perdiste el código?
+    <a href="#" id="link-recuperar-2">Recupéralo aquí</a>
+  </p>
+</section>
+
 <!-- 0098: la alternativa a mensualidad, sin mezclarse con su embudo.
      Vive en secciones propias (#st0.. ) para no arriesgar el flujo de
      mensualidad, que es el que hoy trae la plata. -->
-<p class="sub" id="ir-a-tiquetera" style="text-align:center;margin:0 0 1.2rem">
+<p class="sub" id="ir-a-tiquetera" style="text-align:center;margin:0 0 1.2rem" hidden>
   ¿Buscas algo más flexible? <a href="#" id="link-tiquetera">Compra una tiquetera</a> ·
   <a href="#" id="link-recuperar">¿Perdiste tu código?</a>
 </p>
 
-<ol class="pasos" id="pasos">
+<ol class="pasos" id="pasos" hidden>
   <li data-paso="0" aria-current="step"><span class="n">1</span>Horario</li>
   <li data-paso="1"><span class="n">2</span>Tus datos</li>
   <li data-paso="2"><span class="n">3</span>Pago</li>
 </ol>
 
 <!-- ═══════ 0 · qué es y qué horario ═══════ -->
-<section id="s0">
+<section id="s0" hidden>
+  <button type="button" class="volver-eleccion" id="volver-eleccion-mens">← Cambiar de opción</button>
   <h2>Tu mensualidad en Tumbao</h2>
   <p class="sub">Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.</p>
 
@@ -403,7 +486,7 @@ const CONFIG = {
     <div class="clases" id="tiq-paquetes"><div class="skel"></div><div class="skel"></div></div>
     <div id="err-t0"></div>
     <p class="sub" style="text-align:center;margin-top:1.2rem">
-      <a href="#" id="volver-mensualidad-0">← Volver a mensualidad</a>
+      <a href="#" id="volver-mensualidad-0">← Cambiar de opción</a>
     </p>
   </section>
 
@@ -786,9 +869,82 @@ const CONFIG = {
   $('#link-tiquetera').addEventListener('click', (e) => {
     e.preventDefault(); mostrarTiquetera(true); ir(0);
   });
+
+  /* ── la elección de entrada: mensualidad o tiquetera ──────────────
+     Vuelve a la pantalla de las tres tarjetas desde cualquier sitio: la
+     tiquetera y recuperar dejaron de ser "sub-modos de mensualidad" y
+     pasaron a ser opciones hermanas. */
+  function volverAEleccion() {
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = true;
+    $('#ir-a-tiquetera').hidden = true;
+    $('#pasos').hidden = true;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = true;
+    $('#eleccion').hidden = false;
+  }
+  $('#volver-eleccion-mens').addEventListener('click', volverAEleccion);
   $('#volver-mensualidad-0').addEventListener('click', (e) => {
-    e.preventDefault(); mostrarTiquetera(false); ir(0);
+    e.preventDefault(); volverAEleccion();
   });
+
+  /* Se eligió una tiquetera concreta desde su tarjeta -- el paquete ya
+     está decidido, así que se salta la lista (st0) y se va directo a
+     pedir los datos. */
+  function elegirTiqueteraDirecta(clave) {
+    mostrarTiquetera(true);
+    tiqPaqueteElegido = tiqPaquetes.find(p => p.clave === clave) || null;
+    if (!tiqPaqueteElegido) { irTiq(0); return; }
+    $('#tiq-resumen').innerHTML =
+      `<strong>Tiquetera de ${esc(String(tiqPaqueteElegido.clases))} clases</strong>` +
+      `<span>${pesos(tiqPaqueteElegido.precio_cop)} · vigente ` +
+      `${esc(String(tiqPaqueteElegido.vigencia_dias))} días</span>`;
+    aviso('#err-t1', '');
+    irTiq(1);
+  }
+
+  function pintarEleccion() {
+    const tarjetaMensualidad = `
+      <button type="button" class="tarjeta" data-elegir="mensualidad">
+        <span class="icono">🗓️</span>
+        <span class="titulo">Plan mensualidad</span>
+        <span class="precio">${pesos(valorCop)}</span>
+        <span class="precio-cada">al mes · horario fijo</span>
+        <p class="desc">Todas tus clases de lunes a viernes en tu horario. No reservas entre semana: solo llegas y entras.</p>
+      </button>`;
+
+    const tarjetasTQ = tiqPaquetes.map(p => {
+      const clases = Number(p.clases) || 0;
+      const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - Number(p.precio_cop || 0), 0);
+      return `
+      <button type="button" class="tarjeta" data-elegir="tq" data-clave="${esc(p.clave)}">
+        ${clases >= 8 ? '<span class="destacado">Mejor precio</span>' : ''}
+        <span class="icono">🎟️</span>
+        <span class="titulo">Tiquetera · ${clases} clases</span>
+        <span class="precio">${pesos(p.precio_cop)}</span>
+        ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
+        <p class="desc">Compra una vez y ven cuando quieras.</p>
+        <div class="clave">🕒 <span><b>Reservas cada clase</b> en la página de reservas ·
+          vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra</span></div>
+      </button>`;
+    }).join('');
+
+    $('#tarjetas-eleccion').innerHTML = tarjetaMensualidad +
+      (tiqPaquetes.length ? tarjetasTQ
+        : '<p class="sub">Las tiqueteras no están disponibles en este momento.</p>');
+
+    for (const b of $('#tarjetas-eleccion').querySelectorAll('[data-elegir]')) {
+      b.addEventListener('click', () => {
+        $('#eleccion').hidden = true;
+        if (b.dataset.elegir === 'mensualidad') {
+          $('#pasos').hidden = false;
+          $('#ir-a-tiquetera').hidden = false;
+          ir(0);
+        } else {
+          elegirTiqueteraDirecta(b.dataset.clave);
+        }
+      });
+    }
+  }
 
   async function cargarPaquetes() {
     try {
@@ -983,8 +1139,13 @@ const CONFIG = {
   $('#link-recuperar').addEventListener('click', (e) => {
     e.preventDefault(); mostrarRecuperar(true);
   });
+  $('#link-recuperar-2').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('#eleccion').hidden = true;
+    $('#recuperar-todo').hidden = false;
+  });
   $('#rec-volver').addEventListener('click', (e) => {
-    e.preventDefault(); mostrarRecuperar(false); ir(0);
+    e.preventDefault(); volverAEleccion();
   });
 
   $('#form-recuperar').addEventListener('submit', async (ev) => {
@@ -1019,7 +1180,7 @@ const CONFIG = {
     }
   });
 
-  cargarCupos();
+  Promise.all([cargarCupos(), cargarPaquetes()]).then(pintarEleccion);
 })();
 </script>
 </body>

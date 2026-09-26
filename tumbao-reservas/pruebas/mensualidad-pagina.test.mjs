@@ -71,6 +71,10 @@ async function abrir({ cupos, solicitar, pague } = {}) {
     pague || { ok: true, estado: 'pagada', ya_estaba: false },
   ]);
   await p.goto(PAGINA);
+  // La puerta ahora es una elección entre mensualidad y tiquetera: hay
+  // que entrar por la tarjeta antes de llegar al horario de siempre.
+  await p.waitForSelector('[data-elegir="mensualidad"]', { timeout: 10000 });
+  await p.click('[data-elegir="mensualidad"]');
   await p.waitForSelector('.hora', { timeout: 10000 });
   return { p, errs };
 }
@@ -309,6 +313,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { window.fetch = async () => { throw new Error('caído'); }; });
   await p.goto(PAGINA);
+  await p.waitForSelector('[data-elegir="mensualidad"]', { timeout: 10000 });
+  await p.click('[data-elegir="mensualidad"]');
   await p.waitForSelector('#err0 .aviso', { timeout: 10000 });
   const t = await p.locator('#err0').innerText();
   ok('si no puede leer los cupos, lo dice', /No pudimos leer los cupos/.test(t));

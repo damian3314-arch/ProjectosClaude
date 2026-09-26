@@ -318,6 +318,52 @@ const CONFIG = {
     #burbuja-pista{display:none}
   }
 
+  /* ---------- la franja hacia mensualidad y tiquetera ----------
+     Quien llega aquí ya conoce este portal de memoria; lo que no sabe
+     es que también puede comprar por paquete o apartar su horario fijo.
+     Una franja quieta, siempre visible, es la invitación permanente —
+     el aviso emergente de abajo es solo el empujón de una vez. */
+  .franja-promo{
+    display:flex;align-items:center;gap:.7rem;margin-top:1.2rem;
+    background:linear-gradient(150deg,rgba(255,107,53,.13),rgba(255,193,77,.05));
+    border:1px solid rgba(255,107,53,.3);border-radius:var(--r);
+    padding:.85rem 1rem;text-decoration:none;color:inherit;
+    transition:border-color .16s,transform .16s;
+  }
+  .franja-promo:hover{border-color:var(--hot);transform:translateY(-1px)}
+  .franja-promo .ico{font-size:1.35rem;flex:none}
+  .franja-promo b{color:var(--gold)}
+  .franja-promo .tx{flex:1;font-size:.86rem;color:var(--tx-2);line-height:1.4}
+  .franja-promo .flecha{flex:none;color:var(--tx-3);font-size:1.1rem}
+
+  /* ---------- el aviso emergente, una sola vez ----------
+     Entra suave y se puede cerrar de tres formas —la X, tocar afuera,
+     Escape— porque un aviso que no se deja cerrar deja de sentirse como
+     una invitación. Solo sale en la pantalla de entrada y una sola vez
+     por persona: el mismo cuidado que ya tiene la burbuja de opiniones. */
+  #promo{
+    position:fixed;inset:0;z-index:80;display:flex;align-items:center;
+    justify-content:center;padding:1.2rem;
+    background:rgba(8,6,10,.72);
+  }
+  #promo[hidden]{display:none}
+  #promo .caja{
+    position:relative;max-width:23rem;width:100%;background:var(--bg-2);
+    border:1px solid var(--line-2);border-radius:20px;
+    padding:1.7rem 1.4rem 1.4rem;box-shadow:0 24px 60px rgba(0,0,0,.55);
+    animation:promo-in .3s cubic-bezier(.2,.85,.3,1.2) both;
+  }
+  @keyframes promo-in{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+  #promo .cerrar{
+    position:absolute;top:.5rem;right:.6rem;background:none;border:0;
+    color:var(--tx-3);font-size:1.6rem;line-height:1;cursor:pointer;padding:.25rem .55rem;
+  }
+  #promo .cerrar:hover{color:var(--tx)}
+  #promo .ico{font-size:2.3rem;text-align:center;margin-bottom:.2rem}
+  #promo h3{margin:.1rem 0 .45rem;font-size:1.18rem;text-align:center}
+  #promo p{color:var(--tx-2);font-size:.89rem;text-align:center;margin:0 0 1.15rem;line-height:1.55}
+  #promo p b{color:var(--tx)}
+
   .btn{
     width:100%;padding:.92rem 1rem;border:0;border-radius:var(--r);
     background:linear-gradient(160deg,var(--hot-2),var(--hot) 45%,#e0491d);
@@ -514,6 +560,13 @@ const CONFIG = {
       Si tienes mensualidad, tus clases <b>entre semana</b> ya están cubiertas —
       no necesitas reservar, solo llegar. El <b>sábado</b> sí hay que apartar cupo.
     </div>
+
+    <a class="franja-promo" href="mensualidad.html" id="franja-promo">
+      <span class="ico" aria-hidden="true">🎟️</span>
+      <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
+        y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
+      <span class="flecha" aria-hidden="true">→</span>
+    </a>
   </section>
 
   <!-- ═══════ 1 · Horario ═══════ -->
@@ -753,6 +806,24 @@ const CONFIG = {
     <b>Cuéntanos</b>
     <span class="sp"></span>
     <button type="button" id="opina-cerrar" aria-label="Cerrar">×</button>
+  </div>
+</div>
+
+<!-- ═══════ el aviso de tiquetera/mensualidad, una sola vez ═══════
+     Sale a los pocos segundos de entrar, solo en esta pantalla y solo
+     una vez por persona — igual de discreto que la burbuja de
+     opiniones. Quien ya conoce el portal de clase suelta no tiene por
+     qué enterarse solo, y "no otra vez" pesa más que "una vez más". -->
+<div id="promo" hidden role="dialog" aria-modal="true" aria-label="Tiquetera y mensualidad">
+  <div class="caja">
+    <button type="button" class="cerrar" id="promo-cerrar" aria-label="Cerrar">×</button>
+    <div class="ico" aria-hidden="true">🎟️</div>
+    <h3>¿Sabías que puedes ahorrar?</h3>
+    <p>Con la <b>tiquetera</b> compras varias clases de una y las reservas
+       cuando quieras, o aparta tu <b>mensualidad</b> con horario fijo —
+       sin volver a pagar clase por clase.</p>
+    <a class="btn" id="promo-ir" href="mensualidad.html">Ver tiquetera y mensualidad</a>
+    <button type="button" class="btn-ghost" id="promo-ahora-no">Ahora no</button>
   </div>
 </div>
 
@@ -1176,6 +1247,42 @@ const CONFIG = {
         }
       }, 6000);
     }
+  }
+
+  /* ---------- el aviso de tiquetera y mensualidad, una sola vez ----------
+     Damián: la gente ya conoce este portal de memoria, así que aquí es
+     donde vale la pena decirle que también existe la tiquetera y la
+     mensualidad — y que se note, sin ser la única invitación: la franja
+     fija de arriba se queda ahí para quien cerró el aviso y decide
+     mirarlo después. Se cierra de tres formas (la X, tocar afuera,
+     Escape) y no vuelve a salir una vez visto, igual que la burbuja. */
+  {
+    const promo = $('#promo');
+    let yaLoVio = true;
+    try { yaLoVio = !!localStorage.getItem('tumbao_promo_visto'); } catch {}
+
+    const cerrarPromo = () => {
+      promo.hidden = true;
+      try { localStorage.setItem('tumbao_promo_visto', '1'); } catch {}
+    };
+
+    if (!yaLoVio) {
+      setTimeout(() => {
+        // Solo en la pantalla de entrada, y solo si nada más se abrió
+        // encima (la burbuja, por ejemplo) mientras tanto.
+        if ($('#s0').classList.contains('on') && $('#opina').hidden) {
+          promo.hidden = false;
+        }
+      }, 5000);
+    }
+
+    $('#promo-cerrar').addEventListener('click', cerrarPromo);
+    $('#promo-ahora-no').addEventListener('click', cerrarPromo);
+    $('#promo-ir').addEventListener('click', cerrarPromo);
+    promo.addEventListener('click', (ev) => { if (ev.target === promo) cerrarPromo(); });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && !promo.hidden) cerrarPromo();
+    });
   }
 
   /* ---------- 2 · reservar ---------- */
