@@ -14,7 +14,7 @@
 <meta property="og:image" content="https://tumbaobaila.com/img/og-tumbao.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Alumnas y profe de Tumbao bajo el letrero de neón del estudio">
+<meta property="og:image:alt" content="Logo de Tumbao, baila pa' sanar">
 <meta name="twitter:card" content="summary_large_image">
 
 <script>
@@ -721,25 +721,11 @@ const CONFIG = {
      El logo es el archivo de la marca (la "u" pequeña, el rosado del
      "baila pa' sanar"), no la palabra escrita con una fuente. Para el
      fondo oscuro el rosado va un punto más claro, como en cualquier
-     versión en negativo de un logo. La foto es del estudio real. */
+     versión en negativo de un logo. */
   .marca{margin:0;line-height:0}
   .marca img{display:block;width:min(15rem,64vw);height:auto;margin:0 auto}
   header{padding:1.4rem 0 1.3rem}
   .tagline{margin-top:.7rem;color:var(--tx-2)}
-  .foto-estudio{
-    display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;
-    border-radius:var(--r-card);background:var(--surface);margin:.3rem 0 1.3rem;
-  }
-  #promo .promo-foto{
-    display:block;width:calc(100% + 2.8rem);max-width:none;height:auto;
-    aspect-ratio:16/10;object-fit:cover;margin:-1.7rem -1.4rem 1.1rem;
-    border-radius:18px 18px 0 0;background:var(--surface-2);
-  }
-  #promo .caja{overflow:hidden}
-  #promo .cerrar{
-    z-index:1;width:2.3rem;height:2.3rem;padding:0;border-radius:50%;
-    background:rgba(13,11,15,.72);color:#fff;display:grid;place-items:center;
-  }
 
   /* ---------- skeleton y movimiento reducido ---------- */
   .skel{background-color:var(--surface);border-radius:var(--r-card)}
@@ -1081,7 +1067,7 @@ const CONFIG = {
 <div id="promo" hidden role="dialog" aria-modal="true" aria-label="Tiquetera y mensualidad">
   <div class="caja">
     <button type="button" class="cerrar" id="promo-cerrar" aria-label="Cerrar">×</button>
-    <img class="promo-foto" src="img/estudio-720.jpg" width="720" height="450" alt="Alumnas y profe de Tumbao bajo el letrero de neón del estudio" loading="lazy">
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
     <h3>¿Sabías que puedes ahorrar?</h3>
     <p>Con la <b>tiquetera</b> compras varias clases de una y las reservas
        cuando quieras, o aparta tu <b>mensualidad</b> con horario fijo,
