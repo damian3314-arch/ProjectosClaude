@@ -10,6 +10,11 @@
 <meta property="og:title" content="Mensualidad · Tumbao">
 <meta property="og:description" content="Elige tu horario, mira si hay cupo y aparta tu mensualidad.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://tumbaobaila.com/img/og-tumbao.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Alumnas y profe de Tumbao bajo el letrero de neón del estudio">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc14d'/%3E%3Cstop offset='.55' stop-color='%23ff6b35'/%3E%3Cstop offset='1' stop-color='%23ff4f7d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230d0b0f'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='url(%23g)'%3ET%3C/text%3E%3C/svg%3E">
 
 <script>
@@ -514,6 +519,30 @@ const CONFIG = {
   .tarjeta .clave svg.ico-i{color:var(--hot-2);width:1.1rem;height:1.1rem;margin-top:.05rem}
   .volver-eleccion{color:var(--tx-2)}
 
+  /* ---------- la marca de verdad ----------
+     El logo es el archivo de la marca (la "u" pequeña, el rosado del
+     "baila pa' sanar"), no la palabra escrita con una fuente. Para el
+     fondo oscuro el rosado va un punto más claro, como en cualquier
+     versión en negativo de un logo. La foto es del estudio real. */
+  .marca{margin:0;line-height:0}
+  .marca img{display:block;width:min(15rem,64vw);height:auto;margin:0 auto}
+  header{padding:1.4rem 0 1.3rem}
+  .tagline{margin-top:.7rem;color:var(--tx-2)}
+  .foto-estudio{
+    display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;
+    border-radius:var(--r-card);background:var(--surface);margin:.3rem 0 1.3rem;
+  }
+  #promo .promo-foto{
+    display:block;width:calc(100% + 2.8rem);max-width:none;height:auto;
+    aspect-ratio:16/10;object-fit:cover;margin:-1.7rem -1.4rem 1.1rem;
+    border-radius:18px 18px 0 0;background:var(--surface-2);
+  }
+  #promo .caja{overflow:hidden}
+  #promo .cerrar{
+    z-index:1;width:2.3rem;height:2.3rem;padding:0;border-radius:50%;
+    background:rgba(13,11,15,.72);color:#fff;display:grid;place-items:center;
+  }
+
   /* ---------- skeleton y movimiento reducido ---------- */
   .skel{background-color:var(--surface);border-radius:var(--r-card)}
   @media (prefers-reduced-motion:reduce){
@@ -544,8 +573,8 @@ const CONFIG = {
 <div class="wrap">
 
 <header>
-  <h1 class="logo">TUMBAO</h1>
-  <p class="tagline">Mensualidad · <b>baila pa' sanar</b></p>
+  <h1 class="marca"><img src="img/logo-tumbao.png" alt="Tumbao, baila pa' sanar" width="521" height="196" fetchpriority="high"></h1>
+  <p class="tagline">Mensualidad y tiquetera</p>
 </header>
 
 <!-- ═══════ elegir · mensualidad o tiquetera ═══════
@@ -554,6 +583,10 @@ const CONFIG = {
      el ahorro y --lo más importante-- que hay que reservar cada clase y
      que vencen a los 30 días, sin que haga falta buscarlo. -->
 <section id="eleccion">
+  <img class="foto-estudio" src="img/estudio-720.jpg"
+       srcset="img/estudio-720.jpg 720w, img/estudio-1200.jpg 1200w"
+       sizes="(min-width: 44rem) 42rem, 100vw" width="1200" height="750"
+       alt="Alumnas y profe de Tumbao bajo el letrero de neón del estudio">
   <h2>¿Qué quieres comprar?</h2>
   <p class="sub">Un horario fijo cada mes, o un paquete de clases sueltas para reservar cuando quieras.</p>
   <div class="eleccion" id="tarjetas-eleccion">
