@@ -10,6 +10,13 @@
 <meta property="og:title" content="Reserva tu clase · Tumbao">
 <meta property="og:description" content="Elige tu horario y aparta tu cupo en 30 segundos.">
 <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Una sola familia display, para que el logo y los títulos dejen de
+     sentirse como cualquier plantilla de SaaS. El cuerpo se queda en la
+     fuente del sistema: rápida, y es la que de verdad se lee en un
+     formulario. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
 
 <script>
 /* ─────────────────────────────────────────────────────────────
@@ -81,6 +88,10 @@ const CONFIG = {
     --hot:#ff6b35; --hot-2:#ff8f5e; --gold:#ffc14d; --ok:#4ade80; --bad:#ff6b81;
     --r:14px;
     --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    /* Solo para titulares y el logo. El cuerpo y los formularios se
+       quedan en --sans: una serif display en cada renglón de datos se
+       lee más lento, y aquí la gente viene a resolver algo rápido. */
+    --serif:'Fraunces',ui-serif,Georgia,"Times New Roman",serif;
   }
   *,*::before,*::after{box-sizing:border-box}
   /* Cualquier regla de autor con display: le gana al [hidden] del
@@ -94,17 +105,32 @@ const CONFIG = {
       radial-gradient(70rem 40rem at 50% -12rem,rgba(255,107,53,.16),transparent 65%),
       radial-gradient(50rem 30rem at 100% 100%,rgba(255,193,77,.07),transparent 60%);
     background-attachment:fixed;
+    position:relative;
   }
-  .wrap{max-width:44rem;margin:0 auto;padding:1.5rem 1.1rem 4rem}
+  /* Un grano finísimo en vez de un fondo perfectamente liso: es la
+     diferencia entre "hecho en un generador" y "con alguien detrás". */
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{max-width:44rem;margin:0 auto;padding:1.5rem 1.1rem 4rem;position:relative;z-index:1}
 
-  header{text-align:center;padding:1.5rem 0 1.6rem}
+  header{text-align:center;padding:1.7rem 0 1.6rem}
   .logo{
-    font-size:clamp(2.4rem,11vw,3.6rem);font-weight:800;letter-spacing:-.03em;
-    margin:0;line-height:1;
+    font-family:var(--serif);font-size:clamp(2.5rem,11vw,3.7rem);font-weight:600;
+    letter-spacing:-.01em;margin:0;line-height:1;
     background:linear-gradient(100deg,var(--gold),var(--hot) 55%,#ff4f7d);
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
-  .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
+  .tagline{
+    color:var(--tx-2);margin:.55rem 0 0;font-size:1rem;
+    font-family:var(--serif);font-style:italic;font-weight:500;
+  }
+  /* El trazo bajo el logo: un gesto de mano, no un adorno genérico de
+     plantilla. Corto, torcido, y del color de marca. */
+  .trazo{display:block;margin:.5rem auto 0;width:5.5rem;height:.5rem}
+  .trazo path{fill:none;stroke:url(#trazo-g);stroke-width:3;stroke-linecap:round}
 
   /* ── la franja de campaña ──────────────────────────────────────
      En penumbra y con una sola línea. Va antes de los pasos de la
@@ -122,7 +148,7 @@ const CONFIG = {
     display:block; font-size:.66rem; font-weight:700; letter-spacing:.22em;
     text-transform:uppercase; color:#F2682A; margin-bottom:.35rem;
   }
-  .franja-titulo{display:block; font-size:1.35rem; line-height:1.15; font-weight:800}
+  .franja-titulo{display:block;font-family:var(--serif);font-size:1.4rem;line-height:1.2;font-weight:600}
   .franja-linea{
     display:block; font-size:.9rem; line-height:1.4;
     color:rgba(255,255,255,.78); margin-top:.35rem;
@@ -157,23 +183,35 @@ const CONFIG = {
   @keyframes sube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){section{animation:none}*{transition:none!important}}
 
-  h2{font-size:1.28rem;margin:1.4rem 0 .3rem;letter-spacing:-.015em}
+  h2{font-family:var(--serif);font-weight:600;font-size:1.4rem;margin:1.4rem 0 .35rem;letter-spacing:-.01em}
   .sub{color:var(--tx-2);font-size:.9rem;margin:0 0 1.1rem}
 
-  /* ---------- tarjetas de elección ---------- */
-  .opciones{display:grid;gap:.8rem}
+  /* ---------- tarjetas de elección ----------
+     Sin ícono metido en una cajita redonda -- eso es lo primero que se
+     repite en cualquier plantilla. Un número editorial a la izquierda,
+     el trazo del ícono suelto, y una barra de acento que solo aparece
+     al pasar el mouse: se nota más el gesto que el adorno. */
+  .opciones{display:grid;gap:.7rem}
   .opcion{
-    display:flex;align-items:center;gap:1rem;width:100%;text-align:left;
-    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
-    padding:1.1rem;color:inherit;font:inherit;cursor:pointer;transition:.18s;
+    position:relative;display:flex;align-items:center;gap:1rem;width:100%;text-align:left;
+    background:var(--bg-2);border:1px solid var(--line);border-left:1px solid var(--line);
+    border-radius:var(--r);padding:1.05rem 1.1rem;color:inherit;font:inherit;cursor:pointer;
+    transition:border-color .18s,transform .18s;overflow:hidden;
   }
-  .opcion:hover{border-color:var(--hot);transform:translateX(3px)}
-  .opcion .ico{
-    flex:none;width:2.9rem;height:2.9rem;border-radius:12px;display:grid;place-items:center;
-    font-size:1.5rem;background:var(--bg-3);border:1px solid var(--line);
+  .opcion::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(var(--gold),var(--hot));
+    transform:scaleY(0);transform-origin:top;transition:transform .22s ease;
   }
-  .opcion .tit{display:block;font-weight:600;font-size:1.02rem}
-  .opcion .des{display:block;font-size:.82rem;color:var(--tx-3);margin-top:.15rem}
+  .opcion:hover{border-color:var(--line-2);transform:translateX(2px)}
+  .opcion:hover::before{transform:scaleY(1)}
+  .opcion .num{
+    flex:none;font-family:var(--serif);font-style:italic;font-size:.85rem;
+    color:var(--tx-3);width:1.4rem;
+  }
+  .opcion .ico{flex:none;width:1.6rem;height:1.6rem;color:var(--gold)}
+  .opcion .tit{display:block;font-family:var(--serif);font-weight:600;font-size:1.06rem}
+  .opcion .des{display:block;font-size:.82rem;color:var(--tx-3);margin-top:.2rem;line-height:1.45}
 
   /* ---------- días ---------- */
   .dias{display:flex;gap:.5rem;overflow-x:auto;padding:.2rem .1rem 1rem;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -186,7 +224,7 @@ const CONFIG = {
   .dia:hover{border-color:var(--line-2);color:var(--tx)}
   .dia[aria-pressed="true"]{
     background:linear-gradient(160deg,var(--hot),#e0491d);border-color:var(--hot);
-    color:#fff;box-shadow:0 6px 20px -8px rgba(255,107,53,.7);
+    color:#fff;box-shadow:0 3px 10px -4px rgba(255,107,53,.5);
   }
   .dia .dow{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;opacity:.85}
   .dia .num{display:block;font-size:1.32rem;font-weight:700;line-height:1.2}
@@ -214,7 +252,7 @@ const CONFIG = {
     border:1px solid rgba(255,107,53,.32);border-radius:var(--r);
     padding:.9rem 1rem;margin-bottom:1.2rem;
   }
-  .resumen strong{display:block;font-size:1.04rem}
+  .resumen strong{display:block;font-family:var(--serif);font-weight:600;font-size:1.1rem}
   .resumen span{color:var(--tx-2);font-size:.86rem}
   form{display:grid;gap:.9rem}
   label{display:block;font-size:.82rem;color:var(--tx-2);margin-bottom:.32rem;font-weight:500}
@@ -331,7 +369,7 @@ const CONFIG = {
     transition:border-color .16s,transform .16s;
   }
   .franja-promo:hover{border-color:var(--hot);transform:translateY(-1px)}
-  .franja-promo .ico{font-size:1.35rem;flex:none}
+  .franja-promo .ico{width:1.5rem;height:1.5rem;flex:none;color:var(--gold)}
   .franja-promo b{color:var(--gold)}
   .franja-promo .tx{flex:1;font-size:.86rem;color:var(--tx-2);line-height:1.4}
   .franja-promo .flecha{flex:none;color:var(--tx-3);font-size:1.1rem}
@@ -359,8 +397,8 @@ const CONFIG = {
     color:var(--tx-3);font-size:1.6rem;line-height:1;cursor:pointer;padding:.25rem .55rem;
   }
   #promo .cerrar:hover{color:var(--tx)}
-  #promo .ico{font-size:2.3rem;text-align:center;margin-bottom:.2rem}
-  #promo h3{margin:.1rem 0 .45rem;font-size:1.18rem;text-align:center}
+  #promo .ico{width:2.2rem;height:2.2rem;display:block;margin:0 auto .5rem;color:var(--gold)}
+  #promo h3{font-family:var(--serif);font-weight:600;margin:.1rem 0 .45rem;font-size:1.28rem;text-align:center}
   #promo p{color:var(--tx-2);font-size:.89rem;text-align:center;margin:0 0 1.15rem;line-height:1.55}
   #promo p b{color:var(--tx)}
 
@@ -368,9 +406,10 @@ const CONFIG = {
     width:100%;padding:.92rem 1rem;border:0;border-radius:var(--r);
     background:linear-gradient(160deg,var(--hot-2),var(--hot) 45%,#e0491d);
     color:#fff;font:inherit;font-weight:700;font-size:1.02rem;cursor:pointer;
-    box-shadow:0 8px 26px -10px rgba(255,107,53,.85);transition:.18s;
+    box-shadow:0 3px 12px -4px rgba(255,107,53,.55);transition:filter .16s,transform .1s;
   }
   .btn:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:active:not(:disabled){transform:translateY(1px)}
   .btn:disabled{opacity:.55;cursor:wait;box-shadow:none}
   .btn-ghost{
     display:block;width:100%;padding:.78rem;border-radius:var(--r);text-align:center;
@@ -389,9 +428,10 @@ const CONFIG = {
     border-radius:var(--r);padding:1.1rem;margin-bottom:1rem;
   }
   .monto small{display:block;font-size:.74rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.13em}
-  .monto b{display:block;font-size:2.3rem;font-weight:800;margin:.2rem 0 .1rem;
-    background:linear-gradient(100deg,var(--gold),var(--hot));
-    -webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+  /* Un solo color y no el arcoíris de siempre: el degradado se guarda
+     para el logo, que es lo único que tiene que sentirse "de marca". */
+  .monto b{display:block;font-family:var(--serif);font-size:2.3rem;font-weight:600;
+    margin:.2rem 0 .1rem;color:var(--gold);font-variant-numeric:tabular-nums}
   .monto .ojo{font-size:.78rem;color:var(--gold)}
 
   .qr-caja{text-align:center;background:#fff;border-radius:var(--r);padding:1rem;margin-bottom:1rem}
@@ -434,7 +474,7 @@ const CONFIG = {
     padding:1.3rem 1rem;cursor:pointer;transition:.18s;
   }
   .soltar:hover,.soltar.encima{border-color:var(--hot);background:var(--bg-3)}
-  .soltar .ico{font-size:1.7rem}
+  .soltar .ico{width:1.9rem;height:1.9rem;color:var(--gold)}
   .soltar .tit{font-weight:600}
   .soltar .des{font-size:.8rem;color:var(--tx-3)}
   /* La lectura pasa por la red y puede tardar un par de segundos: sin
@@ -488,7 +528,8 @@ const CONFIG = {
   .tick.espera-humana{background:rgba(255,193,77,.13);border-color:var(--gold)}
   .codigo{margin:1.4rem 0;padding:1.2rem;border-radius:var(--r);background:var(--bg-2);border:1px dashed var(--line-2)}
   .codigo small{display:block;font-size:.74rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.13em}
-  .codigo b{display:block;font-size:2.5rem;letter-spacing:.16em;font-weight:800;margin-top:.3rem;
+  .codigo b{display:block;font-family:var(--serif);font-size:2.5rem;letter-spacing:.1em;
+    font-weight:600;margin-top:.3rem;
     background:linear-gradient(100deg,var(--gold),var(--hot));
     -webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
 
@@ -504,11 +545,42 @@ const CONFIG = {
 </style>
 </head>
 <body>
+<!-- Íconos propios, trazo fino, en vez de emoji: el emoji lo renderiza
+     cada sistema operativo a su manera y es lo primero que delata una
+     plantilla genérica. Un solo trazo (currentColor) y se pintan del
+     color que haga falta en cada sitio. -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-dance" viewBox="0 0 24 24">
+    <path d="M12 20.5s-7-4.2-9-8C1.4 9 3.6 5.6 7 5.6c1.9 0 3.4 1.1 5 3 1.6-1.9 3.1-3 5-3 3.4 0 5.6 3.4 4 6.9-2 3.8-9 8-9 8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24">
+    <path d="M3 8.4a1.9 1.9 0 0 1 1.9-1.9h14.2A1.9 1.9 0 0 1 21 8.4v1.8a2 2 0 0 0 0 3.6v1.8a1.9 1.9 0 0 1-1.9 1.9H4.9A1.9 1.9 0 0 1 3 15.6v-1.8a2 2 0 0 0 0-3.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M9.3 6.8v10.4" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2.2"/>
+  </symbol>
+  <symbol id="i-ticket-ok" viewBox="0 0 24 24">
+    <path d="M3 8.4a1.9 1.9 0 0 1 1.9-1.9h14.2A1.9 1.9 0 0 1 21 8.4v1.8a2 2 0 0 0 0 3.6v1.8a1.9 1.9 0 0 1-1.9 1.9H4.9A1.9 1.9 0 0 1 3 15.6v-1.8a2 2 0 0 0 0-3.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M9.6 12.1l1.7 1.7 3.4-3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24">
+    <rect x="3.4" y="5.2" width="17.2" height="15.2" rx="2.3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M3.4 9.6h17.2M7.7 3v4.4M16.3 3v4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24">
+    <path d="M4 8.5A1.6 1.6 0 0 1 5.6 7h2l1-1.8h6.8L16.4 7h2A1.6 1.6 0 0 1 20 8.5v9A1.6 1.6 0 0 1 18.4 19H5.6A1.6 1.6 0 0 1 4 17.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  </symbol>
+</svg>
 <div class="wrap">
 
   <header>
-    <h1 class="logo">TUMBAO</h1>
-    <p class="tagline">Baila pa' sanar · <b>Reserva tu clase</b></p>
+    <h1 class="logo">Tumbao</h1>
+    <svg class="trazo" viewBox="0 0 88 14" aria-hidden="true">
+      <defs><linearGradient id="trazo-g" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--hot)"/>
+      </linearGradient></defs>
+      <path d="M3 9.5C18 2 34 2 44 7c11 5.5 27 5.5 41-2"/>
+    </svg>
+    <p class="tagline">baila pa' sanar</p>
   </header>
 
   <!-- La franja de campaña. Nace oculta y la enciende CONFIG, no un
@@ -535,21 +607,24 @@ const CONFIG = {
     <p class="sub">De esto depende si te pedimos el soporte de pago.</p>
     <div class="opciones">
       <button class="opcion" type="button" data-tipo="miembro">
-        <span class="ico" aria-hidden="true">💃</span>
+        <span class="num">01</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-dance"/></svg>
         <span>
           <span class="tit">Tengo mensualidad</span>
           <span class="des">Plan o media mensualidad activa. No pagas nada.</span>
         </span>
       </button>
       <button class="opcion" type="button" data-tipo="suelta">
-        <span class="ico" aria-hidden="true">🎟️</span>
+        <span class="num">02</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ticket"/></svg>
         <span>
           <span class="tit">Clase suelta</span>
           <span class="des">Eliges tu clase, pagas y tu cupo queda confirmado.</span>
         </span>
       </button>
       <button class="opcion" type="button" data-tipo="tiquetera">
-        <span class="ico" aria-hidden="true">🎫</span>
+        <span class="num">03</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ticket-ok"/></svg>
         <span>
           <span class="tit">Tengo tiquetera</span>
           <span class="des">Ya la pagaste. Reserva con tu código, sin pagar otra vez.</span>
@@ -562,7 +637,7 @@ const CONFIG = {
     </div>
 
     <a class="franja-promo" href="mensualidad.html" id="franja-promo">
-      <span class="ico" aria-hidden="true">🎟️</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ticket"/></svg>
       <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
         y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
       <span class="flecha" aria-hidden="true">→</span>
@@ -694,7 +769,7 @@ const CONFIG = {
       <h3 class="paso-titulo">Sube tu comprobante</h3>
 
       <label for="archivo" class="soltar" id="soltar">
-        <span class="ico" aria-hidden="true">📷</span>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-camera"/></svg>
         <span class="tit">Elige la captura del pago</span>
         <span class="des">Leemos la hora y la referencia por ti.</span>
         <input id="archivo" type="file" accept="image/*" hidden>
@@ -817,7 +892,7 @@ const CONFIG = {
 <div id="promo" hidden role="dialog" aria-modal="true" aria-label="Tiquetera y mensualidad">
   <div class="caja">
     <button type="button" class="cerrar" id="promo-cerrar" aria-label="Cerrar">×</button>
-    <div class="ico" aria-hidden="true">🎟️</div>
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ticket"/></svg>
     <h3>¿Sabías que puedes ahorrar?</h3>
     <p>Con la <b>tiquetera</b> compras varias clases de una y las reservas
        cuando quieras, o aparta tu <b>mensualidad</b> con horario fijo —

@@ -10,6 +10,9 @@
 <meta property="og:description" content="Elige tu horario, mira si hay cupo y aparta tu mensualidad.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc14d'/%3E%3Cstop offset='.55' stop-color='%23ff6b35'/%3E%3Cstop offset='1' stop-color='%23ff4f7d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230d0b0f'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='url(%23g)'%3ET%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap" rel="stylesheet">
 
 <script>
 /* ─────────────────────────────────────────────────────────────
@@ -61,6 +64,7 @@ const CONFIG = {
     --hot:#ff6b35; --hot-2:#ff8f5e; --gold:#ffc14d; --ok:#4ade80; --bad:#ff6b81;
     --r:14px;
     --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --serif:'Fraunces',ui-serif,Georgia,"Times New Roman",serif;
   }
   *,*::before,*::after{box-sizing:border-box}
   [hidden]{display:none!important}
@@ -72,18 +76,29 @@ const CONFIG = {
       radial-gradient(70rem 40rem at 50% -12rem,rgba(255,107,53,.16),transparent 65%),
       radial-gradient(50rem 30rem at 100% 100%,rgba(255,193,77,.07),transparent 60%);
     background-attachment:fixed;
+    position:relative;
   }
-  .wrap{max-width:44rem;margin:0 auto;padding:1.5rem 1.1rem 4rem}
+  body::before{
+    content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .wrap{max-width:44rem;margin:0 auto;padding:1.5rem 1.1rem 4rem;position:relative;z-index:1}
 
-  header{text-align:center;padding:1.5rem 0 1.6rem}
+  header{text-align:center;padding:1.7rem 0 1.6rem}
   .logo{
-    font-size:clamp(2.4rem,11vw,3.6rem);font-weight:800;letter-spacing:-.03em;
-    margin:0;line-height:1;
+    font-family:var(--serif);font-size:clamp(2.5rem,11vw,3.7rem);font-weight:600;
+    letter-spacing:-.01em;margin:0;line-height:1;
     background:linear-gradient(100deg,var(--gold),var(--hot) 55%,#ff4f7d);
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
-  .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
-  .tagline b{color:var(--gold);font-weight:600}
+  .tagline{
+    color:var(--tx-2);margin:.55rem 0 0;font-size:1rem;
+    font-family:var(--serif);font-style:italic;font-weight:500;
+  }
+  .tagline b{color:var(--gold);font-weight:600;font-style:normal}
+  .trazo{display:block;margin:.5rem auto 0;width:5.5rem;height:.5rem}
+  .trazo path{fill:none;stroke:url(#trazo-g);stroke-width:3;stroke-linecap:round}
 
   /* Los tres pasos. Se ve de entrada que esto se acaba en tres pantallas
      y no en un formulario sin fondo. */
@@ -107,7 +122,7 @@ const CONFIG = {
   @keyframes sube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){section{animation:none}*{transition:none!important}}
 
-  h2{font-size:1.28rem;margin:1.4rem 0 .3rem;letter-spacing:-.015em}
+  h2{font-family:var(--serif);font-weight:600;font-size:1.4rem;margin:1.4rem 0 .35rem;letter-spacing:-.01em}
   .sub{color:var(--tx-2);font-size:.9rem;margin:0 0 1.1rem}
 
   /* ---------- lo que incluye ---------- */
@@ -117,9 +132,8 @@ const CONFIG = {
     padding:1.1rem;margin-bottom:1.4rem;
   }
   .plan .valor{
-    display:block;font-size:2.3rem;font-weight:800;line-height:1;text-align:center;
-    background:linear-gradient(100deg,var(--gold),var(--hot));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
+    display:block;font-family:var(--serif);font-size:2.3rem;font-weight:600;
+    line-height:1;text-align:center;color:var(--gold);
     font-variant-numeric:tabular-nums;
   }
   .plan .cada{display:block;text-align:center;font-size:.8rem;color:var(--tx-3);
@@ -155,7 +169,7 @@ const CONFIG = {
     border:1px solid rgba(255,107,53,.32);border-radius:var(--r);
     padding:.9rem 1rem;margin-bottom:1.2rem;
   }
-  .resumen strong{display:block;font-size:1.04rem}
+  .resumen strong{display:block;font-family:var(--serif);font-weight:600;font-size:1.1rem}
   .resumen span{color:var(--tx-2);font-size:.86rem}
   form{display:grid;gap:.9rem}
   label{display:block;font-size:.82rem;color:var(--tx-2);margin-bottom:.32rem;font-weight:500}
@@ -178,9 +192,10 @@ const CONFIG = {
     width:100%;padding:.92rem 1rem;border:0;border-radius:var(--r);
     background:linear-gradient(160deg,var(--hot-2),var(--hot) 45%,#e0491d);
     color:#fff;font:inherit;font-weight:700;font-size:1.02rem;cursor:pointer;
-    box-shadow:0 8px 26px -10px rgba(255,107,53,.85);transition:.18s;
+    box-shadow:0 3px 12px -4px rgba(255,107,53,.55);transition:filter .16s,transform .1s;
   }
   .btn:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:active:not(:disabled){transform:translateY(1px)}
   .btn:disabled{opacity:.55;cursor:wait;box-shadow:none}
   .btn-ghost{
     display:block;width:100%;padding:.78rem;border-radius:var(--r);text-align:center;
@@ -200,9 +215,8 @@ const CONFIG = {
     border-radius:var(--r);padding:1.1rem;margin-bottom:1rem;
   }
   .monto small{display:block;font-size:.74rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.13em}
-  .monto b{display:block;font-size:2.3rem;font-weight:800;margin:.2rem 0 .1rem;
-    background:linear-gradient(100deg,var(--gold),var(--hot));
-    -webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+  .monto b{display:block;font-family:var(--serif);font-size:2.3rem;font-weight:600;
+    margin:.2rem 0 .1rem;color:var(--gold);font-variant-numeric:tabular-nums}
   .monto .ojo{font-size:.78rem;color:var(--gold)}
 
   /* Fondo blanco para el QR: sobre el fondo oscuro muchas cámaras no lo
@@ -257,8 +271,9 @@ const CONFIG = {
     transition:transform .18s,border-color .18s,box-shadow .18s;
     overflow:hidden;
   }
-  /* La línea de arriba es el único toque "más cuidado": sutil, no un
-     cartel, y solo se enciende del todo al pasar el mouse. */
+  /* La línea de arriba es el único toque "más cuidado" en la tarjeta de
+     mensualidad: sutil, no un cartel, y solo se enciende al pasar el
+     mouse. La tiquetera tiene su propio gesto -- ver .tarjeta-boleto. */
   .tarjeta::before{
     content:'';position:absolute;inset:0 0 auto 0;height:3px;
     background:linear-gradient(90deg,var(--gold),var(--hot));
@@ -266,22 +281,22 @@ const CONFIG = {
   }
   .tarjeta:hover,.tarjeta:focus-visible{
     border-color:var(--line-2);transform:translateY(-3px);
-    box-shadow:0 14px 34px -16px rgba(0,0,0,.6);
+    box-shadow:0 10px 26px -14px rgba(0,0,0,.55);
   }
   .tarjeta:hover::before,.tarjeta:focus-visible::before{opacity:1}
   .tarjeta .destacado{
-    position:absolute;top:.7rem;right:.7rem;font-size:.68rem;font-weight:700;
-    letter-spacing:.04em;text-transform:uppercase;color:#2a1206;
-    background:linear-gradient(100deg,var(--gold),var(--hot-2));
+    position:absolute;top:.7rem;right:.7rem;font-size:.66rem;font-weight:700;
+    letter-spacing:.05em;text-transform:uppercase;color:#2a1206;
+    background:var(--gold);
     padding:.22rem .5rem;border-radius:99px;
   }
-  .tarjeta .icono{font-size:1.5rem;line-height:1}
-  .tarjeta .titulo{font-weight:700;font-size:1.05rem}
+  .tarjeta .icono{width:1.5rem;height:1.5rem;color:var(--gold)}
+  .tarjeta .titulo{font-family:var(--serif);font-weight:600;font-size:1.1rem}
+  /* Un solo color, no el arcoíris: el degradado se reserva para el
+     logo y el código de la reserva, que son lo único "de marca". */
   .tarjeta .precio{
-    font-size:1.5rem;font-weight:800;line-height:1;
-    background:linear-gradient(100deg,var(--gold),var(--hot));
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    font-variant-numeric:tabular-nums;
+    font-family:var(--serif);font-size:1.5rem;font-weight:600;line-height:1;
+    color:var(--gold);font-variant-numeric:tabular-nums;
   }
   .tarjeta .precio-cada{font-size:.74rem;color:var(--tx-3);font-weight:600}
   .tarjeta .ahorro{font-size:.76rem;color:var(--ok);font-weight:600}
@@ -296,6 +311,31 @@ const CONFIG = {
     padding:.5rem .6rem;margin-top:.15rem;line-height:1.4;
   }
   .tarjeta .clave b{color:var(--tx)}
+  .tarjeta .clave .ico-mini{width:1.1rem;height:1.1rem;flex:none;margin-top:.05rem}
+
+  /* ---------- la tarjeta-boleto: la tiquetera es literalmente un
+     boleto ----------
+     Dos muescas circulares a los lados, del color de la página (no de
+     la tarjeta), como si estuviera troquelada -- y el aviso de reservar
+     se separa del resto con una línea punteada de "aquí se corta", no
+     con una cajita más. Es el detalle que hace que esto no se sienta
+     como cualquier tarjeta de precios genérica. */
+  .tarjeta-boleto{overflow:visible}
+  .tarjeta-boleto::before{
+    content:'';position:absolute;top:50%;left:-9px;width:18px;height:18px;
+    border-radius:50%;background:var(--bg);transform:translateY(-50%);
+    opacity:1;box-shadow:inset 0 0 0 1px var(--line);
+  }
+  .tarjeta-boleto::after{
+    content:'';position:absolute;top:50%;right:-9px;width:18px;height:18px;
+    border-radius:50%;background:var(--bg);transform:translateY(-50%);
+    box-shadow:inset 0 0 0 1px var(--line);
+  }
+  .tarjeta-boleto .clave{
+    background:none;border:0;border-radius:0;color:var(--gold);
+    border-top:2px dashed rgba(255,193,77,.4);
+    margin:.3rem -1.1rem 0;padding:.75rem 1.1rem 0;
+  }
 
   .volver-eleccion{
     display:inline-flex;align-items:center;gap:.3rem;background:none;border:0;
@@ -306,11 +346,31 @@ const CONFIG = {
 </style>
 </head>
 <body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-ticket" viewBox="0 0 24 24">
+    <path d="M3 8.4a1.9 1.9 0 0 1 1.9-1.9h14.2A1.9 1.9 0 0 1 21 8.4v1.8a2 2 0 0 0 0 3.6v1.8a1.9 1.9 0 0 1-1.9 1.9H4.9A1.9 1.9 0 0 1 3 15.6v-1.8a2 2 0 0 0 0-3.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M9.3 6.8v10.4" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2.2"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24">
+    <rect x="3.4" y="5.2" width="17.2" height="15.2" rx="2.3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M3.4 9.6h17.2M7.7 3v4.4M16.3 3v4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </symbol>
+</svg>
 <div class="wrap">
 
 <header>
-  <h1 class="logo">TUMBAO</h1>
-  <p class="tagline">Mensualidad · <b>baila pa' sanar</b></p>
+  <h1 class="logo">Tumbao</h1>
+  <svg class="trazo" viewBox="0 0 88 14" aria-hidden="true">
+    <defs><linearGradient id="trazo-g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="var(--gold)"/><stop offset="1" stop-color="var(--hot)"/>
+    </linearGradient></defs>
+    <path d="M3 9.5C18 2 34 2 44 7c11 5.5 27 5.5 41-2"/>
+  </svg>
+  <p class="tagline">mensualidad y tiquetera</p>
 </header>
 
 <!-- ═══════ elegir · mensualidad o tiquetera ═══════
@@ -905,7 +965,7 @@ const CONFIG = {
   function pintarEleccion() {
     const tarjetaMensualidad = `
       <button type="button" class="tarjeta" data-elegir="mensualidad">
-        <span class="icono">🗓️</span>
+        <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-calendar"/></svg>
         <span class="titulo">Plan mensualidad</span>
         <span class="precio">${pesos(valorCop)}</span>
         <span class="precio-cada">al mes · horario fijo</span>
@@ -916,14 +976,15 @@ const CONFIG = {
       const clases = Number(p.clases) || 0;
       const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - Number(p.precio_cop || 0), 0);
       return `
-      <button type="button" class="tarjeta" data-elegir="tq" data-clave="${esc(p.clave)}">
+      <button type="button" class="tarjeta tarjeta-boleto" data-elegir="tq" data-clave="${esc(p.clave)}">
         ${clases >= 8 ? '<span class="destacado">Mejor precio</span>' : ''}
-        <span class="icono">🎟️</span>
+        <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ticket"/></svg>
         <span class="titulo">Tiquetera · ${clases} clases</span>
         <span class="precio">${pesos(p.precio_cop)}</span>
         ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
         <p class="desc">Compra una vez y ven cuando quieras.</p>
-        <div class="clave">🕒 <span><b>Reservas cada clase</b> en la página de reservas ·
+        <div class="clave"><svg class="ico-mini" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
+          <span><b>Reservas cada clase</b> en la página de reservas ·
           vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra</span></div>
       </button>`;
     }).join('');
