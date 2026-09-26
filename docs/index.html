@@ -113,16 +113,14 @@ const CONFIG = {
   .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
 
   /* ── la franja de campaña ──────────────────────────────────────
-     En penumbra y con una sola línea. Va antes de los pasos de la
-     reserva porque es lo primero que se mira, y no puede quitarle sitio
-     a lo segundo: quien entró a apartar su clase tiene que seguir
-     viendo el paso 1 sin bajar. De ahí que sea una franja y no un
-     cartel. */
+     En penumbra y con una sola línea. Va al final del paso 1, debajo
+     de las opciones: quien entró a apartar su clase ve primero lo suyo
+     y la invitación a opinar queda de cierre. */
   .franja{
     display:block; text-decoration:none; color:#fff; cursor:pointer;
     background-color:#0B0710; background-size:cover; background-position:center;
     border:1px solid rgba(242,104,42,.45); border-radius:14px;
-    padding:1rem 1.1rem; margin:0 0 1.2rem;
+    padding:1rem 1.1rem; margin:1.2rem 0 0;
   }
   .franja-ceja{
     display:block; font-size:.66rem; font-weight:700; letter-spacing:.22em;
@@ -327,10 +325,10 @@ const CONFIG = {
   /* ---------- la franja hacia mensualidad y tiquetera ----------
      Quien llega aquí ya conoce este portal de memoria; lo que no sabe
      es que también puede comprar por paquete o apartar su horario fijo.
-     Una franja quieta, siempre visible, es la invitación permanente —
-     el aviso emergente de abajo es solo el empujón de una vez. */
+     Una franja quieta bajo el logo es la invitación permanente; el
+     aviso emergente de abajo es solo el empujón de una vez. */
   .franja-promo{
-    display:flex;align-items:center;gap:.7rem;margin-top:1.2rem;
+    display:flex;align-items:center;gap:.7rem;margin:0 0 1.2rem;
     background:linear-gradient(150deg,rgba(255,107,53,.13),rgba(255,193,77,.05));
     border:1px solid rgba(255,107,53,.3);border-radius:var(--r);
     padding:.85rem 1rem;text-decoration:none;color:inherit;
@@ -723,8 +721,8 @@ const CONFIG = {
      fondo oscuro el rosado va un punto más claro, como en cualquier
      versión en negativo de un logo. */
   .marca{margin:0;line-height:0}
-  .marca img{display:block;width:min(15rem,64vw);height:auto;margin:0 auto}
-  header{padding:1.4rem 0 1.3rem}
+  .marca img{display:block;width:min(10rem,42vw);height:auto;margin:0 auto}
+  header{padding:1.1rem 0 1.1rem}
   .tagline{margin-top:.7rem;color:var(--tx-2)}
 
   /* ---------- skeleton y movimiento reducido ---------- */
@@ -761,14 +759,14 @@ const CONFIG = {
     <p class="tagline">Reserva tu clase en un minuto</p>
   </header>
 
-  <!-- La franja de campaña. Nace oculta y la enciende CONFIG, no un
-       comentario borrado a mano: así encenderla y apagarla es una línea
-       y no una edición del HTML con prisa. -->
-  <a class="franja" id="franja" hidden>
-    <span class="franja-ceja" id="franja-ceja"></span>
-    <b class="franja-titulo" id="franja-titulo"></b>
-    <span class="franja-linea" id="franja-linea"></span>
-    <span class="franja-boton" id="franja-boton"></span>
+  <!-- La invitación a tiquetera y mensualidad va justo debajo del
+       logo: es lo primero que se lee. Solo se ve en el paso 1; mientras
+       alguien está pagando su clase no se le pone nada encima. -->
+  <a class="franja-promo" href="mensualidad.html" id="franja-promo">
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
+    <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
+      y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
+    <span class="flecha" aria-hidden="true">→</span>
   </a>
 
   <ol class="pasos" id="pasos">
@@ -811,11 +809,14 @@ const CONFIG = {
       no necesitas reservar, solo llegar. El <b>sábado</b> sí hay que apartar cupo.
     </div>
 
-    <a class="franja-promo" href="mensualidad.html" id="franja-promo">
-      <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
-      <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
-        y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
-      <span class="flecha" aria-hidden="true">→</span>
+    <!-- La franja de campaña. Nace oculta y la enciende CONFIG, no un
+         comentario borrado a mano: así encenderla y apagarla es una línea
+         y no una edición del HTML con prisa. -->
+    <a class="franja" id="franja" hidden>
+      <span class="franja-ceja" id="franja-ceja"></span>
+      <b class="franja-titulo" id="franja-titulo"></b>
+      <span class="franja-linea" id="franja-linea"></span>
+      <span class="franja-boton" id="franja-boton"></span>
     </a>
   </section>
 
@@ -1169,6 +1170,7 @@ const CONFIG = {
   /* ---------- navegación ---------- */
   function irA(n){
     ['s0','s1','s2','s3','s4','s5'].forEach((id,i) => $('#'+id).classList.toggle('on', i === n));
+    $('#franja-promo').hidden = n !== 0;
     $$('#pasos li').forEach(li => {
       const p = +li.dataset.paso;
       li.removeAttribute('aria-current');
