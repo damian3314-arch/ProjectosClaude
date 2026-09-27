@@ -75,6 +75,27 @@ const CONFIG = {
     boton:   'Cuéntanos',
     tema:    'escuchamos',
     imagen:  'img/franja.jpg'
+  },
+
+  /* La clase nueva. Una tarjeta bajo la invitación a tiquetera que
+     lleva directo a reservarla, y la etiqueta «Nueva» en el horario.
+     `nombre` tiene que ser EXACTAMENTE el nombre de la clase en la base:
+     así se encuentra en el horario. Desde `hasta` deja de verse sola.
+     Antes de `estreno` dice cuándo arranca; después, solo el horario.
+     `video`: ruta del archivo (p. ej. 'video/rumba-basica.mp4'); vacío
+     no pinta nada. */
+  NUEVA: {
+    activo:  true,
+    nombre:  'Rumba básica',
+    estreno: '2026-10-01',
+    hasta:   '2026-10-31',
+    ceja:    'Clase nueva',
+    titulo:  'Rumba básica',
+    cuando:  'Martes y jueves · 5:00 pm',
+    antes:   'Arranca este jueves 1 de octubre. Si estás empezando, esta es tu clase.',
+    despues: 'Si estás empezando, esta es tu clase.',
+    boton:   'Reservar mi cupo',
+    video:   ''
   }
 };
 </script>
@@ -140,6 +161,27 @@ const CONFIG = {
     .franja-titulo{font-size:1.2rem}
   }
   .tagline b{color:var(--gold);font-weight:600}
+
+  /* ── la clase nueva ────────────────────────────────────────────── */
+  .nueva-clase{
+    display:block;margin:0 0 1.2rem;padding:1rem 1.1rem;
+    background:var(--surface,var(--bg-2));border-radius:var(--r-card,14px);
+    box-shadow:inset 3px 0 0 var(--hot);
+  }
+  .nueva-clase .ceja{
+    display:block;font-size:.66rem;font-weight:700;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--hot-2);margin-bottom:.3rem;
+  }
+  .nueva-clase .tit{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .nueva-clase .cuando{display:block;font-size:.92rem;color:var(--tx);margin-top:.15rem;font-variant-numeric:tabular-nums}
+  .nueva-clase .linea{display:block;font-size:.86rem;color:var(--tx-2);line-height:1.45;margin-top:.35rem}
+  .nueva-clase video{display:block;width:100%;height:auto;max-height:26rem;border-radius:10px;margin:.8rem 0 0;background:#000}
+  .nueva-clase .btn{margin-top:.85rem;width:auto;padding-left:1.3rem;padding-right:1.3rem}
+  .etq-nueva{
+    display:inline-block;margin-left:.4rem;padding:.05rem .45rem;border-radius:99px;
+    background:var(--hot);color:var(--on-hot,#1c0b03);font-size:.66rem;font-weight:700;
+    vertical-align:.12em;letter-spacing:.02em;
+  }
 
   .pasos{display:flex;gap:.35rem;justify-content:center;margin:1.4rem 0 .5rem;list-style:none;padding:0;flex-wrap:wrap}
   .pasos li{
@@ -769,6 +811,15 @@ const CONFIG = {
     <span class="flecha" aria-hidden="true">→</span>
   </a>
 
+  <!-- La clase nueva. Nace oculta y la enciende CONFIG.NUEVA. -->
+  <div class="nueva-clase" id="nueva-clase" hidden>
+    <span class="ceja" id="nueva-ceja"></span>
+    <b class="tit" id="nueva-titulo"></b>
+    <span class="cuando" id="nueva-cuando"></span>
+    <span class="linea" id="nueva-linea"></span>
+    <button type="button" class="btn" id="nueva-boton"></button>
+  </div>
+
   <ol class="pasos" id="pasos">
     <li data-paso="0" aria-current="step"><span class="n">1</span> Tú</li>
     <li data-paso="1"><span class="n">2</span> Horario</li>
@@ -1088,6 +1139,7 @@ const CONFIG = {
   const cfgOk = /^https?:\/\/.+/.test(CONFIG.API_BASE);
 
   let tipo = null, dias = [], diaActivo = null, elegida = null;
+  let irALaNueva = false;
   // La abre el bloque de la burbuja, más abajo. La pantalla de
   // confirmación necesita poder llamarla, y ese bloque se define después.
   let abrirOpina = () => {};
@@ -1123,6 +1175,36 @@ const CONFIG = {
 
   $('#f-ig').href = `https://instagram.com/${CONFIG.INSTAGRAM}`;
   $('#f-wa').href = waUrl('Hola Tumbao 👋');
+
+  /* La clase nueva: la tarjeta y cómo se reconoce en el horario. */
+  const hoyBogota = () => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const N = CONFIG.NUEVA;
+  const nuevaVisible = !!(N && N.activo && N.nombre && (!N.hasta || hoyBogota() <= N.hasta));
+  const esNueva = c => nuevaVisible && !!c.nombre &&
+    c.nombre.trim().toLowerCase() === N.nombre.trim().toLowerCase();
+  (function claseNueva() {
+    if (!nuevaVisible) return;
+    $('#nueva-ceja').textContent   = N.ceja || '';
+    $('#nueva-titulo').textContent = N.titulo || N.nombre;
+    $('#nueva-cuando').textContent = N.cuando || '';
+    $('#nueva-linea').textContent  =
+      (N.estreno && hoyBogota() < N.estreno ? N.antes : N.despues) || '';
+    $('#nueva-boton').textContent  = N.boton || 'Reservar';
+    if (N.video) {
+      const v = document.createElement('video');
+      v.src = N.video; v.controls = true; v.playsInline = true;
+      v.preload = 'metadata';
+      v.setAttribute('aria-label', 'Video de la clase ' + (N.titulo || N.nombre));
+      $('#nueva-linea').after(v);
+    }
+    $('#nueva-boton').addEventListener('click', () => {
+      irALaNueva = true;
+      document.querySelector('.opcion[data-tipo="suelta"]').click();
+    });
+    $('#nueva-clase').hidden = false;
+  })();
 
   /* La franja de campaña. Si está apagada no se pinta y la foto ni
      siquiera se descarga: quien entra a reservar desde datos móviles no
@@ -1171,6 +1253,7 @@ const CONFIG = {
   function irA(n){
     ['s0','s1','s2','s3','s4','s5'].forEach((id,i) => $('#'+id).classList.toggle('on', i === n));
     $('#franja-promo').hidden = n !== 0;
+    if (nuevaVisible) $('#nueva-clase').hidden = n !== 0;
     $$('#pasos li').forEach(li => {
       const p = +li.dataset.paso;
       li.removeAttribute('aria-current');
@@ -1285,7 +1368,9 @@ const CONFIG = {
         return;
       }
       pintarDias();
-      elegirDia(dias[0].fecha);
+      const conNueva = irALaNueva ? dias.find(d => d.clases.some(esNueva)) : null;
+      irALaNueva = false;
+      elegirDia((conNueva || dias[0]).fecha);
     }catch(err){
       $('#clases').innerHTML = '';
       aviso('#err1', `No pudimos cargar los horarios. <a href="${waUrl('Hola, quiero reservar 💃')}" style="color:var(--gold)"><b>Reserva por WhatsApp</b></a>.`);
@@ -1316,7 +1401,7 @@ const CONFIG = {
 
   const tituloClase = c => nombreRedundante(c) ? '' : c.nombre;
   const metaClase = c => [
-    nombreRedundante(c) && c.duracion_min ? `${c.duracion_min} min` : null,
+    c.duracion_min ? `${c.duracion_min} min` : null,
     c.profesor && c.profesor !== 'Por asignar' ? c.profesor : null,
     c.lugar,
   ].filter(Boolean).join(' · ');
@@ -1335,7 +1420,7 @@ const CONFIG = {
       const meta = metaClase(c);
       return `<button class="clase" type="button" data-id="${esc(c.clase_id)}" ${libres === 0 ? 'disabled' : ''}>
                 <span class="hora">${esc(c.hora)}</span>
-                <span class="info">${tit ? `<span class="nom">${esc(tit)}</span>` : ''}<span class="meta">${esc(meta)}</span></span>
+                <span class="info">${tit ? `<span class="nom">${esc(tit)}${esNueva(c) ? '<span class="etq-nueva">Nueva</span>' : ''}</span>` : ''}<span class="meta">${esc(meta)}</span></span>
                 <span class="cupos ${cls}">${txt}</span>
               </button>`;
     }).join('');
