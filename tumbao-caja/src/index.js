@@ -1157,8 +1157,14 @@ async function whatsappPrueba(env, origen) {
       }
     }
   }
+  // El identificador que pasó Damián el 27 sep. Puede ser el del número
+  // o el de la cuenta: se prueba como número y, si no, como cuenta.
+  const ID_DAMIAN = '1402860685313558';
+  const comoNumero = await (await fetch(`${G}/${ID_DAMIAN}?fields=id,display_phone_number,verified_name,quality_rating`, { headers: H })).json();
+  pasos.id_como_numero = comoNumero.display_phone_number ? comoNumero : (comoNumero.error && comoNumero.error.message);
+  if (!comoNumero.display_phone_number && !wabas.includes(ID_DAMIAN)) wabas.push(ID_DAMIAN);
   pasos.wabas = wabas;
-  const telefonos = [];
+  const telefonos = comoNumero.display_phone_number ? [comoNumero] : [];
   for (const w of wabas) {
     const r = await (await fetch(`${G}/${w}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,code_verification_status`, { headers: H })).json();
     if (r.data) telefonos.push(...r.data.map((t) => ({ ...t, waba: w })));
