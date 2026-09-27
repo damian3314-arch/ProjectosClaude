@@ -5,6 +5,11 @@
   "compatibility_date": "2026-07-01",
   "observability": { "enabled": true },
 
+  // Que `wrangler deploy` no borre las variables puestas a mano en el
+  // dashboard (p. ej. WHATSAPP_TOKEN si se guardó como variable y no
+  // como secreto). Los secretos nunca se borran; las variables sí.
+  "keep_vars": true,
+
   // OJO: LOS CRON NO DISPARAN EN ESTA CUENTA.
   //
   // Se dejaron registrados a propósito, pero NO son el mecanismo que
