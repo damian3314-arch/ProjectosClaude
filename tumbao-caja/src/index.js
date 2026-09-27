@@ -1118,72 +1118,6 @@ async function pagina(request, env, ruta, origen, ctx) {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────
- * TEMPORAL · prueba de WhatsApp Cloud API (27 sep, pedida por Damián)
- *
- * Manda la plantilla `hello_world` de Meta a UN número fijo —el de
- * Damián— para comprobar que el token guardado en WHATSAPP_TOKEN sirve.
- * Es plantilla porque a quien no le ha escrito al negocio en las
- * últimas 24 h Meta solo deja mandarle plantillas aprobadas.
- *
- * No recibe destinatario ni texto: no se puede usar para escribirle a
- * nadie más. Se apaga sola a la hora de abajo y se borra después de la
- * prueba. Nunca devuelve el token.
- * ───────────────────────────────────────────────────────────────── */
-const WA_PRUEBA_HASTA = Date.parse('2026-09-28T02:00:00Z');
-async function whatsappPrueba(env, origen) {
-  if (Date.now() > WA_PRUEBA_HASTA) return json({ ok: false, error: 'VENCIDA' }, 410, origen);
-  const tok = env.WHATSAPP_TOKEN;
-  if (!tok) return json({ ok: false, error: 'SIN_TOKEN',
-    mensaje: 'El Worker no tiene WHATSAPP_TOKEN.' }, 503, origen);
-  const G = 'https://graph.facebook.com/v21.0';
-  const H = { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' };
-  const pasos = {};
-  const dbg = await (await fetch(`${G}/debug_token?input_token=${encodeURIComponent(tok)}`, { headers: H })).json();
-  const d = dbg.data || {};
-  pasos.token = { valido: d.is_valid, tipo: d.type, app: d.application,
-    vence: d.expires_at, scopes: d.scopes,
-    error: (dbg.error && dbg.error.message) || (d.error && d.error.message) || null };
-  const wabas = [...new Set((d.granular_scopes || []).flatMap((g) => g.target_ids || []))];
-  // Si el token no trae la cuenta pegada, se busca por el negocio.
-  if (!wabas.length) {
-    const bz = await (await fetch(`${G}/me/businesses?fields=id,name`, { headers: H })).json();
-    pasos.negocios = bz.data || (bz.error && bz.error.message);
-    for (const b of (bz.data || [])) {
-      for (const tipo of ['owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts']) {
-        const x = await (await fetch(`${G}/${b.id}/${tipo}?fields=id,name`, { headers: H })).json();
-        if (x.data) wabas.push(...x.data.map((w) => w.id));
-        else pasos['error_' + tipo] = x.error && x.error.message;
-      }
-    }
-  }
-  // El identificador que pasó Damián el 27 sep. Puede ser el del número
-  // o el de la cuenta: se prueba como número y, si no, como cuenta.
-  const ID_DAMIAN = '1402860685313558';
-  const comoNumero = await (await fetch(`${G}/${ID_DAMIAN}?fields=id,display_phone_number,verified_name,quality_rating`, { headers: H })).json();
-  pasos.id_como_numero = comoNumero.display_phone_number ? comoNumero : (comoNumero.error && comoNumero.error.message);
-  if (!comoNumero.display_phone_number && !wabas.includes(ID_DAMIAN)) wabas.push(ID_DAMIAN);
-  pasos.wabas = wabas;
-  const telefonos = comoNumero.display_phone_number ? [comoNumero] : [];
-  for (const w of wabas) {
-    const r = await (await fetch(`${G}/${w}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,code_verification_status`, { headers: H })).json();
-    if (r.data) telefonos.push(...r.data.map((t) => ({ ...t, waba: w })));
-    else pasos['error_' + w] = r.error && r.error.message;
-  }
-  pasos.telefonos = telefonos;
-  const phoneId = env.WHATSAPP_PHONE_ID || (telefonos[0] && telefonos[0].id);
-  if (!phoneId) return json({ ok: false, error: 'SIN_NUMERO', pasos }, 200, origen);
-  const r = await fetch(`${G}/${phoneId}/messages`, {
-    method: 'POST', headers: H,
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', to: '573015373964', type: 'template',
-      template: { name: 'hello_world', language: { code: 'en_US' } },
-    }),
-  });
-  pasos.envio = { desde: phoneId, status: r.status, respuesta: await r.json() };
-  return json({ ok: r.ok, pasos }, 200, origen);
-}
-
 export default {
   async fetch(request, env, ctx) {
     const origen = request.headers.get('Origin');
@@ -1195,8 +1129,6 @@ export default {
     if (request.method !== 'POST' && request.method !== 'GET') {
       return json({ ok: false, error: 'METODO' }, 405, origen);
     }
-    if (ruta === '/wa-prueba') return await whatsappPrueba(env, origen);
-
     if (!env.SUPABASE_SERVICE_KEY) {
       return json({
         ok: false, error: 'SIN_LLAVE',
