@@ -1145,6 +1145,18 @@ async function whatsappPrueba(env, origen) {
     vence: d.expires_at, scopes: d.scopes,
     error: (dbg.error && dbg.error.message) || (d.error && d.error.message) || null };
   const wabas = [...new Set((d.granular_scopes || []).flatMap((g) => g.target_ids || []))];
+  // Si el token no trae la cuenta pegada, se busca por el negocio.
+  if (!wabas.length) {
+    const bz = await (await fetch(`${G}/me/businesses?fields=id,name`, { headers: H })).json();
+    pasos.negocios = bz.data || (bz.error && bz.error.message);
+    for (const b of (bz.data || [])) {
+      for (const tipo of ['owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts']) {
+        const x = await (await fetch(`${G}/${b.id}/${tipo}?fields=id,name`, { headers: H })).json();
+        if (x.data) wabas.push(...x.data.map((w) => w.id));
+        else pasos['error_' + tipo] = x.error && x.error.message;
+      }
+    }
+  }
   pasos.wabas = wabas;
   const telefonos = [];
   for (const w of wabas) {
