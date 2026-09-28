@@ -1361,23 +1361,26 @@ const CONFIG = {
             "Tengo tiquetera" y escribiendo este código.</p>
          <p><a href="${guardarUrl}" target="_blank" rel="noopener">Guardar el código en WhatsApp</a></p>`;
       $('#tiq-wa').hidden = true;
-    } else if (pendiente) {
-      $('#tiq-final').innerHTML =
-        `<div class="tick espera-humana">${icono('hourglass-medium')}</div>
-         <h2>No pudimos confirmar tu pago automáticamente</h2>
-         <p>Tu compra sigue apartada con el código <b>${esc(d.codigo)}</b>.
-            Escríbenos por WhatsApp con tu comprobante y la activamos a mano.</p>`;
+    } else {
+      /* 0112 · Damián: si el pago no se comprobó solo, NO se entrega el
+         código hasta que la persona mande el soporte y recepción vea que
+         la plata entró. Al validarla, el código le llega por WhatsApp.
+         Por eso aquí no se muestra: se identifica con su nombre y celular. */
+      const quien = `${$('#tiq-nombre').value.trim()} · celular ${limpiarTel($('#tiq-celular').value)}`;
+      $('#tiq-final').innerHTML = pendiente
+        ? `<div class="tick espera-humana">${icono('hourglass-medium')}</div>
+           <h2>Recibimos tu aviso de pago</h2>
+           <p>Todavía no vemos la transferencia en el banco. Mándanos el comprobante por
+              WhatsApp: apenas confirmemos que la plata entró, activamos tu tiquetera y
+              <b>te llega tu código por WhatsApp</b>.</p>`
+        : `<div class="tick espera-humana">!</div>
+           <h2>Todavía no vemos tu pago</h2>
+           <p>Si ya transferiste, mándanos el comprobante por WhatsApp. Apenas confirmemos
+              que la plata entró, activamos tu tiquetera y <b>te llega tu código por WhatsApp</b>.</p>`;
       $('#tiq-wa').hidden = false;
       $('#tiq-wa').href = waUrl(
-        `Hola Tumbao, ya transferí mi tiquetera (código ${d.codigo}). Les mando el comprobante.`);
-    } else {
-      $('#tiq-final').innerHTML =
-        `<div class="tick espera-humana">!</div>
-         <h2>Se agotó el tiempo</h2>
-         <p>No vimos el pago a tiempo. Escríbenos por WhatsApp y lo revisamos con tu código
-            <b>${esc(d.codigo)}</b>.</p>`;
-      $('#tiq-wa').hidden = false;
-      $('#tiq-wa').href = waUrl(`Hola Tumbao, mi tiquetera (código ${d.codigo}) no se confirmó.`);
+        `Hola Tumbao, ya transferí mi tiquetera de ${tiqCompra.clases} clases (${quien}). ` +
+        `Les mando el comprobante.`);
     }
   }
 

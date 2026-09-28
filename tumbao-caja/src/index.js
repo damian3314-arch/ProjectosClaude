@@ -466,6 +466,16 @@ const ADMIN = {
                            p_precio_cop: precio, p_medio: medio,
                            p_pago_id: UUID(b.pago_id) };
                 } },
+  // 0112: la compra en línea que el banco no confirmó sola se valida a
+  // mano, con el depósito del banco o con la referencia del comprobante
+  // que la persona mandó por WhatsApp. Al quedar activa le llega su código.
+  'tiquetera-validar': { fn: 'admin_tiquetera_validar',
+                args: (b) => {
+                  const id = enteroPositivo(b.id);
+                  if (!id) return { _error: 'ID_INVALIDO' };
+                  return { p_id: id, p_pago_id: UUID(b.pago_id),
+                           p_referencia: TXT(b.referencia, 80) || null };
+                } },
   'tiqueteras-listar': { fn: 'admin_tiqueteras_listar',
                 args: (b) => ({ p_estado: b.estado === 'todas' ? 'todas' : 'activas' }) },
 };
@@ -1162,6 +1172,27 @@ const PLANTILLAS_WA = [
         example: { body_text: [['Laura', 'jueves 1 de octubre', '5:00 pm · Rumba básica', 'Código: A1B2C3']] },
       },
       { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
+    // 0112: el código de la tiquetera llega SOLO cuando el pago quedó
+    // confirmado (por el banco, a mano en recepción o vendida en el
+    // mostrador). Antes de eso la persona no tiene nada que usar.
+    name: 'tiquetera_activa',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🎉 Tu tiquetera Tumbao de {{2}} clases ya está activa.\n\n' +
+          '🎟️ Tu código: *{{3}}*\n📅 Vence el {{4}}\n\n' +
+          'Para reservar entra a tumbaobaila.com, elige *Tengo tiquetera* y escribe tu código. ' +
+          'Guarda este mensaje para tenerlo a la mano. ¡Nos vemos en la pista! 💃',
+        example: { body_text: [['Laura', '4', 'A1B2C3', 'miércoles 28 de octubre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
     ],
   },
   {

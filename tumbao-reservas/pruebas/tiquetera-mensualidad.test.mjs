@@ -224,8 +224,14 @@ titulo('5. Sin confirmación a tiempo, invita a escribir');
   const cuerpo = await p.locator('#tiq-final').innerText();
   ok('no dice que quedó activa', !/está activa/i.test(cuerpo), cuerpo.replace(/\n/g, ' '));
   ok('SÍ ofrece escribir por WhatsApp', await p.locator('#tiq-wa').isVisible());
-  ok('con el código en el mensaje',
-     decodeURIComponent(await p.locator('#tiq-wa').getAttribute('href')).includes('ABC123'));
+  // 0112 · Damián: sin pago confirmado no se entrega el código. El
+  // mensaje identifica la compra por nombre y celular, y el código le
+  // llega por WhatsApp cuando recepción valida el comprobante.
+  const msgWa = decodeURIComponent(await p.locator('#tiq-wa').getAttribute('href'));
+  ok('el mensaje NO trae el código', !msgWa.includes('ABC123'), msgWa);
+  ok('el mensaje trae el celular para ubicar la compra', /\d{10}/.test(msgWa), msgWa);
+  ok('la pantalla NO muestra el código', !cuerpo.includes('ABC123'), cuerpo.replace(/\n/g, ' '));
+  ok('dice que el código llega por WhatsApp', /código por WhatsApp/i.test(cuerpo));
 
   ok('sin errores de JS', errs.length === 0, errs.join(' | '));
   await p.close();

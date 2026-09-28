@@ -1259,6 +1259,9 @@ const CONFIG = {
     background:var(--bg-3); color:var(--tx-2)}
   .fila.mens .et.bien{background:#14532d; color:#bbf7d0}
   .fila.mens .et.ojo{background:#4a3410; color:var(--gold)}
+  /* 0112: validar a mano la tiquetera comprada en la página. */
+  .tiq-validar{margin-top:.6rem;display:grid;gap:.45rem;max-width:28rem}
+  .tiq-validar .suave{margin:0;font-size:.8rem}
 
   #tirilla{display:none}
 
@@ -7164,19 +7167,82 @@ const CONFIG = {
       $('#tiq-lista').innerHTML = '<p class="suave">No hay tiqueteras para mostrar.</p>';
       return;
     }
-    $('#tiq-lista').innerHTML = lista.map(t => `
+    $('#tiq-lista').innerHTML = lista.map(t => {
+      // 0112: la comprada en la página que el banco no confirmó solo. No
+      // sirve para reservar ni se le manda el código hasta validarla.
+      const pendiente = t.estado && t.estado !== 'confirmada';
+      return `
       <div class="fila mens">
         <div class="cuerpo">
           <div class="nom">${esc(t.nombre)}
-            <span class="et">${esc(t.codigo)}</span>
+            ${pendiente ? '' : `<span class="et">${esc(t.codigo)}</span>`}
+            ${pendiente
+              ? `<span class="et ojo">${t.reporto_pago ? 'dijo que pagó · por validar' : 'por validar'}</span>`
+              : ''}
             ${!t.activa ? '<span class="et mal">anulada</span>' : ''}
           </div>
-          <div class="ag">${esc(t.telefono)} · ${t.clases_restantes} de ${t.clases_totales}
-            clase${t.clases_totales === 1 ? '' : 's'} restantes · vence ${esc(fmtCorto(t.vence_el))}
+          <div class="ag">${esc(t.telefono)} · ${pendiente
+              ? `${t.clases_totales} clases · comprada en la página ${esc(fmtCorto(String(t.creada_en || '').slice(0, 10)))}`
+              : `${t.clases_restantes} de ${t.clases_totales}
+            clase${t.clases_totales === 1 ? '' : 's'} restantes · vence ${esc(fmtCorto(t.vence_el))}`}
             ${t.precio_cop ? ' · ' + esc(pesos(t.precio_cop)) : ''}</div>
+          ${pendiente ? `
+          <div class="tiq-validar" data-id="${Number(t.id)}" data-precio="${Number(t.precio_cop || 0)}">
+            <p class="suave">Valídala cuando te manden el comprobante por WhatsApp y veas que la plata entró.
+              Al validarla entra al cierre de hoy y le llega su código por WhatsApp.</p>
+            <label class="topes-campo"><span>Depósito del banco</span>
+              <select class="tv-deposito"><option value="">Cargando depósitos…</option></select></label>
+            <label class="topes-campo"><span>o referencia del comprobante</span>
+              <input type="text" class="tv-referencia" maxlength="80" placeholder="Nequi 123456"></label>
+            <button class="btn primario chico tv-ok">Validar pago</button>
+          </div>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+    if (lista.some(t => t.estado && t.estado !== 'confirmada')) depositosParaValidar();
   }
+
+  // Los depósitos libres que alcanzan para cada tiquetera por validar.
+  async function depositosParaValidar() {
+    let libres = [];
+    try {
+      const d = await alWorker('dia', {});
+      libres = Array.isArray(d.pagos_libres) ? d.pagos_libres : [];
+    } catch (_) { /* sin lista: queda la referencia */ }
+    for (const caja of document.querySelectorAll('#tiq-lista .tiq-validar')) {
+      const precio = Number(caja.dataset.precio || 0);
+      const sel = caja.querySelector('.tv-deposito');
+      const sirven = libres.filter(p => Number(p.saldo_cop || 0) >= precio);
+      sel.innerHTML = '<option value="">Todavía no aparece en el banco</option>' +
+        sirven.map(p => `<option value="${esc(p.id)}">${esc(p.cuando)} · ` +
+          `${esc(pesos(p.saldo_cop))} · ${esc(p.remitente || 'sin nombre')}</option>`).join('');
+    }
+  }
+
+  $('#tiq-lista').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.tv-ok');
+    if (!btn) return;
+    const caja = btn.closest('.tiq-validar');
+    const pago_id = caja.querySelector('.tv-deposito').value || null;
+    const referencia = caja.querySelector('.tv-referencia').value.trim();
+    if (!pago_id && referencia.length < 4) {
+      nota('Falta el soporte', 'mal',
+        'Escoge el depósito del banco o escribe la referencia del comprobante que te mandó.');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const d = await api('tiquetera-validar', { id: Number(caja.dataset.id), pago_id, referencia });
+      nota('Tiquetera validada', 'bien',
+        `${d.nombre} ya puede reservar con el código ${d.codigo} (vence ${fmtCorto(d.vence_el)}). ` +
+        `Entró al cierre de hoy y le llega el código por WhatsApp.`);
+      traido.delete('caja');
+      await cargarTiqueteras(true);
+    } catch (e) {
+      fallo(e, 'No se pudo validar la tiquetera');
+      btn.disabled = false;
+    }
+  });
 
   $('#tiq-crear-btn').addEventListener('click', async () => {
     const btn = $('#tiq-crear-btn');
