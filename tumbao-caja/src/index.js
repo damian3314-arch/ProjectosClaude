@@ -1180,7 +1180,11 @@ const PLANTILLAS_WA = [
     // mostrador). Antes de eso la persona no tiene nada que usar.
     // 'tiquetera_activa' (con el código en negrita y cierre de ánimo) la
     // rechazó Meta al instante el 28 sep; esta es la versión sobria.
-    name: 'tiquetera_codigo',
+    // Meta rechazó al instante 'tiquetera_activa' y 'tiquetera_codigo'
+    // (28 sep): la palabra «código» junto a una variable la lee como
+    // plantilla de autenticación. Como en reserva_confirmada (aprobada),
+    // el «Código: X» va DENTRO de la variable, no en el texto fijo.
+    name: 'tiquetera_lista',
     language: 'es',
     category: 'UTILITY',
     components: [
@@ -1188,9 +1192,10 @@ const PLANTILLAS_WA = [
         type: 'BODY',
         text:
           'Hola {{1}}, tu tiquetera Tumbao de {{2}} clases quedó activa ✅\n\n' +
-          'Código: {{3}}\nVence: {{4}}\n\n' +
-          'Para reservar entra a tumbaobaila.com, elige Tengo tiquetera y escribe tu código.',
-        example: { body_text: [['Laura', '4', 'A1B2C3', 'miércoles 28 de octubre']] },
+          '🎟️ {{3}}\n📅 Vence el {{4}}\n\n' +
+          'Para reservar entra a tumbaobaila.com y elige Tengo tiquetera.\n\n' +
+          '¿Dudas? Escríbenos al WhatsApp de siempre: 301 783 3550',
+        example: { body_text: [['Laura', '4', 'Código: A1B2C3', 'miércoles 28 de octubre']] },
       },
       { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
       { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
