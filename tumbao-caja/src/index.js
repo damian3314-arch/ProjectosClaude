@@ -1653,6 +1653,16 @@ async function estadoWA(env) {
       out[`modelo_${k}_disponible`] = r.ok;
     }
   }
+  if (env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID) {
+    const n = await (await fetch(
+      `${GRAPH}/${env.WHATSAPP_PHONE_ID}?fields=display_phone_number,verified_name,name_status,status,quality_rating,account_mode,platform_type,messaging_limit_tier`,
+      { headers: cabecerasWA(env) })).json();
+    out.numero = n.error ? n.error.message : n;
+  }
+  try {
+    const d = await rpcLectura(env, 'agente_consulta', { p_sql: "select valor from ajustes where clave = 'wa_webhook_diag'" });
+    out.webhook_llegadas = d && d[0] ? JSON.parse(d[0].valor) : 'ninguna todavía';
+  } catch (_) {}
   if (env.WHATSAPP_APP_SECRET && env.WHATSAPP_APP_ID) {
     const s = await (await fetch(
       `${GRAPH}/${env.WHATSAPP_APP_ID}/subscriptions?access_token=${encodeURIComponent(`${env.WHATSAPP_APP_ID}|${env.WHATSAPP_APP_SECRET}`)}`)).json();
