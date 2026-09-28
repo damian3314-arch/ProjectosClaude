@@ -1420,9 +1420,10 @@ async function webhookWA(request, env) {
       : new Response('no', { status: 403 });
   }
   const cuerpo = await request.text();
-  if (!(await firmaValida(env, cuerpo, request.headers.get('X-Hub-Signature-256')))) {
-    return new Response('firma', { status: 401 });
-  }
+  const firmaOk = await firmaValida(env, cuerpo, request.headers.get('X-Hub-Signature-256'));
+  // Diagnóstico (0103): cuenta llegadas y firmas, sin guardar contenido.
+  await rpc(env, 'wa_diag_webhook', { p_firma_ok: firmaOk }).catch(() => {});
+  if (!firmaOk) return new Response('firma', { status: 401 });
   let d = {};
   try { d = JSON.parse(cuerpo); } catch (_) {}
   for (const e of d.entry || []) {
