@@ -750,6 +750,10 @@ async function pagina(request, env, ruta, origen, ctx) {
       // Antes de leer, no después: así los cupos que se enseñan ya
       // tienen descontados los que acaban de vencer.
       await soltarVencidos(env);
+      // Respaldo de pg_net: si algún aviso se quedó en la cola, sale ya.
+      if (ctx && Date.now() - ultimoDespacho > 60000) {
+        ctx.waitUntil(despacharAvisos(env).catch((e) => console.log('despachar', e && e.message)));
+      }
       const filas = await rpc(env, 'clases_para', {
         p_tipo: q.get('tipo') === 'miembro' ? 'miembro' : 'suelta',
       });
@@ -1118,6 +1122,120 @@ async function pagina(request, env, ruta, origen, ctx) {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────
+ * WhatsApp · los avisos a clientes (0101)
+ *
+ * La cola vive en Postgres (wa_avisos) y es la que manda: clave única
+ * por evento, tope diario, tope por persona, y NADA se reintenta solo.
+ * El Worker solo toma lo pendiente, lo manda una vez y anota cómo le
+ * fue. Por eso /wa/despachar no necesita secreto: llamarla mil veces
+ * manda lo mismo que llamarla una.
+ *
+ * Quién la llama: la base misma, con pg_net, cada vez que entra algo a
+ * la cola (los cron de Cloudflare no disparan en esta cuenta). Y de
+ * respaldo, la página de horarios, como mucho una vez por minuto.
+ *
+ * Las plantillas se definen AQUÍ y /wa/plantillas las crea en Meta si
+ * no existen. Cambiar el texto de una aprobada no se hace editándola
+ * aquí: Meta no deja; se crea otra con otro nombre.
+ * ───────────────────────────────────────────────────────────────── */
+const GRAPH = 'https://graph.facebook.com/v21.0';
+
+const PLANTILLAS_WA = [
+  {
+    name: 'reserva_confirmada',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, tu cupo en Tumbao quedó confirmado ✅\n\n' +
+          '📅 {{2}}\n🕐 {{3}}\n🎟️ {{4}}\n\n' +
+          'Muestra tu código en recepción y llega 10 minutos antes.\n\n' +
+          '¿Dudas? Escríbenos al WhatsApp de siempre: 301 783 3550',
+        example: { body_text: [['Laura', 'jueves 1 de octubre', '5:00 pm · Rumba básica', 'Código: A1B2C3']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+];
+
+const cabecerasWA = (env) => ({
+  Authorization: 'Bearer ' + env.WHATSAPP_TOKEN,
+  'Content-Type': 'application/json',
+});
+
+async function asegurarPlantillas(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
+  const H = cabecerasWA(env);
+  const lista = await (await fetch(
+    `${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates?fields=name,status,category,language,rejected_reason&limit=200`,
+    { headers: H })).json();
+  if (lista.error) return { ok: false, error: lista.error.message };
+  const out = [];
+  for (const p of PLANTILLAS_WA) {
+    const ya = (lista.data || []).find((t) => t.name === p.name && t.language === p.language);
+    if (ya) {
+      out.push({ nombre: p.name, estado: ya.status, categoria: ya.category,
+                 motivo: ya.rejected_reason && ya.rejected_reason !== 'NONE' ? ya.rejected_reason : null });
+      continue;
+    }
+    const c = await (await fetch(`${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates`,
+      { method: 'POST', headers: H, body: JSON.stringify(p) })).json();
+    out.push({ nombre: p.name, creada: !c.error, estado: c.status || null,
+               categoria: c.category || null,
+               error: c.error ? (c.error.error_user_msg || c.error.message) : null });
+  }
+  return { ok: true, plantillas: out };
+}
+
+let ultimoDespacho = 0;
+async function despacharAvisos(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return { ok: false, error: 'SIN_CONFIG' };
+  ultimoDespacho = Date.now();
+  const lote = await rpc(env, 'wa_tomar_avisos', { p_limite: 10 });
+  const res = { ok: true, enviados: 0, fallidos: 0 };
+  for (const a of (Array.isArray(lote) ? lote : [])) {
+    let waId = null;
+    let error = null;
+    try {
+      const vars = Array.isArray(a.variables) ? a.variables : [];
+      const r = await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}/messages`, {
+        method: 'POST',
+        headers: cabecerasWA(env),
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: a.para,
+          type: 'template',
+          template: {
+            name: a.plantilla,
+            language: { code: a.idioma || 'es' },
+            components: vars.length
+              ? [{ type: 'body', parameters: vars.map((t) => ({ type: 'text', text: String(t) })) }]
+              : [],
+          },
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      waId = d && d.messages && d.messages[0] && d.messages[0].id;
+      if (!r.ok || !waId) {
+        waId = null;
+        error = d && d.error ? `${d.error.code}: ${d.error.message}` : `HTTP ${r.status}`;
+      }
+    } catch (e) {
+      error = 'red: ' + (e && e.message);
+    }
+    try {
+      await rpc(env, 'wa_marcar_aviso', { p_id: a.id, p_ok: !!waId, p_wa_id: waId, p_error: error });
+    } catch (e) {
+      console.log('wa_marcar_aviso', a.id, e && e.message);
+    }
+    if (waId) res.enviados++; else res.fallidos++;
+  }
+  return res;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const origen = request.headers.get('Origin');
@@ -1134,6 +1252,16 @@ export default {
         ok: false, error: 'SIN_LLAVE',
         mensaje: 'Falta el secreto SUPABASE_SERVICE_KEY en el Worker.',
       }, 503, origen);
+    }
+
+    // Avisos por WhatsApp (0101). Sin token a propósito: ver arriba.
+    if (ruta === '/wa/despachar') {
+      try { return json(await despacharAvisos(env), 200, origen); }
+      catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
+    }
+    if (ruta === '/wa/plantillas' && request.method === 'GET') {
+      try { return json(await asegurarPlantillas(env), 200, origen); }
+      catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
     }
 
     /* ─────────────────────────────────────────────────────────────

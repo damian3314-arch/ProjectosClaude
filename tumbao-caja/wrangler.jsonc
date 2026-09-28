@@ -53,12 +53,19 @@
     // El webhook de n8n que revisa Gmail al instante cuando alguien dice
     // "ya pagué", en vez de esperar al sondeo de fondo. No es secreto:
     // sin el token de abajo no hace nada.
-    "N8N_REVISAR_URL": "https://barragan.app.n8n.cloud/webhook/tumbao/revisar-pago-ahora"
+    "N8N_REVISAR_URL": "https://barragan.app.n8n.cloud/webhook/tumbao/revisar-pago-ahora",
+    // WhatsApp Cloud API (0101). No son secretos: el token sí, y va en
+    // el dashboard como WHATSAPP_TOKEN.
+    "WHATSAPP_PHONE_ID": "1439328619255544",
+    "WHATSAPP_WABA_ID": "1402860685313558"
   }
   // SECRETOS — se ponen en el dashboard, nunca aquí:
   //   SUPABASE_SERVICE_KEY
   //   OPENAI_API_KEY       (para leer comprobantes; sin ella se usa un
   //                         modelo más flojo, ver leerComprobante())
+  //   WHATSAPP_TOKEN       (token permanente del usuario del sistema de
+  //                         Meta, app BotTumbao; sin él no sale ningún
+  //                         aviso y la cola se queda quieta)
   //   N8N_REVISAR_TOKEN    (el mismo valor que el onlyRunIf del webhook
   //                         "Revisar ahora" en n8n; sin él, el aviso
   //                         simplemente no se manda — el sondeo de fondo
