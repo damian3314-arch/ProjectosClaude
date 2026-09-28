@@ -1838,6 +1838,105 @@ async function redactar(env, instrucciones, entrada, esfuerzo) {
   return String((d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '').trim();
 }
 
+/* ---------------------------------------------------------------------
+ * 0115 · El asistente le escribe a Damián
+ *
+ * /wa/notas entrega lo que dejó nota_asistente(): con ventana abierta
+ * (habló con el número en 23 h) va el texto directo; sin ventana, la
+ * plantilla resumen_listo y el texto espera al botón «Ver resumen». Sin
+ * token a propósito, como /wa/despachar: solo vacía la cola que ya está
+ * en la base, no se le puede meter un mensaje desde fuera.
+ * ------------------------------------------------------------------- */
+async function notasWA(env, origen) {
+  if (!env.WHATSAPP_TOKEN) return json({ ok: false, error: 'SIN_CONFIG' }, 503, origen);
+  const lista = await rpc(env, 'wa_tomar_notas', {});
+  const res = { entregadas: 0, avisadas: 0, fallidas: 0 };
+  for (const n of (Array.isArray(lista) ? lista : [])) {
+    const texto = `*${n.titulo}*\n\n${n.texto}`;
+    try {
+      if (!n.ventana_abierta) throw new Error('sin ventana');
+      await responderYGuardar(env, '57' + n.telefono, texto);
+      await rpc(env, 'wa_marcar_nota', { p_id: n.id, p_estado: 'entregado' });
+      res.entregadas++;
+    } catch (_) {
+      try {
+        await rpc(env, 'wa_avisar_nota', { p_id: n.id });
+        res.avisadas++;
+      } catch (e) {
+        console.log('nota', e && e.message);
+        await rpc(env, 'wa_marcar_nota', { p_id: n.id, p_estado: 'fallido' }).catch(() => {});
+        res.fallidas++;
+      }
+    }
+  }
+  return json({ ok: true, ...res }, 200, origen);
+}
+
+/* /wa/centinela: cada hora (pg_cron) mira si algo anda mal y SOLO
+ * escribe si lo hay. Cada alerta lleva una clave del día: la misma
+ * alerta no se repite cada hora. */
+async function centinelaWA(env, origen) {
+  const hoy = fClave.format(new Date());
+  const alertas = [];
+  const alerta = (clave, titulo, texto) => alertas.push({ clave, titulo, texto });
+
+  try {
+    const e = await estadoWA(env);
+    const q = e && e.numero && e.numero.quality_rating;
+    if (q && q !== 'GREEN') {
+      alerta(`calidad:${hoy}:${q}`, '⚠️ Alerta: calidad del número',
+        `Meta bajó la calidad del número de avisos a *${q}*. Las campañas programadas se frenan ` +
+        `en su revisión previa; no mandes mensajes masivos hasta que vuelva a verde.`);
+    }
+  } catch (_) {}
+
+  try {
+    const s = await (await salud(env, null)).json();
+    if (s && s.ok === false) {
+      const mal = (s.revisiones || []).filter((r) => !r.ok);
+      alerta(`salud:${hoy}:${(s.mal || []).join('|')}`, '⚠️ Alerta: página de reservas',
+        'Algo no está bien en tumbaobaila.com:\n' +
+        mal.map((r) => `• ${r.que}: ${r.detalle}`).join('\n'));
+    }
+  } catch (_) {}
+
+  try {
+    const d = await rpcLectura(env, 'centinela_datos', {});
+    if (d.fallidos_2h >= 3) {
+      alerta(`fallidos:${hoy}:${Math.floor(d.fallidos_2h / 3)}`, '⚠️ Alerta: mensajes fallando',
+        `${d.fallidos_2h} mensajes de WhatsApp fallaron en las últimas 2 horas. Lo estoy revisando.`);
+    }
+    if (d.bajas_hoy >= 3) {
+      alerta(`bajas:${hoy}:${Math.floor(d.bajas_hoy / 3)}`, '⚠️ Ojo: gente pidiendo no más mensajes',
+        `Hoy ${d.bajas_hoy} personas tocaron «No quiero más mensajes». Si sigue subiendo, ` +
+        `frenamos las campañas para cuidar el número.`);
+    }
+    if (d.cola_atascada > 0) {
+      alerta(`cola:${hoy}`, '⚠️ Alerta: envíos atascados',
+        `${d.cola_atascada} mensaje(s) llevan más de 30 minutos esperando salir.`);
+    }
+    if (d.informes_fallidos_hoy > 0) {
+      alerta(`informe:${hoy}`, '⚠️ Alerta: informe diario',
+        'Hoy un informe diario no se pudo generar. Lo reviso.');
+    }
+    const tq = Array.isArray(d.tiqueteras_por_validar) ? d.tiqueteras_por_validar : [];
+    if (tq.length) {
+      alerta(`tiqueteras:${hoy}:${tq.map((t) => t.nombre).join('|')}`, '🎟️ Tiqueteras por validar',
+        'Dijeron «ya pagué» y nadie ha validado el pago:\n' +
+        tq.map((t) => `• ${t.nombre} · ${t.clases} clases · $${Number(t.precio || 0).toLocaleString('es-CO')} · desde ${t.desde}`).join('\n') +
+        '\n\nSi mandaron el comprobante, valídalas en el panel → Tiqueteras. Es plata que ya entró.');
+    }
+  } catch (e) { console.log('centinela', e && e.message); }
+
+  let enviadas = 0;
+  for (const a of alertas) {
+    enviadas += Number(await rpc(env, 'nota_asistente', {
+      p_titulo: a.titulo, p_texto: a.texto, p_clave: 'centinela:' + a.clave,
+    }).catch(() => 0)) || 0;
+  }
+  return json({ ok: true, alertas: alertas.length, nuevas: enviadas }, 200, origen);
+}
+
 async function informeWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -2020,6 +2119,14 @@ export default {
     if (ruta === '/wa/webhook') {
       try { return await webhookWA(request, env); }
       catch (e) { console.log('webhook', e && e.message); return new Response('ok', { status: 200 }); }
+    }
+    if (ruta === '/wa/notas') {
+      try { return await notasWA(env, origen); }
+      catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
+    }
+    if (ruta === '/wa/centinela') {
+      try { return await centinelaWA(env, origen); }
+      catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
     }
     if (ruta === '/wa/informe' && request.method === 'POST') {
       return await informeWA(request, env, origen);
