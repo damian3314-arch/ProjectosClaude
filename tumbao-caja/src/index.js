@@ -1178,17 +1178,18 @@ const PLANTILLAS_WA = [
     // 0112: el código de la tiquetera llega SOLO cuando el pago quedó
     // confirmado (por el banco, a mano en recepción o vendida en el
     // mostrador). Antes de eso la persona no tiene nada que usar.
-    name: 'tiquetera_activa',
+    // 'tiquetera_activa' (con el código en negrita y cierre de ánimo) la
+    // rechazó Meta al instante el 28 sep; esta es la versión sobria.
+    name: 'tiquetera_codigo',
     language: 'es',
     category: 'UTILITY',
     components: [
       {
         type: 'BODY',
         text:
-          'Hola {{1}} 🎉 Tu tiquetera Tumbao de {{2}} clases ya está activa.\n\n' +
-          '🎟️ Tu código: *{{3}}*\n📅 Vence el {{4}}\n\n' +
-          'Para reservar entra a tumbaobaila.com, elige *Tengo tiquetera* y escribe tu código. ' +
-          'Guarda este mensaje para tenerlo a la mano. ¡Nos vemos en la pista! 💃',
+          'Hola {{1}}, tu tiquetera Tumbao de {{2}} clases quedó activa ✅\n\n' +
+          'Código: {{3}}\nVence: {{4}}\n\n' +
+          'Para reservar entra a tumbaobaila.com, elige Tengo tiquetera y escribe tu código.',
         example: { body_text: [['Laura', '4', 'A1B2C3', 'miércoles 28 de octubre']] },
       },
       { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },

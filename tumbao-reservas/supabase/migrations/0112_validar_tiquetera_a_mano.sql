@@ -194,7 +194,7 @@ begin
   if v_tel !~ '^3[0-9]{9}$' then return new; end if;
 
   insert into wa_avisos (clave, tipo, telefono, plantilla, variables, vence_at)
-  values ('tiquetera_activa:' || new.id, 'tiquetera_activa', v_tel, 'tiquetera_activa',
+  values ('tiquetera_activa:' || new.id, 'tiquetera_activa', v_tel, 'tiquetera_codigo',
           jsonb_build_array(
             coalesce(nullif(initcap(split_part(btrim(new.nombre), ' ', 1)), ''), 'amigo(a)'),
             new.clases_totales::text, new.codigo, wa_fecha_texto(new.vence_el)),
