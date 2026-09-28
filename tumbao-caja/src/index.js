@@ -1748,7 +1748,7 @@ Si "tipo" es "manana", es el DEBRIEF DE LAS 6 AM (qué hay hoy):
 
 Si "tipo" es "noche", es el CIERRE DE LAS 10 PM (cómo fue el día):
 1. Un titular de una línea.
-2. *Ventas de hoy* ("ventas.hoy"): el total; cuántas personas en clase suelta y cuánto; cuántas mensualidades y cuánto; otros si hay; tiqueteras compradas en línea si hay. Compáralo con "promedio_mismo_dia_4_semanas_cop".
+2. *Ventas de hoy* ("ventas.hoy"): el total; cuántas personas en clase suelta y cuánto; cuántas mensualidades y cuánto; otros si hay; tiqueteras compradas en línea si hay (esas NO están incluidas en "total_cop": dilas aparte, como venta adicional del día). Compáralo con "promedio_mismo_dia_4_semanas_cop".
 3. *Banco*: entró X; cruzado en el cierre Y; pendiente por cruzar Z (pagos adelantados o de clientes que aún no se identifican). Si el cierre no se ha hecho, dilo. Si "efectivo_diferencia_cop" no es 0, di la diferencia del efectivo; si es 0, "el efectivo cuadró".
 4. *El mes*: ventas del mes contra el mismo tramo del mes anterior con % de cambio; mensualidades y personas en suelta. Si hay meta: cuánto falta y cuánto hay que vender por día en los días con clase que quedan.
 5. *Próxima clase* ("clases_manana" es el próximo día con clase, ver "proximo_dia_con_clase_semana"; si hoy es sábado es el lunes): cómo viene la agenda (reservas + mensualidades de esa hora).
