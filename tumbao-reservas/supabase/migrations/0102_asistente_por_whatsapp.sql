@@ -84,7 +84,7 @@ declare v_id bigint;
 begin
   insert into wa_mensajes (wa_msg_id, telefono, nombre, direccion, tipo, texto)
   values (p_wa_msg_id, regexp_replace(coalesce(p_tel, ''), '\D', '', 'g'),
-          left(p_nombre, 120), coalesce(p_tipo, 'text'), left(p_texto, 4000))
+          left(p_nombre, 120), 'entrante', coalesce(p_tipo, 'text'), left(p_texto, 4000))
   on conflict (wa_msg_id) do nothing
   returning id into v_id;
   if v_id is null then return jsonb_build_object('nuevo', false); end if;
