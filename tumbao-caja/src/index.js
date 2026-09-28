@@ -1237,6 +1237,72 @@ const PLANTILLAS_WA = [
         ],
       },
     ],
+  },  // 28 sep, Damián: el recordatorio del miércoles «sin sonar acosador,
+  // solo recordando el vencimiento, con lenguaje muy de Tumbao», y que la
+  // tiquetera sea para «programarse la semana».
+  {
+    name: 'mensualidad_recordatorio',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡 Pasamos con cariño a recordarte que la fecha de renovación de tu mensualidad de las {{2}} es el {{3}}.\n\n' +
+          'Nos encanta verte bailar con nosotros. Puedes renovarla en recepción o por transferencia, ' +
+          'y si necesitas los datos de pago, escríbenos al 301 783 3550. ¡Nos vemos en la pista! 💃',
+        example: { body_text: [['Laura', '6:00 pm', 'miércoles 30 de septiembre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
+    name: 'tiquetera_semana',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 👋 En el último mes viniste {{2}} veces a bailar a Tumbao 💃\n\n' +
+          'Arma tu semana de baile con la *tiquetera*: 8 clases por $96.000 ($12.000 cada una, en vez de $15.000) ' +
+          'o 4 clases por $52.000. La compras en un minuto, reservas tus clases de la semana y tu cupo queda asegurado. ' +
+          'Te dura 30 días.',
+        example: { body_text: [['Laura', '4']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Comprar tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'te_extranamos_semana',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, hace rato no te vemos en Tumbao y te extrañamos 💃\n\n' +
+          'Esta semana volvemos a bailar: clases de lunes a sábado y *Rumba básica*, martes y jueves a las 5:00 pm. ' +
+          'Con la *tiquetera de 4 clases* ($52.000) programas tu semana y apartas tus cupos desde ya 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Comprar tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'URL', text: 'Reservar una clase', url: 'https://tumbaobaila.com' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
   },
 ];
 
