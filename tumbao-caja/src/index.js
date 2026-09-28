@@ -1243,7 +1243,8 @@ async function despacharAvisos(env) {
  *              la firma con WHATSAPP_APP_SECRET: sin firma válida no se
  *              toca nada. Se guarda, se contesta 200 y ya.
  * /wa/agente   La base lo llama (pg_net) cuando escribe un DUEÑO. Piensa
- *              con OpenAI (gpt-4o-mini: lo decidió Damián por costo) y
+ *              con OpenAI (gpt-6-luna, respaldo gpt-4o-mini: Damián pidió
+ *              OpenAI por costo) y
  *              contesta. Solo lee: sus consultas pasan por
  *              agente_consulta por GET, en solo lectura.
  * /wa/conectar Deja a Meta mandando los avisos a /wa/webhook. Se puede
@@ -1457,13 +1458,13 @@ function armarConversacion(m) {
   return mensajes;
 }
 
-async function pensar(env, mensajes) {
+async function pensarChat(env, mensajes) {
   for (let i = 0; i < 6; i++) {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: env.MODELO_AGENTE || 'gpt-4o-mini',
+        model: env.MODELO_RESPALDO || 'gpt-4o-mini',
         temperature: 0.2,
         max_tokens: 900,
         messages: mensajes,
@@ -1495,6 +1496,91 @@ async function pensar(env, mensajes) {
     }
   }
   return 'Me enredé con esa consulta 😅 ¿Me la preguntas de otra forma?';
+}
+
+// Las mismas dos herramientas, en la forma de la Responses API.
+const HERRAMIENTAS_RESPONSES = HERRAMIENTAS_AGENTE.map((t) => ({
+  type: 'function', name: t.function.name, description: t.function.description,
+  parameters: t.function.parameters, strict: true,
+}));
+
+async function ejecutarHerramienta(env, nombre, argumentos) {
+  try {
+    const args = JSON.parse(argumentos || '{}');
+    if (nombre === 'consultar') return await rpcLectura(env, 'agente_consulta', { p_sql: String(args.sql || '') });
+    if (nombre === 'ver_tablas') return await rpcLectura(env, 'agente_esquema', {});
+    return { error: 'Herramienta desconocida.' };
+  } catch (e) {
+    return { error: String((e && e.message) || e).slice(0, 400) };
+  }
+}
+
+function textoDeRespuesta(d) {
+  if (typeof d.output_text === 'string' && d.output_text.trim()) return d.output_text.trim();
+  const partes = [];
+  for (const o of d.output || []) {
+    if (o.type !== 'message') continue;
+    for (const c of o.content || []) {
+      if (typeof c.text === 'string') partes.push(c.text);
+      else if (typeof c.output_text === 'string') partes.push(c.output_text);
+    }
+  }
+  return partes.join('\n').trim();
+}
+
+class ModeloNoDisponible extends Error {}
+
+/* El cerebro principal: gpt-6-luna por la Responses API (28 sep: el más
+ * nuevo y más barato de OpenAI, $0,10 / $0,50 por millón). Por Chat
+ * Completions ese modelo solo usa herramientas SIN razonar; por aquí
+ * razona un poco (esfuerzo «low») antes de escribir cada consulta.
+ * Los ítems de razonamiento se devuelven tal cual con los resultados,
+ * como pide OpenAI para modelos que razonan. */
+async function pensarResponses(env, mensajes) {
+  const modelo = env.MODELO_AGENTE || 'gpt-6-luna';
+  const instrucciones = mensajes[0].content;
+  let input = mensajes.slice(1).map((m) => ({ role: m.role, content: m.content }));
+  for (let i = 0; i < 8; i++) {
+    const r = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelo,
+        instructions: instrucciones,
+        input,
+        tools: HERRAMIENTAS_RESPONSES,
+        reasoning: { effort: env.ESFUERZO_AGENTE || 'low' },
+        max_output_tokens: 4000,
+      }),
+    });
+    if (!r.ok) {
+      const t = (await r.text()).slice(0, 300);
+      // Modelo que la cuenta no tiene o parámetro que no acepta: se pasa
+      // al respaldo en vez de dejar a Damián sin respuesta.
+      if (i === 0 && [400, 403, 404].includes(r.status)) throw new ModeloNoDisponible(`${modelo} ${r.status}: ${t}`);
+      throw new Error(`OpenAI ${r.status}: ${t}`);
+    }
+    const d = await r.json();
+    const salida = Array.isArray(d.output) ? d.output : [];
+    const llamadas = salida.filter((o) => o.type === 'function_call');
+    if (!llamadas.length) return textoDeRespuesta(d);
+    input = input.concat(salida);
+    for (const c of llamadas) {
+      const res = await ejecutarHerramienta(env, c.name, c.arguments);
+      input.push({ type: 'function_call_output', call_id: c.call_id, output: JSON.stringify(res).slice(0, 15000) });
+    }
+  }
+  return 'Me enredé con esa consulta 😅 ¿Me la preguntas de otra forma?';
+}
+
+async function pensar(env, mensajes) {
+  try {
+    return await pensarResponses(env, mensajes.map((m) => ({ ...m })));
+  } catch (e) {
+    if (!(e instanceof ModeloNoDisponible)) throw e;
+    console.log('agente: respaldo', e.message);
+    return await pensarChat(env, mensajes);
+  }
 }
 
 async function agenteWA(request, env, origen) {
@@ -1556,8 +1642,16 @@ async function estadoWA(env) {
       WHATSAPP_APP_SECRET: !!env.WHATSAPP_APP_SECRET,
       OPENAI_API_KEY: !!env.OPENAI_API_KEY,
     },
-    modelo_agente: env.MODELO_AGENTE || 'gpt-4o-mini',
+    modelo_agente: env.MODELO_AGENTE || 'gpt-6-luna',
+    modelo_respaldo: env.MODELO_RESPALDO || 'gpt-4o-mini',
   };
+  if (env.OPENAI_API_KEY) {
+    for (const [k, id] of [['agente', out.modelo_agente], ['respaldo', out.modelo_respaldo]]) {
+      const r = await fetch(`https://api.openai.com/v1/models/${encodeURIComponent(id)}`,
+        { headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` } });
+      out[`modelo_${k}_disponible`] = r.ok;
+    }
+  }
   if (env.WHATSAPP_APP_SECRET && env.WHATSAPP_APP_ID) {
     const s = await (await fetch(
       `${GRAPH}/${env.WHATSAPP_APP_ID}/subscriptions?access_token=${encodeURIComponent(`${env.WHATSAPP_APP_ID}|${env.WHATSAPP_APP_SECRET}`)}`)).json();

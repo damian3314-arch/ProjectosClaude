@@ -58,7 +58,12 @@
     // el dashboard como WHATSAPP_TOKEN.
     "WHATSAPP_PHONE_ID": "1439328619255544",
     "WHATSAPP_WABA_ID": "1402860685313558",
-    "WHATSAPP_APP_ID": "1655314906206509"
+    "WHATSAPP_APP_ID": "1655314906206509",
+    // El cerebro del asistente de WhatsApp (0102). Cambiar de modelo es
+    // cambiar esta línea; si el de arriba falla, responde el respaldo.
+    "MODELO_AGENTE": "gpt-6-luna",
+    "ESFUERZO_AGENTE": "low",
+    "MODELO_RESPALDO": "gpt-4o-mini"
   }
   // SECRETOS — se ponen en el dashboard, nunca aquí:
   //   SUPABASE_SERVICE_KEY
