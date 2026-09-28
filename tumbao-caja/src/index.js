@@ -1175,6 +1175,69 @@ const PLANTILLAS_WA = [
       { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Ver resumen' }] },
     ],
   },
+  // ── Cierre de septiembre 2026 (28-30 sep, pedido por Damián: sin descuento) ──
+  {
+    // Aviso de cuenta, no promoción: la fecha de vencimiento es del cliente.
+    name: 'mensualidad_vencimiento',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, te recordamos que tu mensualidad de las {{2}} en Tumbao tiene fecha de vencimiento el {{3}}.\n\n' +
+          'Puedes renovarla en recepción o por transferencia. Si necesitas los datos de pago, escríbenos al 301 783 3550.',
+        example: { body_text: [['Laura', '6:00 pm', 'martes 29 de septiembre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
+    name: 'tiquetera_frecuentes',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 👋 En el último mes viniste {{2}} veces a bailar a Tumbao.\n\n' +
+          'Con la *tiquetera de 8 clases* ($96.000) cada clase te sale en $12.000 en vez de $15.000, ' +
+          'y la usas cuando quieras durante 30 días, reservando cada clase en la página. 💃',
+        example: { body_text: [['Laura', '4']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Comprar tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'te_extranamos',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, hace rato no te vemos en Tumbao y te extrañamos 💃\n\n' +
+          'Seguimos con clases de lunes a sábado y arrancó *Rumba básica*, martes y jueves a las 5:00 pm. ' +
+          'Aparta tu cupo en un minuto 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
 ];
 
 const cabecerasWA = (env) => ({
