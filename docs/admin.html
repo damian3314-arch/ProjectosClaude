@@ -262,6 +262,8 @@ const CONFIG = {
     padding:.12rem .45rem;border-radius:99px;border:1px solid var(--line-2);color:var(--tx-3);
   }
   .etiqueta.espera{border-color:rgba(255,193,77,.45);color:var(--gold)}
+  /* 0111: el cupo salió de una tiquetera ya pagada: no hay que cobrar. */
+  .etiqueta.tiq{border-color:rgba(120,200,255,.45);color:#7cc8ff}
 
   /* ---------- ya resuelta, con vuelta atrás ---------- */
   .pend-card.resuelta.si{border-color:rgba(74,222,128,.45)}
@@ -1811,8 +1813,18 @@ const CONFIG = {
             <input type="number" min="1" max="20" step="1" id="tiq-clases" value="4"></label>
           <label class="topes-campo"><span>Vigencia (días)</span>
             <input type="number" min="1" max="365" step="1" id="tiq-vigencia" value="45"></label>
-          <label class="topes-campo"><span>Precio (opcional, para el reporte)</span>
-            <input type="number" min="0" step="1000" id="tiq-precio" placeholder="52000"></label>
+          <label class="topes-campo"><span>Cuánto pagó</span>
+            <input type="number" min="1000" step="1000" id="tiq-precio" value="52000"></label>
+          <!-- 0111: la venta entra al cierre del día. Se pide cómo pagó
+               para que el efectivo cuadre en el cajón y la transferencia
+               se tache contra su depósito del banco. -->
+          <label class="topes-campo"><span>Cómo pagó</span>
+            <select id="tiq-medio">
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+            </select></label>
+          <label class="topes-campo" id="tiq-deposito-campo" hidden><span>Depósito del banco</span>
+            <select id="tiq-deposito"><option value="">No lo encuentro todavía</option></select></label>
           <div class="topes-pie">
             <button class="btn primario chico" id="tiq-crear-btn">Vender</button>
             <span class="suave" id="tiq-crear-estado"></span>
@@ -3084,7 +3096,8 @@ const CONFIG = {
     if (res.length) {
       cont.appendChild(grupoPuerta(
         'Reservaron', res,
-        'Compraron clase suelta. Su cupo salió de los que estaban a la venta.'));
+        'Compraron clase suelta o la descontaron de su tiquetera (🎟, ya pagada). ' +
+        'Su cupo salió de los que estaban a la venta.'));
     }
     if (plan.length) {
       cont.appendChild(grupoPuerta(
@@ -3117,6 +3130,13 @@ const CONFIG = {
       `<div class="quien">` +
         `<div class="nom">${esc(p.nombre)}` +
           (p.codigo ? ` <span class="cod">${esc(p.codigo)}</span>` : '') +
+          // 0111: de qué tiquetera salió el cupo y cuál clase es. Ya está
+          // pagada: en la puerta no se cobra nada.
+          (p.tiquetera
+            ? ` <span class="etiqueta tiq" title="Cupo descontado de su tiquetera ` +
+              `${esc(p.tiquetera.codigo)} · ya pagada, no se cobra">` +
+              `🎟 Tiquetera · clase ${Number(p.tiquetera.clase_n)} de ` +
+              `${Number(p.tiquetera.total)}</span>` : '') +
           (p.confirmada === false
             ? ` <span class="etiqueta espera">sin confirmar</span>` : '') +
           // Está enfrente y su plan se acaba hoy: es el mejor momento
@@ -4917,8 +4937,17 @@ const CONFIG = {
     pintarCierre();
   }
 
+  /* 0111: conceptos que registra el sistema solo y NO se escogen en la
+     Caja. La tiquetera se cobra desde «Vender una tiquetera» (o sola,
+     cuando el banco confirma la compra en línea): si también se pudiera
+     apuntar aquí, habría plata de tiquetera sin tiquetera detrás. */
+  const CONCEPTOS_AUTOMATICOS = {
+    tiquetera: 'Tiquetera',
+  };
+
   const nombreConcepto = c =>
-    (CONCEPTOS.find(x => x.c === c) || {}).n || CONCEPTOS_RETIRADOS[c] || c;
+    (CONCEPTOS.find(x => x.c === c) || {}).n || CONCEPTOS_AUTOMATICOS[c]
+      || CONCEPTOS_RETIRADOS[c] || c;
 
   /* ---------- el banco: el único dato que no teclea nadie ----------
      Todo lo demás en esta pantalla lo escribió alguien del mostrador,
@@ -5214,6 +5243,10 @@ const CONFIG = {
     const porBancos  = ing.porBancos;
     const total      = ing.total;
 
+    // 0111: tiqueteras vendidas hoy y clases que se tomaron con una.
+    const tiqVendidas = Array.isArray(d.tiqueteras_vendidas) ? d.tiqueteras_vendidas : [];
+    const tiqUsadas   = Array.isArray(d.tiqueteras_usadas) ? d.tiqueteras_usadas : [];
+
     /* ── el cajón ───────────────────────────────────────────────────
        Solo efectivo: la transferencia no pasa por aquí.
 
@@ -5345,6 +5378,20 @@ const CONFIG = {
         const n = o.efN + o.trN;
         return n ? g(plural(nombreConcepto(k), n), `${n} · ${pesos(o.ef + o.tr)}`) : '';
       }).join('') +
+
+      /* 0111: QUIÉN COMPRÓ TIQUETERA Y CUÁNTAS CLASES SE TOMARON CON UNA.
+         La plata de la tiquetera ya está arriba, en su concepto, el día
+         que se pagó. Aquí van los nombres (sin cifra en columna, para que
+         nadie los sume dos veces) y las clases que se tomaron con
+         tiquetera, que hoy no traen plata: ya estaban pagadas. */
+      (tiqVendidas.length
+        ? tiqVendidas.map(t => `<div class="peq">Tiquetera: ${esc(t.nombre)} · ` +
+            `${Number(t.clases)} clases · ${esc(pesos(t.valor_cop))}` +
+            `${t.en_linea ? ' · página' : ''}</div>`).join('')
+        : '') +
+      (tiqUsadas.length
+        ? g('Clases con tiquetera', `${tiqUsadas.length} · ya pagadas`)
+        : '') +
 
       `<hr>` +
       grupo('Resumen de ingresos') +
@@ -5546,7 +5593,12 @@ const CONFIG = {
                       // tirilla.
                       ? ` · en la puerta` +
                         (Number(x.cobros) > 1 ? `, ${Number(x.cobros)} personas` : '')
-                      : ` · en recepción`) +
+                      // 0111: la tiquetera comprada en la página no pasó
+                      // por recepción: el renglón dice solo «Tiquetera».
+                      : (Array.isArray(x.conceptos) && x.conceptos.length &&
+                         x.conceptos.every(c => c === 'tiquetera'))
+                        ? ''
+                        : ` · en recepción`) +
                     `</div>`
                   : `<div class="peq">→ cobrado en la puerta</div>`) +
               // 0072: y quién de este mismo depósito no entró. Es la
@@ -7132,27 +7184,66 @@ const CONFIG = {
     const telefono = $('#tiq-telefono').value.replace(/\D/g, '');
     const clases = parseInt($('#tiq-clases').value, 10);
     const vigencia_dias = parseInt($('#tiq-vigencia').value, 10);
-    const precioTxt = $('#tiq-precio').value.trim();
-    const precio_cop = precioTxt ? parseInt(precioTxt, 10) : null;
+    const precio_cop = parseInt($('#tiq-precio').value.trim(), 10);
+    const medio = $('#tiq-medio').value;
+    const pago_id = medio === 'transferencia' ? ($('#tiq-deposito').value || null) : null;
     if (nombre.length < 2 || telefono.length !== 10 || !clases || !vigencia_dias) {
       $('#tiq-crear-estado').textContent = 'Revisa el nombre, el celular y los números.';
+      return;
+    }
+    if (!precio_cop || precio_cop <= 0) {
+      $('#tiq-crear-estado').textContent = 'Escribe cuánto pagó: entra al cierre de hoy.';
       return;
     }
     btn.disabled = true;
     try {
       const d = await api('tiquetera-crear', {
-        nombre, telefono, clases, vigencia_dias, precio_cop,
+        nombre, telefono, clases, vigencia_dias, precio_cop, medio, pago_id,
       });
       $('#tiq-crear-estado').textContent = '';
       nota('Tiquetera vendida', 'bien',
-        `Código ${d.codigo} · ${d.clases} clases · vence ${fmtCorto(d.vence_el)}. Mándaselo por WhatsApp.`);
-      $('#tiq-nombre').value = ''; $('#tiq-telefono').value = ''; $('#tiq-precio').value = '';
+        `Código ${d.codigo} · ${d.clases} clases · vence ${fmtCorto(d.vence_el)}. ` +
+        `Quedó en el cierre de hoy: ${pesos(precio_cop)} en ${medio}. Mándale el código por WhatsApp.`);
+      $('#tiq-nombre').value = ''; $('#tiq-telefono').value = '';
+      $('#tiq-medio').value = 'efectivo'; $('#tiq-deposito-campo').hidden = true;
+      traido.delete('caja');
       await cargarTiqueteras(true);
     } catch (e) {
       fallo(e, 'No se pudo vender la tiquetera');
     } finally {
       btn.disabled = false;
     }
+  });
+
+  // 0111: el precio de lista se sugiere según las clases (se puede cambiar).
+  const PRECIO_TIQUETERA = { 4: 52000, 8: 96000 };
+  $('#tiq-clases').addEventListener('input', () => {
+    const p = PRECIO_TIQUETERA[parseInt($('#tiq-clases').value, 10)];
+    if (p) $('#tiq-precio').value = p;
+  });
+
+  // Transferencia: se ofrecen los depósitos libres de los últimos días que
+  // alcanzan para el precio, igual que en la Caja. Si no aparece, se vende
+  // igual y queda como transferencia sin depósito escogido.
+  async function depositosParaTiquetera() {
+    const sel = $('#tiq-deposito');
+    sel.innerHTML = '<option value="">Buscando depósitos…</option>';
+    try {
+      const d = await alWorker('dia', {});
+      const precio = parseInt($('#tiq-precio').value, 10) || 0;
+      const libres = (Array.isArray(d.pagos_libres) ? d.pagos_libres : [])
+        .filter(p => Number(p.saldo_cop || 0) >= precio);
+      sel.innerHTML = '<option value="">No lo encuentro todavía</option>' +
+        libres.map(p => `<option value="${esc(p.id)}">${esc(p.cuando)} · ` +
+          `${esc(pesos(p.saldo_cop))} · ${esc(p.remitente || 'sin nombre')}</option>`).join('');
+    } catch (e) {
+      sel.innerHTML = '<option value="">No lo encuentro todavía</option>';
+    }
+  }
+  $('#tiq-medio').addEventListener('change', () => {
+    const tr = $('#tiq-medio').value === 'transferencia';
+    $('#tiq-deposito-campo').hidden = !tr;
+    if (tr) depositosParaTiquetera();
   });
 
   $('#tab-tiqueteras').addEventListener('click',

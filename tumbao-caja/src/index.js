@@ -446,7 +446,9 @@ const ADMIN = {
 
   // Tiqueteras (0097): cualquier rol de admin puede vender una — es
   // caja de mostrador, igual que registrar cualquier otro ingreso.
-  'tiquetera-crear': { fn: 'admin_tiquetera_crear',
+  // 0111: vender = crear la tiquetera Y registrar el cobro en la caja,
+  // en una sola transacción. Por eso el precio y el medio son obligatorios.
+  'tiquetera-crear': { fn: 'admin_tiquetera_vender',
                 args: (b) => {
                   const nombre = TXT(b.nombre, 80);
                   const tel = TXT(String(b.telefono || '').replace(/\D/g, ''), 15);
@@ -455,11 +457,14 @@ const ADMIN = {
                   if (!nombre || nombre.length < 2 || !tel || !clases || !vigencia) {
                     return { _error: 'DATO_INVALIDO' };
                   }
-                  const precio = b.precio_cop == null || b.precio_cop === ''
-                    ? null : enteroPositivo(b.precio_cop);
+                  const precio = enteroPositivo(b.precio_cop);
+                  const medio = b.medio === 'transferencia' ? 'transferencia'
+                              : b.medio === 'efectivo' ? 'efectivo' : null;
+                  if (!precio || !medio) return { _error: 'DATO_INVALIDO' };
                   return { p_nombre: nombre, p_telefono: tel,
                            p_clases: clases, p_vigencia_dias: vigencia,
-                           p_precio_cop: precio };
+                           p_precio_cop: precio, p_medio: medio,
+                           p_pago_id: UUID(b.pago_id) };
                 } },
   'tiqueteras-listar': { fn: 'admin_tiqueteras_listar',
                 args: (b) => ({ p_estado: b.estado === 'todas' ? 'todas' : 'activas' }) },
@@ -1749,7 +1754,7 @@ Nada de insights largos ni comparaciones en la mañana: eso va en el cierre de l
 
 Si "tipo" es "noche", es el CIERRE DE LAS 10 PM (cómo fue el día):
 1. Un titular de una línea.
-2. *Ventas de hoy* ("ventas.hoy"): el total; cuántas personas en clase suelta y cuánto; cuántas mensualidades y cuánto; otros si hay; tiqueteras compradas en línea si hay (esas NO están incluidas en "total_cop": dilas aparte, como venta adicional del día). Compáralo con "promedio_mismo_dia_4_semanas_cop".
+2. *Ventas de hoy* ("ventas.hoy"): el total; cuántas personas en clase suelta y cuánto; cuántas mensualidades y cuánto; otros si hay; tiqueteras vendidas si hay ("tiqueteras_n"/"tiqueteras_cop", ya incluidas en "total_cop": nómbralas aparte, p. ej. "2 tiqueteras, $104.000"). Las clases que alguien toma con su tiquetera no suman plata ese día: ya se pagaron el día que la compró. Compáralo con "promedio_mismo_dia_4_semanas_cop".
 3. *Banco*: entró X; cruzado en el cierre Y; pendiente por cruzar Z (pagos adelantados o de clientes que aún no se identifican). Si el cierre no se ha hecho, dilo. Si "efectivo_diferencia_cop" no es 0, di la diferencia del efectivo; si es 0, "el efectivo cuadró".
 4. *El mes*: ventas del mes contra el mismo tramo del mes anterior con % de cambio; mensualidades y personas en suelta. Si hay meta: cuánto falta y cuánto hay que vender por día en los días con clase que quedan.
 5. *Próxima clase* ("clases_manana" es el próximo día con clase, ver "proximo_dia_con_clase_semana"; si hoy es sábado es el lunes): cómo viene la agenda (reservas + mensualidades de esa hora).
