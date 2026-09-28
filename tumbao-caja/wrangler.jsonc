@@ -57,7 +57,8 @@
     // WhatsApp Cloud API (0101). No son secretos: el token sí, y va en
     // el dashboard como WHATSAPP_TOKEN.
     "WHATSAPP_PHONE_ID": "1439328619255544",
-    "WHATSAPP_WABA_ID": "1402860685313558"
+    "WHATSAPP_WABA_ID": "1402860685313558",
+    "WHATSAPP_APP_ID": "1655314906206509"
   }
   // SECRETOS — se ponen en el dashboard, nunca aquí:
   //   SUPABASE_SERVICE_KEY
@@ -66,6 +67,9 @@
   //   WHATSAPP_TOKEN       (token permanente del usuario del sistema de
   //                         Meta, app BotTumbao; sin él no sale ningún
   //                         aviso y la cola se queda quieta)
+  //   WHATSAPP_APP_SECRET  (la clave secreta de la app BotTumbao; con
+  //                         ella se comprueba que lo que llega a
+  //                         /wa/webhook viene de verdad de Meta)
   //   N8N_REVISAR_TOKEN    (el mismo valor que el onlyRunIf del webhook
   //                         "Revisar ahora" en n8n; sin él, el aviso
   //                         simplemente no se manda — el sondeo de fondo
