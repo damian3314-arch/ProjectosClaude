@@ -27,7 +27,7 @@
  *   node usuarios-invitacion.test.mjs
  */
 import { chromium } from 'playwright-core';
-import { rutaDelPanel } from './instrumentar.mjs';
+import { rutaDelPanel, irASeccion } from './instrumentar.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 
@@ -109,7 +109,7 @@ await p.addInitScript(() => {
 });
 await p.goto('http://localhost:8132/', { waitUntil: 'load' });
 await p.waitForTimeout(500);
-await p.click('#tab-usuarios');
+await irASeccion(p, 'tab-usuarios');
 await p.waitForTimeout(600);
 
 const txt = () => p.locator('#lista-usuarios').innerText().then(s => s.replace(/\s+/g, ' '));

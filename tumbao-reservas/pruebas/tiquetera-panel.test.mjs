@@ -17,7 +17,7 @@
  *   node tiquetera-panel.test.mjs
  */
 import { chromium } from 'playwright-core';
-import { rutaDelPanel } from './instrumentar.mjs';
+import { rutaDelPanel, irASeccion } from './instrumentar.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 
@@ -84,7 +84,7 @@ titulo('1. El cajero vende una tiquetera');
   vendidas = [];
   const { p, errs } = await abrirPanel('cajero');
 
-  await p.locator('#tab-tiqueteras').click();
+  await irASeccion(p, 'tab-tiqueteras');
   await p.waitForTimeout(200);
   ok('la pestaña abre sin errores', errs.length === 0, errs.join(' | '));
   ok('el título dice Tiqueteras', (await p.locator('#donde').innerText()) === 'Tiqueteras');
@@ -115,7 +115,7 @@ titulo('2. Formulario incompleto');
 {
   vendidas = [];
   const { p, errs } = await abrirPanel('administrador');
-  await p.locator('#tab-tiqueteras').click();
+  await irASeccion(p, 'tab-tiqueteras');
   await p.waitForTimeout(200);
 
   let pedido = false;

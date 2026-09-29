@@ -31,7 +31,7 @@
  *   node salidas-por-clasificar.test.mjs
  */
 import { chromium } from 'playwright-core';
-import { rutaDelPanel } from './instrumentar.mjs';
+import { rutaDelPanel, irASeccion } from './instrumentar.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 
@@ -144,7 +144,7 @@ ok('y se ve', !(await globo.getAttribute('hidden') !== null));
 
 titulo('2. La bandeja');
 
-await p.click('#tab-salidas');
+await irASeccion(p, 'tab-salidas');
 await p.waitForTimeout(600);
 let t = (await p.locator('#sal-lista').innerText()).replace(/\s+/g, ' ');
 ok('están las tres salidas',
@@ -256,7 +256,7 @@ await p.close();
 titulo('7. Vacía no asusta');
 
 ({ p, errs } = await abrir({ datos: { ok: true, cuantas: 0, cop: 0, salidas: [] } }));
-await p.click('#tab-salidas');
+await irASeccion(p, 'tab-salidas');
 await p.waitForTimeout(500);
 ok('lo dice en positivo',
    /están clasificadas/.test(await p.locator('#sal-lista').innerText()));
@@ -277,7 +277,7 @@ ok('la pestaña no se le esconde',
 ok('mientras la tesorería sí',
    await p.locator('#tab-tesoreria').getAttribute('hidden') !== null,
    'la diferencia es a propósito');
-await p.click('#tab-salidas');
+await irASeccion(p, 'tab-salidas');
 await p.waitForTimeout(500);
 ok('y puede clasificar',
    await p.locator('#sal-lista [data-hacer="clasificar"]').count() === 3);

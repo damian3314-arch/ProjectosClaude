@@ -1,8 +1,13 @@
+<!doctype html>
+<html lang="es-CO">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0d0b0f">
 <title>Tumbao · Panel</title>
+<link rel="preload" href="fonts/outfit-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc14d'/%3E%3Cstop offset='.55' stop-color='%23ff6b35'/%3E%3Cstop offset='1' stop-color='%23ff4f7d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230d0b0f'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='url(%23g)'%3ET%3C/text%3E%3C/svg%3E">
 
 <script>
 /* ─────────────────────────────────────────────────────────────
@@ -1263,6 +1268,347 @@ const CONFIG = {
   .tiq-validar{margin-top:.6rem;display:grid;gap:.45rem;max-width:28rem}
   .tiq-validar .suave{margin:0;font-size:.8rem}
 
+  /* ═══════════════════════════════════════════════════════════════
+     CAPA DE DISEÑO (29 sep) — la misma de index.html y mensualidad.html
+
+     Damián: «simplifiquemos la interfaz y dale el style de
+     tumbaobaila.com. Objetivo que den ganas de trabajar».
+
+     Qué cambia y por qué:
+     - Outfit, autoalojada en fonts/, como la página de reservas. La
+       letra del sistema se veía distinta en cada celular del mostrador.
+     - La marca de verdad (img/logo-tumbao.png) en vez de la palabra
+       escrita. En el escritorio vive arriba de la columna.
+     - Superficies sin borde: las tarjetas se separan por el tono. Las
+       líneas quedan casi transparentes y solo se encienden para decir
+       algo (escogido, entró, descuadre).
+     - Botones píldora. El principal es naranja sólido con texto oscuro,
+       el mismo de «Reservar» en la página: 7,6:1 de contraste.
+     - Un acento: el naranja. Verde, ámbar y rojo quedan para lo que
+       exige una acción, como ya decían los comentarios de arriba.
+     - Íconos Phosphor en la navegación en vez de símbolos sueltos.
+     Va al final a propósito: quitarla entera devuelve el panel a como
+     estaba, sin tocar ninguna regla de arriba.
+     ═══════════════════════════════════════════════════════════════ */
+  @font-face{
+    font-family:'Outfit';font-style:normal;font-weight:100 900;font-display:swap;
+    src:url(fonts/outfit-latin-wght.woff2) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  }
+  :root{
+    --sans:'Outfit',ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --bg-2:#18141c; --bg-3:#221d27;        /* superficies de la página */
+    --surface:#18141c; --surface-2:#221d27; --surface-3:#2b2531;
+    --line:rgba(255,255,255,.06); --line-2:rgba(255,255,255,.12);
+    --gold:#f5b85c;                         /* ámbar: «mira esto» */
+    --on-hot:#1c0b03;                       /* texto sobre naranja */
+    --r:14px; --r-field:10px; --r-pill:999px;
+    color-scheme:dark;
+  }
+  html{-webkit-tap-highlight-color:transparent}
+  body{
+    letter-spacing:.005em;line-height:1.5;
+    background-image:
+      radial-gradient(70rem 40rem at 50% -14rem,rgba(255,107,53,.12),transparent 65%),
+      radial-gradient(50rem 30rem at 100% 100%,rgba(255,193,77,.05),transparent 60%);
+  }
+  @media screen{
+    body::after{
+      content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.03;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+  }
+  button,a,label,.tab,.caja-btn,.clase-card{touch-action:manipulation}
+  h1,h2,h3{text-wrap:balance}
+  a{color:var(--hot-2);text-underline-offset:.18em}
+  .sprite{position:absolute;width:0;height:0;overflow:hidden}
+  svg{fill:currentColor}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  /* ---------- la marca ---------- */
+  .wrap > header{
+    display:flex;flex-direction:column;align-items:center;gap:.35rem;
+    padding:2.2rem 0 1.4rem;
+  }
+  .marca{margin:0;line-height:0}
+  .marca img{display:block;width:min(11rem,46vw);height:auto}
+  .rotulo{
+    font-size:.7rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--tx-3);
+  }
+  /* Con el panel abierto la cabecera se encoge: en el celular, una tira
+     con el logo pequeño; en el escritorio desaparece, porque el logo ya
+     está arriba de la columna. */
+  body.dentro .wrap > header{flex-direction:row;padding:.2rem 0 .9rem;gap:.6rem}
+  body.dentro .marca img{width:5.4rem}
+  body.dentro .rotulo{font-size:.62rem}
+  .lat-marca{display:none}
+
+  /* ---------- entrar ---------- */
+  #entrar,#olvide,#definir-clave{
+    max-width:24rem;margin:0 auto 3rem;padding:1.5rem 1.35rem;
+    background:var(--surface);border:0;border-radius:20px;
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.9);
+  }
+  #entrar label,#olvide label,#definir-clave label{margin-top:.9rem}
+  #entrar label:first-child,#olvide label:first-child{margin-top:0}
+  #entrar .btn.primario,#olvide .btn,#definir-clave .btn{width:100%;margin-top:1.1rem;padding:.8rem 1rem;font-size:1rem}
+  #entrar p{text-align:center;margin:.9rem 0 .2rem}
+  #entrar p a{color:var(--tx-2);font-size:.85rem}
+  #modo-token{margin-top:.6rem}
+  #modo-token summary{font-size:.78rem;color:var(--tx-3);cursor:pointer;text-align:center}
+
+  /* ---------- campos ---------- */
+  input,select,textarea{
+    background:var(--surface-2);border:1px solid transparent;border-radius:var(--r-field);
+    padding:.6rem .75rem;transition:border-color .16s ease,background-color .16s ease;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:var(--hot);background:var(--surface-3);
+  }
+  input::placeholder{color:var(--tx-3)}
+  input[type=checkbox],input[type=radio]{accent-color:var(--hot);width:auto}
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.55)}
+  label{font-weight:500}
+
+  /* ---------- botones ---------- */
+  .btn,.btn-min{
+    display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+    background:var(--surface-2);border:1px solid transparent;color:var(--tx);
+    border-radius:var(--r-pill);padding:.55rem 1.05rem;font-weight:600;font-size:.9rem;
+    transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .1s ease;
+  }
+  .btn:hover:not(:disabled),.btn-min:hover:not(:disabled){background:var(--surface-3);border-color:transparent}
+  .btn:active:not(:disabled),.btn-min:active:not(:disabled){transform:translateY(1px) scale(.99)}
+  .btn.chico,.btn-min{padding:.38rem .8rem;font-size:.8rem;border-radius:var(--r-pill);min-height:2.1rem}
+  .btn.primario{
+    background:var(--hot);border-color:var(--hot);color:var(--on-hot);font-weight:700;
+  }
+  .btn.primario:hover:not(:disabled){filter:none;background:#ff8150;border-color:#ff8150}
+  .btn.primario:disabled{background:var(--surface-2);border-color:transparent;color:var(--tx-3);opacity:1}
+  .btn.ok{background:rgba(74,222,128,.1);border-color:transparent;color:var(--ok)}
+  .btn.ok:hover:not(:disabled){background:rgba(74,222,128,.18)}
+  .btn.mal{background:rgba(255,107,129,.08);border-color:transparent;color:var(--bad)}
+  .btn.mal:hover:not(:disabled){background:rgba(255,107,129,.16)}
+  .btn.deshacer{background:transparent;border-color:var(--line-2)}
+  .btn.dejar{background:rgba(245,184,92,.1)}
+  .btn:focus-visible,.btn-min:focus-visible,.tab:focus-visible,.caja-btn:focus-visible,
+  .medio:focus-visible,.origen:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+  /* Recargar, anterior, siguiente: un ícono redondo. El panel se
+     refresca solo cada 15 segundos; este botón es para el apuro, no para
+     pelearse con él en cada pantalla. */
+  .ico-btn{width:2.3rem;height:2.3rem;min-height:0;padding:0!important;flex:none}
+  .ico-btn svg{width:1.1rem;height:1.1rem}
+  .ico-btn:hover svg{color:var(--hot-2)}
+
+  /* ---------- navegación ---------- */
+  .tab .ic{display:inline-grid;place-items:center;color:var(--tx-3)}
+  .tab .ic svg{width:1.25rem;height:1.25rem}
+  .tab{font-weight:500;transition:background-color .16s ease,color .16s ease}
+  .tab[aria-selected="true"],.tab.mas.activo{color:var(--tx);font-weight:600}
+  .tab[aria-selected="true"] .ic,.tab.mas.activo .ic{color:var(--hot)}
+  .tab .globo{color:var(--on-hot)}
+  .tab.mas{display:none}
+  .nav-velo{display:none}
+
+  .donde{font-size:1.7rem;font-weight:700;letter-spacing:-.025em;line-height:1.15;margin:.2rem 0 1.1rem}
+
+  @media (min-width:900px){
+    body.dentro .wrap > header{display:none}
+    .wrap{padding-top:2rem}
+    .lateral{background:rgba(14,11,17,.92);border-right:1px solid var(--line);padding:1.1rem .75rem 1rem}
+    .lat-marca{display:block;padding:.3rem .6rem 1rem}
+    .lat-marca img{display:block;width:7.4rem;height:auto}
+    .tab{border-radius:12px;padding:.6rem .75rem}
+    .tab:hover{background:var(--surface)}
+    .tab[aria-selected="true"]{background:rgba(255,107,53,.11)}
+    .tab.salir{margin-top:auto;color:var(--tx-3)}
+    .tab.salir:hover{color:var(--tx)}
+    .lat-grupo{letter-spacing:.14em;font-weight:700}
+    /* Sin la cabecera de antes, los botones de cada sección suben a la
+       altura donde salían los avisos, y un aviso abierto se tragaba el
+       clic de «+ Apuntar a alguien». Abajo a la izquierda del contenido
+       no hay botones: ni en la barra de Guardar del horario, que los
+       lleva a la derecha. */
+    body.dentro #avisos{top:auto;bottom:1.2rem;right:auto;left:15.6rem}
+  }
+
+  @media (max-width:899px){
+    /* La barra: cuatro secciones y «Más». Sin deslizar. */
+    .lateral{
+      overflow:visible;justify-content:space-around;gap:0;
+      background:rgba(18,14,21,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border-top:1px solid var(--line);
+    }
+    .lateral .tab{flex:1 1 0;min-width:0;padding:.45rem .2rem;font-size:.68rem;gap:.2rem}
+    .lateral .tab .ic svg{width:1.4rem;height:1.4rem}
+    .lateral .tab.sec{display:none}
+    .lateral .tab.mas{display:flex}
+    #tab-resumen{order:-1}
+    .tab .globo{transform:translate(.95rem,-.1rem);top:.2rem;left:50%;margin-left:-.6rem}
+
+    /* La hoja de «Más»: la misma nav, abierta hacia arriba. */
+    .nav-velo{display:block;position:fixed;inset:0;z-index:29;background:rgba(6,4,8,.6)}
+    .lateral.abierta{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;
+      padding:.6rem .8rem calc(.8rem + env(safe-area-inset-bottom));
+      border-radius:22px 22px 0 0;max-height:85dvh;overflow-y:auto;
+      background:var(--surface);box-shadow:0 -20px 50px rgba(0,0,0,.55);
+      animation:hoja .22s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes hoja{from{transform:translateY(30%);opacity:.3}to{transform:none;opacity:1}}
+    .lateral.abierta .lat-grupo{display:block;grid-column:1/-1;padding:.7rem .2rem .1rem;
+      font-size:.66rem;letter-spacing:.14em}
+    .lateral.abierta .lat-grupo:first-of-type{padding-top:.3rem}
+    .lateral.abierta .tab{display:flex;padding:.75rem .3rem;font-size:.78rem;border-radius:14px;
+      background:var(--surface-2)}
+    .lateral.abierta .tab[aria-selected="true"]{background:rgba(255,107,53,.14)}
+    .lateral.abierta .tab.mas{grid-column:1/-1;flex-direction:row;justify-content:center;
+      background:transparent;color:var(--tx-3);order:99}
+    .lateral.abierta .tab.salir{order:98;grid-column:1/-1;flex-direction:row;justify-content:center;gap:.5rem}
+    .lateral.abierta #tab-resumen{order:0}
+    #app{padding-bottom:6rem}
+    .donde{font-size:1.45rem}
+  }
+  @media (prefers-reduced-motion:reduce){.lateral.abierta{animation:none}}
+
+  /* ---------- superficies: sin borde, el tono separa ---------- */
+  .tarjeta,.dia-col,.pend-card,.clase-card,.tile,.ficha,.mov,.caja-btn,.mens-cupo,
+  .marcador,#sin-dueno,.fila-puerta,.revisar,.cierre,#mens-abierto{border-radius:var(--r)}
+  .tile{padding:1rem 1.05rem}
+  .tile .n{font-weight:700;letter-spacing:-.02em}
+  .tile .k,.ficha .cab{letter-spacing:.08em;font-weight:600}
+  .ficha .gordo{font-weight:700}
+  .clase-card .h{font-weight:700;letter-spacing:-.02em}
+  .clase-card.abrible:hover{background:var(--surface-2)}
+  .clase-card.abrible:hover .ver-lista{color:var(--hot-2)}
+  .quedan{border:0;background:rgba(74,222,128,.12)}
+  .quedan.poco{background:rgba(245,184,92,.13)}
+  .quedan.lleno{background:rgba(255,107,129,.12)}
+  .etiqueta{border:0;background:var(--surface-2);color:var(--tx-2);letter-spacing:.04em}
+  .etiqueta.espera{background:rgba(245,184,92,.13)}
+  .etiqueta.tiq{background:rgba(124,200,255,.12)}
+  .pend-card .cod,.grupo-cab .hh{color:var(--hot-2)}
+  .grupo-cab .hh{background:rgba(255,107,53,.1);border:0}
+  .pago{background:var(--surface-2)}
+  .vencen{border-color:rgba(245,184,92,.45)}
+  .cierre{background:var(--surface)}
+  .cierre input{background:var(--surface-2)}
+  .cierre .grupo.banco{background:rgba(0,0,0,.2)}
+  .revisar{border-color:rgba(245,184,92,.45)}
+  #caja-tiles .tile.cajon{background:linear-gradient(160deg,rgba(245,184,92,.08),var(--surface));border-color:transparent}
+
+  /* La caja: las opciones son lo que se toca. Sin sombra ni salto: el
+     tono sube al pasar y baja al tocar, como en la página. */
+  .caja-btn{min-height:5.2rem;padding:1rem .95rem;border-color:transparent}
+  .caja-btn:hover{background:var(--surface-2);border-color:transparent;transform:none;box-shadow:none}
+  .caja-btn:active{transform:scale(.985)}
+  .caja-btn .q{font-weight:600}
+  .caja-seccion > h4,.caja-h{letter-spacing:.14em;font-size:.72rem}
+  .caja-seccion > h4::after,.caja-h::after{background:var(--line-2)}
+
+  /* Las ventanas: más aire, esquinas de hoja. */
+  .modal{background:rgba(6,4,8,.72)}
+  .caja-modal{background:var(--surface);border:0;border-radius:20px;padding:1.4rem 1.3rem;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.95)}
+  .caja-modal h3{font-size:1.2rem;font-weight:700;letter-spacing:-.02em}
+  .caja-modal input{background:var(--surface-2);border-color:transparent}
+  .caja-modal input:focus{border-color:var(--hot)}
+  .caja-modal .ap-clase{color:var(--hot-2)}
+  /* «Caja menor / mayor» no tenía estilo: salían dos botones grises del
+     navegador en mitad de la ventana. Se visten igual que el medio. */
+  .medio,.origen{
+    flex:1;padding:.7rem .5rem;border-radius:12px;background:var(--surface-2);
+    border:1px solid transparent;color:var(--tx-2);font:inherit;font-size:.87rem;cursor:pointer;
+    transition:background-color .14s ease,border-color .14s ease,color .14s ease;
+  }
+  .medio.on,.origen.on{border-color:var(--hot);color:var(--tx);background:rgba(255,107,53,.12)}
+  .dep{background:var(--surface-2);border-color:transparent}
+  .dep.on{border-color:var(--hot);background:rgba(255,107,53,.1)}
+  .contador .cnt{background:var(--surface-2);border-color:transparent;border-radius:12px}
+  .contador .cnt:hover:not(:disabled){border-color:var(--hot)}
+
+  /* Los avisos flotantes. */
+  .nota{background:var(--surface-2);border-color:transparent;border-left-width:3px;border-radius:14px}
+  .nota.mal{border-left-color:var(--bad)} .nota.bien{border-left-color:var(--ok)} .nota.ojo{border-left-color:var(--gold)}
+  .aviso{background:var(--surface);border-color:transparent;border-radius:12px}
+  .aviso.mal{background:rgba(255,107,129,.08)}
+  .aviso.bien{background:rgba(74,222,128,.08)}
+  .aviso.ojo{background:rgba(245,184,92,.08)}
+
+  /* El buscador. */
+  .buscar{display:block}
+  .buscar input{padding-left:2.3rem}
+  .buscar .lupa{width:1.05rem;height:1.05rem;left:.8rem}
+  .semana-bar{gap:.5rem}
+  .semana-bar .rango{font-size:1.02rem;font-weight:600;letter-spacing:-.01em}
+  #dia-fecha{border-radius:var(--r-pill);padding:.4rem .8rem!important}
+
+  .vacio{padding:3.5rem 1rem}
+  .vacio .ico{opacity:.8}
+  .nota-horario{margin:-.4rem 0 1rem}
+
+  /* ---------- filas de Mensualidad, Salidas y Tiqueteras ----------
+     Esas tres pestañas pintan `.fila.mens` y solo había estilo para la
+     `.fila` del cierre: salían como texto suelto sin separación. */
+  #p-mensualidad .fila.mens,#p-salidas .fila.mens,#p-tiqueteras .fila.mens{
+    display:flex;justify-content:space-between;gap:.8rem;
+    background:var(--surface);border-radius:var(--r);padding:.85rem 1rem;margin-bottom:.5rem;
+  }
+  .fila.mens .cuerpo{flex:1;min-width:0}
+  .fila.mens .nom{font-weight:600;font-size:.98rem}
+  .fila.mens .ag{font-size:.8rem;color:var(--tx-2);margin-top:.15rem;line-height:1.45}
+  .fila.mens .et.mal{background:rgba(255,107,129,.12);color:var(--bad)}
+  .fila.mens .et.bien{background:rgba(74,222,128,.12);color:var(--ok)}
+  .fila.mens .et.ojo{background:rgba(245,184,92,.13);color:var(--gold)}
+  .mens-cupo{background:var(--surface);border-color:transparent}
+  .mens-cupo .v{font-weight:700}
+  .mens-cupo .ag{font-size:.72rem;color:var(--tx-3);margin-top:.15rem}
+  .mens-grupo{letter-spacing:.14em}
+
+  /* Lo plegado: el resumen se lee como un botón, no como una viñeta. */
+  #mens-topes,#mens-cambios,#sal-solas,#tes-detalle,#tes-nuevo{
+    background:var(--surface);border-radius:var(--r);padding:.8rem 1rem;margin-bottom:.8rem;
+  }
+  #mens-topes summary,#mens-cambios summary,#sal-solas summary,#tes-detalle summary,#tes-nuevo summary{
+    font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tx-2);
+  }
+
+  /* Vender una tiquetera: una tarjeta con los campos en rejilla. Antes
+     eran seis campos de lado a lado de la pantalla, uno debajo de otro. */
+  #tiq-crear{background:var(--surface);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1.1rem}
+  #tiq-crear summary{font-weight:700;font-size:1.02rem;cursor:pointer;letter-spacing:-.01em}
+  #tiq-crear .topes-cuerpo{
+    display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));padding-top:.9rem;
+  }
+  #tiq-crear .topes-campo span{color:var(--tx-2)}
+  #tiq-crear .topes-pie{grid-column:1/-1;margin-top:.2rem}
+  #tiq-crear .topes-pie .btn{padding:.6rem 1.6rem;font-size:.95rem}
+  #p-tiqueteras .semana-bar label{display:flex;align-items:center;gap:.45rem;margin:0}
+  .tiq-validar{background:var(--surface-2);border-radius:12px;padding:.8rem .9rem;margin-top:.7rem}
+  .topes-campo input{background:var(--surface-2);border-color:transparent}
+  #tiq-crear .topes-campo input,#tiq-crear select{background:var(--surface-2)}
+  .tiq-validar input,.tiq-validar select{background:var(--surface-3)}
+
+  #tiq-crear .topes-campo input,#tiq-crear .topes-campo select{font-size:.95rem;padding:.6rem .75rem}
+  .tiq-validar .btn:not(.primario){background:var(--surface-3)}
+  .tiq-validar .suave{font-style:normal;color:var(--tx-2)}
+
+  @media (max-width:899px){
+    /* Con la hoja abierta, el botón que la abrió es el que la cierra. */
+    .lateral.abierta .tab.mas{font-size:0;gap:0}
+    .lateral.abierta .tab.mas .ic,.lateral.abierta .tab.mas .globo{display:none}
+    .lateral.abierta .tab.mas::after{content:'Cerrar';font-size:.82rem;font-weight:600}
+  }
+  @media (max-width:560px){
+    /* Cinco recuadros en dos columnas dejaban el último cojo. */
+    .tiles > .tile:last-child:nth-child(odd){grid-column:1/-1}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .btn,.btn-min,.caja-btn,.tab{transition:none}
+  }
+
   #tirilla{display:none}
 
   @media print{
@@ -1352,11 +1698,37 @@ const CONFIG = {
 
 </style>
 
+<!-- Íconos: Phosphor Icons (regular), MIT, https://phosphoricons.com — los
+     mismos de la página de reservas. Van como <symbol> para no cargar una
+     librería entera por diecisiete dibujos. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="ph-squares-four" viewBox="0 0 256 256"><path d="M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z"/></symbol>
+  <symbol id="ph-seal-check" viewBox="0 0 256 256"><path d="M225.86,102.82c-3.77-3.94-7.67-8-9.14-11.57-1.36-3.27-1.44-8.69-1.52-13.94-.15-9.76-.31-20.82-8-28.51s-18.75-7.85-28.51-8c-5.25-.08-10.67-.16-13.94-1.52-3.56-1.47-7.63-5.37-11.57-9.14C146.28,23.51,138.44,16,128,16s-18.27,7.51-25.18,14.14c-3.94,3.77-8,7.67-11.57,9.14C88,40.64,82.56,40.72,77.31,40.8c-9.76.15-20.82.31-28.51,8S41,67.55,40.8,77.31c-.08,5.25-.16,10.67-1.52,13.94-1.47,3.56-5.37,7.63-9.14,11.57C23.51,109.72,16,117.56,16,128s7.51,18.27,14.14,25.18c3.77,3.94,7.67,8,9.14,11.57,1.36,3.27,1.44,8.69,1.52,13.94.15,9.76.31,20.82,8,28.51s18.75,7.85,28.51,8c5.25.08,10.67.16,13.94,1.52,3.56,1.47,7.63,5.37,11.57,9.14C109.72,232.49,117.56,240,128,240s18.27-7.51,25.18-14.14c3.94-3.77,8-7.67,11.57-9.14,3.27-1.36,8.69-1.44,13.94-1.52,9.76-.15,20.82-.31,28.51-8s7.85-18.75,8-28.51c.08-5.25.16-10.67,1.52-13.94,1.47-3.56,5.37-7.63,9.14-11.57C232.49,146.28,240,138.44,240,128S232.49,109.73,225.86,102.82Zm-11.55,39.29c-4.79,5-9.75,10.17-12.38,16.52-2.52,6.1-2.63,13.07-2.73,19.82-.1,7-.21,14.33-3.32,17.43s-10.39,3.22-17.43,3.32c-6.75.1-13.72.21-19.82,2.73-6.35,2.63-11.52,7.59-16.52,12.38S132,224,128,224s-9.15-4.92-14.11-9.69-10.17-9.75-16.52-12.38c-6.1-2.52-13.07-2.63-19.82-2.73-7-.1-14.33-.21-17.43-3.32s-3.22-10.39-3.32-17.43c-.1-6.75-.21-13.72-2.73-19.82-2.63-6.35-7.59-11.52-12.38-16.52S32,132,32,128s4.92-9.15,9.69-14.11,9.75-10.17,12.38-16.52c2.52-6.1,2.63-13.07,2.73-19.82.1-7,.21-14.33,3.32-17.43S70.51,56.9,77.55,56.8c6.75-.1,13.72-.21,19.82-2.73,6.35-2.63,11.52-7.59,16.52-12.38S124,32,128,32s9.15,4.92,14.11,9.69,10.17,9.75,16.52,12.38c6.1,2.52,13.07,2.63,19.82,2.73,7,.1,14.33.21,17.43,3.32s3.22,10.39,3.32,17.43c.1,6.75.21,13.72,2.73,19.82,2.63,6.35,7.59,11.52,12.38,16.52S224,124,224,128,219.08,137.15,214.31,142.11ZM173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"/></symbol>
+  <symbol id="ph-heart" viewBox="0 0 256 256"><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40ZM128,214.8C109.74,204.16,32,155.69,32,102A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,155.61,146.24,204.15,128,214.8Z"/></symbol>
+  <symbol id="ph-cash-register" viewBox="0 0 256 256"><path d="M239.76,158.06,217.28,68.12A16,16,0,0,0,201.75,56H136V40a16,16,0,0,0-16-16H80A16,16,0,0,0,64,40V56H54.25A16,16,0,0,0,38.72,68.12L16.24,158.06A7.93,7.93,0,0,0,16,160v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160A7.93,7.93,0,0,0,239.76,158.06ZM80,40h40V56H80ZM54.25,72h147.5l20,80H34.25ZM32,192V168H224v24ZM64,96a8,8,0,0,1,8-8H88a8,8,0,0,1,0,16H72A8,8,0,0,1,64,96Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H120A8,8,0,0,1,112,96Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H168A8,8,0,0,1,160,96ZM64,128a8,8,0,0,1,8-8H88a8,8,0,0,1,0,16H72A8,8,0,0,1,64,128Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H120A8,8,0,0,1,112,128Zm48,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H168A8,8,0,0,1,160,128Z"/></symbol>
+  <symbol id="ph-calendar-check" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-38.34-85.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35A8,8,0,0,1,169.66,122.34Z"/></symbol>
+  <symbol id="ph-arrow-up-right" viewBox="0 0 256 256"><path d="M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"/></symbol>
+  <symbol id="ph-ticket" viewBox="0 0 256 256"><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></symbol>
+  <symbol id="ph-chart-line-up" viewBox="0 0 256 256"><path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0V156.69l50.34-50.35a8,8,0,0,1,11.32,0L128,132.69,180.69,80H160a8,8,0,0,1,0-16h40a8,8,0,0,1,8,8v40a8,8,0,0,1-16,0V91.31l-58.34,58.35a8,8,0,0,1-11.32,0L96,123.31l-56,56V200H224A8,8,0,0,1,232,208Z"/></symbol>
+  <symbol id="ph-bank" viewBox="0 0 256 256"><path d="M24,104H48v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16H208V104h24a8,8,0,0,0,4.19-14.81l-104-64a8,8,0,0,0-8.38,0l-104,64A8,8,0,0,0,24,104Zm40,0H96v64H64Zm80,0v64H112V104Zm48,64H160V104h32ZM128,41.39,203.74,88H52.26ZM248,208a8,8,0,0,1-8,8H16a8,8,0,0,1,0-16H240A8,8,0,0,1,248,208Z"/></symbol>
+  <symbol id="ph-calendar-dots" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"/></symbol>
+  <symbol id="ph-users-three" viewBox="0 0 256 256"><path d="M244.8,150.4a8,8,0,0,1-11.2-1.6A51.6,51.6,0,0,0,192,128a8,8,0,0,1-7.37-4.89,8,8,0,0,1,0-6.22A8,8,0,0,1,192,112a24,24,0,1,0-23.24-30,8,8,0,1,1-15.5-4A40,40,0,1,1,219,117.51a67.94,67.94,0,0,1,27.43,21.68A8,8,0,0,1,244.8,150.4ZM190.92,212a8,8,0,1,1-13.84,8,57,57,0,0,0-98.16,0,8,8,0,1,1-13.84-8,72.06,72.06,0,0,1,33.74-29.92,48,48,0,1,1,58.36,0A72.06,72.06,0,0,1,190.92,212ZM128,176a32,32,0,1,0-32-32A32,32,0,0,0,128,176ZM72,120a8,8,0,0,0-8-8A24,24,0,1,1,87.24,82a8,8,0,1,0,15.5-4A40,40,0,1,0,37,117.51,67.94,67.94,0,0,0,9.6,139.19a8,8,0,1,0,12.8,9.61A51.6,51.6,0,0,1,64,128,8,8,0,0,0,72,120Z"/></symbol>
+  <symbol id="ph-sign-out" viewBox="0 0 256 256"><path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,229.66,122.34Z"/></symbol>
+  <symbol id="ph-dots-three-outline" viewBox="0 0 256 256"><path d="M128,96a32,32,0,1,0,32,32A32,32,0,0,0,128,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,128,144ZM48,96a32,32,0,1,0,32,32A32,32,0,0,0,48,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,48,144ZM208,96a32,32,0,1,0,32,32A32,32,0,0,0,208,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,208,144Z"/></symbol>
+  <symbol id="ph-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
+  <symbol id="ph-caret-left" viewBox="0 0 256 256"><path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"/></symbol>
+  <symbol id="ph-caret-right" viewBox="0 0 256 256"><path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/></symbol>
+  <symbol id="ph-magnifying-glass" viewBox="0 0 256 256"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></symbol>
+</svg>
+
 <div class="wrap">
+  <!-- La marca de verdad, el mismo archivo de la página de reservas. Con
+       el panel abierto, en el escritorio se va a la columna de la
+       izquierda (antes el logotipo quedaba tapado por ella) y en el
+       celular queda pequeña arriba. -->
   <header>
-    <h1 class="logo">TUMBAO <small>panel</small></h1>
-    <span class="sp"></span>
-    <button class="btn chico" id="salir" hidden>Salir</button>
+    <h1 class="marca"><img src="img/logo-tumbao.png" alt="Tumbao, baila pa' sanar" width="521" height="196"></h1>
+    <span class="rotulo">Panel</span>
   </header>
 
   <!-- ══════════ entrar ══════════ -->
@@ -1417,43 +1789,59 @@ const CONFIG = {
          son los de siempre: los escuchas colgados de ellos no se enteran
          de que ahora viven en otro sitio. La barra de abajo no duplica
          lógica, le da clic al de arriba. -->
-    <nav class="lateral" role="tablist" aria-label="Secciones">
+    <!-- 29 de septiembre, «que den ganas de trabajar»: en el celular la
+         barra de abajo llevaba once botones y había que deslizarla para
+         encontrar Caja. Ahora enseña CUATRO —lo de todos los días— y
+         «Más», que abre las demás en una hoja. Las `.sec` son las que
+         viven en «Más». Quién va en la barra lo termina de decidir
+         aplicarRol(): a la cajera le sirve Tiqueteras; al dueño, Resumen.
+         En el escritorio no cambia nada: la columna las enseña todas. -->
+    <div class="nav-velo" id="nav-velo" hidden></div>
+    <nav class="lateral" id="lateral" role="tablist" aria-label="Secciones">
+      <div class="lat-marca"><img src="img/logo-tumbao.png" alt="Tumbao" width="521" height="196"></div>
       <div class="lat-grupo">Hoy</div>
       <button class="tab" role="tab" id="tab-tablero" aria-selected="true">
-        <span class="ic" aria-hidden="true">▦</span>Tablero</button>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-squares-four"/></svg></span>Tablero</button>
       <button class="tab" role="tab" id="tab-pendientes" aria-selected="false">
-        <span class="ic" aria-hidden="true">✓</span>Por validar<span class="globo" id="globo-pend" hidden></span>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-seal-check"/></svg></span>Por validar<span class="globo" id="globo-pend" hidden></span>
       </button>
-      <button class="tab" role="tab" id="tab-disfrutar" aria-selected="false">
-        <span class="ic" aria-hidden="true">♪</span>Por disfrutar<span class="globo" id="globo-disf" hidden></span>
+      <button class="tab sec" role="tab" id="tab-disfrutar" aria-selected="false">
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-heart"/></svg></span>Por disfrutar<span class="globo" id="globo-disf" hidden></span>
       </button>
       <button class="tab" role="tab" id="tab-caja" aria-selected="false">
-        <span class="ic" aria-hidden="true">▤</span>Caja</button>
-      <button class="tab" role="tab" id="tab-mensualidad" aria-selected="false">
-        <span class="ic" aria-hidden="true">◎</span>Mensualidad<span class="globo" id="globo-mens" hidden></span>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-cash-register"/></svg></span>Caja</button>
+      <button class="tab sec" role="tab" id="tab-mensualidad" aria-selected="false">
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-calendar-check"/></svg></span>Mensualidad<span class="globo" id="globo-mens" hidden></span>
       </button>
       <!-- Va en «Hoy» y no en «Negocio» a propósito: esto lo atiende
            recepción. Clasificar una salida no es ver la nómina; es decir
            a qué corresponde un movimiento que el banco ya avisó. -->
-      <button class="tab" role="tab" id="tab-salidas" aria-selected="false">
-        <span class="ic" aria-hidden="true">↗</span>Salidas<span class="globo" id="globo-sal" hidden></span>
+      <button class="tab sec" role="tab" id="tab-salidas" aria-selected="false">
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-arrow-up-right"/></svg></span>Salidas<span class="globo" id="globo-sal" hidden></span>
       </button>
       <!-- Va en «Hoy» también: venderla es caja de mostrador, la hace
            quien esté atendiendo. -->
       <button class="tab" role="tab" id="tab-tiqueteras" aria-selected="false">
-        <span class="ic" aria-hidden="true">🎫</span>Tiqueteras</button>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-ticket"/></svg></span>Tiqueteras</button>
 
-      <div class="lat-grupo" id="grupo-negocio">Negocio</div>
-      <button class="tab" role="tab" id="tab-resumen" aria-selected="false" hidden>
-        <span class="ic" aria-hidden="true">◈</span>Resumen</button>
-      <button class="tab" role="tab" id="tab-tesoreria" aria-selected="false" hidden>
-        <span class="ic" aria-hidden="true">$</span>Tesorería</button>
+      <div class="lat-grupo sec" id="grupo-negocio">Negocio</div>
+      <button class="tab sec" role="tab" id="tab-resumen" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-chart-line-up"/></svg></span>Resumen</button>
+      <button class="tab sec" role="tab" id="tab-tesoreria" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-bank"/></svg></span>Tesorería</button>
 
-      <div class="lat-grupo" id="grupo-ajustes">Ajustes</div>
-      <button class="tab" role="tab" id="tab-horario" aria-selected="false">
-        <span class="ic" aria-hidden="true">▥</span>Horario</button>
-      <button class="tab" role="tab" id="tab-usuarios" aria-selected="false" hidden>
-        <span class="ic" aria-hidden="true">☺</span>Usuarios</button>
+      <div class="lat-grupo sec" id="grupo-ajustes">Ajustes</div>
+      <button class="tab sec" role="tab" id="tab-horario" aria-selected="false">
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-calendar-dots"/></svg></span>Horario</button>
+      <button class="tab sec" role="tab" id="tab-usuarios" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-users-three"/></svg></span>Usuarios</button>
+
+      <button class="tab sec salir" id="salir" type="button" hidden>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-sign-out"/></svg></span>Salir</button>
+      <!-- Solo en el celular. No es una sección: abre y cierra la hoja. -->
+      <button class="tab mas" id="tab-mas" type="button" aria-expanded="false" aria-controls="lateral">
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-dots-three-outline"/></svg></span>Más<span class="globo" id="globo-mas" hidden></span>
+      </button>
     </nav>
 
     <!-- El nombre de dónde estás. En una columna de nueve secciones, sin
@@ -1479,7 +1867,7 @@ const CONFIG = {
         <span class="rango" id="tes-rango">—</span>
         <span class="sp"></span>
         <select id="tes-mes" class="tes-mes" aria-label="Mes"></select>
-        <button class="btn chico" id="tes-recargar">Recargar</button>
+        <button class="btn chico ico-btn" id="tes-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
       </div>
       <div class="aviso" id="msg-tesoreria" hidden></div>
       <div class="cargando" id="cargando-tesoreria" hidden>Cargando…</div>
@@ -1537,7 +1925,7 @@ const CONFIG = {
       <div class="semana-bar">
         <span class="rango" id="resumen-rango">—</span>
         <span class="sp"></span>
-        <button class="btn chico" id="resumen-recargar">Recargar</button>
+        <button class="btn chico ico-btn" id="resumen-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
       </div>
       <div class="aviso" id="msg-resumen" hidden></div>
       <div class="cargando" id="cargando-resumen" hidden>Cargando…</div>
@@ -1573,13 +1961,13 @@ const CONFIG = {
       <!-- el día entero -->
       <div id="vista-dia">
         <div class="semana-bar">
-          <button class="btn chico" id="dia-antes">← Día</button>
+          <button class="btn chico ico-btn" id="dia-antes" title="Día anterior"><svg aria-hidden="true"><use href="#ph-caret-left"/></svg><span class="sr">Día anterior</span></button>
           <span class="rango" id="dia-rango">—</span>
-          <button class="btn chico" id="dia-despues">Día →</button>
+          <button class="btn chico ico-btn" id="dia-despues" title="Día siguiente"><svg aria-hidden="true"><use href="#ph-caret-right"/></svg><span class="sr">Día siguiente</span></button>
           <button class="btn chico" id="dia-hoy">Hoy</button>
           <input id="dia-fecha" type="date" style="width:auto;padding:.3rem .5rem;font-size:.85rem">
           <span class="sp"></span>
-          <button class="btn chico" id="recargar-tab">Recargar</button>
+          <button class="btn chico ico-btn" id="recargar-tab" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
         </div>
 
         <div class="aviso" id="msg-tab" hidden></div>
@@ -1595,12 +1983,12 @@ const CONFIG = {
           <span class="rango" id="puerta-titulo">—</span>
           <span class="sp"></span>
           <button class="btn chico" id="puerta-apuntar">+ Apuntar a alguien</button>
-          <button class="btn chico" id="puerta-recargar">Recargar</button>
+          <button class="btn chico ico-btn" id="puerta-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
         </div>
 
         <div class="marcador" id="puerta-marcador"></div>
         <label class="buscar buscar-puerta">
-          <span class="lupa" aria-hidden="true">🔎</span>
+          <svg class="lupa" aria-hidden="true"><use href="#ph-magnifying-glass"/></svg>
           <input id="buscar-puerta" type="search" autocomplete="off"
                  aria-label="Buscar a alguien en la lista de la clase"
                  placeholder="¿Quién dice que reservó? Nombre, código o celular…">
@@ -1617,17 +2005,16 @@ const CONFIG = {
     <!-- ── horario ── -->
     <div class="panel" id="p-horario">
       <div class="semana-bar">
-        <button class="btn chico" id="sem-antes">← Semana</button>
+        <button class="btn chico ico-btn" id="sem-antes" title="Semana anterior"><svg aria-hidden="true"><use href="#ph-caret-left"/></svg><span class="sr">Semana anterior</span></button>
         <span class="rango" id="sem-rango">—</span>
-        <button class="btn chico" id="sem-despues">Semana →</button>
+        <button class="btn chico ico-btn" id="sem-despues" title="Semana siguiente"><svg aria-hidden="true"><use href="#ph-caret-right"/></svg><span class="sr">Semana siguiente</span></button>
         <button class="btn chico" id="sem-hoy">Esta semana</button>
         <span class="sp"></span>
       </div>
 
-      <div class="aviso ojo">
-        El cupo es lo que queda para <b>clase suelta</b>: aforo menos la gente con plan activo
-        a esa hora. Déjalo vacío para que se calcule solo, o escribe un número para forzarlo.
-      </div>
+      <p class="suave nota-horario">
+        El cupo es lo que queda para <b>clase suelta</b>. Vacío se calcula solo; un número lo fuerza.
+      </p>
 
       <div class="aviso" id="msg-horario" hidden></div>
       <div class="cargando" id="cargando-horario">Cargando…</div>
@@ -1645,7 +2032,7 @@ const CONFIG = {
     <div class="panel" id="p-pendientes">
       <div class="semana-bar">
         <label class="buscar">
-          <span class="lupa" aria-hidden="true">🔎</span>
+          <svg class="lupa" aria-hidden="true"><use href="#ph-magnifying-glass"/></svg>
           <input id="buscar-pend" type="search" autocomplete="off"
                  aria-label="Buscar en la cola de validación"
                  placeholder="Nombre, código o celular…">
@@ -1654,7 +2041,7 @@ const CONFIG = {
         </label>
         <span class="cuenta-filtro" id="cuenta-filtro"></span>
         <span class="sp"></span>
-        <button class="btn chico" id="recargar-pend">Recargar</button>
+        <button class="btn chico ico-btn" id="recargar-pend" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
       </div>
       <div class="aviso" id="msg-pend" hidden></div>
       <div class="cargando" id="cargando-pend" hidden>Cargando…</div>
@@ -1673,7 +2060,7 @@ const CONFIG = {
       <div class="semana-bar">
         <b>Pagaron y no vinieron</b>
         <span class="sp"></span>
-        <button class="btn chico" id="disf-recargar">Recargar</button>
+        <button class="btn chico ico-btn" id="disf-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
       </div>
       <p class="suave" style="margin:.2rem 0 1rem">
         Tienen tres días para usar la clase, contados desde la que se
@@ -1688,7 +2075,7 @@ const CONFIG = {
       <div class="semana-bar">
         <b id="caja-dia">Caja de hoy</b>
         <span class="sp"></span>
-        <button class="btn chico" id="caja-recargar">Recargar</button>
+        <button class="btn chico ico-btn" id="caja-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
       </div>
 
       <!-- Sale cuando se llega aquí tocando un depósito del tablero. Es
@@ -1737,9 +2124,13 @@ const CONFIG = {
          enteraría, que es exactamente lo que pasaba cuando todo iba por
          WhatsApp. -->
     <div class="panel" id="p-mensualidad">
-      <div class="barra">
-        <h2>Mensualidad</h2>
-        <button class="btn chico" id="mens-recargar">Actualizar</button>
+      <!-- Era un <div class="barra">: esa clase es la de la barrita de
+           ocupación de las tarjetas, así que el título y el botón salían
+           aplastados dentro de una raya de 7px. El título ya lo pone
+           #donde arriba. -->
+      <div class="semana-bar">
+        <span class="sp"></span>
+        <button class="btn chico ico-btn" id="mens-recargar" title="Actualizar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Actualizar</span></button>
       </div>
       <div id="mens-cupos" class="mens-cupos"></div>
       <!-- Lo que queda después de abrirle el cupo a alguien: el mensaje
@@ -1787,7 +2178,7 @@ const CONFIG = {
          Por eso esta pantalla existe — alguien tiene que decirlo. -->
     <div class="panel" id="p-salidas">
       <div class="semana-bar">
-        <button class="btn-min" id="sal-recargar">Recargar</button>
+        <button class="btn-min ico-btn" id="sal-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
         <span class="suave" id="sal-resumen"></span>
       </div>
       <div id="sal-lista"></div>
@@ -1835,7 +2226,7 @@ const CONFIG = {
         </div>
       </details>
       <div class="semana-bar">
-        <button class="btn-min" id="tiq-recargar">Recargar</button>
+        <button class="btn-min ico-btn" id="tiq-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
         <label class="suave"><input type="checkbox" id="tiq-ver-todas"> Ver vencidas y agotadas</label>
       </div>
       <div id="tiq-lista"></div>
@@ -1845,7 +2236,7 @@ const CONFIG = {
       <div class="semana-bar">
         <b>Quién entra al panel</b>
         <span class="sp"></span>
-        <button class="btn chico" id="usuarios-recargar">Recargar</button>
+        <button class="btn chico ico-btn" id="usuarios-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
         <button class="btn primario chico" id="usuarios-nuevo">Dar de alta</button>
       </div>
       <div class="aviso" id="msg-usuarios" hidden></div>
@@ -2296,6 +2687,8 @@ const CONFIG = {
     try { localStorage.removeItem(LLAVE); } catch (_) {}
     $('#app').hidden = true;
     $('#salir').hidden = true;
+    document.body.classList.remove('dentro');
+    cerrarMas();
     $('#olvide').hidden = true;
     $('#definir-clave').hidden = true;
     $('#entrar').hidden = false;
@@ -2324,6 +2717,12 @@ const CONFIG = {
     // Un rótulo de grupo con todo lo suyo oculto es un rótulo suelto.
     $('#grupo-negocio').hidden = esCajero;
     $('#grupo-ajustes').hidden = esCajero && !vePropietario;
+    // La barra del celular: cuatro fijas y «Más». La cajera vende
+    // tiqueteras en el mostrador; el dueño abre el panel para ver cómo
+    // va el negocio. A cada quien su cuarto botón.
+    $('#tab-tiqueteras').classList.toggle('sec', !esCajero);
+    $('#tab-resumen').classList.toggle('sec', esCajero);
+    globoMas();
     if (esCajero && ['horario', 'disfrutar', 'resumen', 'tesoreria'].includes(panelActual)) {
       verPanel('tablero');
     }
@@ -2355,6 +2754,7 @@ const CONFIG = {
     $('#definir-clave').hidden = true;
     $('#app').hidden = false;
     $('#salir').hidden = false;
+    document.body.classList.add('dentro');
     diaTablero = hoyBogota();
     const arranque = panelDeArranque();
     verPanel(arranque);
@@ -2477,6 +2877,47 @@ const CONFIG = {
     caja: 'Caja', mensualidad: 'Mensualidad', usuarios: 'Usuarios',
     salidas: 'Salidas por clasificar', tiqueteras: 'Tiqueteras',
   };
+  /* ---------- «Más», la hoja del celular ----------
+     Abre la misma <nav> hacia arriba, con las secciones que no caben en
+     la barra. No es otra lista: son los mismos botones, así que una
+     sección nueva se añade una sola vez. */
+  function abrirMas() {
+    $('#lateral').classList.add('abierta');
+    $('#nav-velo').hidden = false;
+    $('#tab-mas').setAttribute('aria-expanded', 'true');
+  }
+  function cerrarMas() {
+    $('#lateral').classList.remove('abierta');
+    $('#nav-velo').hidden = true;
+    $('#tab-mas').setAttribute('aria-expanded', 'false');
+  }
+  $('#tab-mas').addEventListener('click', () => {
+    if ($('#lateral').classList.contains('abierta')) cerrarMas(); else abrirMas();
+  });
+  $('#nav-velo').addEventListener('click', cerrarMas);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMas(); });
+
+  /* El globo de «Más» suma los de adentro. Sin esto, una mensualidad
+     pagada esperando a pasar a AdminGym quedaba escondida en la hoja. */
+  function globoMas() {
+    let n = 0;
+    for (const g of document.querySelectorAll('#lateral .tab.sec .globo')) {
+      const tab = g.closest('.tab');
+      if (g.hidden || tab.hidden) continue;
+      n += Number(g.textContent) || 0;
+    }
+    // Solo se escribe si cambió: el observador de abajo mira este mismo
+    // globo, y escribir el mismo valor otra vez lo volvería a despertar
+    // en un bucle sin fin.
+    const gm = $('#globo-mas');
+    const texto = n ? String(n) : '';
+    if (gm.hidden !== (n === 0)) gm.hidden = n === 0;
+    if (gm.textContent !== texto) gm.textContent = texto;
+  }
+  new MutationObserver(globoMas).observe($('#lateral'),
+    { subtree: true, childList: true, characterData: true, attributes: true,
+      attributeFilter: ['hidden', 'class'] });
+
   let panelActual = 'tablero';
   function verPanel(cual) {
     panelActual = cual;
@@ -2485,6 +2926,11 @@ const CONFIG = {
       $('#p-' + p).classList.toggle('on', p === cual);
     }
     $('#donde').textContent = NOMBRES[cual] || '';
+    // «Más» se enciende cuando lo que se está viendo vive dentro de él:
+    // si no, en el celular ningún botón de abajo diría dónde se está.
+    const enMas = $('#tab-' + cual).classList.contains('sec');
+    $('#tab-mas').classList.toggle('activo', enMas);
+    cerrarMas();
     // En el celular la barra de abajo se desplaza: si la sección elegida
     // quedó fuera de la vista, no se ve cuál está activa y parece que el
     // toque no hizo nada.

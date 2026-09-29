@@ -503,3 +503,21 @@ export function panelInstrumentado(origen = PANEL) {
 export function rutaDelPanel(argv = process.argv) {
   return argv[2] || panelInstrumentado();
 }
+
+/**
+ * Ir a una sección del panel como lo haría una persona.
+ *
+ * Desde el 29 de septiembre la barra del celular enseña cuatro secciones
+ * y «Más»; las demás viven en la hoja que abre «Más». Una prueba con
+ * viewport de celular que tocara `#tab-salidas` directo estaría tocando
+ * un botón que nadie ve. Si la pestaña no está a la vista, se abre «Más»
+ * primero; en el escritorio no hace falta y no se toca.
+ */
+export async function irASeccion(p, id) {
+  const tab = p.locator('#' + id);
+  if (!(await tab.isVisible())) {
+    const mas = p.locator('#tab-mas');
+    if (await mas.isVisible()) await mas.click();
+  }
+  await tab.click();
+}

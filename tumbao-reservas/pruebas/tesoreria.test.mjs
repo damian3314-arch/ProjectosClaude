@@ -25,7 +25,7 @@
  *   node tesoreria.test.mjs
  */
 import { chromium } from 'playwright-core';
-import { rutaDelPanel } from './instrumentar.mjs';
+import { rutaDelPanel, irASeccion } from './instrumentar.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 
@@ -117,7 +117,7 @@ await p.addInitScript(() => {
 });
 await p.goto('http://localhost:8133/', { waitUntil: 'load' });
 await p.waitForTimeout(600);
-await p.click('#tab-tesoreria');
+await irASeccion(p, 'tab-tesoreria');
 await p.waitForTimeout(600);
 
 const txt = async (sel) => (await p.locator(sel).innerText()).replace(/\s+/g, ' ');
@@ -388,7 +388,10 @@ await p2.close();
    navegaciones habrían sido dos sitios donde añadir cada sección
    nueva, y el día que se olvide uno, media app desaparece. */
 
-const cuantas = await p.locator('.lateral .tab').count();
+// Solo las secciones (role=tab). Desde el 29 de septiembre la columna
+// lleva además «Salir» y «Más» (la hoja del celular), que son botones
+// de la navegación pero no secciones.
+const cuantas = await p.locator('.lateral .tab[role="tab"]').count();
 ok('hay una sola navegación', await p.locator('.lateral').count() === 1);
 // Once desde el 24 de septiembre: entró «Tiqueteras», para vender los
 // paquetes de clases prepago. Este número se toca a mano a propósito —

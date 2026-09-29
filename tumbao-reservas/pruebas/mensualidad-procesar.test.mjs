@@ -25,7 +25,7 @@
  * Admite una ruta suelta para apuntar a otra copia del panel.
  */
 import { chromium } from 'playwright-core';
-import { rutaDelPanel } from './instrumentar.mjs';
+import { rutaDelPanel, irASeccion } from './instrumentar.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 
@@ -107,7 +107,7 @@ const responder = (v) => p.evaluate(x => { window.__quiere = x; }, v);
 
 await p.goto('http://localhost:8126/', { waitUntil: 'load' });
 await p.waitForTimeout(500);
-await p.click('#tab-mensualidad');
+await irASeccion(p, 'tab-mensualidad');
 await p.waitForTimeout(600);
 
 /* ═══════════ 1. el cupo dice de dónde sale ═══════════ */
@@ -415,7 +415,7 @@ await p3.addInitScript(() => {
 });
 await p3.goto('http://localhost:8126/', { waitUntil: 'load' });
 await p3.waitForTimeout(500);
-await p3.click('#tab-mensualidad');
+await irASeccion(p3, 'tab-mensualidad');
 await p3.waitForTimeout(600);
 ok('con rol de cajero el botón no está',
    await p3.locator('[data-cupo]').count() === 0,
