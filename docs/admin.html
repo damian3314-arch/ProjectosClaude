@@ -3581,7 +3581,12 @@ const CONFIG = {
           (p.codigo ? ` <span class="cod">${esc(p.codigo)}</span>` : '') +
           // 0111: de qué tiquetera salió el cupo y cuál clase es. Ya está
           // pagada: en la puerta no se cobra nada.
-          (p.tiquetera
+          // 0121: el pase de regalo por constancia se dice con su nombre:
+          // que recepción sepa que es un premio y que no hay nada que cobrar.
+          (p.tiquetera && p.tiquetera.premio
+            ? ` <span class="etiqueta tiq" title="Pase de regalo por constancia ` +
+              `${esc(p.tiquetera.codigo)} · no se cobra">🎁 Pase de regalo</span>`
+            : p.tiquetera
             ? ` <span class="etiqueta tiq" title="Cupo descontado de su tiquetera ` +
               `${esc(p.tiquetera.codigo)} · ya pagada, no se cobra">` +
               `🎟 Tiquetera · clase ${Number(p.tiquetera.clase_n)} de ` +
@@ -7627,6 +7632,7 @@ const CONFIG = {
               ? `<span class="et ojo">${t.reporto_pago ? 'dijo que pagó · por validar' : 'por validar'}</span>`
               : ''}
             ${descartada ? '<span class="et">descartada · no pagó</span>' : ''}
+            ${t.premio ? '<span class="et bien">🎁 pase de regalo</span>' : ''}
             ${!t.activa && !descartada && !pendiente ? '<span class="et mal">anulada</span>' : ''}
           </div>
           <div class="ag">${esc(t.telefono)} · ${pendiente

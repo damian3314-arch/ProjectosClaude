@@ -1210,6 +1210,28 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0121: el pase de regalo por constancia. Se manda a quien fue a TODAS
+    // las clases de su tiquetera; el código va dentro de la variable
+    // («Código: X»), igual que en tiquetera_lista, por lo que Meta aprendió
+    // de «código» + variable. Sin emojis en el botón.
+    name: 'pase_constancia',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          '¡Felicidades {{1}}! 🎉 Completaste las {{2}} clases de tu tiquetera en Tumbao y te ganaste una clase de regalo por tu constancia.\n\n' +
+          '🎁 {{3}}\n📅 Vale hasta el {{4}}\n\n' +
+          'Para usarla entra a tumbaobaila.com y elige Tengo tiquetera.\n\n' +
+          'Gracias por bailar con nosotros 🧡',
+        example: { body_text: [['Laura', '4', 'Código: A1B2C3', 'jueves 29 de octubre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
+    ],
+  },
+  {
     // 0120: la opinión se toma aquí mismo, no con un enlace a Tumbao Opina.
     // Va a quien tomó su primera clase; al responder, conversa /wa/opinion.
     name: 'como_te_fue',

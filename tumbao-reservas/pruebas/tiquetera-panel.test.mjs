@@ -134,6 +134,36 @@ titulo('2. Formulario incompleto');
   await p.close();
 }
 
+/* ═══════ 3 · el pase de regalo se distingue de una tiquetera comprada ═══════
+   0121: quien va a todas las clases de su tiquetera gana un pase (una
+   tiquetera de 1 clase, sin precio). En la lista tiene que leerse como
+   regalo y no como una venta de $0. */
+
+titulo('3. Pase de regalo por constancia');
+{
+  vendidas = [
+    { id: 30, codigo: 'PASE01', nombre: 'Laura Gómez', telefono: '3001112233',
+      clases_totales: 1, clases_usadas: 0, clases_restantes: 1, precio_cop: 0,
+      vence_el: '2026-11-15', activa: true, estado: 'confirmada', premio: true },
+    { id: 31, codigo: 'COMP02', nombre: 'Marta Ruiz', telefono: '3004445566',
+      clases_totales: 4, clases_usadas: 1, clases_restantes: 3, precio_cop: 52000,
+      vence_el: '2026-11-10', activa: true, estado: 'confirmada', premio: false },
+  ];
+  const { p, errs } = await abrirPanel('administrador');
+  await irASeccion(p, 'tab-tiqueteras');
+  await p.waitForTimeout(500);
+  const filas = p.locator('#tiq-lista .fila');
+  ok('salen las dos', await filas.count() === 2, String(await filas.count()));
+  const pase = (await filas.nth(0).innerText()).toLowerCase();
+  const comprada = (await filas.nth(1).innerText()).toLowerCase();
+  ok('el pase dice que es un regalo', pase.includes('pase de regalo'), pase.replace(/\s+/g, ' ').slice(0, 90));
+  ok('y no enseña un precio', !/\$\s*0|52\.000/.test(pase));
+  ok('la comprada NO dice regalo', !comprada.includes('regalo'));
+  ok('y sí enseña lo que pagó', /52\.000/.test(comprada));
+  ok('sin errores de JS', errs.length === 0, errs.join(' | '));
+  await p.close();
+}
+
 srv.close();
 await b.close();
 console.log(fallos ? `\n\x1b[31m${fallos} fallo(s)\x1b[0m`
