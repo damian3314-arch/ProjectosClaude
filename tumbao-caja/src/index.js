@@ -1235,6 +1235,34 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0123: seguimiento a quien contestó «Me encantó» y todavía no volvió ni
+    // compró. Sale al día 4 o más de su respuesta (la segunda visita llega a
+    // los 7 días de mediana). Precio y número de clases vienen de
+    // tiquetera_paquetes. NO dice nada del pase de regalo: eso es interno.
+    name: 'seguimiento_encanto',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡 Nos alegró que te encantara tu primera clase en Tumbao. ' +
+          'Para que no se enfríe el ritmo, reserva tu segunda clase cuando quieras.\n\n' +
+          'Si piensas venir varias veces, la tiquetera de {{2}} clases sale a {{3}} y la usas cuando quieras.',
+        example: { body_text: [['Laura', '4', '$52.000']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' },
+          { type: 'URL', text: 'Comprar tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 0120: la opinión se toma aquí mismo, no con un enlace a Tumbao Opina.
     // Va a quien tomó su primera clase; al responder, conversa /wa/opinion.
     name: 'como_te_fue',
