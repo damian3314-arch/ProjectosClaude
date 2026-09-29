@@ -7170,7 +7170,8 @@ const CONFIG = {
     $('#tiq-lista').innerHTML = lista.map(t => {
       // 0112: la comprada en la página que el banco no confirmó solo. No
       // sirve para reservar ni se le manda el código hasta validarla.
-      const pendiente = t.estado && t.estado !== 'confirmada';
+      const pendiente = t.estado === 'pendiente_pago' || t.estado === 'pendiente_validacion';
+      const descartada = t.estado === 'descartada';
       return `
       <div class="fila mens">
         <div class="cuerpo">
@@ -7179,7 +7180,8 @@ const CONFIG = {
             ${pendiente
               ? `<span class="et ojo">${t.reporto_pago ? 'dijo que pagó · por validar' : 'por validar'}</span>`
               : ''}
-            ${!t.activa ? '<span class="et mal">anulada</span>' : ''}
+            ${descartada ? '<span class="et">descartada · no pagó</span>' : ''}
+            ${!t.activa && !descartada && !pendiente ? '<span class="et mal">anulada</span>' : ''}
           </div>
           <div class="ag">${esc(t.telefono)} · ${pendiente
               ? `${t.clases_totales} clases · comprada en la página ${esc(fmtCorto(String(t.creada_en || '').slice(0, 10)))}`
@@ -7194,12 +7196,15 @@ const CONFIG = {
               <select class="tv-deposito"><option value="">Cargando depósitos…</option></select></label>
             <label class="topes-campo"><span>o referencia del comprobante</span>
               <input type="text" class="tv-referencia" maxlength="80" placeholder="Nequi 123456"></label>
-            <button class="btn primario chico tv-ok">Validar pago</button>
+            <div class="topes-pie">
+              <button class="btn primario chico tv-ok">Validar pago</button>
+              <button class="btn chico tv-descartar" title="No pagó o se equivocó de producto">Descartar (no pagó)</button>
+            </div>
           </div>` : ''}
         </div>
       </div>`;
     }).join('');
-    if (lista.some(t => t.estado && t.estado !== 'confirmada')) depositosParaValidar();
+    if (lista.some(t => t.estado === 'pendiente_pago' || t.estado === 'pendiente_validacion')) depositosParaValidar();
   }
 
   // Los depósitos libres que alcanzan para cada tiquetera por validar.
@@ -7218,6 +7223,26 @@ const CONFIG = {
           `${esc(pesos(p.saldo_cop))} · ${esc(p.remitente || 'sin nombre')}</option>`).join('');
     }
   }
+
+  // 0117: descartar la compra que nunca se pagó (p. ej. se equivocó de
+  // producto). Queda en el historial y su código nunca sirve para reservar.
+  $('#tiq-lista').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.tv-descartar');
+    if (!btn) return;
+    const caja = btn.closest('.tiq-validar');
+    const motivo = window.prompt(
+      '¿Por qué se descarta? (queda anotado). Ej: no pagó, quería mensualidad', 'No pagó');
+    if (motivo === null) return;
+    btn.disabled = true;
+    try {
+      const d = await api('tiquetera-descartar', { id: Number(caja.dataset.id), motivo });
+      nota('Tiquetera descartada', 'bien', `${d.nombre} ya no aparece por validar.`);
+      await cargarTiqueteras(true);
+    } catch (e) {
+      fallo(e, 'No se pudo descartar la tiquetera');
+      btn.disabled = false;
+    }
+  });
 
   $('#tiq-lista').addEventListener('click', async (ev) => {
     const btn = ev.target.closest('.tv-ok');

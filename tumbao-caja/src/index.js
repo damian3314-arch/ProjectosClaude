@@ -476,6 +476,14 @@ const ADMIN = {
                   return { p_id: id, p_pago_id: UUID(b.pago_id),
                            p_referencia: TXT(b.referencia, 80) || null };
                 } },
+  // 0117: la compra de la página que nunca se pagó se descarta (queda en
+  // el historial como 'descartada'; el código nunca sirvió para reservar).
+  'tiquetera-descartar': { fn: 'admin_tiquetera_descartar',
+                args: (b) => {
+                  const id = enteroPositivo(b.id);
+                  if (!id) return { _error: 'ID_INVALIDO' };
+                  return { p_id: id, p_motivo: TXT(b.motivo, 200) || null };
+                } },
   'tiqueteras-listar': { fn: 'admin_tiqueteras_listar',
                 args: (b) => ({ p_estado: b.estado === 'todas' ? 'todas' : 'activas' }) },
 };
