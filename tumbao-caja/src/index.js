@@ -1984,12 +1984,17 @@ async function informeWA(request, env, origen) {
     const dia = /^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : null;
     try {
       const tablero = await rpc(env, 'tablero_tumbao_del_dia', { p_tipo: tipo, p_dia: dia });
+      let cuentas = null;
       if (tipo === 'manana' && (b.lunes === true || esLunesBogota())) {
         tablero.voz_de_la_semana = await vozDeLaSemana(env);
+        // Solo cuentas (sin datos de nadie): para saber si opina respondió.
+        const v = tablero.voz_de_la_semana;
+        cuentas = { opina: Array.isArray(v.opina) ? v.opina.length : null,
+                    whatsapp: Array.isArray(v.whatsapp) ? v.whatsapp.length : null };
       }
       const t = await redactar(env, INSTRUCCIONES_INFORME, JSON.stringify(tablero), 'medium');
       await rpc(env, 'wa_guardar_borrador', { p_tipo: tipo, p_dia: dia, p_texto: t || '(vacío)' });
-      return json({ ok: true, borrador: true }, 200, origen);
+      return json({ ok: true, borrador: true, voz: cuentas }, 200, origen);
     } catch (e) {
       console.log('borrador', e && e.message);
       return json({ ok: false, error: 'FALLA' }, 200, origen);
