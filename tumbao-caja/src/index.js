@@ -1225,7 +1225,7 @@ const PLANTILLAS_WA = [
       },
       { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
       { type: 'BUTTONS', buttons: [
-        { type: 'QUICK_REPLY', text: 'Me encantó 😍' },
+        { type: 'QUICK_REPLY', text: 'Me encantó' },
         { type: 'QUICK_REPLY', text: 'Tengo algo que contar' },
         { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
       ] },
