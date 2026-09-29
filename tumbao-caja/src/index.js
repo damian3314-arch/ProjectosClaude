@@ -31,6 +31,9 @@
  */
 
 // De dónde se acepta que llamen. Un endpoint de plata no lleva '*'.
+// La invitación a la tiquetera del cierre de «¿cómo te fue?» (0121, 29 sep).
+import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
+
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
   'https://www.tumbaobaila.com',
@@ -2038,7 +2041,7 @@ CÓMO RESPONDES
 - Corto: 1 a 3 frases, cálido, español de Colombia, máximo 1 emoji. Usa su nombre de pila si lo tienes.
 - Siempre acusa recibo de lo que dijo antes de preguntar algo.
 - En toda la conversación haces como MÁXIMO 2 preguntas, una por mensaje, y solo si no lo contó ya: (a) qué fue lo que más le gustó o qué la haría volver; (b) "Y si algo te hiciera no volver, ¿qué sería?" (es hipotética: deja decir lo que no gustó sin quedar mal).
-- Cierra (cerrar=true) cuando ya tengas su opinión o cuando "respuestas_del_bot" sea 2 o más: agradece de verdad y, si le fue bien, invita suave a reservar su próxima clase en tumbaobaila.com o a la tiquetera de 4 clases. Sin presionar, sin descuentos, sin inventar precios, horarios ni promesas.
+- Cierra (cerrar=true) cuando ya tengas su opinión o cuando "respuestas_del_bot" sea 2 o más: agradece de verdad lo que contó. NO menciones reservas, tiquetera, precios ni enlaces al cerrar: si le fue bien, el sistema añade solo la invitación después de tu mensaje. Sin descuentos, sin inventar precios, horarios ni promesas.
 - Si la conversación ya estaba "cerrada", responde solo un agradecimiento muy breve y cerrar=true.
 - Si pregunta algo operativo (horarios, pagos, cambios de clase, mensualidad), dile con amabilidad que eso se lo resuelven en el WhatsApp de Tumbao 301 783 3550, y sigue.
 - Si hay una queja seria, incomodidad, una lesión, maltrato o un problema con un pago: discúlpate, dile que alguien del equipo la va a contactar hoy, y marca urgente=true con el motivo.
@@ -2125,7 +2128,14 @@ async function opinionWA(request, env, origen) {
     }
 
     const cerrar = !!j.cerrar || Number(op.turnos || 0) + 1 >= 3;
-    await responderYGuardar(env, m.telefono, String(j.respuesta).slice(0, 900));
+    let respuesta = String(j.respuesta).trim().slice(0, 600);
+    // La invitación a la tiquetera la escribe el código, no el modelo: a quien
+    // dijo que le encantó le llega siempre igual y con el precio de verdad.
+    if (texto && debeInvitarATiquetera({ estadoAntes: op.estado, cerrar, tipo: j.tipo, urgente: !!j.urgente })) {
+      const oferta = invitacionTiquetera(await rpc(env, 'tiquetera_paquetes', {}).catch(() => null));
+      if (oferta) respuesta += '\n\n' + oferta;
+    }
+    await responderYGuardar(env, m.telefono, respuesta.slice(0, 900));
     await rpc(env, 'wa_opinion_turno', {
       p_opinion: op.id, p_mensaje: m.id,
       p_texto_entrante: transcrito ? `(nota de voz) ${transcrito}` : null,

@@ -43,6 +43,7 @@ const SUITES = [
   'tiquetera-reserva',
   'tiquetera-panel',
   'tiquetera-mensualidad',
+  'oferta-tiquetera',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,
