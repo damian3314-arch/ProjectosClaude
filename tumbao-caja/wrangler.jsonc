@@ -48,6 +48,11 @@
   // No hace falta llave de nadie: es un binding.
   "ai": { "binding": "AI" },
 
+  // 0119: el debrief del lunes le pide a tumbao-opina lo que la gente
+  // contó en la semana. Por binding, sin secreto: la ruta interna de
+  // opina solo responde a este hostname, que no existe en internet.
+  "services": [{ "binding": "OPINA", "service": "tumbao-opina" }],
+
   "vars": {
     "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co",
     // El webhook de n8n que revisa Gmail al instante cuando alguien dice

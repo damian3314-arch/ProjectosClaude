@@ -1524,6 +1524,35 @@ export default {
         return json({ ok: true, urgente: f.urgente });
       }
 
+      /* ── la voz de la semana, para el debrief del lunes ──
+       *
+       * Damián, 29 sep: «el reporte de Tumbao Opina debería llegar con
+       * el reporte de la mañana de los lunes, algo corto». Lo pide
+       * tumbao-caja por su service binding (OPINA). La dirección
+       * 'interno.tumbao' no existe en internet: Cloudflare solo le manda
+       * a este Worker el tráfico de sus rutas, así que una petición con
+       * este hostname solo puede venir del binding. Solo lee: no marca
+       * en_hoja, el correo de n8n sigue igual mientras exista. */
+      if (ruta === '/interno/semana' && url.hostname === 'interno.tumbao') {
+        await completarAbandonadas(env, 8);
+        const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+        const { results } = await env.DB.prepare(
+          `select nombre, tipo, resumen, urgente, motivo_urgente, empezada_at
+             from conversaciones
+            where turnos > 1 and empezada_at >= ?1
+            order by urgente desc, empezada_at desc
+            limit 30`
+        ).bind(desde).all();
+        return json({
+          ok: true,
+          conversaciones: (results || []).map((r) => ({
+            nombre: String(r.nombre || '').trim().split(/\s+/)[0] || null,
+            tipo: r.tipo, resumen: r.resumen,
+            urgente: !!r.urgente, motivo_urgente: r.motivo_urgente || null,
+          })),
+        });
+      }
+
       // ── lo que se lleva n8n una vez por semana ──
       if (ruta === '/api/pendientes' && request.method === 'POST') {
         const b = await request.json();

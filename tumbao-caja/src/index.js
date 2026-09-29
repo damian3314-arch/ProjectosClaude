@@ -1795,7 +1795,8 @@ Si "tipo" es "manana", es el DEBRIEF DE LAS 6 AM: CORTO, máximo 10 líneas, que
 3. *Para vender hoy*: renovaciones que vencen hoy y mañana (nombres de pila y hora), lista de espera o reservas pendientes de pago solo si hay.
 4. *Meta*: si hay meta del mes ("ventas.mes"), cuánto falta y cuánto hay que vender hoy.
 5. *Acción del día*: UNA, concreta, la que más plata mueve.
-Nada de insights largos ni comparaciones en la mañana: eso va en el cierre de la noche.
+6. SOLO si viene "voz_de_la_semana" (los lunes): *Lo que dice la gente*, máximo 4 líneas. "opina" son las conversaciones del chat de opiniones (Tumbao Opina) y "whatsapp" lo que escribieron al WhatsApp de Tumbao ("respondia_a" dice a qué aviso contestaban). Primero lo urgente o lo que pide acción (quién y qué hacer); luego el tema que más se repite con una cita corta entre comillas. Sin celulares. Ignora respuestas automáticas de otros negocios y los "ok"/"gracias" sueltos. Si no hubo nada, una línea: "Esta semana nadie dejó opinión".
+Nada de insights largos ni comparaciones en la mañana: eso va en el cierre de la noche. Los lunes el límite sube a 14 líneas por la sección 6.
 
 Si "tipo" es "noche", es el CIERRE DE LAS 10 PM (cómo fue el día):
 1. Un titular de una línea.
@@ -1945,6 +1946,29 @@ async function centinelaWA(env, origen) {
   return json({ ok: true, alertas: alertas.length, nuevas: enviadas }, 200, origen);
 }
 
+/* 0119 · Lo que la gente contó en la semana: Tumbao Opina (por el service
+ * binding OPINA, en su propia base) y lo que le escribió al WhatsApp de
+ * Tumbao. Si una de las dos falla, va la otra: el debrief sale igual. */
+function esLunesBogota() {
+  return new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' })
+    .format(new Date()) === 'Mon';
+}
+
+async function vozDeLaSemana(env) {
+  const voz = { opina: null, whatsapp: null };
+  try {
+    if (env.OPINA) {
+      const r = await env.OPINA.fetch('https://interno.tumbao/interno/semana');
+      const d = await r.json();
+      if (d && d.ok) voz.opina = d.conversaciones;
+    }
+  } catch (e) { console.log('opina', e && e.message); }
+  try {
+    voz.whatsapp = await rpcLectura(env, 'mensajes_clientes_semana', {});
+  } catch (e) { console.log('mensajes clientes', e && e.message); }
+  return voz;
+}
+
 async function informeWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -1960,6 +1984,9 @@ async function informeWA(request, env, origen) {
     const dia = /^\d{4}-\d{2}-\d{2}$/.test(b.dia || '') ? b.dia : null;
     try {
       const tablero = await rpc(env, 'tablero_tumbao_del_dia', { p_tipo: tipo, p_dia: dia });
+      if (tipo === 'manana' && (b.lunes === true || esLunesBogota())) {
+        tablero.voz_de_la_semana = await vozDeLaSemana(env);
+      }
       const t = await redactar(env, INSTRUCCIONES_INFORME, JSON.stringify(tablero), 'medium');
       await rpc(env, 'wa_guardar_borrador', { p_tipo: tipo, p_dia: dia, p_texto: t || '(vacío)' });
       return json({ ok: true, borrador: true }, 200, origen);
@@ -1976,6 +2003,8 @@ async function informeWA(request, env, origen) {
   let texto;
   try {
     const tablero = await rpcLectura(env, 'tablero_tumbao', { p_tipo: tipo });
+    // 0119: los lunes en la mañana va también la voz de los clientes.
+    if (tipo === 'manana' && esLunesBogota()) tablero.voz_de_la_semana = await vozDeLaSemana(env);
     texto = await redactar(env, INSTRUCCIONES_INFORME, JSON.stringify(tablero), 'medium');
     if (!texto) throw new Error('informe vacío');
   } catch (e) {
