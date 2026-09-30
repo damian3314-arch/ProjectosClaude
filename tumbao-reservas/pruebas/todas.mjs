@@ -45,6 +45,7 @@ const SUITES = [
   'tiquetera-mensualidad',
   'oferta-tiquetera',
   'premium-bot',
+  'cupo-sin-pago',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,

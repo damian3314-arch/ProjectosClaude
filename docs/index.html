@@ -46,6 +46,10 @@ const CONFIG = {
   // El aviso del banco tarda de 1 a 2 minutos. Con 3 basta, y esperar 5
   // solo hace que la gente crea que algo se rompió.
   MINUTOS_ESPERA: 3,
+  // Cuánto se le guarda el cupo a quien reserva y todavía no avisa que
+  // pagó. La hora exacta la manda el servidor (expira_en); esto solo
+  // vale si no la mandara.
+  MINUTOS_CUPO: 15,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -798,6 +802,17 @@ const CONFIG = {
   }
   #acompanantes:empty{display:none}
   #acompanantes > div{margin-top:0}
+  /* El reloj del cupo guardado y el aviso de que se acabó */
+  .cupo-reloj{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .55rem;margin:0 0 1rem;
+    padding:.75rem .9rem;border-radius:var(--r-card,14px);background:var(--bg-2);border:1px solid var(--line);
+    font-size:.92rem;color:var(--tx-2)}
+  .cupo-reloj b{color:var(--tx);font-variant-numeric:tabular-nums;font-size:1.05rem}
+  .cupo-reloj small{flex-basis:100%;color:var(--tx-3);font-size:.8rem}
+  .cupo-reloj.urgente{border-color:var(--gold);background:rgba(255,193,77,.1)}
+  .cupo-reloj.urgente b{color:var(--gold)}
+  .cupo-vencido{margin:0 0 1rem;padding:1.1rem;border-radius:var(--r-card,14px);border:1px solid var(--gold);background:rgba(255,193,77,.08)}
+  .cupo-vencido h3{margin:0 0 .4rem}
+  #s3.vencido > :not(h2):not(.cupo-vencido){display:none !important}
   .grupo-total{
     margin:0;padding:.7rem .85rem;border-radius:var(--r-field);
     background:rgba(255,107,53,.11);font-size:.9rem;line-height:1.45;
@@ -1004,6 +1019,21 @@ const CONFIG = {
   <section id="s3" aria-labelledby="t3">
     <h2 id="t3">Paga tu clase</h2>
     <p class="sub" id="sub-pago">Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.</p>
+
+    <!-- El cupo se guarda unos minutos y se libera solo: se dice aquí, con
+         el reloj a la vista, para que nadie crea que «apartar» es para
+         siempre. -->
+    <div class="cupo-reloj" id="cupo-reloj" role="timer" hidden>
+      <svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-clock"/></svg>
+      <span>Tu cupo está guardado por <b id="cupo-tiempo">15:00</b></span>
+      <small>Si no avisas tu pago a tiempo, se libera para otra persona.</small>
+    </div>
+    <div class="cupo-vencido" id="cupo-vencido" hidden>
+      <h3>Se acabó el tiempo</h3>
+      <p>Liberamos tu cupo para que otra persona pueda tomarlo. Si todavía quieres venir, reserva de nuevo: toma menos de un minuto.</p>
+      <button class="btn" type="button" id="cupo-reservar-otra">Reservar de nuevo</button>
+      <p class="sub" style="margin-top:1rem">¿Ya pagaste? <a id="cupo-wa" href="#" style="color:var(--gold)">Escríbenos por WhatsApp</a> y lo validamos.</p>
+    </div>
 
     <div class="monto">
       <small id="pago-etiqueta">Valor de la clase</small>
@@ -1783,6 +1813,7 @@ const CONFIG = {
             ? 'Es un solo pago por todos. Tus cupos quedan apartados mientras pagas: escanea el QR o usa la llave.'
             : 'Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.';
           $('#pago-etiqueta').textContent = g ? 'Total a pagar' : 'Valor de la clase';
+          arrancarCupo(data.expira_en);
           irA(3);
         } else {
           mostrarResultado('confirmada', data);
@@ -1802,6 +1833,64 @@ const CONFIG = {
       $('#enviar').textContent = textoEnviar();
     }
   });
+
+  /* ---------- el cupo guardado: reloj, aviso al salir y cupo liberado ---------- */
+  // El cupo de quien reserva y todavía no avisa que pagó se guarda unos
+  // minutos (hoy 15) y el servidor lo libera solo. La página lo cuenta a
+  // la vista con la hora que manda el servidor, avisa antes de dejar
+  // salir, y si se acaba el tiempo lo dice en vez de dejar pagar un cupo
+  // que ya no es suyo. Una vez que pulsa «Ya pagué» el cupo no vence
+  // (queda esperando al banco) y todo esto se apaga.
+  let venceEn = null, relojCupo = null;
+
+  const avisoSalir = (ev) => { ev.preventDefault(); ev.returnValue = ''; return ''; };
+  const mmss = (ms) => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  function revisarCupo(){
+    if (venceEn == null) return;
+    const queda = venceEn - Date.now();
+    if (queda <= 0) { cupoVencido(); return; }
+    $('#cupo-tiempo').textContent = mmss(queda);
+    $('#cupo-reloj').classList.toggle('urgente', queda <= 3 * 60000);
+  }
+
+  function detenerCupo(){
+    clearInterval(relojCupo); relojCupo = null; venceEn = null;
+    window.removeEventListener('beforeunload', avisoSalir);
+    $('#cupo-reloj').hidden = true; $('#cupo-reloj').classList.remove('urgente');
+    $('#cupo-vencido').hidden = true;
+    $('#s3').classList.remove('vencido');
+  }
+
+  function arrancarCupo(expiraEn){
+    detenerCupo();
+    const t = expiraEn ? Date.parse(expiraEn) : NaN;
+    venceEn = Number.isFinite(t) ? t : Date.now() + CONFIG.MINUTOS_CUPO * 60000;
+    window.addEventListener('beforeunload', avisoSalir);
+    $('#cupo-reloj').hidden = false;
+    revisarCupo();
+    if (venceEn != null) relojCupo = setInterval(revisarCupo, 1000);
+  }
+
+  function cupoVencido(){
+    clearInterval(relojCupo); relojCupo = null; venceEn = null;
+    window.removeEventListener('beforeunload', avisoSalir);
+    $('#cupo-reloj').hidden = true;
+    $('#s3').classList.add('vencido');
+    $('#cupo-vencido').hidden = false;
+    $('#t3').textContent = 'Se liberó tu cupo';
+    $('#cupo-wa').href = waUrl(`Hola, reservé con el código ${reserva && reserva.codigo ? reserva.codigo : ''} y ya pagué, pero se acabó el tiempo en la página.`);
+    cargar();   // los horarios vuelven a mostrar ese cupo como libre
+  }
+
+  // Si vuelve a la pestaña después de un rato (el celular la durmió), se
+  // revisa de una: no hay que esperar al siguiente segundo del reloj.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarCupo(); });
+
+  $('#cupo-reservar-otra').addEventListener('click', () => { $('#otra').click(); });
 
   /* ---------- 3 · ya pagué ---------- */
   $$('.copiar').forEach(b => b.addEventListener('click', async () => {
@@ -1996,6 +2085,7 @@ const CONFIG = {
       });
       data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.mensaje || '');
+      detenerCupo();
       irA(4);
       arrancarEspera();
     }catch(err){
@@ -2178,6 +2268,7 @@ const CONFIG = {
 
   $('#otra').addEventListener('click', () => {
     detenerEspera();
+    detenerCupo();
     $('#form').reset();
     $$('.err-campo').forEach(p => p.classList.remove('on'));
     tipo = null; elegida = null; reserva = null; grupoActual = null;

@@ -902,6 +902,8 @@ createServer(async (req, res) => {
       fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
       hora: hora12(c.fecha_hora), precio_cop: c.precio_cop,
       tiquetera_saldo: tiquetera ? tiquetera.clases_totales - tiquetera.clases_usadas : null,
+      // 0130: como el servidor real, el cupo sin pago se guarda 15 minutos.
+      expira_en: requierePago ? new Date(Date.now() + 15 * 60000).toISOString() : null,
     });
   }
 
@@ -953,6 +955,7 @@ createServer(async (req, res) => {
       fecha: fmt(c.fecha_hora, { weekday: 'long', day: 'numeric', month: 'long' }),
       hora: hora12(c.fecha_hora),
       precio_cop: c.precio_cop, total_cop: c.precio_cop * nombres.length,
+      expira_en: new Date(Date.now() + 15 * 60000).toISOString(),
     });
   }
 

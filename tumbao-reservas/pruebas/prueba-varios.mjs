@@ -6,7 +6,7 @@
  * Alguien llega y reserva para cuatro. Tiene que poder decir cuántos,
  * escribir los cuatro nombres, y que la pantalla de pago le pida el
  * total: si le pide $15.000 va a transferir $15.000 y el cupo de los
- * otros tres se cae solo a la media hora.
+ * otros tres se cae solo a los 15 minutos.
  *
  * Requiere el espejo corriendo:  node pruebas/espejo-api.mjs
  */
