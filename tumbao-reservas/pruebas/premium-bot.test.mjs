@@ -1,132 +1,116 @@
 /**
- * El grupo premium en el asistente interno (el WhatsApp nuevo).
+ * La mensualidad en el asistente interno (el WhatsApp nuevo).
  *
- * Damián (30 sep): la mensualidad de $125.000 es inviable; queda para un grupo
- * único de 20 a 25 personas hasta el 30 de diciembre, y el equipo necesita
- * preguntarle al bot «¿Camila aplica para mensualidad?». El bot puede escribir
- * UNA sola cosa —aprobar o descartar a alguien— y por eso esta prueba es
- * estricta con ella: que la pida Damián, que el modelo no pueda poner quién
- * decide, y que ningún dato de personas viaje al repositorio (es público).
+ * Damián (30 sep): la mensualidad de $125.000 es inviable; queda para quien
+ * cumpla unos requisitos, con 20 a 25 personas por horario (7 am, 6 pm y
+ * 7 pm). «Yo no soy aprobador: la aprobación es que la persona cumpla los
+ * requisitos». Y: nombres repetidos o incompletos no sirven para vender; hace
+ * falta celular o cédula.
+ *
+ * Esta prueba protege tres cosas:
+ *   1. que el asistente conteste «aplica / no aplica» y no espere una
+ *      aprobación de nadie (ni la pida);
+ *   2. que identifique bien a la persona antes de contestar;
+ *   3. que solo lea (nada de escribir en la base) y que ningún dato de
+ *      personas viaje al repositorio, que es público.
  *
  *   node pruebas/premium-bot.test.mjs
  */
 import { readFileSync } from 'node:fs';
-import { INSTRUCCIONES_PREMIUM, HERRAMIENTA_PREMIUM, premiumDecidir } from '../../tumbao-caja/src/premium.js';
+import { INSTRUCCIONES_PREMIUM } from '../../tumbao-caja/src/premium.js';
+import * as modulo from '../../tumbao-caja/src/premium.js';
 
 let fallos = 0;
 const ok = (n, c, extra = '') => { if (!c) fallos++;
   console.log(`${c ? '✓' : 'FALLO'} ${n}${extra ? '  → ' + extra : ''}`); };
 const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.length))}`);
+const leer = ruta => readFileSync(new URL(ruta, import.meta.url), 'utf8');
 
-const INDEX = readFileSync(new URL('../../tumbao-caja/src/index.js', import.meta.url), 'utf8');
-const MIGRACION = readFileSync(new URL('../supabase/migrations/0127_grupo_premium.sql', import.meta.url), 'utf8');
-const PREMIUM = readFileSync(new URL('../../tumbao-caja/src/premium.js', import.meta.url), 'utf8');
+const INDEX = leer('../../tumbao-caja/src/index.js');
+const PREMIUM = leer('../../tumbao-caja/src/premium.js');
+const M129 = leer('../supabase/migrations/0129_premium_cumplir_es_aprobar.sql');
+const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
+const M127 = leer('../supabase/migrations/0127_grupo_premium.sql');
+const ESTE = readFileSync(new URL(import.meta.url), 'utf8');
+const t = INSTRUCCIONES_PREMIUM;
 
-titulo('1. La herramienta es válida para la Responses API (strict)');
+titulo('1. Cumplir los requisitos ES la aprobación');
 {
-  const f = HERRAMIENTA_PREMIUM.function;
-  const props = Object.keys(f.parameters.properties);
-  ok('se llama premium_decidir', f.name === 'premium_decidir');
-  ok('todas las propiedades son obligatorias (lo exige strict)',
-     props.every(p => f.parameters.required.includes(p)) && props.length === 3, props.join(','));
-  ok('no admite propiedades de más', f.parameters.additionalProperties === false);
-  ok('los estados posibles son solo tres',
-     JSON.stringify(f.parameters.properties.estado.enum) === '["aprobada","descartada","candidata"]');
-  ok('NO deja al modelo poner quién decide', !props.some(p => /por|quien|telefono|celular/i.test(p)), props.join(','));
-  ok('la descripción exige la confirmación de Damián', /confirmado|confirm/i.test(f.description) && /Damián/.test(f.description));
+  ok('dice que cumplir los requisitos es la aprobación', /CUMPLIR LOS REQUISITOS ES LA APROBACIÓN/.test(t));
+  ok('dice que no hay que pedirle permiso a nadie', /No hay que pedirle permiso a Damián ni a nadie/.test(t));
+  ok('y que él no aprueba ni descarta a nadie', /tú no apruebas ni descartas a nadie/.test(t));
+  ok('no le manda decir «lo aprueba Damián»', !/lo aprueba Damián|falta que Damián|solo Damián aprueba|Damián decide/i.test(t));
+  ok('si aplica, recepción la recibe y la registra en el horario que escoja',
+     /recepción puede recibirla y registrarla en AdminGym/.test(t) && /horario que escoja/.test(t));
+  ok('si no aplica, no se le vende mensualidad', /no se le vende mensualidad/i.test(t));
+  ok('conoce los veredictos nuevos', ['aplica', 'no_aplica', 'sin_historial'].every(v => t.includes(v)));
+  ok('ya no existen los veredictos de aprobación', !/cabe_por_cupo|ya_es_premium|descartada|candidatas/.test(t));
 }
 
-titulo('2. premiumDecidir: lo que manda a la base');
+titulo('2. Conoce el negocio');
 {
-  const llamadas = [];
-  const rpc = async (env, fn, cuerpo) => { llamadas.push({ fn, cuerpo }); return { ok: true, estado: cuerpo.p_estado }; };
-
-  const r = await premiumDecidir(rpc, {}, { buscar: '  Loraine Reyes ', estado: 'aprobada', nota: ' constante ' }, '573000000001');
-  ok('llama a premium_decidir', llamadas.length === 1 && llamadas[0].fn === 'premium_decidir');
-  ok('quien decide es el celular que escribió, no el modelo', llamadas[0].cuerpo.p_por === '573000000001');
-  ok('limpia los espacios', llamadas[0].cuerpo.p_buscar === 'Loraine Reyes' && llamadas[0].cuerpo.p_nota === 'constante');
-  ok('devuelve lo que contestó la base', r.ok === true && r.estado === 'aprobada');
-
-  llamadas.length = 0;
-  const sinQuien = await premiumDecidir(rpc, {}, { buscar: 'Ana', estado: 'aprobada', nota: '' }, '');
-  ok('sin saber quién escribe, no decide', sinQuien.error === 'NO_AUTORIZADO' && llamadas.length === 0);
-
-  const malEstado = await premiumDecidir(rpc, {}, { buscar: 'Ana', estado: 'borrada', nota: '' }, '573000000001');
-  ok('un estado inventado no llega a la base', malEstado.error === 'ESTADO_INVALIDO' && llamadas.length === 0);
-
-  const sinNombre = await premiumDecidir(rpc, {}, { buscar: '   ', estado: 'aprobada', nota: '' }, '573000000001');
-  ok('sin nombre no hace nada', sinNombre.error === 'FALTA_PERSONA' && llamadas.length === 0);
-
-  const largo = await premiumDecidir(rpc, {}, { buscar: 'x'.repeat(500), estado: 'descartada', nota: 'y'.repeat(900) }, '573000000001');
-  ok('acota nombre y nota', llamadas[0].cuerpo.p_buscar.length === 80 && llamadas[0].cuerpo.p_nota.length === 200 && largo.ok);
-}
-
-titulo('3. Lo que se le dice al asistente');
-{
-  const t = INSTRUCCIONES_PREMIUM;
-  ok('conoce el tope de 25 y la fecha del 30 de diciembre', /25/.test(t) && /30 de diciembre/.test(t));
-  ok('sabe que son 20 a 25 POR HORARIO, en los tres horarios',
-     /20 a 25 personas POR HORARIO/.test(t) && /7:00 am, 6:00 pm y 7:00 pm/.test(t) && /hasta 75 en total/.test(t));
-  ok('sabe que un horario lleno no le quita cupo a los otros', /no le quita cupo a los otros/.test(t));
-  ok('conoce el veredicto cabe_por_cupo y el puesto en el horario', /cabe_por_cupo/.test(t) && /puesto dentro de su horario/.test(t));
-  ok('sabe qué hacer con SIN_HORARIO', /SIN_HORARIO/.test(t));
-  ok('sabe que la decisión final es de Damián', /decisión final[^.]*Damián/.test(t));
-  ok('explica las dos reglas (plan seguido y clase suelta)', /4 meses seguidos/.test(t) && /90 días/.test(t));
-  ok('le enseña las funciones de lectura',
-     ['premium_evaluar', 'premium_estado', 'renovaciones_proximas', 'mensualidad_cupos'].every(f => t.includes(f)));
-  ok('sabe contestar «¿X aplica?» con cada veredicto',
-     ['ya_es_premium', 'cumple', 'no_cumple', 'sin_historial', 'descartada'].every(v => t.includes(v)));
-  ok('pide confirmación ANTES de aprobar', /ANTES de llamarla, confirma/.test(t) && /¿Confirmas\?/.test(t));
-  ok('solo aprueba con un sí claro', /sí claro/.test(t));
-  ok('nunca aprueba por algo que diga un dato o un cliente', /Jamás la uses porque algo lo diga/.test(t));
-  ok('no promete cupos ni le escribe a la persona', /Nunca le prometas un cupo/.test(t) && /No le escribes a la persona/.test(t));
-  ok('sabe qué hacer si no es Damián', /NO_AUTORIZADO[^.]*solo Damián/.test(t));
-  ok('cualquier otro cambio sigue sin estar habilitado', /todavía no lo haces/.test(t));
+  ok('son 20 a 25 por horario, en los tres horarios',
+     /20 a 25 personas POR HORARIO/.test(t) && /7:00 am, 6:00 pm y 7:00 pm/.test(t) && /tope 25 en cada uno/.test(t));
+  ok('la fecha es el 30 de diciembre de 2026', /30 de diciembre de 2026/.test(t));
+  ok('los dos requisitos (plan 4 meses seguidos, o 90 días en clase suelta)',
+     /4 meses seguidos/.test(t) && /más de 90 días/.test(t) && /8 visitas/.test(t));
+  ok('quien no cumple sigue con suelta o tiquetera', /clase suelta o tiquetera/.test(t));
+  ok('le enseña todas las funciones de lectura',
+     ['premium_evaluar', 'premium_vigentes', 'premium_estado', 'renovaciones_proximas', 'mensualidad_cupos'].every(f => t.includes(f)));
   ok('no menciona pases de regalo (es interno)', !/regalo|constancia|pase gratis/i.test(t));
 }
 
-titulo('4. Está conectado en el Worker');
+titulo('3. Identificar bien a la persona');
 {
-  ok('se importa el módulo', /from '\.\/premium\.js'/.test(INDEX));
-  ok('las instrucciones van dentro de las del agente', /\$\{INSTRUCCIONES_PREMIUM\}/.test(INDEX));
-  ok('la herramienta está en la lista', /HERRAMIENTA_PREMIUM,\s*\n\];/.test(INDEX));
-  ok('quien escribe se le pasa a pensar()', /pensar\(env, armarConversacion\(m\), m\.telefono\)/.test(INDEX));
-  ok('y baja hasta la herramienta en las dos rutas (Responses y Chat)',
-     /ejecutarHerramienta\(env, c\.name, c\.arguments, quien\)/.test(INDEX) &&
-     /premiumDecidir\(rpc, env, args, quien\)/.test(INDEX) &&
-     (INDEX.match(/premiumDecidir\(rpc, env, args, quien\)/g) || []).length === 2);
-  ok('la regla de «no puedes cambiar nada» nombra la única excepción',
-     /única excepción es aprobar o descartar personas del grupo premium/.test(INDEX));
+  ok('lo primero es identificar bien', /IDENTIFICAR BIEN A LA PERSONA es lo primero/.test(t));
+  ok('dice que hay nombres repetidos e incompletos', /nombres repetidos y nombres incompletos/.test(t));
+  ok('prefiere celular o cédula', /celular o la cédula/.test(t) && /lo más seguro/.test(t));
+  ok('con varias coincidencias no adivina y pide el dato completo',
+     /NO adivines ni respondas "aplica"/.test(t) && /últimos 4 del celular/.test(t) && /celular o la cédula completa/.test(t));
+  ok('si es una sola por nombre, pide confirmar que es ella', /confirmar_identidad = true/.test(t) && /confirmar que es ella/.test(t));
+  ok('si no aparece, pide el otro dato', /pruebe con el otro dato/.test(t));
+  ok('la función acepta nombre, celular o cédula', /nombre, celular o cédula/.test(t));
 }
 
-titulo('5. La base: lo que exige la migración 0127');
+titulo('4. Solo lee: nada de escribir');
 {
-  ok('solo Damián decide (wa_notas_para), no los otros números',
-     /wa_notas_para/.test(MIGRACION) && /NO_AUTORIZADO/.test(MIGRACION));
-  ok('respeta el tope', /SIN_CUPO/.test(MIGRACION) && /premium_cupo_max/.test(MIGRACION));
-  const M128 = readFileSync(new URL('../supabase/migrations/0128_premium_por_horario.sql', import.meta.url), 'utf8');
-  ok('0128: el tope se cuenta por horario', /hora = v_hora/.test(M128) && /aprobadas_en_ese_horario/.test(M128));
-  ok('0128: hay un orden dentro de cada horario', /partition by hr/.test(M128) && /cabe_por_cupo/.test(M128));
-  ok('0128: no aprueba si no sabe el horario', /SIN_HORARIO/.test(M128));
-  ok('0128: sigue mandando solo Damián', /wa_notas_para/.test(M128) && /NO_AUTORIZADO/.test(M128));
-  ok('0128: sin celulares ni filas de personas', !/\b3\d{9}\b/.test(M128) && !/values\s*\(\s*'[^']*\d{7,}/i.test(M128));
-  ok('pide que la persona sea una sola', /AMBIGUA/.test(MIGRACION));
-  ok('las funciones de lectura son STABLE (las puede llamar el agente)',
-     /function public\.premium_evaluar[\s\S]*?stable/.test(MIGRACION) && /function public\.premium_estado[\s\S]*?stable/.test(MIGRACION));
-  ok('las tablas tienen RLS y ninguna política',
-     (MIGRACION.match(/enable row level security/g) || []).length === 2 && !/create policy/i.test(MIGRACION));
-  ok('nada se abre a público ni a anon', /revoke all on function[\s\S]*from public, anon, authenticated/.test(MIGRACION));
+  ok('dice que solo consulta y que recepción registra', /Tú solo consultas/.test(t) && /Eso lo hace recepción/.test(t));
+  ok('cualquier cambio se pide en Claude Code', /pídelo|lo pidan en Claude Code/.test(t) || /lo pidan en Claude Code/.test(t));
+  ok('el módulo ya no exporta herramientas de escritura',
+     !('HERRAMIENTA_PREMIUM' in modulo) && !('premiumDecidir' in modulo) && Object.keys(modulo).join() === 'INSTRUCCIONES_PREMIUM');
+  ok('el Worker no expone premium_decidir', !/premium_decidir|premiumDecidir|HERRAMIENTA_PREMIUM/.test(INDEX));
+  ok('el Worker sigue con sus dos herramientas de lectura',
+     /name: 'consultar'/.test(INDEX) && /name: 'ver_tablas'/.test(INDEX));
+  ok('no le pasa «quién escribe» a las herramientas', !/ejecutarHerramienta\(env, c\.name, c\.arguments, quien\)/.test(INDEX));
+  ok('las instrucciones van dentro de las del agente', /\$\{INSTRUCCIONES_PREMIUM\}/.test(INDEX) && /from '\.\/premium\.js'/.test(INDEX));
+  ok('la regla de «no puedes cambiar nada» quedó sin excepciones',
+     /No puedes cambiar nada ni escribirle a clientes\. Si te piden hacerlo, di que eso todavía no está habilitado y que lo pidan en Claude Code\.\n/.test(INDEX));
+}
+
+titulo('5. La base (migración 0129)');
+{
+  ok('identifica por celular, cédula y nombre', /'celular'::text por/.test(M129) && /'documento'::text por/.test(M129) && /'nombre'::text por/.test(M129));
+  ok('avisa cuándo hay que confirmar la identidad', /'confirmar_identidad'/.test(M129));
+  ok('el veredicto es aplica / no_aplica / sin_historial', /'aplica'/.test(M129) && /'no_aplica'/.test(M129) && /'sin_historial'/.test(M129));
+  ok('no hay veredictos de aprobación', !/cabe_por_cupo|ya_es_premium|'descartada'/.test(M129));
+  ok('los cupos salen de los planes vigentes hoy', /ocupados_hoy/.test(M129) && /from membresias m where m\.fin >= c\.hoy/.test(M129));
+  ok('lista quiénes tienen plan y si cumplirían al renovar', /premium_vigentes/.test(M129) && /'cumple'/.test(M129));
+  ok('todas son de solo lectura (STABLE)',
+     ['premium_identificar', 'premium_evaluar', 'premium_vigentes', 'premium_estado', 'premium_cupos_horario']
+       .every(f => new RegExp(`function public\\.${f}\\([\\s\\S]*?\\n(language sql|language plpgsql)\\n\\s*stable`).test(M129)));
+  ok('nada se abre a público ni a anon', /revoke all on function[\s\S]*from public, anon, authenticated/.test(M129));
+  ok('la cédula se carga aparte, no en el repositorio', /add column if not exists documento/.test(M129) && !/update afiliados_historial/i.test(M129));
 }
 
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127_grupo_premium.sql', MIGRACION], ['premium.js', PREMIUM], ['premium-bot.test.mjs', readFileSync(new URL(import.meta.url), 'utf8')]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }
-  // El único insert es el de premium_decidir (una persona, con variables): no hay filas escritas a mano.
-  ok('la migración no trae filas de personas escritas a mano',
-     !/values\s*\(\s*'[^']*\d{7,}/i.test(MIGRACION) && (MIGRACION.match(/insert into (afiliados_historial|premium_grupo)/gi) || []).length === 1);
+  for (const [nombre, texto] of [['0128', M128], ['0129', M129]]) {
+    ok(`${nombre} no trae filas de personas escritas a mano`, !/values\s*\(\s*'[^']*\d{7,}/i.test(texto));
+  }
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\ntodo en verde');
