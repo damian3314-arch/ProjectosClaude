@@ -773,6 +773,47 @@ const CONFIG = {
     .skel{animation:none}
     .opcion,.clase,.tarjeta,.btn{transition:none}
   }
+
+  /* ---------- reservar para varias personas (29 sep) ----------
+     Primero los datos de quien hace el proceso; después, aparte, un bloque
+     propio para los acompañantes con la cuenta a la vista. Antes el
+     contador iba ARRIBA de todo y el celular quedaba al final, debajo de
+     los nombres de los demás: nadie entendía quién recibía la
+     confirmación ni por qué se pedían tantos nombres. */
+  .grupo{
+    margin-top:.5rem;padding:1.15rem 1.05rem 1.05rem;
+    background:var(--surface);border-radius:var(--r-card);
+    display:grid;gap:.8rem;
+  }
+  .grupo-tit{margin:0;font-size:1.12rem;font-weight:700;letter-spacing:-.02em}
+  .grupo-txt{margin:0;font-size:.87rem;color:var(--tx-2);line-height:1.5}
+  .grupo-txt b{color:var(--tx);font-weight:600}
+  .grupo label{margin-bottom:.1rem}
+  .grupo input[type=text]{background:var(--surface-2)}
+  /* Los acompañantes cuelgan del bloque: una guía a la izquierda los
+     junta y dice que van con quien reserva. */
+  #acompanantes{
+    display:grid;gap:.8rem;padding-left:.9rem;
+    border-left:2px solid rgba(255,107,53,.5);
+  }
+  #acompanantes:empty{display:none}
+  #acompanantes > div{margin-top:0}
+  .grupo-total{
+    margin:0;padding:.7rem .85rem;border-radius:var(--r-field);
+    background:rgba(255,107,53,.11);font-size:.9rem;line-height:1.45;
+  }
+  .grupo-total b{font-weight:700;white-space:nowrap}
+
+  /* La pantalla final: a quiénes cubre el único código. */
+  .ok-grupo{
+    margin:1.1rem 0 .4rem;padding:1rem 1.05rem;text-align:left;
+    background:var(--surface);border-radius:var(--r-card);
+    box-shadow:inset 3px 0 0 var(--hot);font-size:.9rem;line-height:1.5;
+  }
+  .ok-grupo ul{margin:.5rem 0 .6rem;padding-left:1.15rem}
+  .ok-grupo li{margin:.1rem 0}
+  .ok-grupo li span{color:var(--tx-3);font-size:.82rem}
+  .ok-grupo p{margin:0;color:var(--tx-2)}
 </style>
 </head>
 <body>
@@ -844,7 +885,7 @@ const CONFIG = {
         <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
         <span>
           <span class="tit">Clase suelta</span>
-          <span class="des">Eliges tu clase, pagas y tu cupo queda confirmado.</span>
+          <span class="des">Eliges tu clase y pagas. Puedes reservar para varias personas a la vez.</span>
         </span>
       </button>
       <button class="opcion" type="button" data-tipo="tiquetera">
@@ -885,32 +926,20 @@ const CONFIG = {
 
   <!-- ═══════ 2 · Datos ═══════ -->
   <section id="s2" aria-labelledby="t2">
-    <h2 id="t2">¿Quién eres?</h2>
+    <h2 id="t2">Tus datos</h2>
     <p class="sub" id="sub-datos">Solo lo necesario para apartarte el cupo.</p>
     <div class="resumen" id="resumen"></div>
 
     <form id="form" novalidate>
-      <!-- Para cuántos. Solo en clase suelta: la mensualidad es de una
-           persona y ahí el contador sobraría. -->
-      <div id="caja-cuantos" hidden>
-        <label for="cuantos">¿Para cuántas personas?</label>
-        <div class="contador">
-          <button type="button" class="menos" id="cuantos-menos" aria-label="Uno menos">−</button>
-          <input id="cuantos" type="text" inputmode="numeric" value="1"
-                 aria-label="Cantidad de cupos" readonly>
-          <button type="button" class="mas" id="cuantos-mas" aria-label="Uno más">+</button>
-          <span class="hint" id="cuantos-hint"></span>
-        </div>
-      </div>
+      <!-- PRIMERO quien hace el proceso: es quien recibe la confirmación por
+           WhatsApp y quien paga. Los acompañantes van DESPUÉS y solo con su
+           nombre (29 sep, Damián: la gente no entendía el orden). -->
       <div>
         <label for="nombre" id="lbl-nombre">Nombre y apellido <span class="req">*</span></label>
         <input id="nombre" name="nombre" type="text" autocomplete="name" required maxlength="80" placeholder="Camila Rojas">
+        <p class="hint" id="hint-nombre" hidden>Tú reservas y pagas por todos. Los demás van más abajo.</p>
         <p class="err-campo" id="e-nombre">Escribe tu nombre.</p>
       </div>
-      <!-- Los nombres de los demás. Se dibujan al mover el contador: un
-           campo vacío por persona es lo que evita que en la puerta haya
-           seis cupos y un solo nombre. -->
-      <div id="acompanantes"></div>
       <div id="caja-codigo-tiquetera" hidden>
         <label for="codigo-tiquetera">Código de tu tiquetera <span class="req">*</span></label>
         <input id="codigo-tiquetera" name="codigo_tiquetera" type="text"
@@ -928,6 +957,27 @@ const CONFIG = {
       <div>
         <label for="email">Correo <span style="color:var(--tx-3);font-weight:400">(opcional)</span></label>
         <input id="email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="camila@correo.com">
+      </div>
+
+      <!-- ¿Vienes con alguien? Solo en clase suelta: la mensualidad y la
+           tiquetera son de una persona. Va DESPUÉS de los datos de quien
+           reserva. Un campo de nombre por acompañante es lo que evita que
+           en la puerta haya seis cupos y un solo nombre. -->
+      <div id="caja-cuantos" class="grupo" hidden>
+        <h3 class="grupo-tit">¿Vienes con alguien más?</h3>
+        <p class="grupo-txt">Puedes apartar varios cupos en <b>un solo pago</b>.
+          Tú pones tus datos arriba y aquí solo el <b>nombre</b> de cada acompañante:
+          la confirmación te llega a ti.</p>
+        <label for="cuantos">Personas en total, contándote a ti</label>
+        <div class="contador">
+          <button type="button" class="menos" id="cuantos-menos" aria-label="Una persona menos">−</button>
+          <input id="cuantos" type="text" inputmode="numeric" value="1"
+                 aria-label="Cantidad de cupos" readonly>
+          <button type="button" class="mas" id="cuantos-mas" aria-label="Una persona más">+</button>
+          <span class="hint" id="cuantos-hint"></span>
+        </div>
+        <div id="acompanantes"></div>
+        <p class="grupo-total" id="grupo-total" hidden></p>
       </div>
 
       <div class="trampa" aria-hidden="true">
@@ -953,10 +1003,10 @@ const CONFIG = {
   <!-- ═══════ 3 · Pago ═══════ -->
   <section id="s3" aria-labelledby="t3">
     <h2 id="t3">Paga tu clase</h2>
-    <p class="sub">Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.</p>
+    <p class="sub" id="sub-pago">Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.</p>
 
     <div class="monto">
-      <small>Valor de la clase</small>
+      <small id="pago-etiqueta">Valor de la clase</small>
       <b id="pago-monto">$15.000</b>
       <!-- Con varios cupos, el desglose. Ver "$90.000" a secas donde
            siempre decía $15.000 hace dudar de si uno se equivocó. -->
@@ -1067,6 +1117,8 @@ const CONFIG = {
       </div>
 
       <p class="sub" id="ok-mensaje"></p>
+      <!-- Solo con varios cupos: un código para todos, y quiénes son. -->
+      <div class="ok-grupo" id="ok-grupo" hidden></div>
 
       <!-- La invitación a contarnos va AQUÍ, no flotando mientras la
            persona reserva. Es el único momento en que sabemos dos cosas:
@@ -1290,7 +1342,8 @@ const CONFIG = {
       ? 'El mismo con el que compraste la tiquetera.'
       : 'Ahí te confirmamos por WhatsApp.';
     $('#caja-codigo-tiquetera').hidden = !esTiquetera;
-    $('#enviar').textContent = (esMiembro || esTiquetera) ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
+    cuantos = 1;
+    $('#enviar').textContent = textoEnviar();
     irA(1);
     cargar();
   }));
@@ -1434,6 +1487,7 @@ const CONFIG = {
     if (!c) return;
     elegida = { ...c, etiqueta: dia.etiqueta };
     cuantos = 1;
+    grupoActual = null;
     prepararCuantos();
     pintarResumen();
     aviso('#err2','');
@@ -1448,6 +1502,9 @@ const CONFIG = {
    * servidor diga que no después de llenar seis nombres.
    */
   let cuantos = 1;
+  // Los nombres del grupo tal como los escribió quien reservó: la pantalla
+  // final los usa para decir a quiénes cubre el código.
+  let grupoActual = null;
 
   function prepararCuantos(){
     const caja = $('#caja-cuantos');
@@ -1479,14 +1536,23 @@ const CONFIG = {
     $('#cuantos-hint').textContent =
       libres <= 1 ? 'Queda un solo cupo en esta clase.'
       : libres <= MAX_DE_UNA_VEZ
-        ? `Quedan ${libres} cupos. Pagas todo junto, en un solo giro.`
-        : `Quedan ${libres} cupos. Puedes reservar hasta ${MAX_DE_UNA_VEZ} ` +
-          `de una vez, y pagas todo junto en un solo giro.`;
+        ? `Quedan ${libres} cupos.`
+        : `Quedan ${libres} cupos. Puedes reservar hasta ${MAX_DE_UNA_VEZ} de una vez.`;
 
     // Cuando va sola, el campo de arriba es "tu nombre" a secas. Con
     // acompañantes hay que numerarlos o nadie sabe cuál es cuál.
-    $('#lbl-nombre').innerHTML = (cuantos > 1 ? 'Persona 1: tu nombre' : 'Nombre y apellido')
+    const varios = cuantos > 1 && tipo === 'suelta';
+    $('#lbl-nombre').innerHTML = (varios ? 'Tu nombre y apellido' : 'Nombre y apellido')
       + ' <span class="req">*</span>';
+    // Con acompañantes, decir quién es quién: quien reserva es quien recibe
+    // la confirmación y quien paga todo.
+    $('#hint-nombre').hidden = !varios;
+    if (tipo === 'suelta'){
+      $('#hint-celular').textContent = varios
+        ? `Ahí te llega la confirmación de las ${cuantos} personas.`
+        : 'Ahí te confirmamos por WhatsApp.';
+    }
+    $('#enviar').textContent = textoEnviar();
 
     const cont = $('#acompanantes');
     const hay = cont.querySelectorAll('input').length + 1;
@@ -1499,7 +1565,7 @@ const CONFIG = {
     for (let i = 2; i <= cuantos; i++){
       const d = document.createElement('div');
       d.innerHTML =
-        `<label for="nombre-${i}">Persona ${i} <span class="req">*</span></label>` +
+        `<label for="nombre-${i}">Acompañante ${i - 1} <span class="req">*</span></label>` +
         `<input id="nombre-${i}" type="text" maxlength="80" autocomplete="off" ` +
                `placeholder="Nombre y apellido">` +
         `<p class="err-campo" id="e-nombre-${i}">Escribe el nombre.</p>`;
@@ -1522,6 +1588,20 @@ const CONFIG = {
                ? `${cuantos} cupos · ${pesos(total)}`
                : pesos(elegida.precio_cop))
            : ''}</span>`;
+    // La cuenta clara, ahí mismo donde se elige la cantidad: es donde la
+    // persona se da cuenta de que va a transferir 45 y no 15.
+    const g = $('#grupo-total');
+    const hay = tipo === 'suelta' && cuantos > 1;
+    g.hidden = !hay;
+    if (hay) g.innerHTML =
+      `${cuantos} personas × ${esc(pesos(elegida.precio_cop || 0))} = <b>${esc(pesos(total))}</b>` +
+      ` · pagas todo junto, en un solo pago`;
+  }
+
+  // El botón dice lo que va a pasar: con varios, cuántos cupos.
+  function textoEnviar(){
+    if (tipo === 'miembro' || tipo === 'tiquetera') return 'Apartar mi cupo';
+    return cuantos > 1 ? `Apartar los ${cuantos} cupos y pagar` : 'Apartar mi cupo y pagar';
   }
 
   $('#cuantos-menos').addEventListener('click', () => { cuantos--; pintarAcompanantes(); pintarResumen(); });
@@ -1685,15 +1765,24 @@ const CONFIG = {
 
       if (res.ok && data.ok){
         reserva = data;
+        grupoActual = varios ? { nombres } : null;
         if (data.requiere_pago){
           // El total del grupo, no el precio de una clase: es la cifra
           // que la persona tiene que teclear en la app del banco, y de
           // ella depende que el pago se cruce solo.
           $('#pago-monto').textContent =
             pesos(data.total_cop || data.precio_cop || elegida.precio_cop);
-          $('#pago-cuantos').textContent = (data.cupos > 1)
-            ? `${data.cupos} clases · ${pesos(data.precio_cop)} cada una` : '';
-          $('#pago-cuantos').hidden = !(data.cupos > 1);
+          const g = data.cupos > 1;
+          $('#pago-cuantos').textContent = g
+            ? `${data.cupos} cupos × ${pesos(data.precio_cop)}` : '';
+          $('#pago-cuantos').hidden = !g;
+          // Un pago por varios cupos se dice como tal: el título, el
+          // subtítulo y la etiqueta del monto.
+          $('#t3').textContent = g ? `Paga tus ${data.cupos} cupos` : 'Paga tu clase';
+          $('#sub-pago').textContent = g
+            ? 'Es un solo pago por todos. Tus cupos quedan apartados mientras pagas: escanea el QR o usa la llave.'
+            : 'Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.';
+          $('#pago-etiqueta').textContent = g ? 'Total a pagar' : 'Valor de la clase';
           irA(3);
         } else {
           mostrarResultado('confirmada', data);
@@ -1710,8 +1799,7 @@ const CONFIG = {
     }finally{
       enviando = false;
       $('#enviar').disabled = false;
-      $('#enviar').textContent = (tipo === 'miembro' || tipo === 'tiquetera')
-        ? 'Apartar mi cupo' : 'Apartar mi cupo y pagar';
+      $('#enviar').textContent = textoEnviar();
     }
   });
 
@@ -2026,8 +2114,26 @@ const CONFIG = {
     const clase = d.clase || (elegida && elegida.nombre) || '';
     const fecha = d.fecha || (elegida && cap(elegida.etiqueta)) || '';
     const hora  = d.hora  || (elegida && elegida.hora) || '';
-    $('#ok-detalle').textContent = [clase, fecha, hora].filter(Boolean).join(' · ');
+    // «Clase 7:00 am · miércoles · 7:00 am» repetía la hora: si el nombre
+    // de la clase ya la trae, no se vuelve a decir.
+    $('#ok-detalle').textContent =
+      [clase, fecha, (hora && !String(clase).includes(hora)) ? hora : ''].filter(Boolean).join(' · ');
     $('#ok-codigo').textContent  = d.codigo || '······';
+
+    // Con varios cupos hay UN código y varias personas: se dice a quiénes
+    // cubre y qué decir en recepción, para que nadie llegue a la puerta con
+    // la duda de si tiene que dar un código por persona.
+    const gr = $('#ok-grupo');
+    const nomG = grupoActual && Array.isArray(grupoActual.nombres) ? grupoActual.nombres : [];
+    if (nomG.length > 1 && (confirmada || pendiente)){
+      gr.innerHTML =
+        `<b>Este código vale para las ${nomG.length} personas:</b>` +
+        `<ul>${nomG.map((n, i) => `<li>${esc(n)}${i === 0 ? ' <span>(tú)</span>' : ''}</li>`).join('')}</ul>` +
+        `<p>En recepción digan tu nombre o este código: las ${nomG.length} personas ya están en la lista.</p>`;
+      gr.hidden = false;
+    } else {
+      gr.hidden = true; gr.innerHTML = '';
+    }
 
     $('#ok-mensaje').innerHTML = confirmada
       ? (tipo === 'tiquetera' && Number.isFinite(d.tiquetera_saldo)
@@ -2074,7 +2180,8 @@ const CONFIG = {
     detenerEspera();
     $('#form').reset();
     $$('.err-campo').forEach(p => p.classList.remove('on'));
-    tipo = null; elegida = null; reserva = null;
+    tipo = null; elegida = null; reserva = null; grupoActual = null;
+    cuantos = 1;
     irA(0);
   });
 

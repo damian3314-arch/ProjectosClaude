@@ -87,9 +87,39 @@ await p.waitForTimeout(200);
 ok('sube a cuatro', (await p.locator('#cuantos').inputValue()) === '4');
 ok('y pide tres nombres más', await p.locator('#acompanantes input').count() === 3,
    `${await p.locator('#acompanantes input').count()} campo(s)`);
-ok('el primero pasa a llamarse "Persona 1"',
-   /Persona 1/.test(await p.locator('#lbl-nombre').innerText()),
+ok('el primero pasa a llamarse "Tu nombre": es quien reserva',
+   /Tu nombre/.test(await p.locator('#lbl-nombre').innerText()),
    (await p.locator('#lbl-nombre').innerText()).trim());
+ok('y se explica que él reserva y paga por todos',
+   await p.locator('#hint-nombre').isVisible() &&
+   /reservas y pagas por todos/.test(await p.locator('#hint-nombre').innerText()));
+ok('los demás se llaman «Acompañante», no «Persona»',
+   /Acompañante 1/.test(await p.locator('label[for="nombre-2"]').innerText()) &&
+   /Acompañante 3/.test(await p.locator('label[for="nombre-4"]').innerText()));
+ok('el celular avisa que la confirmación es de todos',
+   /4 personas/.test(await p.locator('#hint-celular').innerText()),
+   (await p.locator('#hint-celular').innerText()).trim());
+ok('y el botón dice cuántos cupos aparta',
+   /4 cupos/.test(await p.locator('#enviar').innerText()),
+   (await p.locator('#enviar').innerText()).trim());
+
+// EL ORDEN. Primero los datos de quien hace el proceso —nombre, celular,
+// correo— y DESPUÉS el bloque de «¿vienes con alguien?». Antes el contador
+// iba arriba de todo y el celular quedaba debajo de los acompañantes.
+const y = async sel => (await p.locator(sel).boundingBox()).y;
+ok('el nombre va antes que el bloque de acompañantes',
+   (await y('#nombre')) < (await y('#caja-cuantos')));
+ok('el celular también va antes que los acompañantes',
+   (await y('#celular')) < (await y('#caja-cuantos')));
+ok('y los acompañantes cuelgan DEBAJO del contador',
+   (await y('#cuantos')) < (await y('#nombre-2')));
+ok('el bloque explica que solo hace falta el nombre',
+   /solo el\s+nombre/.test(await p.locator('#caja-cuantos .grupo-txt').innerText()),
+   (await p.locator('#caja-cuantos .grupo-txt').innerText()).replace(/\n/g, ' ').slice(0, 90));
+ok('la cuenta está a la vista: 4 × 15.000 = 60.000',
+   /4 personas/.test(await p.locator('#grupo-total').innerText()) &&
+   /60\.000/.test(await p.locator('#grupo-total').innerText()),
+   (await p.locator('#grupo-total').innerText()).replace(/\n/g, ' '));
 
 // El resumen tiene que decir el total ANTES de pagar: es donde la
 // persona se da cuenta de que va a transferir 60 y no 15.
@@ -134,7 +164,14 @@ const desglose = (await p.locator('#pago-cuantos').innerText()).trim();
 // El CSS pone el desglose en mayúsculas, así que la comprobación va sin
 // distinguirlas: lo que importa es que el número esté, no la tipografía.
 ok('y desglosa, para que no parezca un error',
-   /4 clases/i.test(desglose) && /15\.000/.test(desglose), desglose);
+   /4 cupos/i.test(desglose) && /15\.000/.test(desglose), desglose);
+ok('la pantalla de pago habla del grupo: «Paga tus 4 cupos»',
+   /Paga tus 4 cupos/.test(await p.locator('#t3').innerText()),
+   (await p.locator('#t3').innerText()).trim());
+ok('dice que es un solo pago por todos',
+   /solo pago por todos/.test(await p.locator('#sub-pago').innerText()));
+ok('y la etiqueta del monto es «Total a pagar»',
+   /Total a pagar/i.test(await p.locator('#pago-etiqueta').innerText()));
 
 console.log('\n── El resto del camino no cambia ──');
 await p.fill('#hora-transf', '18:42');
@@ -150,7 +187,18 @@ ok('el "ya pagué" sigue funcionando igual', true);
 await p.waitForSelector('#s5.on', { timeout: 30000 }).catch(() => {});
 const final = await p.locator('#s5').innerText();
 ok('y el grupo entero queda confirmado',
-   /confirmad/i.test(final), final.replace(/\n/g, ' · ').slice(0, 90));
+   /pista|confirmad/i.test(final), final.replace(/\n/g, ' · ').slice(0, 90));
+
+// El código es UNO para varias personas: la pantalla final tiene que decir
+// a quiénes cubre y qué decir en recepción.
+const okGrupo = (await p.locator('#ok-grupo').innerText()).replace(/\n/g, ' · ');
+ok('la pantalla final dice que el código vale para las 4 personas',
+   await p.locator('#ok-grupo').isVisible() && /4 personas/.test(okGrupo), okGrupo.slice(0, 100));
+ok('y nombra a las cuatro',
+   ['Ana Perez', 'Beto Perez', 'Caro Perez', 'Dani Perez'].every(n => okGrupo.includes(n)));
+ok('sin repetir la hora en el detalle',
+   !/(\d{1,2}:\d{2} [ap]m)[^\n]*\1/.test((await p.locator('#ok-detalle').innerText())),
+   (await p.locator('#ok-detalle').innerText()).trim());
 
 // Las cuatro tienen que existir de verdad, cada una con su nombre: es lo
 // que va a leer quien esté en la puerta.
