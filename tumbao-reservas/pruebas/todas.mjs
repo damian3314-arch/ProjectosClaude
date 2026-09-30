@@ -44,6 +44,7 @@ const SUITES = [
   'tiquetera-panel',
   'tiquetera-mensualidad',
   'oferta-tiquetera',
+  'premium-bot',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,
