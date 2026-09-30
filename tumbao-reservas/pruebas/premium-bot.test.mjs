@@ -65,6 +65,11 @@ titulo('3. Lo que se le dice al asistente');
 {
   const t = INSTRUCCIONES_PREMIUM;
   ok('conoce el tope de 25 y la fecha del 30 de diciembre', /25/.test(t) && /30 de diciembre/.test(t));
+  ok('sabe que son 20 a 25 POR HORARIO, en los tres horarios',
+     /20 a 25 personas POR HORARIO/.test(t) && /7:00 am, 6:00 pm y 7:00 pm/.test(t) && /hasta 75 en total/.test(t));
+  ok('sabe que un horario lleno no le quita cupo a los otros', /no le quita cupo a los otros/.test(t));
+  ok('conoce el veredicto cabe_por_cupo y el puesto en el horario', /cabe_por_cupo/.test(t) && /puesto dentro de su horario/.test(t));
+  ok('sabe qué hacer con SIN_HORARIO', /SIN_HORARIO/.test(t));
   ok('sabe que la decisión final es de Damián', /decisión final[^.]*Damián/.test(t));
   ok('explica las dos reglas (plan seguido y clase suelta)', /4 meses seguidos/.test(t) && /90 días/.test(t));
   ok('le enseña las funciones de lectura',
@@ -99,6 +104,12 @@ titulo('5. La base: lo que exige la migración 0127');
   ok('solo Damián decide (wa_notas_para), no los otros números',
      /wa_notas_para/.test(MIGRACION) && /NO_AUTORIZADO/.test(MIGRACION));
   ok('respeta el tope', /SIN_CUPO/.test(MIGRACION) && /premium_cupo_max/.test(MIGRACION));
+  const M128 = readFileSync(new URL('../supabase/migrations/0128_premium_por_horario.sql', import.meta.url), 'utf8');
+  ok('0128: el tope se cuenta por horario', /hora = v_hora/.test(M128) && /aprobadas_en_ese_horario/.test(M128));
+  ok('0128: hay un orden dentro de cada horario', /partition by hr/.test(M128) && /cabe_por_cupo/.test(M128));
+  ok('0128: no aprueba si no sabe el horario', /SIN_HORARIO/.test(M128));
+  ok('0128: sigue mandando solo Damián', /wa_notas_para/.test(M128) && /NO_AUTORIZADO/.test(M128));
+  ok('0128: sin celulares ni filas de personas', !/\b3\d{9}\b/.test(M128) && !/values\s*\(\s*'[^']*\d{7,}/i.test(M128));
   ok('pide que la persona sea una sola', /AMBIGUA/.test(MIGRACION));
   ok('las funciones de lectura son STABLE (las puede llamar el agente)',
      /function public\.premium_evaluar[\s\S]*?stable/.test(MIGRACION) && /function public\.premium_estado[\s\S]*?stable/.test(MIGRACION));
