@@ -199,6 +199,9 @@ const CONFIG = {
   .aviso.malo{background:rgba(255,107,129,.1);border:1px solid rgba(255,107,129,.4);color:#ffc2cc}
   .aviso.info{background:var(--bg-2);border:1px solid var(--line);color:var(--tx-2)}
   .aviso a{color:var(--gold)}
+  .aviso-lleno{border-left:3px solid var(--gold);line-height:1.5}
+  .aviso-lleno b{color:var(--tx)}
+  .aviso-lleno a{font-weight:600}
 
   /* ---------- pago ---------- */
   .monto{
@@ -600,6 +603,11 @@ const CONFIG = {
   <h2>Tu mensualidad en Tumbao</h2>
   <p class="sub">Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.</p>
 
+  <!-- Se llena solo cuando hay horarios sin cupo (pintarHoras). Va ARRIBA,
+       antes del precio: quien lee «$125.000 al mes» tiene que saber ya que
+       en esos horarios no se puede comprar. -->
+  <div class="aviso info aviso-lleno" id="aviso-lleno" hidden></div>
+
   <div class="plan">
     <b class="valor" id="precio">$125.000</b>
     <span class="cada">al mes · un horario fijo</span>
@@ -904,7 +912,34 @@ const CONFIG = {
     }
   }
 
+  /* Los horarios sin cupo no se pueden comprar: solo lista de espera. La
+     gente lo entendía como «otra forma de pagar», así que esto se dice
+     en tres sitios —arriba, en la tarjeta de entrada y antes del
+     formulario— y con la misma frase: no hay nada que pagar. Quien ya es
+     alumno y quiere renovar no usa esta página: pide los datos por chat,
+     para que recepción compruebe quién tiene mensualidad. */
+  const horasSinCupo = () => horas.filter(h => !(Number(h.libres) > 0));
+  const unirHoras = (hs) => hs.map(h => h.etiqueta).join(' y ');
+  const waRenovar = (hh) => waUrl(hh
+    ? `Hola Tumbao, soy alumno de la mensualidad de las ${hh} y quiero renovar.`
+    : 'Hola Tumbao, soy alumno de la mensualidad y quiero renovar.');
+
+  function pintarAvisoLleno() {
+    const cerradas = horasSinCupo();
+    const caja = $('#aviso-lleno');
+    if (!cerradas.length) { caja.hidden = true; caja.innerHTML = ''; return; }
+    const uno = cerradas.length === 1;
+    caja.innerHTML =
+      `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
+      `${uno ? 'está lleno' : 'están llenos'}.</b> Ahí <b>no se puede comprar mensualidad</b>: ` +
+      'solo puedes apuntarte a una lista de espera, y <b>no hay nada que pagar</b>. ' +
+      `¿Ya eres alumno y quieres renovar? <a href="${waRenovar('')}" target="_blank" ` +
+      'rel="noopener">Escríbenos por WhatsApp</a> y te damos los datos.';
+    caja.hidden = false;
+  }
+
   function pintarHoras() {
+    pintarAvisoLleno();
     if (!horas.length) {
       $('#horas').innerHTML =
         '<p class="sub">No hay horarios de mensualidad configurados.</p>';
@@ -933,7 +968,7 @@ const CONFIG = {
           <span class="hr">${esc(h.etiqueta)}</span>
           <span class="info">
             <span class="nom">${libre ? 'Lunes a viernes' : 'Lista de espera'}</span>
-            <span class="meta">${libre ? 'Sábado incluido' : 'Te avisamos'}</span>
+            <span class="meta">${libre ? 'Sábado incluido' : 'Sin pago · te avisamos'}</span>
           </span>
           <span class="cupos ${libre ? (n <= 3 ? 'pocos' : '') : 'cero'}">${pastilla}</span>
         </button>`;
@@ -944,19 +979,27 @@ const CONFIG = {
         horaElegida = b.dataset.hora;
         const h = laHora();
         const hay = Number(h.libres) > 0;
-        $('#t1').textContent = hay ? '¿Quién eres?' : 'Te avisamos apenas se libere';
+        // La barra «Horario · Datos · Pago» promete un paso de pago: en la
+        // lista de espera no existe, así que no se enseña.
+        $('#pasos').hidden = !hay;
+        $('#t1').textContent = hay ? '¿Quién eres?' : 'Este horario está lleno';
         // Se dice ANTES de pedir los datos si va a poder pagar o no. Que
         // alguien llene el formulario creyendo que compra y termine en
         // una lista de espera es la peor forma de enterarse.
-        $('#resumen').innerHTML =
-          `<strong>Plan mensualidad · ${esc(h.etiqueta)}</strong>` +
-          `<span>${hay ? pesos(valorCop) + ' al mes' : 'Sin cupo por ahora'}</span>`;
+        $('#resumen').innerHTML = hay
+          ? `<strong>Plan mensualidad · ${esc(h.etiqueta)}</strong>` +
+            `<span>${pesos(valorCop)} al mes</span>`
+          : `<strong>Lista de espera · ${esc(h.etiqueta)}</strong>` +
+            '<span>Sin pago</span>';
         $('#sub1').innerHTML = hay
           ? 'Con estos datos te apartamos el cupo mientras pagas.'
-          : `El horario de las <b>${esc(h.etiqueta)}</b> está lleno. Déjanos tus ` +
-            'datos y te escribimos apenas quede un cupo. ' +
-            '<b>No tienes que pagar nada ahora.</b>';
-        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Entrar a la lista de espera';
+          : `El horario de las <b>${esc(h.etiqueta)}</b> está lleno y <b>no se puede ` +
+            'comprar mensualidad</b>. Esto es solo una lista: déjanos tus datos y te ' +
+            'escribimos si se libera un cupo. <b>No tienes que pagar nada ahora.</b> ' +
+            `<br><br>¿Ya eres alumno y quieres renovar? No uses este formulario: ` +
+            `<a href="${waRenovar(h.etiqueta)}" target="_blank" rel="noopener">` +
+            'escríbenos por WhatsApp</a> y te damos los datos.';
+        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Solo apuntarme a la lista de espera';
         aviso('#err1', '');
         ir(1);
       });
@@ -964,7 +1007,7 @@ const CONFIG = {
   }
 
   /* ── los datos ─────────────────────────────────────────────── */
-  $('#volver0').addEventListener('click', () => ir(0));
+  $('#volver0').addEventListener('click', () => { $('#pasos').hidden = false; ir(0); });
 
   const limpiarTel = v => {
     let t = String(v || '').replace(/\D/g, '');
@@ -1014,7 +1057,7 @@ const CONFIG = {
       btn.disabled = false;
       const h = laHora();
       btn.textContent = (h && Number(h.libres) > 0)
-        ? 'Continuar al pago' : 'Entrar a la lista de espera';
+        ? 'Continuar al pago' : 'Solo apuntarme a la lista de espera';
     }
   });
 
@@ -1067,13 +1110,18 @@ const CONFIG = {
   function pintarEspera() {
     const h = laHora();
     const hh = h ? h.etiqueta : 'ese horario';
+    $('#pasos').hidden = true;   // sin paso de pago, sin barra que lo prometa
     $('#final').innerHTML =
       `<div class="tick espera-humana">${icono('note-pencil')}</div>
        <h2>Quedaste en la lista</h2>
-       <p>Te escribimos por WhatsApp apenas se libere un cupo de las <b>${esc(hh)}</b>.</p>
-       <p><b>No pagues nada todavía.</b></p>`;
-    $('#wa').href = waUrl(
-      `Hola Tumbao, quedé en lista de espera para la mensualidad de las ${hh}.`);
+       <p><b>Esto es solo una lista de espera, no una compra.</b> Te escribimos por
+          WhatsApp si se libera un cupo de las <b>${esc(hh)}</b>.</p>
+       <p><b>No pagues nada todavía.</b> No hay datos de pago para este horario:
+          si transfieres, no podemos asignarte el cupo.</p>
+       <p>¿Ya eres alumno de este horario y quieres renovar? Escríbenos y te
+          ayudamos.</p>`;
+    $('#wa').textContent = 'Ya soy alumno y quiero renovar';
+    $('#wa').href = waRenovar(hh);
   }
 
   function pintarPagado() {
@@ -1085,6 +1133,7 @@ const CONFIG = {
        <p>Estamos confirmando el pago con el banco. Te escribimos por
           WhatsApp para activarte la mensualidad de las <b>${esc(hh)}</b>.</p>
        <p>Si tienes el comprobante a mano, mándanoslo y vamos más rápido.</p>`;
+    $('#wa').textContent = 'Escribirnos por WhatsApp';
     $('#wa').href = waUrl(
       `Hola Tumbao, ya transferí la mensualidad de las ${hh}. Les mando el comprobante.`);
   }
@@ -1155,6 +1204,19 @@ const CONFIG = {
     irTiq(1);
   }
 
+  // La tarjeta dice $125.000: si en algún horario no hay cupo, lo dice ahí
+  // mismo, antes de hacer clic.
+  function notaCupoTarjeta() {
+    const cerradas = horasSinCupo();
+    if (!cerradas.length) return '';
+    const abiertas = horas.filter(h => Number(h.libres) > 0);
+    const donde = abiertas.length
+      ? `Hoy solo hay cupo a las <b>${esc(unirHoras(abiertas))}</b>. ` +
+        `${esc(unirHoras(cerradas))}: solo lista de espera, sin pago.`
+      : 'Hoy no hay cupo en ningún horario: solo lista de espera, sin pago.';
+    return `<p class="desc"><b>${donde}</b></p>`;
+  }
+
   function pintarEleccion() {
     const tarjetaMensualidad = `
       <button type="button" class="tarjeta" data-elegir="mensualidad">
@@ -1163,6 +1225,7 @@ const CONFIG = {
         <span class="precio">${pesos(valorCop)}</span>
         <span class="precio-cada">al mes · horario fijo</span>
         <p class="desc">Todas tus clases de lunes a viernes en tu horario. No reservas entre semana: solo llegas y entras.</p>
+        ${notaCupoTarjeta()}
       </button>`;
 
     const tarjetasTQ = tiqPaquetes.map(p => {

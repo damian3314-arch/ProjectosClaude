@@ -179,6 +179,123 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   await p.close();
 }
 
+/* ═══════ LA LISTA DE ESPERA NO ES UNA FORMA DE PAGAR ═════════════
+   30 sep: dos personas apuntadas en la lista de 6 pm y 7 pm transfirieron
+   $125.000 cada una. La pantalla ya decía «no pagues nada», pero la
+   gente entendía la lista como otra puerta hacia la compra. Desde ahí:
+   el aviso va ARRIBA, la tarjeta de entrada lo repite, el formulario lo
+   dice con las mismas palabras, el final NO es una compra, y quien ya es
+   alumno y quiere renovar no usa el formulario: pide los datos por chat
+   (recepción comprueba quién tiene mensualidad). */
+{
+  const cupos = { ok: true, tope: 25, valor_cop: 125000, horas: [
+    { hora: '07:00', etiqueta: '7:00 am', ocupadas: 20, tope: 35, libres: 15 },
+    { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 19, tope: 0, libres: 0 },
+    { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 0, libres: 0 },
+  ] };
+  const { p, errs } = await abrir({
+    cupos,
+    solicitar: { ok: true, id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+                 estado: 'lista_espera', valor_cop: 125000, ya_estaba: false },
+  });
+
+  // La tarjeta de la puerta de entrada (ya oculta: se lee el textContent).
+  const tarjeta = await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent();
+  ok('la tarjeta de entrada dice dónde sí hay cupo', /Hoy solo hay cupo a las\s*7:00 am/.test(tarjeta), tarjeta);
+  ok('y que en los otros es solo lista, sin pago',
+     /6:00 pm y 7:00 pm: solo lista de espera, sin pago/.test(tarjeta), tarjeta);
+
+  // El aviso de arriba.
+  const aviso = await p.locator('#aviso-lleno').innerText();
+  ok('el aviso de arriba se ve', await p.locator('#aviso-lleno').isVisible());
+  ok('nombra las dos horas llenas', /Los horarios de 6:00 pm y 7:00 pm están llenos/.test(aviso), aviso);
+  ok('dice que ahí no se compra mensualidad', /no se puede comprar mensualidad/.test(aviso), aviso);
+  ok('y que no hay nada que pagar', /no hay nada que pagar/.test(aviso), aviso);
+  const href = await p.locator('#aviso-lleno a').getAttribute('href');
+  ok('el alumno que renueva tiene su salida por WhatsApp',
+     /wa\.me\/573017833550/.test(href) && /renovar/.test(decodeURIComponent(href)), href);
+
+  // Las filas.
+  const filas = await p.evaluate(() =>
+    [...document.querySelectorAll('.hora')].map(h => h.innerText).join(' ~ '));
+  ok('las horas llenas dicen «sin pago»', (filas.match(/Sin pago/g) || []).length === 2, filas);
+
+  // El formulario de una hora llena.
+  await p.click('.hora[data-hora="18:00"]');
+  ok('el título dice que está lleno',
+     /Este horario está lleno/.test(await p.locator('#t1').innerText()));
+  ok('la barra «Horario · Datos · Pago» no se enseña: no hay paso de pago',
+     await p.locator('#pasos').isHidden());
+  const resumen = await p.locator('#resumen').innerText();
+  ok('el resumen habla de lista, sin precio',
+     /Lista de espera/.test(resumen) && /Sin pago/.test(resumen) && !/125\.000/.test(resumen), resumen);
+  const sub = await p.locator('#sub1').innerText();
+  ok('el formulario repite que no se compra', /no se puede comprar mensualidad/.test(sub), sub);
+  ok('y que no se paga nada', /No tienes que pagar nada ahora/.test(sub), sub);
+  ok('y manda al alumno que renueva al chat', /ya eres alumno y quieres renovar/i.test(sub), sub);
+  const boton = await p.locator('#btn-enviar').textContent();
+  ok('el botón dice que es solo la lista', /Solo apuntarme a la lista de espera/.test(boton), boton);
+  ok('y no habla de pagar', !/pag/i.test(boton), boton);
+
+  // La pantalla final.
+  await llenar(p);
+  await p.click('#btn-enviar');
+  await p.waitForSelector('#s3:not([hidden])', { timeout: 5000 });
+  const fin = await p.locator('#s3').innerText();
+  ok('ni en la pantalla final', await p.locator('#pasos').isHidden());
+  ok('el final dice que NO es una compra', /no una compra/.test(fin), fin);
+  ok('dice que no hay datos de pago', /No hay datos de pago para este horario/.test(fin), fin);
+  ok('y que si transfiere no se le puede asignar el cupo', /si transfieres, no podemos asignarte el cupo/.test(fin), fin);
+  ok('la pantalla de pago sigue sin abrirse', await p.locator('#s2').isHidden());
+  ok('el botón de WhatsApp es para quien ya es alumno',
+     (await p.locator('#wa').textContent()).trim() === 'Ya soy alumno y quiero renovar');
+  ok('y lleva su horario y la palabra renovar',
+     /renovar/.test(decodeURIComponent(await p.locator('#wa').getAttribute('href'))) &&
+     /6:00 pm/.test(decodeURIComponent(await p.locator('#wa').getAttribute('href'))));
+  ok('sin errores de JS', errs.length === 0, errs.join(' | '));
+  await p.close();
+}
+
+{
+  // Con una sola hora llena el aviso va en singular.
+  const { p } = await abrir({
+    cupos: { ok: true, tope: 25, valor_cop: 125000, horas: [
+      { hora: '07:00', etiqueta: '7:00 am', ocupadas: 20, tope: 35, libres: 15 },
+      { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 19, tope: 25, libres: 6 },
+      { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 0, libres: 0 },
+    ] },
+  });
+  ok('con una sola hora llena, el aviso va en singular',
+     /El horario de las 7:00 pm está lleno/.test(await p.locator('#aviso-lleno').innerText()));
+  await p.close();
+}
+
+{
+  // Si todo tiene cupo no hay nada que avisar.
+  const { p } = await abrir({
+    cupos: { ok: true, tope: 25, valor_cop: 125000, horas: [
+      { hora: '07:00', etiqueta: '7:00 am', ocupadas: 20, tope: 35, libres: 15 },
+      { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 19, tope: 25, libres: 6 },
+      { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 30, libres: 7 },
+    ] },
+  });
+  ok('sin horas llenas no hay aviso', await p.locator('#aviso-lleno').isHidden());
+  ok('ni nota en la tarjeta',
+     !/solo lista de espera/.test(await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent()));
+
+  // Y el botón de WhatsApp vuelve a su texto normal tras un pago.
+  await p.click('.hora[data-hora="07:00"]');
+  ok('con cupo la barra de pasos sí se enseña', await p.locator('#pasos').isVisible());
+  await llenar(p);
+  await p.click('#btn-enviar');
+  await p.waitForSelector('#s2:not([hidden])', { timeout: 5000 });
+  await p.click('#btn-pague');
+  await p.waitForSelector('#s3:not([hidden])', { timeout: 5000 });
+  ok('tras avisar el pago el botón ya no habla de renovar',
+     (await p.locator('#wa').textContent()).trim() === 'Escribirnos por WhatsApp');
+  await p.close();
+}
+
 // ═══════ lo que no se puede mandar ═══════════════════════════════
 {
   const { p } = await abrir();
