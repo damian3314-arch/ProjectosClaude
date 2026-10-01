@@ -103,19 +103,17 @@ ok('y el botón dice cuántos cupos aparta',
    /4 cupos/.test(await p.locator('#enviar').innerText()),
    (await p.locator('#enviar').innerText()).trim());
 
-// EL ORDEN. Primero los datos de quien hace el proceso —nombre, celular,
-// correo— y DESPUÉS el bloque de «¿vienes con alguien?». Antes el contador
-// iba arriba de todo y el celular quedaba debajo de los acompañantes.
+// EL ORDEN (1 oct). Lo primero es CUÁNTAS personas van (solo el número,
+// con el total a la vista); después los datos de quien reserva —nombre,
+// celular— y DEBAJO del celular los nombres de los acompañantes. Lo que
+// confundió el 29 de sep fue ver los nombres de los demás ANTES del celular.
 const y = async sel => (await p.locator(sel).boundingBox()).y;
-ok('el nombre va antes que el bloque de acompañantes',
-   (await y('#nombre')) < (await y('#caja-cuantos')));
-ok('el celular también va antes que los acompañantes',
-   (await y('#celular')) < (await y('#caja-cuantos')));
-ok('y los acompañantes cuelgan DEBAJO del contador',
-   (await y('#cuantos')) < (await y('#nombre-2')));
-ok('el bloque explica que solo hace falta el nombre',
-   /solo el\s+nombre/.test(await p.locator('#caja-cuantos .grupo-txt').innerText()),
-   (await p.locator('#caja-cuantos .grupo-txt').innerText()).replace(/\n/g, ' ').slice(0, 90));
+ok('lo primero del formulario es cuántas personas van',
+   (await y('#cuantos')) < (await y('#nombre')));
+ok('el nombre y el celular van antes que los acompañantes',
+   (await y('#nombre')) < (await y('#nombre-2')) && (await y('#celular')) < (await y('#nombre-2')));
+ok('la pregunta es clara',
+   /¿Cuántas personas van a la clase\?/.test(await p.locator('#lbl-cuantos').innerText()));
 ok('la cuenta está a la vista: 4 × 15.000 = 60.000',
    /4 personas/.test(await p.locator('#grupo-total').innerText()) &&
    /60\.000/.test(await p.locator('#grupo-total').innerText()),

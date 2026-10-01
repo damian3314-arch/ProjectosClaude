@@ -818,6 +818,15 @@ const CONFIG = {
     background:rgba(255,107,53,.11);font-size:.9rem;line-height:1.45;
   }
   .grupo-total b{font-weight:700;white-space:nowrap}
+  /* El contador de personas, arriba y a la vista (1 oct) */
+  .cuantos-caja{padding:1rem;background:var(--surface);border-radius:var(--r-card);display:grid;gap:.7rem}
+  .cuantos-caja label{margin:0;font-weight:600}
+  .cuantos-caja .grupo-total{background:rgba(255,107,53,.14)}
+  .mas-correo{margin:0}
+  .mas-correo summary{cursor:pointer;font-size:.88rem;color:var(--tx-2);padding:.35rem 0;list-style:none}
+  .mas-correo summary::-webkit-details-marker{display:none}
+  .mas-correo summary::before{content:'+ ';color:var(--hot);font-weight:700}
+  .mas-correo[open] summary{margin-bottom:.4rem}
   .pago-solo{margin:0 0 1rem;padding:.8rem .9rem;border-radius:var(--r-field);background:rgba(255,107,53,.11);font-size:.92rem;line-height:1.45}
   .pago-solo p{margin:0 0 .6rem}
   .pago-solo .btn-ghost{margin:0}
@@ -945,13 +954,32 @@ const CONFIG = {
   <!-- ═══════ 2 · Datos ═══════ -->
   <section id="s2" aria-labelledby="t2">
     <h2 id="t2">Tus datos</h2>
-    <p class="sub" id="sub-datos">Solo lo necesario para apartarte el cupo.</p>
+    <p class="sub" id="sub-datos">Dinos cuántas personas van y déjanos tus datos.</p>
     <div class="resumen" id="resumen"></div>
 
     <form id="form" novalidate>
       <!-- PRIMERO quien hace el proceso: es quien recibe la confirmación por
            WhatsApp y quien paga. Los acompañantes van DESPUÉS y solo con su
            nombre (29 sep, Damián: la gente no entendía el orden). -->
+      <!-- LO PRIMERO: cuántas personas van (solo clase suelta; la mensualidad
+           y la tiquetera son de una persona). Antes era un bloque al final
+           del formulario y quien iba con alguien llegaba al pago viendo
+           $15.000 sin entender por qué (1 oct). El total y el botón se
+           actualizan con la cantidad, así lo que se va a pagar se ve desde
+           el principio. Los nombres de los acompañantes van abajo, después
+           del celular, para que quien reserva ponga primero lo suyo. -->
+      <div id="caja-cuantos" class="cuantos-caja" hidden>
+        <label for="cuantos" id="lbl-cuantos">¿Cuántas personas van a la clase?</label>
+        <div class="contador">
+          <button type="button" class="menos" id="cuantos-menos" aria-label="Una persona menos">−</button>
+          <input id="cuantos" type="text" inputmode="numeric" value="1"
+                 aria-label="Cantidad de personas" readonly>
+          <button type="button" class="mas" id="cuantos-mas" aria-label="Una persona más">+</button>
+          <span class="hint" id="cuantos-hint"></span>
+        </div>
+        <p class="grupo-total" id="grupo-total"></p>
+      </div>
+
       <div>
         <label for="nombre" id="lbl-nombre">Nombre y apellido <span class="req">*</span></label>
         <input id="nombre" name="nombre" type="text" autocomplete="name" required maxlength="80" placeholder="Camila Rojas">
@@ -972,33 +1000,13 @@ const CONFIG = {
         <p class="hint" id="hint-celular">Ahí te confirmamos por WhatsApp.</p>
         <p class="err-campo" id="e-celular">Escribe tu celular a 10 dígitos.</p>
       </div>
-      <!-- ¿Vienes con alguien? Solo en clase suelta: la mensualidad y la
-           tiquetera son de una persona. Va DESPUÉS de los datos de quien
-           reserva y ANTES del correo (1 oct): al final del formulario casi
-           nadie lo veía y llegaba al pago con $15.000 pensando que iba
-           por dos. Un campo de nombre por acompañante es lo que evita que
-           en la puerta haya seis cupos y un solo nombre. -->
-      <div id="caja-cuantos" class="grupo" hidden>
-        <h3 class="grupo-tit">¿Vienes con alguien más?</h3>
-        <p class="grupo-txt">Puedes apartar varios cupos en <b>un solo pago</b>.
-          Tú pones tus datos arriba y aquí solo el <b>nombre</b> de cada acompañante:
-          la confirmación te llega a ti.</p>
-        <label for="cuantos">Personas en total, contándote a ti</label>
-        <div class="contador">
-          <button type="button" class="menos" id="cuantos-menos" aria-label="Una persona menos">−</button>
-          <input id="cuantos" type="text" inputmode="numeric" value="1"
-                 aria-label="Cantidad de cupos" readonly>
-          <button type="button" class="mas" id="cuantos-mas" aria-label="Una persona más">+</button>
-          <span class="hint" id="cuantos-hint"></span>
-        </div>
-        <div id="acompanantes"></div>
-        <p class="grupo-total" id="grupo-total" hidden></p>
-      </div>
-
-      <div>
-        <label for="email">Correo <span style="color:var(--tx-3);font-weight:400">(opcional)</span></label>
-        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="camila@correo.com">
-      </div>
+      <div id="acompanantes"></div>
+      <!-- Correo: opcional y plegado. Cuatro campos obligatorios más uno
+           opcional a la vista hacían ver el formulario más largo de lo que es. -->
+      <details class="mas-correo">
+        <summary>Agregar correo (opcional)</summary>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="camila@correo.com" aria-label="Correo (opcional)">
+      </details>
 
       <div class="trampa" aria-hidden="true">
         <label for="apellido2">No llenes esto</label>
@@ -1378,7 +1386,7 @@ const CONFIG = {
       ? 'Con tu celular verificamos tu mensualidad.'
       : esTiquetera
       ? 'Con tu código descontamos la clase de tu tiquetera.'
-      : 'Solo lo necesario para apartarte el cupo.';
+      : 'Dinos cuántas personas van y déjanos tus datos.';
     $('#hint-celular').textContent = esMiembro
       ? 'Debe ser el mismo que tienes registrado en Tumbao.'
       : esTiquetera
@@ -1634,17 +1642,21 @@ const CONFIG = {
     // La cuenta clara, ahí mismo donde se elige la cantidad: es donde la
     // persona se da cuenta de que va a transferir 45 y no 15.
     const g = $('#grupo-total');
-    const hay = tipo === 'suelta' && cuantos > 1;
-    g.hidden = !hay;
-    if (hay) g.innerHTML =
-      `${cuantos} personas × ${esc(pesos(elegida.precio_cop || 0))} = <b>${esc(pesos(total))}</b>` +
-      ` · pagas todo junto, en un solo pago`;
+    g.hidden = tipo !== 'suelta';
+    if (tipo === 'suelta') g.innerHTML = cuantos > 1
+      ? `${cuantos} personas × ${esc(pesos(elegida.precio_cop || 0))} = <b>${esc(pesos(total))}</b>` +
+        ` · pagas todo junto, en un solo pago`
+      : `Total a pagar: <b>${esc(pesos(total))}</b> · una persona`;
   }
 
   // El botón dice lo que va a pasar: con varios, cuántos cupos.
+  // y cuánto: «Apartar mi cupo y pagar» a secas hacía pensar que se apartaba
+  // uno solo, sin importar lo que se hubiera elegido.
   function textoEnviar(){
     if (tipo === 'miembro' || tipo === 'tiquetera') return 'Apartar mi cupo';
-    return cuantos > 1 ? `Apartar los ${cuantos} cupos y pagar` : 'Apartar mi cupo y pagar';
+    const total = elegida ? (elegida.precio_cop || 0) * cuantos : 0;
+    const monto = total ? ' ' + pesos(total) : '';
+    return cuantos > 1 ? `Reservar los ${cuantos} cupos y pagar${monto}` : `Reservar y pagar${monto}`;
   }
 
   $('#cuantos-menos').addEventListener('click', () => { cuantos--; pintarAcompanantes(); pintarResumen(); });

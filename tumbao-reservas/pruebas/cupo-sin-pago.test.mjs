@@ -184,8 +184,11 @@ titulo('8. Un solo cupo: el pago dice que es por una persona y deja sumar a algu
 
   const html = readFileSync(join(AQUI, '../../docs/index.html'), 'utf8');
   const iCuantos = html.indexOf('id="caja-cuantos"');
-  ok('el contador va antes del correo (se ve sin bajar tanto)',
-     iCuantos > 0 && iCuantos < html.indexOf('id="email"'));
+  ok('el contador va arriba del todo, antes del nombre',
+     iCuantos > 0 && iCuantos < html.indexOf('id="nombre"'));
+  ok('el botón dice cuánto se paga («Reservar y pagar $…»)',
+     /Reservar y pagar\$\{monto\}/.test(html) && !/'Apartar mi cupo y pagar'/.test(html));
+  ok('el correo va plegado: no estorba', /<details class="mas-correo">/.test(html));
   ok('el resumen dice «por persona» con un solo cupo', /pesos\(elegida\.precio_cop\) \+ ' por persona'/.test(html));
   ok('con varios cupos el aviso no sale', /\$\('#pago-solo'\)\.hidden = g \|\| tipo !== 'suelta'/.test(html));
 }
