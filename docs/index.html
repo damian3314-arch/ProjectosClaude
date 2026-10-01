@@ -50,6 +50,8 @@ const CONFIG = {
   // pagó. La hora exacta la manda el servidor (expira_en); esto solo
   // vale si no la mandara.
   MINUTOS_CUPO: 15,
+  // Notificación del navegador cuando vence la reserva (si la persona la permite)
+  AVISO_NAVEGADOR: true,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -803,13 +805,6 @@ const CONFIG = {
   #acompanantes:empty{display:none}
   #acompanantes > div{margin-top:0}
   /* El reloj del cupo guardado y el aviso de que se acabó */
-  .cupo-reloj{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .55rem;margin:0 0 1rem;
-    padding:.75rem .9rem;border-radius:var(--r-card,14px);background:var(--bg-2);border:1px solid var(--line);
-    font-size:.92rem;color:var(--tx-2)}
-  .cupo-reloj b{color:var(--tx);font-variant-numeric:tabular-nums;font-size:1.05rem}
-  .cupo-reloj small{flex-basis:100%;color:var(--tx-3);font-size:.8rem}
-  .cupo-reloj.urgente{border-color:var(--gold);background:rgba(255,193,77,.1)}
-  .cupo-reloj.urgente b{color:var(--gold)}
   .cupo-vencido{margin:0 0 1rem;padding:1.1rem;border-radius:var(--r-card,14px);border:1px solid var(--gold);background:rgba(255,193,77,.08)}
   .cupo-vencido h3{margin:0 0 .4rem}
   #s3.vencido > :not(h2):not(.cupo-vencido){display:none !important}
@@ -1031,19 +1026,14 @@ const CONFIG = {
   <!-- ═══════ 3 · Pago ═══════ -->
   <section id="s3" aria-labelledby="t3">
     <h2 id="t3">Paga tu clase</h2>
-    <p class="sub" id="sub-pago">Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.</p>
+    <p class="sub" id="sub-pago">Paga ahora para confirmar tu reserva. Escanea el QR o usa la llave.</p>
 
-    <!-- El cupo se guarda unos minutos y se libera solo: se dice aquí, con
-         el reloj a la vista, para que nadie crea que «apartar» es para
-         siempre. -->
-    <div class="cupo-reloj" id="cupo-reloj" role="timer" hidden>
-      <svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-clock"/></svg>
-      <span>Tu cupo está guardado por <b id="cupo-tiempo">15:00</b></span>
-      <small>Si no avisas tu pago a tiempo, se libera para otra persona.</small>
-    </div>
+    <!-- El cupo se guarda 15 minutos por dentro y se libera solo, pero NO se
+         le dice a la persona con un reloj: creía que le esperábamos todo ese
+         tiempo y no hacía el pago (1 oct). Solo se avisa si ya venció. -->
     <div class="cupo-vencido" id="cupo-vencido" hidden>
-      <h3>Se acabó el tiempo</h3>
-      <p>Liberamos tu cupo para que otra persona pueda tomarlo. Si todavía quieres venir, reserva de nuevo: toma menos de un minuto.</p>
+      <h3>Liberamos tu cupo</h3>
+      <p>Pasaron más de 15 minutos sin avisar tu pago y liberamos el cupo para otra persona. Vuelve a empezar: toma menos de un minuto.</p>
       <button class="btn" type="button" id="cupo-reservar-otra">Reservar de nuevo</button>
       <p class="sub" style="margin-top:1rem">¿Ya pagaste? <a id="cupo-wa" href="#" style="color:var(--gold)">Escríbenos por WhatsApp</a> y lo validamos.</p>
     </div>
@@ -1792,6 +1782,7 @@ const CONFIG = {
     enviando = true;
     $('#enviar').disabled = true;
     $('#enviar').textContent = 'Apartando tu cupo…';
+    if (tipo === 'suelta') pedirAvisoNavegador();
     aviso('#err2','');
 
     try{
@@ -1835,8 +1826,8 @@ const CONFIG = {
           // subtítulo y la etiqueta del monto.
           $('#t3').textContent = g ? `Paga tus ${data.cupos} cupos` : 'Paga tu clase';
           $('#sub-pago').textContent = g
-            ? 'Es un solo pago por todos. Tus cupos quedan apartados mientras pagas: escanea el QR o usa la llave.'
-            : 'Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.';
+            ? 'Es un solo pago por todos. Paga ahora para confirmar: escanea el QR o usa la llave.'
+            : 'Paga ahora para confirmar tu reserva. Escanea el QR o usa la llave.';
           $('#pago-etiqueta').textContent = g ? 'Total a pagar' : 'Valor de la clase';
           $('#pago-solo').hidden = g || tipo !== 'suelta';
           arrancarCupo(data.expira_en);
@@ -1860,35 +1851,54 @@ const CONFIG = {
     }
   });
 
-  /* ---------- el cupo guardado: reloj, aviso al salir y cupo liberado ---------- */
-  // El cupo de quien reserva y todavía no avisa que pagó se guarda unos
-  // minutos (hoy 15) y el servidor lo libera solo. La página lo cuenta a
-  // la vista con la hora que manda el servidor, avisa antes de dejar
-  // salir, y si se acaba el tiempo lo dice en vez de dejar pagar un cupo
-  // que ya no es suyo. Una vez que pulsa «Ya pagué» el cupo no vence
-  // (queda esperando al banco) y todo esto se apaga.
-  let venceEn = null, relojCupo = null;
+  /* ---------- el cupo guardado: aviso al salir y aviso de que venció ---------- */
+  // El cupo de quien reserva y todavía no avisa que pagó se guarda 15 minutos
+  // y el servidor lo libera solo. Eso es INTERNO: la página no muestra reloj
+  // (la gente creía que le esperábamos todo ese tiempo y no pagaba). Solo
+  // cuenta por debajo con la hora que manda el servidor y, si se acaba:
+  //   · muestra «Tu reserva venció» y esconde el pago (nadie paga un cupo que
+  //     ya no es suyo);
+  //   · si la pestaña quedó en segundo plano (está en la app del banco),
+  //     cambia el título y, si la persona dio permiso, manda una notificación.
+  // Una vez que pulsa «Ya pagué» el cupo no vence (queda esperando al banco)
+  // y todo esto se apaga.
+  let venceEn = null, relojCupo = null, tituloOriginal = null;
 
   const avisoSalir = (ev) => { ev.preventDefault(); ev.returnValue = ''; return ''; };
-  const mmss = (ms) => {
-    const s = Math.max(0, Math.ceil(ms / 1000));
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
 
   function revisarCupo(){
     if (venceEn == null) return;
-    const queda = venceEn - Date.now();
-    if (queda <= 0) { cupoVencido(); return; }
-    $('#cupo-tiempo').textContent = mmss(queda);
-    $('#cupo-reloj').classList.toggle('urgente', queda <= 3 * 60000);
+    if (venceEn - Date.now() <= 0) cupoVencido();
+  }
+
+  // Notificación del navegador: se pide permiso al reservar (un gesto de la
+  // persona) y solo se usa si lo dio. En celular hace falta un service
+  // worker para mostrarla; si no hay, se prueba la forma directa.
+  const hayNotificaciones = () => CONFIG.AVISO_NAVEGADOR && 'Notification' in window;
+  function pedirAvisoNavegador(){
+    try{
+      if (!hayNotificaciones() || Notification.permission !== 'default') return;
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw-avisos.js').catch(() => {});
+      Notification.requestPermission();
+    }catch(_){}
+  }
+  async function notificarVencido(){
+    try{
+      if (!hayNotificaciones() || Notification.permission !== 'granted' || !document.hidden) return;
+      const texto = { body: 'Pasaron más de 15 minutos sin avisar tu pago. Vuelve a empezar: toma menos de un minuto.',
+                      tag: 'tumbao-cupo-vencido' };
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+      if (reg) await reg.showNotification('Tu reserva en Tumbao venció', texto);
+      else new Notification('Tu reserva en Tumbao venció', texto);
+    }catch(_){}
   }
 
   function detenerCupo(){
     clearInterval(relojCupo); relojCupo = null; venceEn = null;
     window.removeEventListener('beforeunload', avisoSalir);
-    $('#cupo-reloj').hidden = true; $('#cupo-reloj').classList.remove('urgente');
     $('#cupo-vencido').hidden = true;
     $('#s3').classList.remove('vencido');
+    if (tituloOriginal != null){ document.title = tituloOriginal; tituloOriginal = null; }
   }
 
   function arrancarCupo(expiraEn){
@@ -1896,24 +1906,25 @@ const CONFIG = {
     const t = expiraEn ? Date.parse(expiraEn) : NaN;
     venceEn = Number.isFinite(t) ? t : Date.now() + CONFIG.MINUTOS_CUPO * 60000;
     window.addEventListener('beforeunload', avisoSalir);
-    $('#cupo-reloj').hidden = false;
+    relojCupo = setInterval(revisarCupo, 1000);
     revisarCupo();
-    if (venceEn != null) relojCupo = setInterval(revisarCupo, 1000);
   }
 
   function cupoVencido(){
     clearInterval(relojCupo); relojCupo = null; venceEn = null;
     window.removeEventListener('beforeunload', avisoSalir);
-    $('#cupo-reloj').hidden = true;
     $('#s3').classList.add('vencido');
     $('#cupo-vencido').hidden = false;
-    $('#t3').textContent = 'Se liberó tu cupo';
+    $('#t3').textContent = 'Tu reserva venció';
     $('#cupo-wa').href = waUrl(`Hola, reservé con el código ${reserva && reserva.codigo ? reserva.codigo : ''} y ya pagué, pero se acabó el tiempo en la página.`);
+    if (tituloOriginal == null) tituloOriginal = document.title;
+    document.title = '⚠️ Tu reserva venció · Tumbao';
+    notificarVencido();
     cargar();   // los horarios vuelven a mostrar ese cupo como libre
   }
 
   // Si vuelve a la pestaña después de un rato (el celular la durmió), se
-  // revisa de una: no hay que esperar al siguiente segundo del reloj.
+  // revisa de una: no hay que esperar al siguiente segundo.
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarCupo(); });
 
   $('#cupo-reservar-otra').addEventListener('click', () => { $('#otra').click(); });

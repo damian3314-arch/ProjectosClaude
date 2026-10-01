@@ -7,13 +7,16 @@
  * avise antes de cerrar o después de esos 15 min que no completó el proceso».
  *
  * Qué protege
- *   1. Quien aparta una suelta ve un reloj con el tiempo que le queda.
+ *   1. Quien aparta una suelta NO ve ningún reloj ni cuenta regresiva: los 15
+ *      minutos son internos (1 oct: la gente creía que le esperábamos todo
+ *      ese tiempo y no pagaba).
  *   2. Si intenta cerrar o recargar con el cupo guardado, el navegador le avisa.
  *   3. Cuando se acaba el tiempo la página lo dice, esconde el pago y ofrece
  *      reservar de nuevo (y sale el aviso de «ya pagué» por WhatsApp).
  *   4. Al pulsar «Ya pagué» el cupo deja de vencer: nada de avisos ni reloj.
  *   5. Si el servidor no mandara la hora, se usa el respaldo de 15 minutos.
- *   6. En los últimos 3 minutos el reloj se pone en alerta.
+ *   6. Al vencer con la pestaña en segundo plano (está en el banco), el título
+ *      cambia y, si dio permiso, sale una notificación del navegador.
  *   7. Con un solo cupo, el pago dice «por 1 persona» y deja sumar a alguien.
  *
  * Usa el espejo del API (que ahora manda expira_en como el servidor real) y,
@@ -78,19 +81,15 @@ const frena = (p) => p.evaluate(() => {
   return ev.defaultPrevented;
 });
 
-titulo('1. El reloj se ve y cuenta');
+titulo('1. No hay reloj a la vista');
 {
   const { p, ctx, errores } = await apartar();           // el espejo manda 15 minutos
-  ok('el reloj está a la vista', await p.locator('#cupo-reloj').isVisible());
-  const t = (await p.locator('#cupo-tiempo').innerText()).trim();
-  ok('arranca cerca de 15:00', /^1[45]:\d\d$/.test(t), t);
-  ok('dice que el cupo se libera si no paga',
-     /se libera para otra persona/.test(await p.locator('#cupo-reloj').innerText()));
-  await p.waitForTimeout(2200);
-  const t2 = (await p.locator('#cupo-tiempo').innerText()).trim();
-  ok('el tiempo baja solo', t2 !== t, `${t} → ${t2}`);
-  ok('todavía no está en alerta', !(await p.locator('#cupo-reloj.urgente').count()));
-  ok('no está la pantalla de «se acabó»', await p.locator('#cupo-vencido').isHidden());
+  ok('no existe el reloj en la página', (await p.locator('#cupo-reloj, #cupo-tiempo').count()) === 0);
+  const texto = await p.locator('#s3').innerText();
+  ok('la pantalla de pago no habla de minutos ni de «guardado por»',
+     !/guardado por|\b15:00\b|minutos/i.test(texto), texto.replace(/\n/g, ' ').slice(0, 100));
+  ok('pide pagar ahora, sin prometer espera', /Paga ahora/.test(await p.locator('#sub-pago').innerText()));
+  ok('no está la pantalla de «venció»', await p.locator('#cupo-vencido').isHidden());
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }
@@ -108,12 +107,13 @@ titulo('3. Se acaba el tiempo');
   ok('antes de tiempo el pago se ve', await p.locator('#ya-pague').isVisible());
   await p.waitForSelector('#cupo-vencido:not([hidden])', { timeout: 8000 });
   const texto = await p.locator('#s3').innerText();
-  ok('dice que se acabó el tiempo', /Se acabó el tiempo/.test(texto), texto.replace(/\n/g, ' ').slice(0, 120));
-  ok('dice que el cupo se liberó para otra persona', /Liberamos tu cupo/.test(texto));
-  ok('el reloj desaparece', await p.locator('#cupo-reloj').isHidden());
+  ok('dice que la reserva venció', /Tu reserva venció/.test(texto), texto.replace(/\n/g, ' ').slice(0, 120));
+  ok('dice que pasaron 15 minutos y que hay que volver a empezar', /más de 15 minutos/.test(texto) && /Vuelve a empezar/.test(texto));
+  ok('dice que el cupo se liberó para otra persona', /liberamos el cupo/.test(texto));
   ok('ya no se puede pagar ese cupo: el botón y los datos se esconden',
      await p.locator('#ya-pague').isHidden() && await p.locator('.datos-pago').isHidden() && await p.locator('#pago-qr').isHidden());
-  ok('el título cambia', /Se liberó tu cupo/.test(await p.locator('#t3').innerText()));
+  ok('el título de la pantalla cambia', /Tu reserva venció/.test(await p.locator('#t3').innerText()));
+  ok('el título de la pestaña también avisa', /Tu reserva venció/.test(await p.title()), await p.title());
   ok('ya no frena la salida (no hay nada que perder)', !(await frena(p)));
   const wa = await p.locator('#cupo-wa').getAttribute('href');
   ok('si ya había pagado, tiene salida por WhatsApp con su código',
@@ -121,20 +121,20 @@ titulo('3. Se acaba el tiempo');
   await p.locator('#cupo-reservar-otra').click();
   await p.waitForSelector('#s0.on', { timeout: 5000 });
   ok('«Reservar de nuevo» vuelve al inicio', await p.locator('#s0.on').isVisible());
-  ok('y limpia todo: sin reloj ni aviso de salida',
-     await p.locator('#cupo-reloj').isHidden() && !(await frena(p)));
+  ok('y limpia todo: título de la pestaña y aviso de salida',
+     !/venció/.test(await p.title()) && !(await frena(p)));
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }
 
-titulo('4. «Ya pagué» detiene el reloj');
+titulo('4. «Ya pagué» detiene el vencimiento');
 {
   const { p, ctx, errores } = await apartar();
   await p.fill('#hora-transf', '12:00');
   await p.locator('#ya-pague').click();
   await p.waitForSelector('#s4.on', { timeout: 8000 });
   ok('pasa a «confirmando tu pago»', await p.locator('#s4.on').isVisible());
-  ok('el reloj no sigue (esa reserva ya no vence sola)', await p.locator('#cupo-reloj').isHidden());
+  ok('ya no vence sola (esa reserva espera al banco)', await p.locator('#cupo-vencido').isHidden());
   ok('y no avisa al salir', !(await frena(p)));
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
@@ -143,18 +143,42 @@ titulo('4. «Ya pagué» detiene el reloj');
 titulo('5. Si el servidor no manda la hora, el respaldo es de 15 minutos');
 {
   const { p, ctx } = await apartar(null);
-  const t = (await p.locator('#cupo-tiempo').innerText()).trim();
-  ok('arranca cerca de 15:00', /^1[45]:\d\d$/.test(t), t);
+  ok('con el servidor sin hora, la reserva sigue viva (no vence de inmediato)', await p.locator('#cupo-vencido').isHidden() && await p.locator('#ya-pague').isVisible());
   await ctx.close();
 }
 
-titulo('6. Últimos 3 minutos: alerta');
+titulo('6. Vence con la pestaña en segundo plano');
 {
-  const { p, ctx } = await apartar(2 * 60000);
-  ok('el reloj se pone en alerta', (await p.locator('#cupo-reloj.urgente').count()) === 1);
-  const t = (await p.locator('#cupo-tiempo').innerText()).trim();
-  ok('y marca cerca de 2:00', /^[12]:\d\d$/.test(t), t);
+  // Se simula una pestaña oculta y un permiso ya concedido, y se espía la
+  // notificación (no hay forma de ver la real en un navegador de pruebas).
+  const { p, ctx } = await apartar(2500);
+  await p.evaluate(() => {
+    window.__notis = [];
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    window.Notification = function (t, o) { window.__notis.push({ t, o }); };
+    window.Notification.permission = 'granted';
+    window.Notification.requestPermission = () => {};
+  });
+  await p.waitForSelector('#cupo-vencido:not([hidden])', { timeout: 8000 });
+  await p.waitForTimeout(300);
+  const notis = await p.evaluate(() => window.__notis);
+  ok('manda una notificación «Tu reserva venció»', notis.length === 1 && /venció/.test(notis[0].t), JSON.stringify(notis));
+  ok('que dice que hay que volver a empezar', /Vuelve a empezar/.test((notis[0] || {}).o?.body || ''));
+  ok('y el título de la pestaña lo avisa', /venció/.test(await p.title()), await p.title());
   await ctx.close();
+
+  // Con la pestaña a la vista no se manda notificación: ya lo está viendo.
+  const v = await apartar(2500);
+  await v.p.evaluate(() => {
+    window.__notis = [];
+    window.Notification = function (t, o) { window.__notis.push({ t, o }); };
+    window.Notification.permission = 'granted';
+    window.Notification.requestPermission = () => {};
+  });
+  await v.p.waitForSelector('#cupo-vencido:not([hidden])', { timeout: 8000 });
+  await v.p.waitForTimeout(300);
+  ok('con la pestaña a la vista no hay notificación', (await v.p.evaluate(() => window.__notis.length)) === 0);
+  await v.ctx.close();
 }
 
 titulo('7. El código de la página');
@@ -163,6 +187,9 @@ titulo('7. El código de la página');
   ok('el respaldo es de 15 minutos', /MINUTOS_CUPO:\s*15/.test(html));
   ok('usa la hora que manda el servidor', /arrancarCupo\(data\.expira_en\)/.test(html));
   ok('revisa al volver a la pestaña', /visibilitychange/.test(html));
+  ok('no queda reloj ni cuenta regresiva en la página', !/cupo-reloj|cupo-tiempo|guardado por/.test(html));
+  ok('la notificación se pide al reservar y se puede apagar', /pedirAvisoNavegador\(\)/.test(html) && /AVISO_NAVEGADOR:\s*true/.test(html));
+  ok('hay service worker para mostrarla en celular', /sw-avisos\.js/.test(html) && /notificationclick/.test(readFileSync(join(AQUI, '../../docs/sw-avisos.js'), 'utf8')) && /showNotification/.test(html));
 }
 
 titulo('8. Un solo cupo: el pago dice que es por una persona y deja sumar a alguien');
