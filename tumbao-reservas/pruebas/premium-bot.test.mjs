@@ -29,6 +29,7 @@ const leer = ruta => readFileSync(new URL(ruta, import.meta.url), 'utf8');
 const INDEX = leer('../../tumbao-caja/src/index.js');
 const PREMIUM = leer('../../tumbao-caja/src/premium.js');
 const M129 = leer('../supabase/migrations/0129_premium_cumplir_es_aprobar.sql');
+const M132 = leer('../supabase/migrations/0132_aviso_de_pago_dice_si_aplica.sql');
 const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
 const M127 = leer('../supabase/migrations/0127_grupo_premium.sql');
 const ESTE = readFileSync(new URL(import.meta.url), 'utf8');
@@ -102,9 +103,21 @@ titulo('5. La base (migración 0129)');
   ok('la cédula se carga aparte, no en el repositorio', /add column if not exists documento/.test(M129) && !/update afiliados_historial/i.test(M129));
 }
 
+titulo('5b. El aviso de pagos dice si quien pagó aplica (0132)');
+{
+  ok('dice «Aplica» con su razón y que se puede registrar', /✅ Aplica a mensualidad/.test(M132) && /Se puede registrar/.test(M132));
+  ok('dice «NO aplica» y que no se registre', /⛔ NO aplica a mensualidad/.test(M132) && /No la registres/.test(M132));
+  ok('si no la encuentra o hay varias, pide celular o cédula', /No la encuentro en el historial/.test(M132) && /personas con ese nombre/.test(M132));
+  ok('solo pagos del tamaño de una mensualidad (60.000 o más)', /p_valor < 60000/.test(M132));
+  ok('avisa cuando la identificó solo por el nombre del banco', (M132.match(/nombre del banco/g) || []).length >= 2);
+  ok('lo pega en los pagos sin dueño y en las mensualidades pagadas por la página',
+     /premium_frase\(r\.remitente, r\.saldo\)/.test(M132) && /premium_frase\(r\.celular, 125000\)/.test(M132));
+  ok('el cierre del bloque ya no manda registrar cualquier mensualidad', /Si dice «aplica», regístrala/.test(M132));
+}
+
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }
