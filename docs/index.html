@@ -818,6 +818,9 @@ const CONFIG = {
     background:rgba(255,107,53,.11);font-size:.9rem;line-height:1.45;
   }
   .grupo-total b{font-weight:700;white-space:nowrap}
+  .pago-solo{margin:0 0 1rem;padding:.8rem .9rem;border-radius:var(--r-field);background:rgba(255,107,53,.11);font-size:.92rem;line-height:1.45}
+  .pago-solo p{margin:0 0 .6rem}
+  .pago-solo .btn-ghost{margin:0}
 
   /* La pantalla final: a quiénes cubre el único código. */
   .ok-grupo{
@@ -969,14 +972,11 @@ const CONFIG = {
         <p class="hint" id="hint-celular">Ahí te confirmamos por WhatsApp.</p>
         <p class="err-campo" id="e-celular">Escribe tu celular a 10 dígitos.</p>
       </div>
-      <div>
-        <label for="email">Correo <span style="color:var(--tx-3);font-weight:400">(opcional)</span></label>
-        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="camila@correo.com">
-      </div>
-
       <!-- ¿Vienes con alguien? Solo en clase suelta: la mensualidad y la
            tiquetera son de una persona. Va DESPUÉS de los datos de quien
-           reserva. Un campo de nombre por acompañante es lo que evita que
+           reserva y ANTES del correo (1 oct): al final del formulario casi
+           nadie lo veía y llegaba al pago con $15.000 pensando que iba
+           por dos. Un campo de nombre por acompañante es lo que evita que
            en la puerta haya seis cupos y un solo nombre. -->
       <div id="caja-cuantos" class="grupo" hidden>
         <h3 class="grupo-tit">¿Vienes con alguien más?</h3>
@@ -993,6 +993,11 @@ const CONFIG = {
         </div>
         <div id="acompanantes"></div>
         <p class="grupo-total" id="grupo-total" hidden></p>
+      </div>
+
+      <div>
+        <label for="email">Correo <span style="color:var(--tx-3);font-weight:400">(opcional)</span></label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" placeholder="camila@correo.com">
       </div>
 
       <div class="trampa" aria-hidden="true">
@@ -1042,6 +1047,14 @@ const CONFIG = {
            siempre decía $15.000 hace dudar de si uno se equivocó. -->
       <small id="pago-cuantos" hidden></small>
       <span class="ojo"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-warning"/></svg> El QR no trae el monto. Escríbelo tú al pagar.</span>
+    </div>
+
+    <!-- Un solo cupo: se dice que el pago es por UNA persona y se ofrece
+         sumar a alguien. Quien iba con otra persona y no vio el contador se
+         daba cuenta aquí ("solo sale 15 mil"), y pagaba dos veces o mal. -->
+    <div class="pago-solo" id="pago-solo" hidden>
+      <p>Este pago es por <b>1 persona</b>. ¿Vas con alguien más?</p>
+      <button class="btn-ghost" type="button" id="pago-agregar">Agregar otra persona</button>
     </div>
 
     <div class="qr-caja">
@@ -1616,7 +1629,7 @@ const CONFIG = {
          tipo === 'suelta'
            ? ' · ' + (cuantos > 1
                ? `${cuantos} cupos · ${pesos(total)}`
-               : pesos(elegida.precio_cop))
+               : pesos(elegida.precio_cop) + ' por persona')
            : ''}</span>`;
     // La cuenta clara, ahí mismo donde se elige la cantidad: es donde la
     // persona se da cuenta de que va a transferir 45 y no 15.
@@ -1813,6 +1826,7 @@ const CONFIG = {
             ? 'Es un solo pago por todos. Tus cupos quedan apartados mientras pagas: escanea el QR o usa la llave.'
             : 'Tu cupo queda apartado mientras pagas. Escanea el QR o usa la llave.';
           $('#pago-etiqueta').textContent = g ? 'Total a pagar' : 'Valor de la clase';
+          $('#pago-solo').hidden = g || tipo !== 'suelta';
           arrancarCupo(data.expira_en);
           irA(3);
         } else {
@@ -1891,6 +1905,20 @@ const CONFIG = {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarCupo(); });
 
   $('#cupo-reservar-otra').addEventListener('click', () => { $('#otra').click(); });
+
+  // «Agregar otra persona»: de vuelta a los datos con dos cupos. La reserva
+  // de uno queda sin pagar y el servidor la suelta sola a los 15 minutos; el
+  // pago de los dos se cruza con la reserva nueva, que vale el doble.
+  $('#pago-agregar').addEventListener('click', () => {
+    if (!elegida) return;
+    detenerCupo();
+    cuantos = 2;
+    prepararCuantos();
+    pintarResumen();
+    aviso('#err2','');
+    irA(2);
+    setTimeout(() => { const i = $('#nombre-2'); if (i) i.focus(); }, 320);
+  });
 
   /* ---------- 3 · ya pagué ---------- */
   $$('.copiar').forEach(b => b.addEventListener('click', async () => {

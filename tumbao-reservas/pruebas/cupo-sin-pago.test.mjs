@@ -14,6 +14,7 @@
  *   4. Al pulsar «Ya pagué» el cupo deja de vencer: nada de avisos ni reloj.
  *   5. Si el servidor no mandara la hora, se usa el respaldo de 15 minutos.
  *   6. En los últimos 3 minutos el reloj se pone en alerta.
+ *   7. Con un solo cupo, el pago dice «por 1 persona» y deja sumar a alguien.
  *
  * Usa el espejo del API (que ahora manda expira_en como el servidor real) y,
  * para no esperar 15 minutos de verdad, reescribe esa hora en la respuesta.
@@ -162,6 +163,31 @@ titulo('7. El código de la página');
   ok('el respaldo es de 15 minutos', /MINUTOS_CUPO:\s*15/.test(html));
   ok('usa la hora que manda el servidor', /arrancarCupo\(data\.expira_en\)/.test(html));
   ok('revisa al volver a la pestaña', /visibilitychange/.test(html));
+}
+
+titulo('8. Un solo cupo: el pago dice que es por una persona y deja sumar a alguien');
+{
+  // Damián (1 oct): «escojo que voy con alguien y al momento del pago solo sale
+  // 15 mil». El contador estaba al final del formulario y casi nadie lo veía.
+  const { p, ctx, errores } = await apartar();
+  ok('en el pago de un cupo sale el aviso «por 1 persona»',
+     await p.locator('#pago-solo').isVisible() && /1 persona/.test(await p.locator('#pago-solo').innerText()));
+  ok('el monto sigue siendo el de una clase', /15\.000/.test(await p.locator('#pago-monto').innerText()));
+  await p.locator('#pago-agregar').click();
+  await p.waitForSelector('#s2.on', { timeout: 5000 });
+  ok('«Agregar otra persona» vuelve a los datos con 2 cupos', (await p.inputValue('#cuantos')) === '2');
+  ok('aparece el campo del acompañante', await p.locator('#nombre-2').isVisible());
+  ok('la cuenta dice 2 × $15.000 = $30.000', /30\.000/.test(await p.locator('#grupo-total').innerText()));
+  ok('el reloj del cupo anterior se apagó', await p.locator('#cupo-reloj').isHidden());
+  ok('sin errores de JavaScript', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+
+  const html = readFileSync(join(AQUI, '../../docs/index.html'), 'utf8');
+  const iCuantos = html.indexOf('id="caja-cuantos"');
+  ok('el contador va antes del correo (se ve sin bajar tanto)',
+     iCuantos > 0 && iCuantos < html.indexOf('id="email"'));
+  ok('el resumen dice «por persona» con un solo cupo', /pesos\(elegida\.precio_cop\) \+ ' por persona'/.test(html));
+  ok('con varios cupos el aviso no sale', /\$\('#pago-solo'\)\.hidden = g \|\| tipo !== 'suelta'/.test(html));
 }
 
 await nav.close();
