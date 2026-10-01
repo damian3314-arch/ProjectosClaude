@@ -1864,7 +1864,7 @@ async function pensar(env, mensajes) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
- * Informes diarios (0105): 6:00 am y 10:00 pm, los dispara pg_cron.
+ * Informes diarios (0105): 8:00 am y 9:00 pm (desde 0131), los dispara pg_cron.
  * Las cifras salen de tablero_tumbao() y el modelo solo las redacta.
  * ───────────────────────────────────────────────────────────────── */
 const INSTRUCCIONES_INFORME = `Eres el analista de Tumbao, una academia de baile en Barrancabermeja, Colombia. Escribes el informe diario que le llega por WhatsApp a Damián (el dueño) y a su equipo. Recibes un JSON con las cifras reales: es tu única fuente.
