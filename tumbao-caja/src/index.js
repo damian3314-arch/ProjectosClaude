@@ -1301,6 +1301,26 @@ const PLANTILLAS_WA = [
       { type: 'BUTTONS', buttons: [{ type: 'QUICK_REPLY', text: 'Ver resumen' }] },
     ],
   },
+  {
+    // 0137: recordatorio el mismo día de la clase, ~3 horas antes (nunca antes
+    // de las 6:30 am). Nace de medir quién reserva y no llega: 10,9 % de las
+    // sueltas de las últimas 4 semanas. Es un aviso de servicio sobre una
+    // reserva que la persona hizo, no una promoción. Sin la palabra «código».
+    name: 'recordatorio_clase',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, te esperamos hoy en Tumbao 💃\n\n' +
+          '🕐 {{2}}\n🎟️ {{3}}\n\n' +
+          'Llega 10 minutos antes. Si no vas a poder venir, avísanos al 301 783 3550 para liberar tu cupo.',
+        example: { body_text: [['Laura', '6:00 pm', 'Clase 6:00 pm']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
   // ── Cierre de septiembre 2026 (28-30 sep, pedido por Damián: sin descuento) ──
   {
     // Aviso de cuenta, no promoción: la fecha de vencimiento es del cliente.
