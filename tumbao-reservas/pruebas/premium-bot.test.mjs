@@ -32,6 +32,7 @@ const M129 = leer('../supabase/migrations/0129_premium_cumplir_es_aprobar.sql');
 const M132 = leer('../supabase/migrations/0132_aviso_de_pago_dice_si_aplica.sql');
 const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
 const M133 = leer('../supabase/migrations/0133_mensualidad_cerrada_deja_pagar_a_quien_aplica.sql');
+const M139 = leer('../supabase/migrations/0139_mensualidad_cerrar_las_ya_registradas.sql');
 const M138 = leer('../supabase/migrations/0138_mensualidad_decision_para_el_asistente.sql');
 const M134 = leer('../supabase/migrations/0134_premium_3_meses_y_tope_23_en_6_y_7_pm.sql');
 const M135 = leer('../supabase/migrations/0135_gracia_de_3_dias_y_tarea_de_cupo_liberado.sql');
@@ -182,9 +183,20 @@ titulo('5g. Recepción le escribe al asistente para procesar una mensualidad (01
   ok('no escribe nada ni le escribe a nadie', !/insert |update |delete |net\.http_post|nota_recepcion|wa_avisos/i.test(sinC));
 }
 
+titulo('5h. La lista de mensualidad se limpia sola (0139)');
+{
+  const c = M139.replace(/--.*$/gm, '');
+  ok('cierra solo las pendientes (pagada, esperando_pago, lista_espera)', /s\.estado in \('pagada', 'esperando_pago', 'lista_espera'\)/.test(c));
+  ok('cruza por celular o por cédula con las membresías de AdminGym', /m\.celular/.test(c) && /m\.documento/.test(c));
+  ok('solo si el plan es vigente y empezó desde su solicitud', /m\.fin >= /.test(c) && /m\.inicio >= .*- 2/.test(c));
+  ok('las deja «atendida» con una nota «Cerrada sola»', /estado = 'atendida'/.test(c) && /Cerrada sola/.test(c));
+  ok('cuenta cualquier horario (no solo el pedido)', !/m\.hora = s\.hora/.test(c));
+  ok('corre cada hora y no escribe a nadie', /'40 \* \* \* \*'/.test(c) && !/net\.http_post|nota_recepcion|wa_avisos/.test(c));
+}
+
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['0136', M136], ['0138', M138], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['0136', M136], ['0138', M138], ['0139', M139], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }
