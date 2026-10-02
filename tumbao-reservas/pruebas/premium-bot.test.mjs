@@ -147,7 +147,11 @@ titulo('5e. Gracia de 3 días y tarea de cupo liberado (0135)');
      /m\.fin \+ v_gracia/.test(M135) && /count\(distinct coalesce\(nullif\(right\(regexp_replace/.test(M135));
   ok('la tarea va a recepción, no a clientes', /nota_recepcion\(/.test(M135) && !/wa_avisos/.test(M135));
   ok('solo si hay cupo libre y alguien en fila o que no renovó', /if v_libres <= 0 then return null/.test(M135) && /v_no_renovaron is null and v_n = 0/.test(M135));
-  ok('ofrece las tiqueteras con los precios de verdad', /tiquetera_paquetes\(\)/.test(M135) && /Ofréceles la tiquetera/.test(M135));
+  ok('a los primeros de la fila (tantos como cupos) les dice que YA HAY CUPO y paguen su mensualidad',
+     /YA HAY CUPO/.test(M135) && /x\.orden <= v_libres/.test(M135));
+  ok('la tiquetera es solo para quienes siguen en cola, con los precios de verdad',
+     /tiquetera_paquetes\(\)/.test(M135) && /Siguen en cola, sin cupo: ofréceles que compren tiquetera/.test(M135) && /x\.orden > v_libres/.test(M135));
+  ok('a quien no renovó no se le ofrece nada: solo se anota', /No renovaron \(pasaron los/.test(M135) && !/Ofréceles la tiquetera/.test(M135));
   ok('la fila va primero quien cumple, después por llegada', /'veredicto'\) = 'aplica' desc, s\.creado_at/.test(M135));
   ok('no insiste: una sola vez por combinación', /md5\(v_texto\)/.test(M135));
   ok('corre 8:20 am Bogotá, lunes a sábado', /'20 13 \* \* 1-6'/.test(M135));

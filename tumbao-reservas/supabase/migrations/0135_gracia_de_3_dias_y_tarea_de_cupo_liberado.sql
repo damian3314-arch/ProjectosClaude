@@ -19,9 +19,11 @@
 --   lo manda con nota_recepcion SOLO si, en un horario con tope (6 pm y 7 pm):
 --     · quedó un cupo libre (tope − ocupadas > 0), y
 --     · hay alguien en lista de espera, o alguien terminó su gracia sin renovar.
---   La nota dice: quién no renovó (para ofrecerle la tiquetera), quién sigue en la
---   fila y en qué orden (primero quien cumple los requisitos, después por llegada),
---   si esa persona ya pagó, y qué hacer. El sistema NO le escribe a ningún cliente.
+--   La nota dice: quién no renovó (solo para saber); los primeros de la fila (tantos
+--   como cupos libres; primero quien cumple los requisitos, después por llegada) a
+--   quienes hay que avisar que YA HAY CUPO y paguen su mensualidad (marca si ya
+--   pagaron); y, aparte, quienes siguen en cola sin cupo, a quienes se les ofrece
+--   la tiquetera. El sistema NO le escribe a ningún cliente.
 --   Se manda una sola vez por combinación (horario + fila + cupos): no insiste.
 
 insert into ajustes (clave, valor, nota) values
@@ -103,8 +105,9 @@ as $$
 declare
   hoy date := (now() at time zone 'America/Bogota')::date;
   v_gracia int := coalesce(nullif((select valor from ajustes where clave = 'mensualidad_gracia_dias'), '')::int, 3);
+  v_valor int := coalesce(nullif((select valor from ajustes where clave = 'mensualidad_valor_cop'), '')::int, 125000);
   v_tope int := (premium_cupos_horario() -> p_hora ->> 'tope')::int;
-  v_ocup int; v_libres int; v_etq text; v_no_renovaron text; v_fila text; v_tiq text; v_n int;
+  v_ocup int; v_libres int; v_etq text; v_no_renovaron text; v_con_cupo text; v_en_cola text; v_tiq text; v_n int;
 begin
   select (h ->> 'ocupadas')::int into v_ocup
     from jsonb_array_elements(mensualidad_cupos() -> 'horas') h where h ->> 'hora' = p_hora;
@@ -112,7 +115,7 @@ begin
   if v_libres <= 0 then return null; end if;
   v_etq := ltrim(to_char(p_hora::time, 'HH12:MI am'), '0');
 
-  -- quienes terminaron su gracia en los últimos 2 días y no renovaron
+  -- quienes terminaron su gracia en los últimos 2 días y no renovaron (solo para saber)
   select string_agg(distinct coalesce(m.afiliado, 'Sin nombre') || ' (' || coalesce(nullif(m.celular, ''), 's/celular') || ')', ', ')
     into v_no_renovaron
     from membresias m
@@ -123,14 +126,18 @@ begin
                         and right(regexp_replace(coalesce(n.celular, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(m.celular, ''), '\D', '', 'g'), 10)
                         and n.fin + v_gracia >= hoy - 2 and n.fin > m.fin);
 
-  -- la fila: primero quien cumple los requisitos, después por llegada
-  select string_agg(x.linea, E'\n' order by x.orden), count(*)
-    into v_fila, v_n
+  -- la fila: primero quien cumple los requisitos, después por llegada.
+  -- Los primeros (tantos como cupos libres) pagan su mensualidad; el resto sigue en cola.
+  select string_agg(x.linea, E'\n' order by x.orden) filter (where x.orden <= v_libres),
+         string_agg('· ' || x.nombre || ' (' || x.celular || ')', E'\n' order by x.orden) filter (where x.orden > v_libres),
+         count(*)
+    into v_con_cupo, v_en_cola, v_n
     from (
       select row_number() over (order by (premium_evaluar(s.celular) -> 'personas' -> 0 ->> 'veredicto') = 'aplica' desc, s.creado_at) orden,
-             s.nombre || ' (' || s.celular || ') — '
-             || case when (premium_evaluar(s.celular) -> 'personas' -> 0 ->> 'veredicto') = 'aplica' then 'cumple los requisitos'
-                     else 'NO cumple los requisitos (solo con excepción de Damián)' end
+             s.nombre, s.celular,
+             '· ' || s.nombre || ' (' || s.celular || ')'
+             || case when (premium_evaluar(s.celular) -> 'personas' -> 0 ->> 'veredicto') = 'aplica' then ''
+                     else ' — ojo: no cumple los requisitos, confírmalo con Damián' end
              || coalesce((select ' · YA PAGÓ $' || replace(to_char(p.valor_cop, 'FM999,999,999'), ',', '.') || ' el ' || to_char(p.fecha_pago, 'DD/MM')
                             from pagos p
                            where p.valor_cop >= 100000 and p.fecha_pago >= s.creado_at - interval '3 days'
@@ -147,13 +154,14 @@ begin
 
   return '🔓 Se liberó cupo de mensualidad a las ' || v_etq || ' (' || v_libres || ' libre(s); tope ' || v_tope || ').'
     || case when v_no_renovaron is not null
-            then E'\n\nNo renovaron (pasaron los ' || v_gracia || ' días): ' || v_no_renovaron
-                 || E'.\n→ Ofréceles la tiquetera: ' || coalesce(v_tiq, 'consulta los paquetes') || ' (30 días).'
+            then E'\n\nNo renovaron (pasaron los ' || v_gracia || ' días): ' || v_no_renovaron || '.'
             else '' end
-    || case when v_n > 0
-            then E'\n\nLista de espera de las ' || v_etq || E' (en este orden):\n' || v_fila
-                 || E'\n→ Avísale a la primera que ya puede pagar su mensualidad. Si cumple los requisitos, que se apunte de nuevo en tumbaobaila.com/mensualidad y verá el pago. Si ya había pagado, solo regístrala. A quien no cumpla y no tenga excepción, ofrécele la tiquetera: '
-                 || coalesce(v_tiq, 'consulta los paquetes') || '.'
+    || case when v_con_cupo is not null
+            then E'\n\nAvísales que YA HAY CUPO y que paguen su mensualidad ($' || replace(to_char(v_valor, 'FM999,999,999'), ',', '.') || E'):\n' || v_con_cupo
+                 || E'\n→ Si cumple los requisitos, que se apunte de nuevo en tumbaobaila.com/mensualidad y ahí verá el pago (o pásale los datos de pago). Si ya había pagado, solo regístrala.'
+            else '' end
+    || case when v_en_cola is not null
+            then E'\n\nSiguen en cola, sin cupo: ofréceles que compren tiquetera (' || coalesce(v_tiq, 'consulta los paquetes') || E', 30 días):\n' || v_en_cola
             else '' end;
 end;
 $$;
