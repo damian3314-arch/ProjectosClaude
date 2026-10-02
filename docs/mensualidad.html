@@ -936,8 +936,7 @@ const CONFIG = {
     // la mensualidad, que se asigna a los clientes que llevan más tiempo.
     caja.innerHTML =
       `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
-      `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo; ` +
-      'si cumples los requisitos de la mensualidad, te mostramos ahí mismo cómo pagar. ' +
+      `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo. ` +
       'Apuntarte es gratis: <b>no hay nada que pagar</b>. ' +
       `¿Ya eres alumno y quieres renovar? <a href="${waRenovar('')}" target="_blank" ` +
       'rel="noopener">Escríbenos por WhatsApp</a> y te damos los datos.';
@@ -1002,8 +1001,6 @@ const CONFIG = {
           : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
             'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
             '<b>No tienes que pagar nada ahora.</b> ' +
-            'Al enviar revisamos si cumples los requisitos de la mensualidad: si cumples, ' +
-            'te mostramos ahí mismo cómo pagar; si no, quedas en la lista. ' +
             `<br><br>¿Ya eres alumno y quieres renovar? No uses este formulario: ` +
             `<a href="${waRenovar(h.etiqueta)}" target="_blank" rel="noopener">` +
             'escríbenos por WhatsApp</a> y te damos los datos.';
@@ -1072,10 +1069,10 @@ const CONFIG = {
   /* ── el pago ───────────────────────────────────────────────── */
   function pintarPago() {
     const h = laHora();
-    // Horario lleno pero la persona cumple los requisitos (0133): se le dice
-    // por qué ve el pago, para que no parezca un error ni una puerta abierta.
+    // Horario con lista de espera pero a esta persona le toca cupo (0133): la
+    // página no habla de «requisitos» a nadie (predispone, 2 oct): solo celebra.
     $('#sub2').innerHTML = (solicitud && solicitud.por_requisitos)
-      ? `¡Cumples los requisitos! Tienes cupo en el horario de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
+      ? `¡Buenas noticias! Tienes cupo en el horario de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
         'Transfiere y avísanos aquí mismo.'
       : `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
         '<b>24 horas</b>. Transfiere y avísanos aquí mismo.';

@@ -209,6 +209,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const aviso = await p.locator('#aviso-lleno').innerText();
   ok('el aviso de arriba se ve', await p.locator('#aviso-lleno').isVisible());
   ok('nombra las dos horas y las invita a la lista', /Los horarios de 6:00 pm y 7:00 pm tienen lista de espera/.test(aviso) && /Apúntate/.test(aviso), aviso);
+  ok('el aviso no habla de requisitos', !/requisito/i.test(aviso), aviso);
   ok('no dice «lleno» ni «no se puede comprar»: no espanta', !/lleno|no se puede comprar/i.test(aviso), aviso);
   ok('y que no hay nada que pagar', /no hay nada que pagar/.test(aviso), aviso);
   const href = await p.locator('#aviso-lleno a').getAttribute('href');
@@ -435,14 +436,14 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   });
   await p.click('.hora[data-hora="19:00"]');       // 7 pm: sin cupo para el público
   const antes = await p.locator('#sub1').innerText();
-  ok('antes de enviar dice que se revisan los requisitos', /revisamos si cumples los requisitos/.test(antes), antes);
+  ok('antes de enviar NO habla de requisitos (predispone)', !/requisito|cumples/i.test(antes), antes);
   ok('y sigue diciendo que ahora no paga nada', /No tienes que pagar nada ahora/.test(antes));
   await llenar(p);
   await p.click('#btn-enviar');
   await p.waitForSelector('#s2:not([hidden])', { timeout: 5000 });
   ok('si cumple, le muestra el pago', await p.locator('#monto').isVisible());
   const sub = await p.locator('#sub2').innerText();
-  ok('y le dice por qué: cumple los requisitos y tiene cupo', /Cumples los requisitos/.test(sub) && /7:00 pm/.test(sub), sub);
+  ok('y le dice que tiene cupo, sin hablar de requisitos', /Tienes cupo/.test(sub) && /7:00 pm/.test(sub) && !/requisito/i.test(sub), sub);
   ok('no le promete guardar el cupo 24 horas', !/24 horas/.test(sub));
   await p.close();
 }
