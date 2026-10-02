@@ -32,6 +32,7 @@ const M129 = leer('../supabase/migrations/0129_premium_cumplir_es_aprobar.sql');
 const M132 = leer('../supabase/migrations/0132_aviso_de_pago_dice_si_aplica.sql');
 const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
 const M133 = leer('../supabase/migrations/0133_mensualidad_cerrada_deja_pagar_a_quien_aplica.sql');
+const M134 = leer('../supabase/migrations/0134_premium_3_meses_y_tope_23_en_6_y_7_pm.sql');
 const M127 = leer('../supabase/migrations/0127_grupo_premium.sql');
 const ESTE = readFileSync(new URL(import.meta.url), 'utf8');
 const t = INSTRUCCIONES_PREMIUM;
@@ -51,11 +52,11 @@ titulo('1. Cumplir los requisitos ES la aprobación');
 
 titulo('2. Conoce el negocio');
 {
-  ok('son 20 a 25 por horario, en los tres horarios',
-     /20 a 25 personas POR HORARIO/.test(t) && /7:00 am, 6:00 pm y 7:00 pm/.test(t) && /tope 25 en cada uno/.test(t));
+  ok('tope de 23 en 6 pm y 7 pm, y 7 am abierto',
+     /máximo 23 personas cada uno/.test(t) && /6:00 pm y 7:00 pm/.test(t) && /7:00 am entran todos los que lleguen/.test(t));
   ok('la fecha es el 30 de diciembre de 2026', /30 de diciembre de 2026/.test(t));
   ok('los dos requisitos (plan 4 meses seguidos, o 90 días en clase suelta)',
-     /4 meses seguidos/.test(t) && /más de 90 días/.test(t) && /8 visitas/.test(t));
+     /3 meses seguidos/.test(t) && !/4 meses seguidos/.test(t) && /más de 90 días/.test(t) && /8 visitas/.test(t));
   ok('quien no cumple sigue con suelta o tiquetera', /clase suelta o tiquetera/.test(t));
   ok('le enseña todas las funciones de lectura',
      ['premium_evaluar', 'premium_vigentes', 'premium_estado', 'renovaciones_proximas', 'mensualidad_cupos'].every(f => t.includes(f)));
@@ -121,7 +122,7 @@ titulo('5c. Horario cerrado: quien cumple puede pagar (0133)');
   ok('se identifica por celular o cédula, nunca solo por nombre',
      /'celular', 'documento'/.test(M133) && !/'nombre'\)/.test(M133));
   ok('exige una sola coincidencia y veredicto «aplica»', /'encontradas'\)::int = 1/.test(M133) && /'veredicto' = 'aplica'/.test(M133));
-  ok('respeta el tope del premium (25) y la vigencia', /premium_cupo_max/.test(M133) && /premium_vigente_hasta/.test(M133));
+  ok('respeta el tope del premium y la vigencia', /premium_cupos_horario/.test(M133) || /premium_cupo_max/.test(M133)); ok('la vigencia también', /premium_vigente_hasta/.test(M133));
   ok('solo lectura (STABLE) y cerrada a público', /stable\s+security definer/.test(M133.replace(/\n/g, ' ')) && /revoke all on function public\.premium_puede_pagar/.test(M133));
   ok('promueve al apuntarse y al volver a apuntarse',
      (M133.match(/premium_puede_pagar\(p_celular, p_documento, v_hora\)/g) || []).length === 2);
@@ -129,9 +130,18 @@ titulo('5c. Horario cerrado: quien cumple puede pagar (0133)');
   ok('no cambia el cupo público (no toca mensualidad_topes)', !/mensualidad_topes/.test(M133.replace(/--.*$/gm, '')));
 }
 
+titulo('5d. 3 meses y tope de 23 en 6 pm y 7 pm (0134)');
+{
+  ok('baja el mínimo de meses a 3', /set valor = '3' where clave = 'premium_min_meses'/.test(M134));
+  ok('tope 23 en 6 pm y 7 pm, 7 am sin tope práctico', /07:00=99,18:00=23,19:00=23/.test(M134));
+  ok('el tope sale de cada horario en premium_cupos_horario y en premium_puede_pagar',
+     /premium_topes/.test(M134) && /premium_cupos_horario\(\) -> to_char\(p_hora/.test(M134));
+  ok('no toca el cupo público (mensualidad_topes)', !/mensualidad_topes/.test(M134.replace(/--.*$/gm, '')));
+}
+
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }
