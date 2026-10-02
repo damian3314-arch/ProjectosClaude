@@ -424,6 +424,29 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   await p.close();
 }
 
+/* ═══════ HORARIO LLENO, PERO CUMPLE LOS REQUISITOS (0133) ═══════
+   Damián (2 oct): quien se apunta y cumple los requisitos de la mensualidad
+   puede pagar de una, aunque el horario esté cerrado al público. El servidor
+   lo decide (estado esperando_pago + por_requisitos); la página lo explica. */
+{
+  const { p } = await abrir({
+    solicitar: { ok: true, id: 'aaaaaaaa-1111-2222-3333-444444444444',
+                 estado: 'esperando_pago', valor_cop: 125000, ya_estaba: false, por_requisitos: true },
+  });
+  await p.click('.hora[data-hora="19:00"]');       // 7 pm: sin cupo para el público
+  const antes = await p.locator('#sub1').innerText();
+  ok('antes de enviar dice que se revisan los requisitos', /revisamos si cumples los requisitos/.test(antes), antes);
+  ok('y sigue diciendo que ahora no paga nada', /No tienes que pagar nada ahora/.test(antes));
+  await llenar(p);
+  await p.click('#btn-enviar');
+  await p.waitForSelector('#s2:not([hidden])', { timeout: 5000 });
+  ok('si cumple, le muestra el pago', await p.locator('#monto').isVisible());
+  const sub = await p.locator('#sub2').innerText();
+  ok('y le dice por qué: cumple los requisitos y tiene cupo', /Cumples los requisitos/.test(sub) && /7:00 pm/.test(sub), sub);
+  ok('no le promete guardar el cupo 24 horas', !/24 horas/.test(sub));
+  await p.close();
+}
+
 // ═══════ cuando el servidor no contesta ══════════════════════════
 {
   const p = await b.newPage({ viewport: { width: 420, height: 940 } });

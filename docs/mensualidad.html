@@ -996,6 +996,8 @@ const CONFIG = {
           : `El horario de las <b>${esc(h.etiqueta)}</b> está lleno y <b>no se puede ` +
             'comprar mensualidad</b>. Esto es solo una lista: déjanos tus datos y te ' +
             'escribimos si se libera un cupo. <b>No tienes que pagar nada ahora.</b> ' +
+            'Al enviar revisamos si cumples los requisitos de la mensualidad: si cumples, ' +
+            'te mostramos ahí mismo cómo pagar; si no, quedas en la lista. ' +
             `<br><br>¿Ya eres alumno y quieres renovar? No uses este formulario: ` +
             `<a href="${waRenovar(h.etiqueta)}" target="_blank" rel="noopener">` +
             'escríbenos por WhatsApp</a> y te damos los datos.';
@@ -1064,9 +1066,13 @@ const CONFIG = {
   /* ── el pago ───────────────────────────────────────────────── */
   function pintarPago() {
     const h = laHora();
-    $('#sub2').innerHTML =
-      `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
-      '<b>24 horas</b>. Transfiere y avísanos aquí mismo.';
+    // Horario lleno pero la persona cumple los requisitos (0133): se le dice
+    // por qué ve el pago, para que no parezca un error ni una puerta abierta.
+    $('#sub2').innerHTML = (solicitud && solicitud.por_requisitos)
+      ? `¡Cumples los requisitos! Tienes cupo en el horario de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
+        'Transfiere y avísanos aquí mismo.'
+      : `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
+        '<b>24 horas</b>. Transfiere y avísanos aquí mismo.';
     $('#monto').textContent = pesos(valorCop);
     $('#d-llave').textContent = CONFIG.PAGO.llave;
     $('#d-banco').textContent = CONFIG.PAGO.banco + ' · ' + CONFIG.PAGO.tipo;
