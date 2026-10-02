@@ -34,6 +34,7 @@ const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
 const M133 = leer('../supabase/migrations/0133_mensualidad_cerrada_deja_pagar_a_quien_aplica.sql');
 const M134 = leer('../supabase/migrations/0134_premium_3_meses_y_tope_23_en_6_y_7_pm.sql');
 const M135 = leer('../supabase/migrations/0135_gracia_de_3_dias_y_tarea_de_cupo_liberado.sql');
+const M136 = leer('../supabase/migrations/0136_cupos_para_los_mas_fieles.sql');
 const M127 = leer('../supabase/migrations/0127_grupo_premium.sql');
 const ESTE = readFileSync(new URL(import.meta.url), 'utf8');
 const t = INSTRUCCIONES_PREMIUM;
@@ -140,27 +141,33 @@ titulo('5d. 3 meses y tope de 23 en 6 pm y 7 pm (0134)');
   ok('no toca el cupo público (mensualidad_topes)', !/mensualidad_topes/.test(M134.replace(/--.*$/gm, '')));
 }
 
-titulo('5e. Gracia de 3 días y tarea de cupo liberado (0135)');
+titulo('5e. Gracia de 3 días (0135)');
 {
   ok('la gracia es de 3 días y está en ajustes', /'mensualidad_gracia_dias', '3'/.test(M135));
   ok('el cupo se cuenta hasta fin + gracia, por persona (no por fila)',
      /m\.fin \+ v_gracia/.test(M135) && /count\(distinct coalesce\(nullif\(right\(regexp_replace/.test(M135));
-  ok('la tarea va a recepción, no a clientes', /nota_recepcion\(/.test(M135) && !/wa_avisos/.test(M135));
-  ok('solo si hay cupo libre y alguien en fila o que no renovó', /if v_libres <= 0 then return null/.test(M135) && /v_no_renovaron is null and v_n = 0/.test(M135));
-  ok('a los primeros de la fila (tantos como cupos) les dice que YA HAY CUPO y paguen su mensualidad',
-     /YA HAY CUPO/.test(M135) && /x\.orden <= v_libres/.test(M135));
-  ok('la tiquetera es solo para quienes siguen en cola, con los precios de verdad',
-     /tiquetera_paquetes\(\)/.test(M135) && /Siguen en cola, sin cupo: ofréceles que compren tiquetera/.test(M135) && /x\.orden > v_libres/.test(M135));
-  ok('a quien no renovó no se le ofrece nada: solo se anota', /No renovaron \(pasaron los/.test(M135) && !/Ofréceles la tiquetera/.test(M135));
-  ok('la fila va primero quien cumple, después por llegada', /'veredicto'\) = 'aplica' desc, s\.creado_at/.test(M135));
-  ok('no insiste: una sola vez por combinación', /md5\(v_texto\)/.test(M135));
   ok('corre 8:20 am Bogotá, lunes a sábado', /'20 13 \* \* 1-6'/.test(M135));
-  ok('no escribe a nadie por su cuenta', !/net\.http_post/.test(M135));
+}
+
+titulo('5f. Los cupos son para los más fieles y recepción recibe UNA instrucción (0136)');
+{
+  const sinComentarios = M136.replace(/--.*$/gm, '');
+  ok('la fila se ordena por fidelidad: cumple, meses seguidos, meses totales, visitas, llegada',
+     /order by g\.ap desc, g\.r desc, g\.m desc, g\.v desc, g\.creado_at/.test(M136));
+  ok('quien no cumple no recibe cupo de la fila (va a tiquetera)', /x\.aplica and x\.orden <= v_libres/.test(M136) && /not \(x\.aplica and x\.orden <= v_libres\)/.test(M136));
+  ok('nadie se cuela: quien se apunta solo paga si le toca por fidelidad', /mensualidad_fila\(p_hora\)/.test(M136) && /coalesce\(v_rank, 1\) <= v_libres/.test(M136));
+  ok('a los primeros les dice que ya hay cupo y paguen su mensualidad', /Avísales que ya hay cupo y que paguen su mensualidad/.test(M136));
+  ok('la tiquetera es para quienes siguen en cola', /Ofréceles tiquetera/.test(M136));
+  ok('no lista a quienes no renovaron', !/no renovaron/i.test(sinComentarios));
+  ok('todos los horarios van en UNA sola nota', /mensualidad_cupo_liberado_mensaje\(\)/.test(M136) && (sinComentarios.match(/nota_recepcion\(/g) || []).length === 1);
+  ok('no repite la misma instrucción (como mucho una vez por semana)', /md5\(v_texto\)/.test(M136) && /IYYY-IW/.test(M136));
+  ok('solo manda si hay algo que hacer', /if v_texto is null then return 0/.test(M136));
+  ok('no escribe a ningún cliente', !/net\.http_post|wa_avisos/.test(sinComentarios));
 }
 
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['0136', M136], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }
