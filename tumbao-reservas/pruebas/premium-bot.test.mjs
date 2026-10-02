@@ -32,6 +32,7 @@ const M129 = leer('../supabase/migrations/0129_premium_cumplir_es_aprobar.sql');
 const M132 = leer('../supabase/migrations/0132_aviso_de_pago_dice_si_aplica.sql');
 const M128 = leer('../supabase/migrations/0128_premium_por_horario.sql');
 const M133 = leer('../supabase/migrations/0133_mensualidad_cerrada_deja_pagar_a_quien_aplica.sql');
+const M138 = leer('../supabase/migrations/0138_mensualidad_decision_para_el_asistente.sql');
 const M134 = leer('../supabase/migrations/0134_premium_3_meses_y_tope_23_en_6_y_7_pm.sql');
 const M135 = leer('../supabase/migrations/0135_gracia_de_3_dias_y_tarea_de_cupo_liberado.sql');
 const M136 = leer('../supabase/migrations/0136_cupos_para_los_mas_fieles.sql');
@@ -165,9 +166,25 @@ titulo('5f. Los cupos son para los más fieles y recepción recibe UNA instrucci
   ok('no escribe a ningún cliente', !/net\.http_post|wa_avisos/.test(sinComentarios));
 }
 
+titulo('5g. Recepción le escribe al asistente para procesar una mensualidad (0138)');
+{
+  const sinC = M138.replace(/--.*$/gm, '');
+  ok('le enseña mensualidad_decision como la consulta principal', /mensualidad_decision\('celular, cédula o nombre'/.test(t) && /LA principal/.test(t));
+  ok('le enseña la fila por fidelidad', /mensualidad_fila\('18:00'\)/.test(t));
+  ok('sabe que recepción (301 783 3550) le escribe', /301 783 3550/.test(t) && /PROCESAR UNA MENSUALIDAD/.test(t));
+  ok('contesta con el veredicto primero y pide celular o cédula si hay dudas', /veredicto primero/.test(t) && /"varias" o "sin_historial"/.test(t));
+  ok('si no aplica: tiquetera o clase suelta, y solo Damián da excepciones', /una excepción solo la da Damián/.test(t));
+  ok('el pago es «posible» hasta confirmarlo', /Posible pago/.test(t) && /antes de decir que ya pagó/.test(t));
+  ok('a los clientes no se les habla de requisitos', /no se les habla de requisitos/.test(t));
+  ok('la función es de solo lectura (STABLE) y cerrada a público', /stable\s+security definer/.test(sinC.replace(/\n/g, ' ')) && /revoke all on function public\.mensualidad_decision/.test(sinC));
+  ok('con varias coincidencias no adivina', /'varias'/.test(sinC) && /Dime el celular o la cédula completa/.test(sinC));
+  ok('el pago solo se muestra si el nombre coincide en dos palabras (no por un apellido)', /nombres_coinciden\(v_nombre, p\.remitente\)/.test(sinC));
+  ok('no escribe nada ni le escribe a nadie', !/insert |update |delete |net\.http_post|nota_recepcion|wa_avisos/i.test(sinC));
+}
+
 titulo('6. Ningún dato de personas en el repositorio (es público)');
 {
-  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['0136', M136], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
+  for (const [nombre, texto] of [['0127', M127], ['0128', M128], ['0129', M129], ['0132', M132], ['0133', M133], ['0134', M134], ['0135', M135], ['0136', M136], ['0138', M138], ['premium.js', PREMIUM], ['esta prueba', ESTE]]) {
     const celulares = (texto.match(/\b3\d{9}\b/g) || []).filter(n => n !== '3000000000');
     ok(`${nombre} no trae celulares`, celulares.length === 0, celulares.slice(0, 3).join(','));
   }

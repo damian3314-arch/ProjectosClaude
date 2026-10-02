@@ -32,6 +32,13 @@ as $$
            premium_evaluar(s.celular) -> 'personas' -> 0 as p
       from mensualidad_solicitudes s
      where s.hora = p_hora and s.estado = 'lista_espera' and s.creado_at > now() - interval '90 days'
+       -- quien ya tiene su plan registrado en ese horario (AdminGym) ya no espera
+       and not exists (
+         select 1 from membresias m
+          where m.hora = p_hora
+            and right(regexp_replace(coalesce(m.celular, ''), '\D', '', 'g'), 10) = right(regexp_replace(coalesce(s.celular, ''), '\D', '', 'g'), 10)
+            and m.fin >= (now() at time zone 'America/Bogota')::date
+            and m.inicio >= (s.creado_at at time zone 'America/Bogota')::date - 2)
   ), g as (
     select f.*,
            coalesce((p ->> 'veredicto') = 'aplica', false) as ap,
@@ -124,7 +131,7 @@ begin
       select f.*, coalesce((select ' · YA PAGÓ el ' || to_char(p.fecha_pago, 'DD/MM') || ', solo regístrala'
                               from pagos p
                              where p.valor_cop >= 100000 and p.fecha_pago >= f.creada - interval '3 days'
-                               and similitud_nombre(f.nombre, p.remitente) >= 0.5
+                               and nombres_coinciden(f.nombre, p.remitente)
                              order by p.fecha_pago desc limit 1), '') as pago
         from mensualidad_fila(p_hora::time) f
     ) x;
