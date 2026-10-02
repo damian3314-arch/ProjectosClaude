@@ -100,8 +100,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
      /\b1 cupo\b/.test(txt) && !/1 cupos/.test(txt));
   // Sin distinguir mayúsculas: lo que importa es que la fila diga las dos
   // cosas —que no hay cupo y que la anotan—, no cómo se capitalice.
-  ok('la llena dice que no hay cupo y que la anotan',
-     /Sin cupo/.test(txt) && /lista de espera/i.test(txt));
+  ok('la llena invita a apuntarse a la lista (no dice «sin cupo»)',
+     /Apuntarme/.test(txt) && /lista de espera/i.test(txt) && !/Sin cupo/.test(txt));
   /* Las pastillas usan el MISMO vocabulario que la lista de clases de la
      página de reservas —.cupos, .cupos.pocos, .cupos.cero— y no unos
      nombres propios. Las dos páginas son el mismo embudo partido en dos:
@@ -112,8 +112,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
      (await p.locator('.cupos').count()) === 3);
   ok('la que va justa se marca en dorado',
      (await p.locator('.cupos.pocos').count()) === 1, '1 cupo → pocos');
-  ok('y la llena en rojo',
-     (await p.locator('.cupos.cero').count()) === 1);
+  ok('y la llena ya no va en rojo: es una invitación (.invita)',
+     (await p.locator('.cupos.cero').count()) === 0 && (await p.locator('.cupos.invita').count()) === 1);
   // Y la fila entera reusa .clase, la misma forma que una clase suelta:
   // quien ya reservó por la otra página reconoce esto sin leerlo.
   ok('la fila reusa el componente .clase',
@@ -146,8 +146,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const txt = await p.evaluate(() =>
     [...document.querySelectorAll('.hora')].map(h => h.innerText).join(' ~ '));
 
-  ok('la hora pasada de tope no ofrece cupo',
-     /Sin cupo/.test(txt) && /lista de espera/i.test(txt), txt);
+  ok('la hora pasada de tope no ofrece cupo: invita a la lista',
+     /Apuntarme/.test(txt) && /lista de espera/i.test(txt) && !/Sin cupo/.test(txt), txt);
   ok('y no inventa un número negativo', !/-\s*\d|−\s*\d/.test(txt), txt);
   ok('las que van por debajo del tope sí venden',
      /\b13 cupos\b/.test(txt) && /\b2 cupos\b/.test(txt), txt);
@@ -172,7 +172,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   await p.click('#volver0');
   await p.click('.hora[data-hora="19:00"]');
   sub = await p.locator('#sub1').innerText();
-  ok('sin cupo, lo dice ANTES de que llene nada', /está lleno/.test(sub), sub);
+  ok('sin cupo, lo dice ANTES de que llene nada: es una lista', /tiene lista de espera/.test(sub), sub);
   ok('y deja claro que no se paga nada', /No tienes que pagar nada ahora/.test(sub));
   ok('el botón ya no habla de pagar',
      (await p.locator('#btn-enviar').textContent()).includes('lista de espera'));
@@ -203,13 +203,13 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const tarjeta = await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent();
   ok('la tarjeta de entrada dice dónde sí hay cupo', /Hoy solo hay cupo a las\s*7:00 am/.test(tarjeta), tarjeta);
   ok('y que en los otros es solo lista, sin pago',
-     /6:00 pm y 7:00 pm: solo lista de espera, sin pago/.test(tarjeta), tarjeta);
+     /6:00 pm y 7:00 pm: apúntate a la lista de espera, es gratis/.test(tarjeta), tarjeta);
 
   // El aviso de arriba.
   const aviso = await p.locator('#aviso-lleno').innerText();
   ok('el aviso de arriba se ve', await p.locator('#aviso-lleno').isVisible());
-  ok('nombra las dos horas llenas', /Los horarios de 6:00 pm y 7:00 pm están llenos/.test(aviso), aviso);
-  ok('dice que ahí no se compra mensualidad', /no se puede comprar mensualidad/.test(aviso), aviso);
+  ok('nombra las dos horas y las invita a la lista', /Los horarios de 6:00 pm y 7:00 pm tienen lista de espera/.test(aviso) && /Apúntate/.test(aviso), aviso);
+  ok('no dice «lleno» ni «no se puede comprar»: no espanta', !/lleno|no se puede comprar/i.test(aviso), aviso);
   ok('y que no hay nada que pagar', /no hay nada que pagar/.test(aviso), aviso);
   const href = await p.locator('#aviso-lleno a').getAttribute('href');
   ok('el alumno que renueva tiene su salida por WhatsApp',
@@ -222,19 +222,19 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
 
   // El formulario de una hora llena.
   await p.click('.hora[data-hora="18:00"]');
-  ok('el título dice que está lleno',
-     /Este horario está lleno/.test(await p.locator('#t1').innerText()));
+  ok('el título invita a apuntarse',
+     /Apúntate a la lista de espera/.test(await p.locator('#t1').innerText()));
   ok('la barra «Horario · Datos · Pago» no se enseña: no hay paso de pago',
      await p.locator('#pasos').isHidden());
   const resumen = await p.locator('#resumen').innerText();
   ok('el resumen habla de lista, sin precio',
      /Lista de espera/.test(resumen) && /Sin pago/.test(resumen) && !/125\.000/.test(resumen), resumen);
   const sub = await p.locator('#sub1').innerText();
-  ok('el formulario repite que no se compra', /no se puede comprar mensualidad/.test(sub), sub);
+  ok('el formulario explica que es una lista', /tiene lista de espera/.test(sub), sub);
   ok('y que no se paga nada', /No tienes que pagar nada ahora/.test(sub), sub);
   ok('y manda al alumno que renueva al chat', /ya eres alumno y quieres renovar/i.test(sub), sub);
   const boton = await p.locator('#btn-enviar').textContent();
-  ok('el botón dice que es solo la lista', /Solo apuntarme a la lista de espera/.test(boton), boton);
+  ok('el botón dice que es apuntarse a la lista', /Apuntarme a la lista de espera/.test(boton), boton);
   ok('y no habla de pagar', !/pag/i.test(boton), boton);
 
   // La pantalla final.
@@ -266,7 +266,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
     ] },
   });
   ok('con una sola hora llena, el aviso va en singular',
-     /El horario de las 7:00 pm está lleno/.test(await p.locator('#aviso-lleno').innerText()));
+     /El horario de las 7:00 pm tiene lista de espera/.test(await p.locator('#aviso-lleno').innerText()));
   await p.close();
 }
 
@@ -281,7 +281,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   });
   ok('sin horas llenas no hay aviso', await p.locator('#aviso-lleno').isHidden());
   ok('ni nota en la tarjeta',
-     !/solo lista de espera/.test(await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent()));
+     !/lista de espera/.test(await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent()));
 
   // Y el botón de WhatsApp vuelve a su texto normal tras un pago.
   await p.click('.hora[data-hora="07:00"]');

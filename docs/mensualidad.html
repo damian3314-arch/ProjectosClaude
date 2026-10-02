@@ -154,6 +154,7 @@ const CONFIG = {
   .cupos{flex:none;font-size:.72rem;padding:.24rem .55rem;border-radius:99px;background:var(--bg-3);color:var(--tx-2);white-space:nowrap;border:1px solid var(--line)}
   .cupos.pocos{color:var(--gold);border-color:rgba(255,193,77,.4)}
   .cupos.cero{color:var(--bad);border-color:rgba(255,107,129,.35)}
+  .cupos.invita{background:var(--hot);color:#1b0f08;border-color:transparent;font-weight:700}
 
   /* ---------- formulario ---------- */
   .resumen{
@@ -425,6 +426,7 @@ const CONFIG = {
   .cupos{border:0;background:var(--surface-2)}
   .cupos.pocos{background:rgba(255,162,122,.14);color:var(--gold)}
   .cupos.cero{background:rgba(255,107,129,.12)}
+  .cupos.invita{background:var(--hot);color:#1b0f08}
   .pasos li[aria-current] .n{color:var(--on-hot)}
 
   /* ---------- campos ---------- */
@@ -929,10 +931,14 @@ const CONFIG = {
     const caja = $('#aviso-lleno');
     if (!cerradas.length) { caja.hidden = true; caja.innerHTML = ''; return; }
     const uno = cerradas.length === 1;
+    // Antes decía «lleno / no se puede comprar» y la gente leía eso y se iba.
+    // Ahora invita a apuntarse (2 oct): la lista es gratis y es la puerta a
+    // la mensualidad, que se asigna a los clientes que llevan más tiempo.
     caja.innerHTML =
       `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
-      `${uno ? 'está lleno' : 'están llenos'}.</b> Ahí <b>no se puede comprar mensualidad</b>: ` +
-      'solo puedes apuntarte a una lista de espera, y <b>no hay nada que pagar</b>. ' +
+      `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo; ` +
+      'si cumples los requisitos de la mensualidad, te mostramos ahí mismo cómo pagar. ' +
+      'Apuntarte es gratis: <b>no hay nada que pagar</b>. ' +
       `¿Ya eres alumno y quieres renovar? <a href="${waRenovar('')}" target="_blank" ` +
       'rel="noopener">Escríbenos por WhatsApp</a> y te damos los datos.';
     caja.hidden = false;
@@ -958,7 +964,7 @@ const CONFIG = {
          tres para abajo la pastilla se vuelve dorada. */
       const pastilla = libre
         ? (n === 1 ? '1 cupo' : `${n} cupos`)
-        : 'Sin cupo';
+        : 'Apuntarme';
       /* El renglón del medio decía "Plan mensualidad" en las tres filas:
          tres veces lo mismo, y encima partido en dos líneas porque no
          cabía al lado de la hora y la pastilla. Lo que de verdad hace
@@ -970,7 +976,7 @@ const CONFIG = {
             <span class="nom">${libre ? 'Lunes a viernes' : 'Lista de espera'}</span>
             <span class="meta">${libre ? 'Sábado incluido' : 'Sin pago · te avisamos'}</span>
           </span>
-          <span class="cupos ${libre ? (n <= 3 ? 'pocos' : '') : 'cero'}">${pastilla}</span>
+          <span class="cupos ${libre ? (n <= 3 ? 'pocos' : '') : 'invita'}">${pastilla}</span>
         </button>`;
     }).join('');
 
@@ -982,7 +988,7 @@ const CONFIG = {
         // La barra «Horario · Datos · Pago» promete un paso de pago: en la
         // lista de espera no existe, así que no se enseña.
         $('#pasos').hidden = !hay;
-        $('#t1').textContent = hay ? '¿Quién eres?' : 'Este horario está lleno';
+        $('#t1').textContent = hay ? '¿Quién eres?' : 'Apúntate a la lista de espera';
         // Se dice ANTES de pedir los datos si va a poder pagar o no. Que
         // alguien llene el formulario creyendo que compra y termine en
         // una lista de espera es la peor forma de enterarse.
@@ -993,15 +999,15 @@ const CONFIG = {
             '<span>Sin pago</span>';
         $('#sub1').innerHTML = hay
           ? 'Con estos datos te apartamos el cupo mientras pagas.'
-          : `El horario de las <b>${esc(h.etiqueta)}</b> está lleno y <b>no se puede ` +
-            'comprar mensualidad</b>. Esto es solo una lista: déjanos tus datos y te ' +
-            'escribimos si se libera un cupo. <b>No tienes que pagar nada ahora.</b> ' +
+          : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
+            'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
+            '<b>No tienes que pagar nada ahora.</b> ' +
             'Al enviar revisamos si cumples los requisitos de la mensualidad: si cumples, ' +
             'te mostramos ahí mismo cómo pagar; si no, quedas en la lista. ' +
             `<br><br>¿Ya eres alumno y quieres renovar? No uses este formulario: ` +
             `<a href="${waRenovar(h.etiqueta)}" target="_blank" rel="noopener">` +
             'escríbenos por WhatsApp</a> y te damos los datos.';
-        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Solo apuntarme a la lista de espera';
+        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
         aviso('#err1', '');
         ir(1);
       });
@@ -1059,7 +1065,7 @@ const CONFIG = {
       btn.disabled = false;
       const h = laHora();
       btn.textContent = (h && Number(h.libres) > 0)
-        ? 'Continuar al pago' : 'Solo apuntarme a la lista de espera';
+        ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
     }
   });
 
@@ -1218,8 +1224,8 @@ const CONFIG = {
     const abiertas = horas.filter(h => Number(h.libres) > 0);
     const donde = abiertas.length
       ? `Hoy solo hay cupo a las <b>${esc(unirHoras(abiertas))}</b>. ` +
-        `${esc(unirHoras(cerradas))}: solo lista de espera, sin pago.`
-      : 'Hoy no hay cupo en ningún horario: solo lista de espera, sin pago.';
+        `${esc(unirHoras(cerradas))}: apúntate a la lista de espera, es gratis.`
+      : 'Hoy no hay cupo libre: apúntate a la lista de espera, es gratis.';
     return `<p class="desc"><b>${donde}</b></p>`;
   }
 
