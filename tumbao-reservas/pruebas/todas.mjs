@@ -47,6 +47,7 @@ const SUITES = [
   'premium-bot',
   'cupo-sin-pago',
   'recordatorio-clase',
+  'tiquetera-oferta',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,

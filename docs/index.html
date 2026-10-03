@@ -825,6 +825,12 @@ const CONFIG = {
   .mas-correo summary::-webkit-details-marker{display:none}
   .mas-correo summary::before{content:'+ ';color:var(--hot);font-weight:700}
   .mas-correo[open] summary{margin-bottom:.4rem}
+  .oferta-tiq{margin:1.1rem 0 1rem;padding:1rem 1.05rem;border-radius:var(--r-card,14px);text-align:left;
+    background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(192,24,95,.12));box-shadow:inset 3px 0 0 var(--hot)}
+  .oferta-tiq .oferta-ceja{display:block;font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--hot-2);margin-bottom:.25rem}
+  .oferta-tiq b{display:block;font-size:1.12rem;letter-spacing:-.02em;margin-bottom:.3rem}
+  .oferta-tiq p{margin:0 0 .75rem;color:var(--tx-2);font-size:.92rem;line-height:1.45}
+  .oferta-tiq .btn{margin:0}
   .pago-solo{margin:0 0 1rem;padding:.8rem .9rem;border-radius:var(--r-field);background:rgba(255,107,53,.11);font-size:.92rem;line-height:1.45}
   .pago-solo p{margin:0 0 .6rem}
   .pago-solo .btn-ghost{margin:0}
@@ -1173,6 +1179,16 @@ const CONFIG = {
       <div id="ok-opina" hidden>
         <p id="ok-opina-q"></p>
         <button class="btn-ghost" type="button" id="ok-opina-ir">Contarnos en una frase</button>
+      </div>
+
+      <!-- La tiquetera se ofrece AQUÍ, cuando la persona ya reservó y está
+           contenta (2 oct): en el pago estorbaría y se perdería la compra
+           de hoy. Muestra la cuenta de verdad, con los precios del sistema. -->
+      <div class="oferta-tiq" id="oferta-tiq" hidden>
+        <span class="oferta-ceja">Para tu próxima clase</span>
+        <b id="oferta-tiq-tit"></b>
+        <p id="oferta-tiq-txt"></p>
+        <a class="btn" id="oferta-tiq-ir" href="mensualidad.html">Ver la tiquetera</a>
       </div>
 
       <a class="btn-ghost" id="ok-wa" href="#" style="margin-bottom:.6rem">Escribirnos por WhatsApp</a>
@@ -2237,6 +2253,35 @@ const CONFIG = {
   }
 
   /* ---------- 5 · resultado ---------- */
+  /* La tiquetera en la pantalla de «reserva confirmada»: el paquete con el
+     precio por clase más bajo, con la cuenta real (clases × $15.000 contra
+     lo que cuesta). Si el servidor no contesta, no se muestra nada. */
+  let paquetesTiq = null;
+  async function ofrecerTiquetera(mostrar){
+    const caja = $('#oferta-tiq');
+    caja.hidden = true;
+    if (!mostrar) return;
+    try{
+      if (!paquetesTiq){
+        const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
+        const d = await r.json();
+        paquetesTiq = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
+      }
+      const ref = (elegida && elegida.precio_cop) || 15000;
+      const mejor = paquetesTiq
+        .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0 && Number(p.precio_cop) / Number(p.clases) < ref)
+        .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
+      if (!mejor) return;
+      const porClase = Math.round(mejor.precio_cop / mejor.clases);
+      const ahorro = mejor.clases * ref - mejor.precio_cop;
+      $('#oferta-tiq-tit').textContent = `Baila a ${pesos(porClase)} la clase`;
+      $('#oferta-tiq-txt').textContent =
+        `Con la tiquetera de ${mejor.clases} clases (${pesos(mejor.precio_cop)}) ahorras ${pesos(ahorro)} ` +
+        `y la usas cuando quieras durante ${mejor.vigencia_dias} días.`;
+      caja.hidden = false;
+    }catch(_){ /* sin oferta antes que una oferta rota */ }
+  }
+
   function mostrarResultado(estado, d){
     detenerEspera();
     const confirmada = estado === 'confirmada';
@@ -2317,6 +2362,7 @@ const CONFIG = {
     // Solo cuando salió bien. A quien tiene el pago sin confirmar hay
     // que dejarlo resolver eso; pedirle la opinión encima es sordo.
     ofrecerOpinar(confirmada);
+    ofrecerTiquetera(confirmada && tipo === 'suelta');
     irA(5);
   }
 

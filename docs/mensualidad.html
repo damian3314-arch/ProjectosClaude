@@ -295,6 +295,12 @@ const CONFIG = {
   }
   .tarjeta .precio-cada{font-size:.74rem;color:var(--tx-3);font-weight:600}
   .tarjeta .ahorro{font-size:.76rem;color:var(--ok);font-weight:600}
+  .tarjeta .por-clase{font-size:.95rem;font-weight:700;color:var(--hot-2)}
+  .oferta-espera{margin:1.1rem 0 .4rem;padding:1rem 1.05rem;border-radius:var(--r-card,14px);text-align:left;
+    background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(192,24,95,.12));box-shadow:inset 3px 0 0 var(--hot)}
+  .oferta-espera b{display:block;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.3rem}
+  .oferta-espera p{margin:0 0 .75rem;font-size:.92rem;line-height:1.45}
+  .oferta-espera .btn{margin:0}
   .tarjeta .desc{font-size:.83rem;color:var(--tx-2);margin:0}
   /* El aviso clave: reservar y la vigencia. Nunca en gris ni al final
      del todo donde no se lee -- siempre con su propio color, en la
@@ -1116,6 +1122,23 @@ const CONFIG = {
   });
 
   /* ── los finales ───────────────────────────────────────────── */
+  /* Mientras espera su cupo, quien quedó en la lista ya está interesado en
+     bailar con nosotros: se le ofrece venir ya con tiquetera (2 oct), con
+     la cuenta real. Sin paquetes cargados, no se muestra nada. */
+  function ofertaEspera() {
+    const mejor = (tiqPaquetes || [])
+      .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0)
+      .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
+    if (!mejor) return '';
+    const porClase = Math.round(mejor.precio_cop / mejor.clases);
+    return `<div class="oferta-espera">
+        <b>Mientras te avisamos, baila desde ya</b>
+        <p>Con la tiquetera de ${esc(String(mejor.clases))} clases (${pesos(mejor.precio_cop)}) cada clase te sale a
+           <b style="display:inline">${pesos(porClase)}</b> y la usas cuando quieras durante ${esc(String(mejor.vigencia_dias))} días.</p>
+        <button type="button" class="btn" id="espera-ir-tiq" data-clave="${esc(mejor.clave)}">Quiero mi tiquetera</button>
+      </div>`;
+  }
+
   function pintarEspera() {
     const h = laHora();
     const hh = h ? h.etiqueta : 'ese horario';
@@ -1128,7 +1151,13 @@ const CONFIG = {
        <p><b>No pagues nada todavía.</b> No hay datos de pago para este horario:
           si transfieres, no podemos asignarte el cupo.</p>
        <p>¿Ya eres alumno de este horario y quieres renovar? Escríbenos y te
-          ayudamos.</p>`;
+          ayudamos.</p>
+       ${ofertaEspera()}`;
+    const irTq = $('#espera-ir-tiq');
+    if (irTq) irTq.addEventListener('click', () => {
+      $('#eleccion').hidden = true;
+      elegirTiqueteraDirecta(irTq.dataset.clave);
+    });
     $('#wa').textContent = 'Ya soy alumno y quiero renovar';
     $('#wa').href = waRenovar(hh);
   }
@@ -1246,6 +1275,7 @@ const CONFIG = {
         <svg class="icono" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
         <span class="titulo">Tiquetera de ${clases} clases</span>
         <span class="precio">${pesos(p.precio_cop)}</span>
+        <span class="por-clase">${pesos(Math.round(Number(p.precio_cop || 0) / (clases || 1)))} por clase</span>
         ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
         <p class="desc">Compra una vez y ven cuando quieras.</p>
         <div class="clave"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-clock"/></svg><span><b>Reservas cada clase</b> en la página de reservas.
