@@ -1,0 +1,255 @@
+/**
+ * Parser de correos de alerta de Bancolombia.
+ *
+ * Este archivo es la FUENTE DE VERDAD del parser: el mismo código va
+ * dentro del nodo Code del workflow "Tumbao · Ingesta de pagos".
+ * Si se cambia aquí, se cambia allá (y se vuelve a correr parser.test.js).
+ *
+ * Regla de oro: ante la duda, NO es un ingreso. Un falso positivo
+ * confirma una reserva que nadie pagó; un falso negativo solo manda la
+ * reserva a validación humana, que es el camino de respaldo previsto.
+ */
+
+// Verbos que significan que el dinero SALIÓ. Si aparece alguno, se
+// descarta el correo aunque también diga "recibiste" en otra parte.
+const VERBOS_SALIDA = [
+  /\btransferiste\b/i,
+  /\bpagaste\b/i,
+  /\bcompraste\b/i,
+  /\bretiraste\b/i,
+  /\bavance\b/i,
+  /\bpago (?:programado|automatico|automático) por\b/i,
+];
+
+// Estructuras de SALIDA. Antes bastaba con reconocerlas para botarlas:
+// el parser decía `motivo: 'movimiento_de_salida'` y ahí moría el
+// correo. De los últimos veinte correos del banco, cuatro eran salidas,
+// así que se estaba perdiendo una quinta parte de los movimientos de la
+// cuenta — y justo la parte que nadie tenía identificada.
+//
+// Lo que el correo SÍ trae: monto, cuenta de origen, cuenta de destino,
+// fecha y hora. Lo que NO trae es a quién: en una transferencia solo
+// viene el número de la cuenta destino. Por eso esto no clasifica nada;
+// solo levanta la mano para que una persona diga qué era.
+const PATRONES_SALIDA = [
+  {
+    // "Transferiste $650000 desde tu cuenta *4619 a la cuenta
+    //  *3007726093 el 19/09/26 a las 19:21"
+    id: 'transferencia_salida',
+    confianza: 'alta',
+    re: /transferiste\s+\$\s*(?<monto>[\d.,]+)\s+desde tu (?:cuenta|producto)\s+\*+(?<cuenta>\d+)\s+a la cuenta\s+\*+(?<destino>\d+)\s+el\s+(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})\s+a las\s+(?<hora>\d{1,2}:\d{2})/i,
+  },
+  {
+    // "Pagaste $5110.00 a Gasoriente desde tu producto *8621 el
+    //  04/09/2026 10:43" — este sí dice a quién, y sin "a las".
+    id: 'pago_salida',
+    confianza: 'alta',
+    re: /pagaste\s+\$\s*(?<monto>[\d.,]+)\s+a\s+(?<destinatario>.+?)\s+desde tu (?:cuenta|producto)\s+\*+(?<cuenta>\d+)\s+el\s+(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})\s+(?:a las\s+)?(?<hora>\d{1,2}:\d{2})/i,
+  },
+  {
+    // Red de seguridad, igual que la de entrada: el verbo es de salida y
+    // hay monto y fecha, pero la frase no encaja. Mejor una salida con
+    // confianza baja que alguien la clasifique, que un correo botado.
+    id: 'salida_generica',
+    confianza: 'baja',
+    re: /(?:transferiste|pagaste|compraste|retiraste|avance)[^$]*\$\s*(?<monto>[\d.,]+)[\s\S]*?(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})[^\d]{0,12}(?<hora>\d{1,2}:\d{2})?/i,
+  },
+];
+
+// Estructuras de ingreso observadas en correos reales de Bancolombia.
+// El orden importa: se prueba de la más específica a la más general.
+const PATRONES_ENTRADA = [
+  {
+    // "Damian, recibiste una transferencia de JUAN PEREZ por $100000.00
+    //  en tu cuenta *8621 conectada a la llave 3015373964 el 17/07/26 a las 17:02"
+    id: 'transferencia_llave',
+    re: /recibiste una transferencia de\s+(?<remitente>.+?)\s+por\s+\$\s*(?<monto>[\d.,]+)\s+en tu cuenta\s+\*+(?<cuenta>\d+)\s+conectada a la llave\s+(?<llave>\d+)\s+el\s+(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})\s+a las\s+(?<hora>\d{1,2}:\d{2})/i,
+    confianza: 1.0,
+  },
+  {
+    // "Recibiste una transferencia por $650000 de JUAN PEREZ
+    //  en tu cuenta **8621, el 10/07/2026 a las 10:10."
+    id: 'transferencia_simple',
+    re: /recibiste una transferencia por\s+\$\s*(?<monto>[\d.,]+)\s+de\s+(?<remitente>.+?)\s+en tu cuenta\s+\*+(?<cuenta>\d+)\s*,?\s*el\s+(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})\s+a las\s+(?<hora>\d{1,2}:\d{2})/i,
+    confianza: 1.0,
+  },
+  {
+    // "Recibiste un pago por codigo QR de JUAN PEREZ por $15000.00
+    //  en tu cuenta *8621 el 26/07/2026 a las 19:05"
+    // Variante esperada para cobros por QR Bre-B. Pendiente de confirmar
+    // con un correo real de la cuenta de Tumbao (ver LEEME).
+    id: 'pago_qr',
+    re: /recibiste un pago(?:\s+por\s+c[oó]digo\s+QR)?\s+de\s+(?<remitente>.+?)\s+por\s+\$\s*(?<monto>[\d.,]+)\s+en tu cuenta[^.]*?\s+el\s+(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})\s+a las\s+(?<hora>\d{1,2}:\d{2})/i,
+    confianza: 0.9,
+  },
+  {
+    // Red de seguridad: dice "recibiste", trae monto y fecha, pero la
+    // estructura no coincide con nada conocido. Se registra con
+    // confianza baja para que NO confirme sola.
+    id: 'generico',
+    re: /recibiste[^$]*\$\s*(?<monto>[\d.,]+)[\s\S]*?(?<fecha>\d{1,2}\/\d{1,2}\/\d{2,4})[^\d]{0,12}(?<hora>\d{1,2}:\d{2})?/i,
+    confianza: 0.4,
+  },
+];
+
+
+/**
+ * Bancolombia mezcla TRES notaciones de monto en los mismos correos:
+ *   $1,000.00    coma = miles,  punto = decimales   (visto en Bre-B real)
+ *   $14.000,00   punto = miles, coma = decimales    (notación colombiana)
+ *   $650000      sin separadores
+ *
+ * Asumir que "si hay coma es decimal" leía $1,000.00 como $1. Con eso
+ * ningún pago habría casado nunca.
+ *
+ * La regla que sí aguanta las tres: mira el ÚLTIMO separador. Si lo
+ * siguen 1 o 2 dígitos hasta el final, es el decimal; cualquier otro
+ * separador es de miles. Si lo siguen 3 dígitos, todos son de miles.
+ */
+function parsearMonto(txt) {
+  if (txt === null || txt === undefined) return null;
+  const s = String(txt).trim().replace(/[^\d.,]/g, '');
+  if (!s) return null;
+
+  const sep = Math.max(s.lastIndexOf('.'), s.lastIndexOf(','));
+  let entero, decimales = '';
+
+  if (sep >= 0) {
+    const cola = s.slice(sep + 1);
+    if (/^\d{1,2}$/.test(cola)) {
+      entero = s.slice(0, sep).replace(/[.,]/g, '');
+      decimales = cola;
+    } else {
+      entero = s.replace(/[.,]/g, '');
+    }
+  } else {
+    entero = s;
+  }
+
+  if (!/^\d+$/.test(entero)) return null;
+
+  const n = parseFloat(entero + (decimales ? '.' + decimales : ''));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  // Los pesos colombianos no llevan centavos en la práctica.
+  return Math.round(n);
+}
+
+
+/**
+ * "17/07/26" y "10/07/2026" conviven. Siempre DD/MM.
+ * Devuelve ISO 8601 con el offset de Bogotá (-05:00, sin horario de verano).
+ */
+function parsearFecha(fecha, hora) {
+  if (!fecha) return null;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(fecha.trim());
+  if (!m) return null;
+
+  const dia = parseInt(m[1], 10);
+  const mes = parseInt(m[2], 10);
+  let anio = parseInt(m[3], 10);
+  if (anio < 100) anio += 2000;
+
+  if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null;
+
+  let hh = 0, mm = 0;
+  if (hora) {
+    const h = /^(\d{1,2}):(\d{2})$/.exec(hora.trim());
+    if (h) {
+      hh = parseInt(h[1], 10);
+      mm = parseInt(h[2], 10);
+      if (hh > 23 || mm > 59) return null;
+    }
+  }
+
+  const p = (n, w = 2) => String(n).padStart(w, '0');
+  return `${anio}-${p(mes)}-${p(dia)}T${p(hh)}:${p(mm)}:00-05:00`;
+}
+
+
+/**
+ * Limpia el cuerpo del correo: quita el envoltorio de marketing que
+ * Bancolombia mete alrededor del mensaje real.
+ */
+function limpiar(texto) {
+  return String(texto || '')
+    .replace(/\s+/g, ' ')
+    .replace(/¡Listo!\s*Todo sali[oó] bien con tus movimientos\s*/i, '')
+    .trim();
+}
+
+
+/**
+ * @returns {{es_ingreso: boolean, motivo?: string, ...}}
+ */
+function parsearCorreoBancolombia(texto) {
+  const cuerpo = limpiar(texto);
+
+  if (!cuerpo) {
+    return { es_ingreso: false, motivo: 'cuerpo_vacio' };
+  }
+
+  const salida = VERBOS_SALIDA.find((re) => re.test(cuerpo));
+  if (salida) {
+    // `es_ingreso: false` se mantiene tal cual: todo lo que decide si un
+    // pago entra a `pagos` cuelga de ese campo y no se puede tocar. Lo
+    // que se añade al lado es `es_salida`, que es camino aparte.
+    for (const patron of PATRONES_SALIDA) {
+      const m = patron.re.exec(cuerpo);
+      if (!m || !m.groups) continue;
+
+      const monto = parsearMonto(m.groups.monto);
+      const fecha = parsearFecha(m.groups.fecha, m.groups.hora);
+      if (monto === null || fecha === null) continue;
+
+      return {
+        es_ingreso: false,
+        es_salida: true,
+        motivo: 'movimiento_de_salida',
+        patron: patron.id,
+        confianza: patron.confianza,
+        banco: 'bancolombia',
+        valor_cop: monto,
+        ocurrio_at: fecha,
+        cuenta_origen: m.groups.cuenta ? m.groups.cuenta.slice(-4) : null,
+        cuenta_destino: m.groups.destino || null,
+        destinatario:
+          (m.groups.destinatario || '').trim().replace(/\s+/g, ' ') || null,
+      };
+    }
+
+    return { es_ingreso: false, motivo: 'salida_no_reconocida' };
+  }
+
+  if (!/recibiste/i.test(cuerpo)) {
+    return { es_ingreso: false, motivo: 'no_es_movimiento_de_entrada' };
+  }
+
+  for (const patron of PATRONES_ENTRADA) {
+    const m = patron.re.exec(cuerpo);
+    if (!m || !m.groups) continue;
+
+    const monto = parsearMonto(m.groups.monto);
+    const fecha = parsearFecha(m.groups.fecha, m.groups.hora);
+    if (monto === null || fecha === null) continue;
+
+    return {
+      es_ingreso: true,
+      patron: patron.id,
+      confianza: patron.confianza,
+      banco: 'bancolombia',
+      valor_cop: monto,
+      fecha_pago: fecha,
+      remitente: (m.groups.remitente || '').trim().replace(/\s+/g, ' ') || null,
+      ultimos_4: m.groups.cuenta ? m.groups.cuenta.slice(-4) : null,
+      llave: m.groups.llave || null,
+    };
+  }
+
+  return { es_ingreso: false, motivo: 'estructura_no_reconocida' };
+}
+
+module.exports = {
+  parsearCorreoBancolombia,
+  parsearMonto,
+  parsearFecha,
+};
