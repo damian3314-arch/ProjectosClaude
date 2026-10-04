@@ -34,6 +34,7 @@
 // La invitación a la tiquetera del cierre de «¿cómo te fue?» (0121, 29 sep).
 import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
+import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta } from './ventas.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -1403,6 +1404,32 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0141: la apertura de las ventas por WhatsApp. La frase {{2}} la arma la base con los
+    // números reales (ventas_gancho). Quien toca «Cuéntame más» o responde queda en
+    // conversación con /wa/ventas; «No quiero más mensajes» es la baja de siempre.
+    name: 'ventas_apertura',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 👋 Te escribe el equipo de Tumbao, tu academia de baile.\n\n' +
+          '{{2}}.\n\n' +
+          '¿Te cuento cómo funciona? Respóndeme por aquí 💃',
+        example: { body_text: [['Laura', 'Vi que este mes ya has venido 4 veces a bailar con nosotros 💃 Con una tiquetera cada clase te sale desde $12.000 en vez de $15.000']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Cuéntame más' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     name: 'tiquetera_semana',
     language: 'es',
     category: 'MARKETING',
@@ -1703,6 +1730,8 @@ async function entranteWA(env, m, nombre) {
   // 0120: quien está contando su opinión no recibe el «no revisamos
   // mensajes»: lo atiende /wa/opinion (lo despierta la base).
   if (g.opinion) return;
+  // 0141: quien responde a una apertura de ventas lo atiende /wa/ventas (lo despierta la base).
+  if (g.ventas) return;
   if (g.responder && !(await rpc(env, 'wa_respondido_24h', { p_tel: m.from }))) {
     await responderYGuardar(env, m.from, RESPUESTA_AUTO);
   }
@@ -2210,6 +2239,104 @@ async function opinionWA(request, env, origen) {
   }
 }
 
+/* 0141 · /wa/ventas: la conversación de ventas. La base lo despierta (pg_net) cuando alguien
+ * con una apertura viva escribe. Conversa dentro de la ventana de 24 h, con la baranda de
+ * ventas.js: precios, cupos y enlaces solo de la base y de la página. */
+async function ventasWA(request, env, origen) {
+  let b = {};
+  try { b = await request.json(); } catch (_) {}
+  const id = Number(b.id);
+  if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
+  const m = await rpc(env, 'wa_tomar_ventas', { p_id: id });
+  if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+  const chat = m.chat || {};
+  const perfil = m.perfil || {};
+  try {
+    await marcarLeido(env, m.wa_msg_id).catch(() => {});
+    // «No quiero más mensajes» lo atiende entranteWA (baja); aquí no se contesta.
+    if (m.texto && PIDE_SALIR.test(m.texto)) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' });
+      await rpc(env, 'ventas_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: null, p_cerrar: true,
+        p_resultado: 'no_interesado', p_interes: 'ninguno', p_resumen: 'Pidió no recibir más mensajes' }).catch(() => {});
+      return json({ ok: true, salir: true }, 200, origen);
+    }
+    let texto = m.texto;
+    let transcrito = null;
+    const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
+    if (au) {
+      transcrito = await transcribirAudioWA(env, au[1]).catch(() => null);
+      texto = transcrito ? `(nota de voz) ${transcrito}` : null;
+    }
+    const entrante = transcrito ? `(nota de voz) ${transcrito}` : null;
+
+    // Tope de turnos: pasado eso, la conversación la sigue una persona.
+    if (Number(chat.turnos || 0) >= MAX_TURNOS_VENTAS) {
+      await responderYGuardar(env, m.telefono, RESPUESTA_SEGURA_VENTAS);
+      await rpc(env, 'ventas_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: true,
+        p_resultado: 'recepcion', p_interes: null, p_resumen: 'Conversación larga: la sigue el equipo' });
+      await avisarRecepcionVenta(env, chat, perfil, m.telefono, 'La conversación se alargó; conviene que la siga una persona.');
+      return json({ ok: true, tope: true }, 200, origen);
+    }
+
+    let j;
+    if (!texto) {
+      j = { respuesta: 'No alcancé a escuchar bien tu nota de voz 🙈 ¿Me lo escribes?', cerrar: false };
+    } else {
+      const conversacion = (Array.isArray(m.historial) ? m.historial : [])
+        .map((h) => `${h.direccion === 'saliente' ? 'Tumbao' : 'Cliente'}: ${h.texto}`)
+        .concat(`Cliente: ${texto}`).join('\n');
+      const salida = await redactar(env, INSTRUCCIONES_VENTAS, JSON.stringify({
+        objetivo: chat.objetivo, turno: Number(chat.turnos || 0) + 1,
+        apertura_enviada: m.apertura || '',
+        perfil: { ...perfil, opciones_hoy: opcionesDeVenta(perfil) },
+        conversacion,
+      }), 'low');
+      j = leerJSON(salida);
+    }
+
+    let respuesta = j && j.respuesta ? String(j.respuesta).trim() : '';
+    const g = guardarRespuestaVentas(respuesta, perfil);
+    let pasar = !!(j && j.pasar_a_recepcion);
+    let motivo = (j && j.motivo) || '';
+    let resultado = (j && j.resultado) || '';
+    let cerrar = !!(j && j.cerrar);
+    if (!g.ok) {
+      // Lo del modelo no se envía: va un mensaje seguro y el equipo retoma.
+      console.log('ventas baranda', g.motivo);
+      respuesta = RESPUESTA_SEGURA_VENTAS;
+      pasar = true; resultado = 'recepcion'; cerrar = true;
+      motivo = motivo || `Dato que el asistente no pudo confirmar (${g.motivo}).`;
+    } else {
+      respuesta = g.texto;
+    }
+    if (pasar) { resultado = 'recepcion'; cerrar = true; }
+    if (resultado === 'no_interesado') cerrar = true;
+
+    await responderYGuardar(env, m.telefono, respuesta.slice(0, 900));
+    await rpc(env, 'ventas_turno', {
+      p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: cerrar,
+      p_resultado: resultado || null, p_interes: (j && j.interes) || null, p_resumen: (j && j.resumen) || null,
+    });
+    if (pasar) await avisarRecepcionVenta(env, chat, perfil, m.telefono, motivo || (j && j.resumen) || 'Necesita que la atienda una persona.');
+    return json({ ok: true, cerrada: cerrar }, 200, origen);
+  } catch (e) {
+    console.log('ventas', e && e.message);
+    await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'error' }).catch(() => {});
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
+}
+
+// Una sola nota por conversación: quién es, qué necesita y qué hacer.
+async function avisarRecepcionVenta(env, chat, perfil, telefono, motivo) {
+  await rpc(env, 'nota_recepcion', {
+    p_titulo: '💬 Venta por WhatsApp: alguien necesita una persona',
+    p_texto: `${chat.nombre || perfil.nombre || 'Una persona'} (cel. ${String(telefono || '').replace(/^57/, '')}) ` +
+             `respondió a nuestra oferta (${String(chat.objetivo || '').replace('_', ' ')}).\n\n` +
+             `${motivo}\n\nAcción: escríbele hoy desde el 301 783 3550. Ya le dije que el equipo le escribe.`,
+    p_clave: 'venta-recepcion:' + chat.id,
+  }).catch(() => {});
+}
+
 async function informeWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -2405,6 +2532,9 @@ export default {
     }
     if (ruta === '/wa/opinion' && request.method === 'POST') {
       return await opinionWA(request, env, origen);
+    }
+    if (ruta === '/wa/ventas' && request.method === 'POST') {
+      return await ventasWA(request, env, origen);
     }
     if (ruta === '/wa/notas') {
       try { return await notasWA(env, origen); }

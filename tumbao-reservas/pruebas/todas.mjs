@@ -48,6 +48,7 @@ const SUITES = [
   'cupo-sin-pago',
   'recordatorio-clase',
   'tiquetera-oferta',
+  'ventas-whatsapp',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,
