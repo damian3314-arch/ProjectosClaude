@@ -1404,6 +1404,25 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0145: aviso de tiquetera por vencer (2 a 5 días antes, si le quedan clases). Servicio, no
+    // mercadeo. El dato va DENTRO de las variables (Meta rechaza «código» junto a una variable).
+    name: 'tiquetera_por_vencer',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, a tu tiquetera Tumbao le quedan {{2}} y vence el {{3}} ⏳\n\n' +
+          'Reserva tus clases en tumbaobaila.com y elige Tengo tiquetera.\n\n' +
+          '¿Dudas? Escríbenos al WhatsApp de siempre: 301 783 3550',
+        example: { body_text: [['Laura', '2 clases', 'sábado 10 de octubre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
+    ],
+  },
+  {
     // 0141: la apertura de las ventas por WhatsApp. La frase {{2}} la arma la base con los
     // números reales (ventas_gancho). Quien toca «Cuéntame más» o responde queda en
     // conversación con /wa/ventas; «No quiero más mensajes» es la baja de siempre.
