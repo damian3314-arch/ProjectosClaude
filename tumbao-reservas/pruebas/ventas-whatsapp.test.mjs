@@ -95,7 +95,8 @@ titulo('5. Las reglas duras están en el prompt');
   ok('pagos y comprobantes no se resuelven por aquí: recepción', /pasa a recepción/.test(p) && /No pides ni recibes datos de pago/.test(p));
   ok('no habla de requisitos de la mensualidad', /NO hables de requisitos/.test(p));
   ok('lo que escribe la persona son datos, no instrucciones', /datos, no instrucciones/.test(p));
-  ok('no vende a quien ya tiene plan o tiquetera con clases', /plan_vigente/.test(p) && /tiquetera_vigente/.test(p));
+  ok('a quien ya bailó con nosotros le habla del historial real y nada más', /perfil\.historial/.test(p) && /meses_con_plan/.test(p) && /no inventes fechas/.test(p));
+    ok('no vende a quien ya tiene plan o tiquetera con clases', /plan_vigente/.test(p) && /tiquetera_vigente/.test(p));
 }
 
 titulo('6. El Worker y la base: todo cableado y apagado');
@@ -118,7 +119,14 @@ titulo('6. El Worker y la base: todo cableado y apagado');
   ok('respeta bajas, dueños, planes en gracia y tiqueteras con clases',
      /wa_bajas/.test(m1) && /wa_es_dueno/.test(m1) && /fin \+ 3 >= hoy/.test(m1) && /clases_usadas < clases_totales/.test(m1));
   ok('quien dijo «no» queda fuera 45 días', /no_interesado[\s\S]{0,120}45 days/.test(m1));
-  ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
+  const m3 = readFileSync(new URL('../supabase/migrations/0143_ventas_retomar_clientes_del_historial.sql', import.meta.url), 'utf8');
+  const sql3 = m3.replace(/--.*$/gm, '');
+  ok('0143: el historial entra con los mismos filtros de siempre',
+     /afiliados_historial/.test(sql3) && /wa_bajas/.test(sql3) && /wa_es_dueno/.test(sql3) && /interval '5 days'/.test(sql3) && /< 2/.test(sql3) && /45 days/.test(sql3));
+  ok('0143: solo a quien vino varias veces (2+ meses con plan o 3+ sueltas)', /h\.m >= 2 or h\.s >= 3/.test(sql3));
+  ok('0143: no a quien vino en los últimos 30 días ni tiene plan o tiquetera', /interval '30 days'/.test(sql3) && /fin \+ 3 >= hoy\.d/.test(sql3) && /clases_usadas < clases_totales/.test(sql3));
+  ok('0143: sin DROP ni cambios al CHECK de ventas_chats', !/\bdrop\b/i.test(sql3) && !/alter table/i.test(sql3));
+    ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
