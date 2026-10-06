@@ -1404,6 +1404,25 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0149: el aviso de vencimiento de la mensualidad, solo informativo y de UTILIDAD (≈ $3 cada uno en vez de ≈ $46
+    // como marketing). Sin oferta ni lenguaje promocional: dice cuándo vence y cómo renovar. Meta decide la
+    // categoría al aprobarla; si la pasa a marketing, el sistema sigue con mensualidad_vencimiento.
+    name: 'mensualidad_vence_aviso',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, te informamos que tu mensualidad de Tumbao del horario de {{2}} vence el {{3}}.\n\n' +
+          'Para renovarla puedes pagar en tumbaobaila.com/mensualidad o en recepción.\n\n' +
+          '¿Dudas? Escríbenos al WhatsApp de siempre: 301 783 3550',
+        example: { body_text: [['Laura', '6:00 pm', 'martes 6 de octubre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
     // 0145: aviso de tiquetera por vencer (2 a 5 días antes, si le quedan clases). Servicio, no
     // mercadeo. El dato va DENTRO de las variables (Meta rechaza «código» junto a una variable).
     name: 'tiquetera_por_vencer',
