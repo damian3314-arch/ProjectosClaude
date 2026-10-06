@@ -49,6 +49,7 @@ const SUITES = [
   'recordatorio-clase',
   'tiquetera-oferta',
   'ventas-whatsapp',
+  'cifras-ia',
 ];
 
 // Se instrumenta una vez aquí para que, si el marcador del panel cambió,
