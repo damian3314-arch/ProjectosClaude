@@ -860,7 +860,7 @@ async function pagina(request, env, ruta, origen, ctx) {
         const mapa = {
           SIN_CUPO: 409, CLASE_NO_EXISTE: 404, CLASE_INACTIVA: 410,
           CLASE_YA_PASO: 410, MEMBRESIA_NO_ENCONTRADA: 404,
-          PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409, CAMBIO_LLENO: 409,
+          PLAN_YA_CUBRE: 409, OTRO_HORARIO: 409, CAMBIO_LLENO: 409, CAMBIO_YA_PEDIDO: 409,
           TIQUETERA_INVALIDA: 404,
         };
         return json({
