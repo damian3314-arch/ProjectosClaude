@@ -1782,6 +1782,13 @@ async function webhookWA(request, env) {
           p_wa_id: st.id, p_estado: st.status,
           p_error: er ? `${er.code}: ${er.title || er.message || ''}` : null,
         }).catch((x) => console.log('estado_entrega', x && x.message));
+        // 0149: Meta cobra por mensaje según su categoría. Se anota cuál fue y si se cobró.
+        if (st.pricing) {
+          await rpc(env, 'wa_guardar_precio', {
+            p_wa_id: st.id, p_categoria: st.pricing.category || null,
+            p_facturable: st.pricing.billable === true, p_tipo: st.pricing.type || st.pricing.pricing_model || null,
+          }).catch((x) => console.log('guardar_precio', x && x.message));
+        }
       }
       const nombres = {};
       for (const c of v.contacts || []) nombres[c.wa_id] = c.profile && c.profile.name;
@@ -2356,6 +2363,37 @@ async function avisarRecepcionVenta(env, chat, perfil, telefono, motivo) {
   }).catch(() => {});
 }
 
+/* 0149 · /wa/costos: cuánto cobra Meta de verdad. Trae pricing_analytics de los últimos 14 días (costo y
+ * volumen por categoría y tipo: pagado, gratis por ventana de 24 h o gratis por punto de entrada) y lo guarda
+ * resumido en la base (ajustes.wa_costos_meta). No devuelve las cifras por HTTP: se leen en la base. */
+async function costosWA(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
+  const fin = Math.floor(Date.now() / 1000);
+  const ini = fin - 14 * 86400;
+  const campos = `pricing_analytics.start(${ini}).end(${fin}).granularity(DAILY).metric_types(["COST","VOLUME"])` +
+                 `.dimensions(["PRICING_CATEGORY","PRICING_TYPE"])`;
+  const r = await fetch(`${GRAPH}/${env.WHATSAPP_WABA_ID}?fields=${encodeURIComponent(campos)}`, { headers: cabecerasWA(env) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || d.error) {
+    const motivo = d && d.error ? `${d.error.code}: ${d.error.message}`.slice(0, 200) : `HTTP ${r.status}`;
+    await rpc(env, 'wa_guardar_costos_meta', { p_datos: { ok: false, error: motivo } });
+    return { ok: false, error: 'META' };
+  }
+  const puntos = (((d.pricing_analytics || {}).data) || []).flatMap((x) => x.data_points || []);
+  const por = {};
+  for (const p of puntos) {
+    const k = `${p.pricing_category || 'otro'}|${p.pricing_type || 'otro'}`;
+    const a = por[k] || { volumen: 0, costo: 0 };
+    a.volumen += Number(p.volume || 0);
+    a.costo = Math.round((a.costo + Number(p.cost || 0)) * 10000) / 10000;
+    por[k] = a;
+  }
+  await rpc(env, 'wa_guardar_costos_meta', { p_datos: {
+    ok: true, desde: new Date(ini * 1000).toISOString().slice(0, 10), hasta: new Date(fin * 1000).toISOString().slice(0, 10),
+    por_categoria_y_tipo: por, puntos: puntos.length } });
+  return { ok: true };
+}
+
 async function informeWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -2572,6 +2610,10 @@ export default {
     if (ruta === '/wa/conectar' && request.method === 'GET') {
       try { return json(await conectarWA(request, env), 200, origen); }
       catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
+    }
+    if (ruta === '/wa/costos') {
+      try { return json(await costosWA(env), 200, origen); }
+      catch (e) { console.log('costos', e && e.message); return json({ ok: false, error: 'FALLA' }, 502, origen); }
     }
     if (ruta === '/wa/estado' && request.method === 'GET') {
       try { return json(await estadoWA(env), 200, origen); }

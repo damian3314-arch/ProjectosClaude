@@ -132,6 +132,8 @@ titulo('6. El Worker y la base: todo cableado y apagado');
     const m7 = readFileSync(new URL('../supabase/migrations/0147_campanas_solo_en_horario_de_mercadeo.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('0147: el despachador no toma campañas fuera de horario (L-V 9-19, sábado 9-13, ni domingo ni festivo)',
      /time '09:00'/.test(m7) && /time '19:00'/.test(m7) && /time '13:00'/.test(m7) && /from festivos/.test(m7) && /isodow[\s\S]*?< 7/.test(m7));
+    ok('costo: el Worker anota categoría y si Meta cobró cada mensaje, y trae el costo real (/wa/costos)',
+     /wa_guardar_precio/.test(w) && /st\.pricing\.billable === true/.test(w) && /ruta === '\/wa\/costos'/.test(w) && /pricing_analytics/.test(w));
     ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 
