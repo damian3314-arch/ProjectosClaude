@@ -2349,6 +2349,13 @@ async function ventasWA(request, env, origen) {
     }
     const entrante = transcrito ? `(nota de voz) ${transcrito}` : null;
 
+    // Sin texto y que no es una nota de voz (sticker, reacción, imagen, emoji suelto): no se contesta
+    // ni gasta un turno. Antes se respondía «no alcancé a escuchar tu nota de voz» a quien no la mandó.
+    if (!texto && !au) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' }).catch(() => {});
+      return json({ ok: true, sin_texto: true }, 200, origen);
+    }
+
     // Tope de turnos: pasado eso, la conversación la sigue una persona.
     if (Number(chat.turnos || 0) >= MAX_TURNOS_VENTAS) {
       await responderYGuardar(env, m.telefono, RESPUESTA_SEGURA_VENTAS);

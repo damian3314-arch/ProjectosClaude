@@ -111,7 +111,9 @@ titulo('6. El Worker y la base: todo cableado y apagado');
   ok('quien responde a una apertura no recibe el «no revisamos mensajes»', /if \(g\.ventas\) return;/.test(w));
   ok('la plantilla ventas_apertura está definida (MARKETING, con baja)',
      /name: 'ventas_apertura'[\s\S]{0,200}category: 'MARKETING'/.test(w) && /ventas_apertura[\s\S]{0,1400}No quiero más mensajes/.test(w));
-  ok('lo del modelo pasa por la baranda antes de enviarse', /guardarRespuestaVentas\(respuesta, perfil\)/.test(w));
+  ok('sin texto y sin ser nota de voz (sticker, reacción): no se contesta ni cuenta turno',
+     /if \(!texto && !au\) \{[\s\S]{0,200}p_estado: 'ignorado'[\s\S]{0,120}sin_texto: true/.test(w));
+  ok('lo del modelo pasa por la baranda antes de enviarse',/guardarRespuestaVentas\(respuesta, perfil\)/.test(w));
   ok('si la baranda falla, va el mensaje seguro y se avisa a recepción', /RESPUESTA_SEGURA_VENTAS;[\s\S]{0,120}pasar = true/.test(w));
   ok('nace APAGADA en la base', /\('wa_ventas', 'apagado'/.test(m1));
   ok('la ronda respeta domingos y festivos (Ley 2300)', /extract\(isodow from ahora\)/.test(m2) && /from festivos/.test(m2));
