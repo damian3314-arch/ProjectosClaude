@@ -2307,7 +2307,7 @@ async function ventasWA(request, env, origen) {
       const salida = await redactar(env, INSTRUCCIONES_VENTAS, JSON.stringify({
         objetivo: chat.objetivo, turno: Number(chat.turnos || 0) + 1,
         apertura_enviada: m.apertura || '',
-        perfil: { ...perfil, opciones_hoy: opcionesDeVenta(perfil) },
+        perfil: { ...perfil, opciones_hoy: opcionesDeVenta(perfil, chat.objetivo) },
         conversacion,
       }), 'low');
       j = leerJSON(salida);

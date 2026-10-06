@@ -127,11 +127,13 @@ export const RESPUESTA_SEGURA_VENTAS =
   `Te escriben hoy desde el WhatsApp de Tumbao (${WHATSAPP_EQUIPO}).`;
 
 /** Ordena lo que el modelo necesita saber de lo que se puede ofrecer hoy. */
-export function opcionesDeVenta(perfil) {
+export function opcionesDeVenta(perfil, objetivo) {
   const c = (perfil && perfil.cupos_mensualidad) || {};
   return {
     mensualidad_7am: Number(c['07:00']) > 0,
-    mensualidad_6pm: !!(perfil && perfil.aplica_mensualidad) && Number(c['18:00']) > 0,
+    // A quien se le abrió con «mensualidad_6pm» (por fidelidad o por salir de la lista de espera) se le
+    // ofrece ese cupo aunque no cumpla el historial: la decisión ya está tomada.
+    mensualidad_6pm: (!!(perfil && perfil.aplica_mensualidad) || objetivo === 'mensualidad_6pm') && Number(c['18:00']) > 0,
     lista_de_espera_6pm_7pm: true,
   };
 }

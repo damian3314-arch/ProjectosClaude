@@ -80,7 +80,10 @@ titulo('4. Vacío, largo y opciones');
   const o = opcionesDeVenta(perfil);
   ok('hay cupo a las 7 am y a las 6 pm para quien aplica', o.mensualidad_7am && o.mensualidad_6pm);
   ok('quien no aplica no recibe la opción de 6 pm', !opcionesDeVenta({ ...perfil, aplica_mensualidad: false }).mensualidad_6pm);
-  ok('sin cupo a las 6 pm tampoco', !opcionesDeVenta({ ...perfil, cupos_mensualidad: { '07:00': 3, '18:00': 0, '19:00': 0 } }).mensualidad_6pm);
+  ok('quien sale de la lista de espera para las 6 pm sí tiene la opción aunque no cumpla el historial',
+     opcionesDeVenta({ ...perfil, aplica_mensualidad: false }, 'mensualidad_6pm').mensualidad_6pm);
+  ok('pero no si ese objetivo es otro', !opcionesDeVenta({ ...perfil, aplica_mensualidad: false }, 'tiquetera').mensualidad_6pm);
+    ok('sin cupo a las 6 pm tampoco', !opcionesDeVenta({ ...perfil, cupos_mensualidad: { '07:00': 3, '18:00': 0, '19:00': 0 } }).mensualidad_6pm);
   ok('el mensaje seguro manda a recepción', /301 783 3550/.test(RESPUESTA_SEGURA_VENTAS));
   ok('hay un tope de turnos', MAX_TURNOS_VENTAS >= 4 && MAX_TURNOS_VENTAS <= 12, String(MAX_TURNOS_VENTAS));
 }
