@@ -164,6 +164,18 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      /from festivos/.test(m155) && /time '13:00'/.test(m155) && /time '19:00'/.test(m155) && /wa_ventas_seguimiento/.test(m155));
   ok('0155: sin DROP ni DELETE', !/\bdrop\b/i.test(m155) && !/\bdelete\b/i.test(m155));
   ok('Worker: ruta /wa/ventas-seguimiento que envía y guarda el texto', /ruta === '\/wa\/ventas-seguimiento'/.test(w) && /textoSeguimientoVentas\(\{ nombre: s\.nombre/.test(w));
+    const m156 = readFileSync(new URL('../supabase/migrations/0156_ventas_precio_por_clase_y_apertura_con_botones.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  ok('precio por clase: el bot puede decir «alrededor de $5.000» (la cifra viene de la base y pasa la baranda)',
+     cifrasPermitidas({ ...perfil, mensualidad_por_clase: 5000 }).has(5000) && guardarRespuestaVentas('La mensualidad sale alrededor de $5.000 por clase, contra $15.000 la suelta.', { ...perfil, mensualidad_por_clase: 5000 }).ok);
+  ok('precio por clase: sin el dato en la base, $5.000 NO pasa la baranda', !guardarRespuestaVentas('Sale a $5.000 por clase.', perfil).ok);
+  ok('prompt: la mensualidad es de lunes a sábado sin domingos ni festivos y se dice «alrededor de», nunca como descuento',
+     /lunes a sábado, sin domingos ni festivos/.test(INSTRUCCIONES_VENTAS) && /alrededor de/.test(INSTRUCCIONES_VENTAS) && /nunca como descuento/.test(INSTRUCCIONES_VENTAS));
+  ok('prompt: sabe contestar a quien toca un botón de horario', /Si lo único que escribe es un horario/.test(INSTRUCCIONES_VENTAS) && /7:00 am/.test(INSTRUCCIONES_VENTAS));
+  const ih = w.indexOf("name: 'ventas_horario'"); const th = w.slice(ih, ih + 1500);
+  ok('plantilla ventas_horario: MARKETING, botones de horario y baja, SIN enlace',
+     ih > 0 && /category: 'MARKETING'/.test(th) && ['7:00 am', '6:00 pm', '7:00 pm', 'No quiero más mensajes'].every(b => th.includes(`text: '${b}'`)) && !/tumbaobaila|https?:|type: 'URL'/.test(th.slice(0, th.indexOf('BUTTONS') + 600)));
+  ok('0156: la prueba A/B solo se activa cuando ventas_plantilla_b tiene valor (vacía de entrada)', /'ventas_plantilla_b', ''/.test(m156) && /<> '' and c\.id % 2 = 1/.test(m156));
+  ok('0156: sin DROP ni DELETE', !/\bdrop\b/i.test(m156) && !/\bdelete\b/i.test(m156));
     const m153 = readFileSync(new URL('../supabase/migrations/0153_gracia_5_dias_y_aviso_automatico_a_la_lista_de_espera.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('0153: la gracia sube a 5 días y las funciones de ventas la leen del ajuste (sin «fin + 3» fijo)',
      /'mensualidad_gracia_dias', '5'/.test(m153) && /ventas_candidatos_historial/.test(m153) && /fin \+ 3/.test(m153) && /replace\(pg_get_functiondef\(r\.oid\), 'fin \+ 3'/.test(m153));

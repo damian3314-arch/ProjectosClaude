@@ -1480,6 +1480,35 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0156: la apertura de ventas con botones de horario y SIN enlace. Medida contra ventas_apertura (A/B por
+    // número de chat, solo cuando ajustes.ventas_plantilla_b la nombra): el enlace va en la respuesta, dentro de
+    // la ventana de 24 h (gratis), cuando la persona ya dijo qué horario le sirve. Cuesta lo mismo que
+    // cualquier plantilla de marketing: el precio lo pone la categoría, no el contenido.
+    name: 'ventas_horario',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 👋 Te escribe el equipo de Tumbao, tu academia de baile.\n\n' +
+          '{{2}}.\n\n' +
+          '¿En qué horario te queda mejor bailar? Toca una opción 👇',
+        example: { body_text: [['Laura', 'Vi que este mes ya has venido 4 veces a bailar con nosotros 💃']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: '7:00 am' },
+          { type: 'QUICK_REPLY', text: '6:00 pm' },
+          { type: 'QUICK_REPLY', text: '7:00 pm' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 7 oct (Plan Tumbao, 16 oct): ¿qué te ha impedido volver? Sin descuento ni oferta (Damián, 27 sep): solo
     // preguntar y escuchar. Cuatro respuestas rápidas y la baja de siempre. Antes de enviarla hay que
     // enrutar esas respuestas (hoy caerían en la respuesta automática general).
