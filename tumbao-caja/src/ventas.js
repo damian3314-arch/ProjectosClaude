@@ -26,14 +26,28 @@ export const WHATSAPP_EQUIPO = '301 783 3550';
 export const MAX_TURNOS_VENTAS = 8;
 
 /**
+ * El enlace que se manda lleva ?r=<número de conversación>: la página avisa que se abrió (/tumbao/visita) y así se
+ * sabe quién lo abrió y no terminó. No agrega nada de la persona: solo el número de la conversación.
+ */
+export function conEnlaceDeChat(texto, chatId) {
+  const id = Number(chatId);
+  if (!(Number.isInteger(id) && id > 0)) return texto;
+  return String(texto).replace(/(?<![\w.@/-])tumbaobaila\.com(\/mensualidad)?(?=[\s.,;:!?)]|$)/gi, (m) => `${m}?r=${id}`);
+}
+
+/**
  * Seguimiento dentro de las 24 h (gratis: la persona escribió hace menos de un día). A quien mostró interés,
  * se le contestó y se quedó callada, unas horas después se le pregunta, sin cifras ni promesas, si pudo
  * ver el enlace. Texto fijo, no del modelo: no hay nada que la baranda tenga que revisar.
  */
-export function textoSeguimientoVentas({ nombre, objetivo, hora } = {}) {
+export function textoSeguimientoVentas({ nombre, objetivo, hora, visito, chat } = {}) {
   const hola = nombre ? `Hola ${nombre} 😊` : 'Hola 😊';
+  // Si abrió la página pero no terminó, la pregunta es otra: no «¿lo viste?», sino «¿qué te frenó?».
+  if (visito) {
+    return `${hola} ¿Te quedó alguna duda para terminar tu inscripción? Si algo no te cuadra (el horario, el pago, lo que incluye), cuéntame y lo resolvemos.`;
+  }
   const h = hora === '19:00' ? '7 pm' : hora === '18:00' ? '6 pm' : null;
-  if (h) return `${hola} ¿Pudiste inscribirte en el cupo de las ${h}? Lo haces en ${ENLACE_PAGINA}. Si te quedó alguna duda, dime y te ayudo.`;
+  if (h) return `${hola} ¿Pudiste inscribirte en el cupo de las ${h}? Lo haces en ${conEnlaceDeChat(ENLACE_PAGINA, chat)}. Si te quedó alguna duda, dime y te ayudo.`;
   if (objetivo === 'mensualidad_7am' || objetivo === 'mensualidad_6pm') {
     return `${hola} ¿Pudiste ver el enlace para tu mensualidad? Si tienes dudas del horario o del pago, dime y te ayudo.`;
   }
@@ -54,6 +68,7 @@ QUÉ OFRECES (según perfil.objetivo; los datos están en "perfil" y SOLO usas e
 - reactivar: con calidez de "te extrañamos", sin culpa ni reclamo por no haber venido. Qué ofrecerle, EN ESTE ORDEN: (1) si perfil.opciones_hoy.mensualidad_7am es true, la mensualidad de 7 am como la forma de volver con un horario fijo y su lugar guardado (si perfil.cupos_mensualidad["07:00"] es 5 o menos puedes decir cuántos quedan, el número exacto; si son más, no lo menciones); (2) si dice que a esa hora no puede o prefiere flexibilidad, la tiquetera con la cuenta contra la suelta; (3) si duda de comprometerse, una clase suelta (perfil.precio_suelta) para volver a probar, que reserva en tumbaobaila.com. Si perfil.historial existe, ya bailó con nosotros: puedes decir cuántos meses estuvo (historial.meses_con_plan) y que se le extraña, y SOLO eso del pasado (no inventes fechas, motivos ni horarios que no estén ahí). Si su horario de antes (historial.horario) era 07:00 y perfil.cupos_mensualidad["07:00"] es mayor que 0, puedes ofrecerle también retomar su mensualidad de 7 am; si era 6 pm o 7 pm, esos horarios tienen lista de espera (mientras tanto, la tiquetera). Si pregunta por qué se fue o por qué no vuelve, escucha: no discutas ni la presiones.
 - mensualidad_7am: la mensualidad ($ en perfil.valor_mensualidad) en el horario de 7 am, mientras perfil.cupos_mensualidad["07:00"] sea mayor que 0. Se inscribe en ${ENLACE_PAGINA}.
 - La mensualidad incluye las clases de su horario de lunes a sábado, sin domingos ni festivos (entre 23 y 26 al mes). Si perfil.mensualidad_por_clase existe, la cuenta que convence es esa: «alrededor de $X por clase» contra la suelta (perfil.precio_suelta). Dilo como cuenta, nunca como descuento, y siempre con «alrededor de» porque el número de clases cambia de un mes a otro.
+- Si lo único que escribe es «Horario», «Precio», «Tiempo» u «Otra razón», está contestando la encuesta «¿Qué te ha impedido volver?». Agradécele con calidez (sin culpa) y responde según lo que tocó, SIN descuentos: Horario → pregúntale qué horario le serviría y dile qué cupos hay (perfil.opciones_hoy); Precio → la cuenta real (la mensualidad alrededor de $X por clase si perfil.mensualidad_por_clase existe; la tiquetera contra la suelta); Tiempo → que la tiquetera y la clase suelta se usan cuando ella pueda, sin horario fijo; Otra razón → pregúntale cuál, escucha y no insistas. Un solo paso a la vez.
 - Si lo único que escribe es un horario («7:00 am», «6:00 pm» o «7:00 pm»), es su respuesta a «¿En qué horario te queda mejor?»: contéstale con lo que hay en ESE horario. 7 am: la mensualidad si perfil.opciones_hoy.mensualidad_7am es true; 6 pm: la mensualidad si opciones_hoy.mensualidad_6pm es true; 7 pm: lista de espera (apuntarse es gratis en el enlace). Si no hay cupo, la tiquetera o una clase suelta mientras tanto. Un solo paso a la vez.
 - mensualidad_6pm: hay un cupo de mensualidad a las 6 pm para ella (perfil.cupos_mensualidad["18:00"] > 0). Se inscribe y paga en ${ENLACE_PAGINA}.
 - mensualidad_lista_espera (perfil.opciones_hoy.mensualidad_lista_espera, si existe): estaba en la lista de espera de ese horario y se le abrió un cupo. Si puede_pagar_ahora es true, ofrécele ESE cupo (el horario que dice "horario", nunca otro) y que se inscriba y pague en ${ENLACE_PAGINA}. No prometas por cuánto tiempo se le guarda el cupo: si pregunta, pasa a recepción. Si puede_pagar_ahora es false, dile que el equipo le confirma hoy y pasa a recepción.
@@ -115,7 +130,7 @@ export function enlacesEnTexto(texto) {
     .map((m) => m[0].toLowerCase());
 }
 
-const ENLACES_OK = /^(?:https?:\/\/)?(?:www\.)?(tumbaobaila\.com(?:\/mensualidad)?\/?|wa\.me\/573017833550\/?)$/i;
+const ENLACES_OK = /^(?:https?:\/\/)?(?:www\.)?(tumbaobaila\.com(?:\/mensualidad)?\/?(?:\?r=\d{1,9})?|wa\.me\/573017833550\/?)$/i;
 
 /**
  * La baranda: ¿se puede enviar lo que escribió el modelo?

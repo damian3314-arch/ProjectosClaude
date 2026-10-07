@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import {
   guardarRespuestaVentas, montosEnTexto, enlacesEnTexto, cifrasPermitidas, opcionesDeVenta,
-  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS, textoSeguimientoVentas,
+  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS, textoSeguimientoVentas, conEnlaceDeChat,
 } from '../../tumbao-caja/src/ventas.js';
 
 let fallos = 0;
@@ -176,6 +176,30 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      ih > 0 && /category: 'MARKETING'/.test(th) && ['7:00 am', '6:00 pm', '7:00 pm', 'No quiero más mensajes'].every(b => th.includes(`text: '${b}'`)) && !/tumbaobaila|https?:|type: 'URL'/.test(th.slice(0, th.indexOf('BUTTONS') + 600)));
   ok('0156: la prueba A/B solo se activa cuando ventas_plantilla_b tiene valor (vacía de entrada)', /'ventas_plantilla_b', ''/.test(m156) && /<> '' and c\.id % 2 = 1/.test(m156));
   ok('0156: sin DROP ni DELETE', !/\bdrop\b/i.test(m156) && !/\bdelete\b/i.test(m156));
+    const m157 = readFileSync(new URL('../supabase/migrations/0157_encuesta_regreso_ronda.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  ok('encuesta: el bot sabe contestar «Horario», «Precio», «Tiempo» y «Otra razón» sin descuentos',
+     /«Horario», «Precio», «Tiempo» u «Otra razón»/.test(INSTRUCCIONES_VENTAS) && /SIN descuentos/.test(INSTRUCCIONES_VENTAS));
+  ok('0157: sale solo el día fijado (16 oct), en horario, sin domingos ni festivos, 10 por corrida con tope',
+     /'encuesta_regreso_fecha', '2026-10-16'/.test(m157) && /v_fecha is distinct from hoy/.test(m157) && /from festivos/.test(m157) && /time '10:00'/.test(m157) && /limit least\(10, v_total - v_hechas\)/.test(m157));
+  ok('0157: abre la conversación ANTES de enviar y solo a quien pasa los filtros de siempre (ventas_seleccion, reactivar)',
+     /insert into ventas_chats[\s\S]*insert into wa_avisos/.test(m157) && /from ventas_seleccion\(500\)/.test(m157) && /objetivo = 'reactivar'/.test(m157));
+  ok('0157: una sola vez por persona y día, y sin DROP ni DELETE', /'encuesta:' \|\| c\.telefono/.test(m157) && /on conflict \(clave\) do nothing/.test(m157) && !/\bdrop\b/i.test(m157) && !/\bdelete\b/i.test(m157));
+    const m158 = readFileSync(new URL('../supabase/migrations/0158_ventas_visita_al_enlace.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  const idx = readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8');
+  const men = readFileSync(new URL('../../docs/mensualidad.html', import.meta.url), 'utf8');
+  ok('enlace con seguimiento: el enlace de la conversación lleva ?r=<número> y lo demás queda igual',
+     conEnlaceDeChat('Inscríbete en tumbaobaila.com/mensualidad. Y mira tumbaobaila.com.', 713) === 'Inscríbete en tumbaobaila.com/mensualidad?r=713. Y mira tumbaobaila.com?r=713.'
+     && conEnlaceDeChat('Escríbenos al 301 783 3550', 5) === 'Escríbenos al 301 783 3550' && conEnlaceDeChat('tumbaobaila.com/mensualidad', 0) === 'tumbaobaila.com/mensualidad');
+  ok('enlace con seguimiento: la baranda lo acepta con ?r=<número> y sigue rechazando otros parámetros ni dominios',
+     guardarRespuestaVentas('Inscríbete en tumbaobaila.com/mensualidad?r=713', perfil).ok && !guardarRespuestaVentas('Inscríbete en tumbaobaila.com/mensualidad?x=1', perfil).ok && !guardarRespuestaVentas('Mira otra.com/mensualidad?r=7', perfil).ok);
+  ok('seguimiento: si abrió la página y no terminó, la pregunta es qué la frenó (y no pasa por «¿lo viste?»)',
+     /duda para terminar tu inscripción/.test(textoSeguimientoVentas({ nombre: 'Ana', visito: true })) && !/Pudiste ver el enlace/.test(textoSeguimientoVentas({ nombre: 'Ana', visito: true })));
+  ok('páginas: index y mensualidad avisan a /tumbao/visita solo si ?r= es un número, sin guardar nada de la persona',
+     [idx, men].every(h => /tumbao\/visita/.test(h) && /\^\\d\{1,9\}\$/.test(h) && /get\('r'\)/.test(h)));
+  ok('Worker: /tumbao/visita valida el número y solo anota la visita', /ruta === '\/tumbao\/visita'/.test(w) && /\^\\d\{1,9\}\$\/\.test\(r\)/.test(w) && /ventas_marcar_visita/.test(w));
+  ok('Worker: el enlace sale con el número de la conversación', /conEnlaceDeChat\(respuesta, chat\.id\)/.test(w));
+  ok('0158: anota la primera visita y cuenta, informa en los resultados y no borra nada',
+     /ventas_marcar_visita/.test(m158) && /abrieron_enlace/.test(m158) && /'visito'/.test(m158) && !/\bdrop\b/i.test(m158) && !/\bdelete\b/i.test(m158));
     const m153 = readFileSync(new URL('../supabase/migrations/0153_gracia_5_dias_y_aviso_automatico_a_la_lista_de_espera.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('0153: la gracia sube a 5 días y las funciones de ventas la leen del ajuste (sin «fin + 3» fijo)',
      /'mensualidad_gracia_dias', '5'/.test(m153) && /ventas_candidatos_historial/.test(m153) && /fin \+ 3/.test(m153) && /replace\(pg_get_functiondef\(r\.oid\), 'fin \+ 3'/.test(m153));

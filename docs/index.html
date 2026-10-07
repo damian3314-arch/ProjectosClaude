@@ -2393,5 +2393,14 @@ const CONFIG = {
   }
 })();
 </script>
+<script>
+/* Seguimiento de la conversación de ventas: el enlace que manda el asistente por WhatsApp lleva ?r=<número de
+   conversación>. Solo se avisa que la página se abrió; no se guarda nada de quien la abre. */
+(function(){try{
+  var r=new URLSearchParams(location.search).get('r');
+  if(!/^\d{1,9}$/.test(r||'')) return;
+  fetch('https://tumbao-caja.damian3314.workers.dev/tumbao/visita',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({r:r}),keepalive:true}).catch(function(){});
+}catch(e){}})();
+</script>
 </body>
 </html>

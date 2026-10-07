@@ -35,7 +35,7 @@
 import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE } from './cifras.js';
-import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas } from './ventas.js';
+import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat } from './ventas.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -783,6 +783,15 @@ async function pagina(request, env, ruta, origen, ctx) {
 
   try {
     // ── los horarios ──────────────────────────────────────────────
+    // 0158: la página de ventas se abrió desde el enlace de una conversación (?r=<número>). Solo informativo.
+    if (ruta === '/tumbao/visita' && metodo === 'POST') {
+      const r = txt(b.r, 12);
+      if (/^\d{1,9}$/.test(r)) {
+        try { await rpc(env, 'ventas_marcar_visita', { p_chat: Number(r) }); } catch (e) { console.log('visita', e && e.message); }
+      }
+      return json({ ok: true }, 200, origen);
+    }
+
     if (ruta === '/tumbao/clases' && metodo === 'GET') {
       // Antes de leer, no después: así los cupos que se enseñan ya
       // tienen descontados los que acaban de vencer.
@@ -2399,7 +2408,7 @@ async function ventasSeguimientoWA(env, origen) {
   let enviados = 0;
   for (const s of (Array.isArray(lote) ? lote : [])) {
     try {
-      await responderYGuardar(env, s.telefono, textoSeguimientoVentas({ nombre: s.nombre, objetivo: s.objetivo, hora: s.hora }));
+      await responderYGuardar(env, s.telefono, textoSeguimientoVentas({ nombre: s.nombre, objetivo: s.objetivo, hora: s.hora, visito: s.visito === true, chat: s.chat }));
       enviados++;
     } catch (e) { console.log('seguimiento', s.chat, e && e.message); }
   }
@@ -2486,7 +2495,7 @@ async function ventasWA(request, env, origen) {
     if (pasar) { resultado = 'recepcion'; cerrar = true; }
     if (resultado === 'no_interesado') cerrar = true;
 
-    await responderYGuardar(env, m.telefono, respuesta.slice(0, 900));
+    await responderYGuardar(env, m.telefono, conEnlaceDeChat(respuesta, chat.id).slice(0, 900));
     await rpc(env, 'ventas_turno', {
       p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: cerrar,
       p_resultado: resultado || null, p_interes: (j && j.interes) || null, p_resumen: (j && j.resumen) || null,
