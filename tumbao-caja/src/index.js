@@ -35,7 +35,7 @@
 import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE } from './cifras.js';
-import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta } from './ventas.js';
+import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas } from './ventas.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -2358,6 +2358,25 @@ async function opinionWA(request, env, origen) {
   }
 }
 
+/* 0155 · /wa/ventas-seguimiento: la base lo llama cada 30 minutos en horario. A quien mostró interés, se le
+ * contestó y se quedó callada dentro de las 24 h (la ventana gratis), se le pregunta si pudo ver el enlace. La
+ * base decide a quién (ventas_seguimientos_tomar) y lo marca para que sea UNA sola vez. */
+async function ventasSeguimientoWA(env, origen) {
+  let lote = [];
+  try { lote = await rpc(env, 'ventas_seguimientos_tomar', { p_limite: 5 }); } catch (e) {
+    console.log('ventas_seguimientos_tomar', e && e.message);
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
+  let enviados = 0;
+  for (const s of (Array.isArray(lote) ? lote : [])) {
+    try {
+      await responderYGuardar(env, s.telefono, textoSeguimientoVentas({ nombre: s.nombre, objetivo: s.objetivo, hora: s.hora }));
+      enviados++;
+    } catch (e) { console.log('seguimiento', s.chat, e && e.message); }
+  }
+  return json({ ok: true, enviados }, 200, origen);
+}
+
 /* 0141 · /wa/ventas: la conversación de ventas. La base lo despierta (pg_net) cuando alguien
  * con una apertura viva escribe. Conversa dentro de la ventana de 24 h, con la baranda de
  * ventas.js: precios, cupos y enlaces solo de la base y de la página. */
@@ -2708,6 +2727,9 @@ export default {
     }
     if (ruta === '/wa/ventas' && request.method === 'POST') {
       return await ventasWA(request, env, origen);
+    }
+    if (ruta === '/wa/ventas-seguimiento' && request.method === 'POST') {
+      return await ventasSeguimientoWA(env, origen);
     }
     if (ruta === '/wa/notas') {
       try { return await notasWA(env, origen); }

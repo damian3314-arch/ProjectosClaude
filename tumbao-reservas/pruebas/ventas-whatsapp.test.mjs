@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import {
   guardarRespuestaVentas, montosEnTexto, enlacesEnTexto, cifrasPermitidas, opcionesDeVenta,
-  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS,
+  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS, textoSeguimientoVentas,
 } from '../../tumbao-caja/src/ventas.js';
 
 let fallos = 0;
@@ -145,6 +145,25 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      /time '09:00'/.test(m7) && /time '19:00'/.test(m7) && /time '13:00'/.test(m7) && /from festivos/.test(m7) && /isodow[\s\S]*?< 7/.test(m7));
     ok('costo: el Worker anota categoría y si Meta cobró cada mensaje, y trae el costo real (/wa/costos)',
      /wa_guardar_precio/.test(w) && /st\.pricing\.billable === true/.test(w) && /ruta === '\/wa\/costos'/.test(w) && /pricing_analytics/.test(w));
+    const m155 = readFileSync(new URL('../supabase/migrations/0155_ventas_seguimiento_dentro_de_24h.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  const p7 = INSTRUCCIONES_VENTAS;
+  ok('prompt: a quien vuelve se le ofrece primero la mensualidad de 7 am, después la tiquetera, después una clase suelta',
+     /EN ESTE ORDEN: \(1\)[^]*mensualidad de 7 am[^]*\(2\)[^]*tiquetera[^]*\(3\)[^]*clase suelta/.test(p7));
+  ok('prompt: la escasez solo con el número exacto y solo si son 5 o menos', /5 o menos puedes decir cuántos quedan, el número exacto/.test(p7));
+  ok('prompt: la tiquetera no se ofrece como la mejor opción a quien casi no viene (vence a los 30 días)', /no se la ofrezcas como la mejor opción a quien casi no viene/.test(p7));
+  const segs = [textoSeguimientoVentas({ nombre: 'Laura' }), textoSeguimientoVentas({ nombre: 'Laura', objetivo: 'mensualidad_7am' }),
+                textoSeguimientoVentas({ nombre: 'Laura', hora: '19:00' }), textoSeguimientoVentas({ nombre: 'Laura', hora: '18:00' }), textoSeguimientoVentas({})];
+  ok('seguimiento: ningún texto trae cifras, promociones ni enlaces ajenos (pasan la baranda)', segs.every(t => guardarRespuestaVentas(t, perfil).ok));
+  ok('seguimiento: el de lista de espera nombra el horario correcto', /7 pm/.test(segs[2]) && !/6 pm/.test(segs[2]) && /6 pm/.test(segs[3]));
+  ok('seguimiento: no es largo (WhatsApp)', segs.every(t => t.length < 260));
+  ok('0155: una sola vez por conversación, dentro de la ventana de 24 h y solo si la última palabra fue nuestra',
+     /seguimiento_at/.test(m155) && /interval '22 hours'/.test(m155) && /interval '20 hours' and ahora - interval '3 hours'/.test(m155) && /m\.direccion from wa_mensajes[^]{0,160}\) = 'saliente'/.test(m155));
+  ok('0155: no a quien ya compró o está pagando, ni a bajas ni dueños',
+     /tiqueteras tq/.test(m155) && /membresias m/.test(m155) && /mensualidad_solicitudes s/.test(m155) && /wa_bajas/.test(m155) && /wa_es_dueno/.test(m155));
+  ok('0155: solo en horario (sin domingos ni festivos; sábado hasta la 1 pm) y se apaga con wa_ventas_seguimiento',
+     /from festivos/.test(m155) && /time '13:00'/.test(m155) && /time '19:00'/.test(m155) && /wa_ventas_seguimiento/.test(m155));
+  ok('0155: sin DROP ni DELETE', !/\bdrop\b/i.test(m155) && !/\bdelete\b/i.test(m155));
+  ok('Worker: ruta /wa/ventas-seguimiento que envía y guarda el texto', /ruta === '\/wa\/ventas-seguimiento'/.test(w) && /textoSeguimientoVentas\(\{ nombre: s\.nombre/.test(w));
     const m153 = readFileSync(new URL('../supabase/migrations/0153_gracia_5_dias_y_aviso_automatico_a_la_lista_de_espera.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('0153: la gracia sube a 5 días y las funciones de ventas la leen del ajuste (sin «fin + 3» fijo)',
      /'mensualidad_gracia_dias', '5'/.test(m153) && /ventas_candidatos_historial/.test(m153) && /fin \+ 3/.test(m153) && /replace\(pg_get_functiondef\(r\.oid\), 'fin \+ 3'/.test(m153));
