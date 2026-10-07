@@ -49,6 +49,7 @@ const SUITES = [
   'recordatorio-clase',
   'tiquetera-oferta',
   'ventas-whatsapp',
+  'novedades',
   'cifras-ia',
 ];
 

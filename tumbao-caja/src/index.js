@@ -102,6 +102,14 @@ async function rpc(env, funcion, cuerpo) {
   try { return JSON.parse(texto); } catch (_) { return {}; }
 }
 
+/** 0154: la casilla opcional «Quiero recibir novedades y promociones por WhatsApp». Se guarda por celular y,
+ *  si falla, no estorba la reserva, la mensualidad ni la compra: lo que la persona vino a hacer sale igual. */
+async function registrarNovedades(env, b, tel, fuente) {
+  if (!(b && (b.acepta_novedades === true || b.acepta_novedades === 'true'))) return;
+  try { await rpc(env, 'registrar_acepta_novedades', { p_telefono: tel, p_fuente: fuente }); }
+  catch (e) { console.log('novedades', e && e.message); }
+}
+
 /** Lee filas de una tabla por PostgREST. Solo lectura. */
 async function leer(env, tabla, consulta) {
   const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${tabla}?${consulta}`, {
@@ -872,6 +880,7 @@ async function pagina(request, env, ruta, origen, ctx) {
         }, mapa[r && r.error] || 400, origen);
       }
 
+      await registrarNovedades(env, b, tel, 'reserva');
       const d = new Date(r.fecha_hora);
       return json({
         ok: true,
@@ -1027,6 +1036,7 @@ async function pagina(request, env, ruta, origen, ctx) {
           mensaje: 'No pudimos guardar tus datos. Escríbenos por WhatsApp.' },
           mapa[r && r.error] || 400, origen);
       }
+      await registrarNovedades(env, b, tel, 'mensualidad');
       return json(r, 200, origen);
     }
 
@@ -1083,6 +1093,7 @@ async function pagina(request, env, ruta, origen, ctx) {
           mensaje: (r && r.mensaje) ||
             'No pudimos iniciar la compra. Escríbenos por WhatsApp.' }, 400, origen);
       }
+      await registrarNovedades(env, b, tel, 'tiquetera');
       return json(r, 200, origen);
     }
 
@@ -1463,6 +1474,34 @@ const PLANTILLAS_WA = [
         type: 'BUTTONS',
         buttons: [
           { type: 'QUICK_REPLY', text: 'Cuéntame más' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    // 7 oct (Plan Tumbao, 16 oct): ¿qué te ha impedido volver? Sin descuento ni oferta (Damián, 27 sep): solo
+    // preguntar y escuchar. Cuatro respuestas rápidas y la baja de siempre. Antes de enviarla hay que
+    // enrutar esas respuestas (hoy caerían en la respuesta automática general).
+    name: 'encuesta_regreso',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡 Hace un tiempo no te vemos en Tumbao y nos gustaría entenderte mejor, sin ningún compromiso.\n\n' +
+          '¿Qué te ha impedido volver? Toca la opción que más se parezca 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'QUICK_REPLY', text: 'Horario' },
+          { type: 'QUICK_REPLY', text: 'Precio' },
+          { type: 'QUICK_REPLY', text: 'Tiempo' },
+          { type: 'QUICK_REPLY', text: 'Otra razón' },
           { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
         ],
       },

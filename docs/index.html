@@ -306,6 +306,7 @@ const CONFIG = {
   .check{display:flex;gap:.7rem;align-items:flex-start;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:.85rem}
   .check input{margin:.15rem 0 0;width:1.15rem;height:1.15rem;accent-color:var(--hot);flex:none}
   .check label{margin:0;font-size:.8rem;color:var(--tx-2);line-height:1.5}
+  .check .opt{color:var(--tx-3);font-weight:400}
   .trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 
   /* ---------- la burbuja de opiniones ----------
@@ -1025,6 +1026,14 @@ const CONFIG = {
         </label>
       </div>
       <p class="err-campo" id="e-habeas">Necesitamos tu autorización para reservar.</p>
+
+      <div class="check">
+        <input id="novedades" type="checkbox">
+        <label for="novedades">
+          Quiero recibir novedades y promociones de Tumbao por WhatsApp
+          <span class="opt">(opcional)</span>
+        </label>
+      </div>
 
       <button class="btn" type="submit" id="enviar">Apartar mi cupo</button>
       <button class="btn-ghost" type="button" data-volver="1">← Cambiar horario</button>
@@ -1822,6 +1831,7 @@ const CONFIG = {
             body: JSON.stringify({
               clase_id: elegida.clase_id, nombre, telefono: celular,
               email: $('#email').value.trim(), habeas: true, tipo,
+              acepta_novedades: $('#novedades').checked,
               codigo_tiquetera: tipo === 'tiquetera' ? codigoTiquetera : undefined,
               apellido2: $('#apellido2').value
             })

@@ -670,6 +670,11 @@ const CONFIG = {
       <label for="habeas">Autorizo a Tumbao a guardar y usar mis datos para
         gestionar mi mensualidad y contactarme por WhatsApp.</label>
     </div>
+    <div class="check">
+      <input id="novedades" type="checkbox">
+      <label for="novedades">Quiero recibir novedades y promociones de Tumbao por
+        WhatsApp <span class="opt">(opcional)</span></label>
+    </div>
 
     <button class="btn" type="submit" id="btn-enviar">Continuar</button>
     <button class="btn-ghost" type="button" id="volver0">← Cambiar de horario</button>
@@ -780,6 +785,11 @@ const CONFIG = {
         <input id="tiq-habeas" type="checkbox">
         <label for="tiq-habeas">Autorizo a Tumbao a guardar y usar mis datos para
           gestionar mi tiquetera y contactarme por WhatsApp.</label>
+      </div>
+      <div class="check">
+        <input id="tiq-novedades" type="checkbox">
+        <label for="tiq-novedades">Quiero recibir novedades y promociones de Tumbao por
+          WhatsApp <span class="opt">(opcional)</span></label>
       </div>
       <button class="btn" type="submit" id="tiq-btn-enviar">Continuar al pago</button>
       <button class="btn-ghost" type="button" id="tiq-volver0">← Cambiar de paquete</button>
@@ -1049,7 +1059,7 @@ const CONFIG = {
           nombre, celular: tel, hora: horaElegida,
           documento: $('#documento').value.trim(),
           correo: $('#correo').value.trim(),
-          habeas: true, apellido2: $('#apellido2').value,
+          habeas: true, acepta_novedades: $('#novedades').checked, apellido2: $('#apellido2').value,
         }),
       });
       const d = await r.json();
@@ -1364,7 +1374,7 @@ const CONFIG = {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre, celular: tel, paquete: tiqPaqueteElegido.clave,
-          habeas: true, apellido2: $('#tiq-apellido2').value,
+          habeas: true, acepta_novedades: $('#tiq-novedades').checked, apellido2: $('#tiq-apellido2').value,
         }),
       });
       const d = await r.json();
