@@ -84,6 +84,15 @@ titulo('4. Vacío, largo y opciones');
      opcionesDeVenta({ ...perfil, aplica_mensualidad: false }, 'mensualidad_6pm').mensualidad_6pm);
   ok('pero no si ese objetivo es otro', !opcionesDeVenta({ ...perfil, aplica_mensualidad: false }, 'tiquetera').mensualidad_6pm);
     ok('sin cupo a las 6 pm tampoco', !opcionesDeVenta({ ...perfil, cupos_mensualidad: { '07:00': 3, '18:00': 0, '19:00': 0 } }).mensualidad_6pm);
+  const le = (hora, puede, libres) => ({ ...perfil, lista_espera: { hora, puede_pagar: puede, libres } });
+  ok('lista de espera de 7 pm: la opción lleva el horario de 7 pm y no la de 6 pm',
+     opcionesDeVenta(le('19:00', true, 1), 'mensualidad_6pm').mensualidad_lista_espera.horario === '7 pm' && !opcionesDeVenta(le('19:00', true, 1), 'mensualidad_6pm').mensualidad_6pm);
+  ok('lista de espera de 6 pm: horario de 6 pm', opcionesDeVenta(le('18:00', true, 2), 'mensualidad_6pm').mensualidad_lista_espera.horario === '6 pm');
+  ok('solo se le promete el cupo si la página lo deja pagar hoy y queda cupo',
+     opcionesDeVenta(le('19:00', true, 1)).mensualidad_lista_espera.puede_pagar_ahora === true
+     && opcionesDeVenta(le('19:00', false, 1)).mensualidad_lista_espera.puede_pagar_ahora === false
+     && opcionesDeVenta(le('19:00', true, 0)).mensualidad_lista_espera.puede_pagar_ahora === false);
+  ok('sin lista de espera la opción no existe', opcionesDeVenta(perfil).mensualidad_lista_espera === null);
   ok('el mensaje seguro manda a recepción', /301 783 3550/.test(RESPUESTA_SEGURA_VENTAS));
   ok('hay un tope de turnos', MAX_TURNOS_VENTAS >= 4 && MAX_TURNOS_VENTAS <= 12, String(MAX_TURNOS_VENTAS));
 }
@@ -136,6 +145,15 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      /time '09:00'/.test(m7) && /time '19:00'/.test(m7) && /time '13:00'/.test(m7) && /from festivos/.test(m7) && /isodow[\s\S]*?< 7/.test(m7));
     ok('costo: el Worker anota categoría y si Meta cobró cada mensaje, y trae el costo real (/wa/costos)',
      /wa_guardar_precio/.test(w) && /st\.pricing\.billable === true/.test(w) && /ruta === '\/wa\/costos'/.test(w) && /pricing_analytics/.test(w));
+    const m153 = readFileSync(new URL('../supabase/migrations/0153_gracia_5_dias_y_aviso_automatico_a_la_lista_de_espera.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  ok('0153: la gracia sube a 5 días y las funciones de ventas la leen del ajuste (sin «fin + 3» fijo)',
+     /'mensualidad_gracia_dias', '5'/.test(m153) && /ventas_candidatos_historial/.test(m153) && /fin \+ 3/.test(m153) && /replace\(pg_get_functiondef\(r\.oid\), 'fin \+ 3'/.test(m153));
+  ok('0153: el aviso a la lista de espera solo va a quien la página deja pagar, sin domingos ni festivos, y respeta bajas y dueños',
+     /premium_puede_pagar\(r\.celular, null, v_hora::time\)/.test(m153) && /from festivos/.test(m153) && /wa_bajas/.test(m153) && /wa_es_dueno/.test(m153));
+  ok('0153: quien no paga en 48 h deja su turno (anulada) y hay alerta si se pasa el tope de 23',
+     /estado = 'anulada'/.test(m153) && /lista_espera_horas_para_pagar/.test(m153) && /v_ocup > v_tope/.test(m153));
+  ok('0153: corre a las 9:10 am Bogotá de lunes a sábado y se apaga con wa_lista_espera_auto', /'10 14 \* \* 1-6'/.test(m153) && /wa_lista_espera_auto/.test(m153));
+  ok('0153: sin DROP ni DELETE', !/\bdrop\b/i.test(m153) && !/\bdelete\b/i.test(m153));
     ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 

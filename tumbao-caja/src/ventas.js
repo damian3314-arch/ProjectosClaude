@@ -39,6 +39,7 @@ QUÉ OFRECES (según perfil.objetivo; los datos están en "perfil" y SOLO usas e
 - reactivar: igual que tiquetera, con calidez de "te extrañamos", sin culpa ni reclamo por no haber venido. Si perfil.historial existe, ya bailó con nosotros: puedes decir cuántos meses estuvo (historial.meses_con_plan) y que se le extraña, y SOLO eso del pasado (no inventes fechas, motivos ni horarios que no estén ahí). Si su horario de antes (historial.horario) era 07:00 y perfil.cupos_mensualidad["07:00"] es mayor que 0, puedes ofrecerle también retomar su mensualidad de 7 am; si era 6 pm o 7 pm, esos horarios tienen lista de espera (mientras tanto, la tiquetera). Si pregunta por qué se fue o por qué no vuelve, escucha: no discutas ni la presiones.
 - mensualidad_7am: la mensualidad ($ en perfil.valor_mensualidad) en el horario de 7 am, mientras perfil.cupos_mensualidad["07:00"] sea mayor que 0. Se inscribe en ${ENLACE_PAGINA}.
 - mensualidad_6pm: hay un cupo de mensualidad a las 6 pm para ella (perfil.cupos_mensualidad["18:00"] > 0). Se inscribe y paga en ${ENLACE_PAGINA}.
+- mensualidad_lista_espera (perfil.opciones_hoy.mensualidad_lista_espera, si existe): estaba en la lista de espera de ese horario y se le abrió un cupo. Si puede_pagar_ahora es true, ofrécele ESE cupo (el horario que dice "horario", nunca otro) y que se inscriba y pague en ${ENLACE_PAGINA}. No prometas por cuánto tiempo se le guarda el cupo: si pregunta, pasa a recepción. Si puede_pagar_ahora es false, dile que el equipo le confirma hoy y pasa a recepción.
 - Si pregunta por la mensualidad de 6 pm o 7 pm y NO es su objetivo (o no hay cupo): esos horarios tienen lista de espera; apuntarse es gratis en ${ENLACE_PAGINA} y se le avisa apenas se libere un cupo. Mientras tanto, la tiquetera. NO hables de requisitos ni de por qué sí o por qué no.
 - Si perfil.plan_vigente existe: ya tiene mensualidad, no le vendas; agradece y cierra con calidez. Si perfil.tiquetera_vigente existe: ya tiene tiquetera con clases; no le vendas otra, invítala a usarla.
 
@@ -129,11 +130,17 @@ export const RESPUESTA_SEGURA_VENTAS =
 /** Ordena lo que el modelo necesita saber de lo que se puede ofrecer hoy. */
 export function opcionesDeVenta(perfil, objetivo) {
   const c = (perfil && perfil.cupos_mensualidad) || {};
+  // 0153: a quien se le avisó desde la lista de espera, la base dice de qué horario (6 pm o 7 pm) y si la
+  // página lo deja pagar hoy; solo se le promete ESE cupo.
+  const le = perfil && perfil.lista_espera && perfil.lista_espera.hora ? perfil.lista_espera : null;
   return {
     mensualidad_7am: Number(c['07:00']) > 0,
     // A quien se le abrió con «mensualidad_6pm» (por fidelidad o por salir de la lista de espera) se le
     // ofrece ese cupo aunque no cumpla el historial: la decisión ya está tomada.
-    mensualidad_6pm: (!!(perfil && perfil.aplica_mensualidad) || objetivo === 'mensualidad_6pm') && Number(c['18:00']) > 0,
+    mensualidad_6pm: !le && (!!(perfil && perfil.aplica_mensualidad) || objetivo === 'mensualidad_6pm') && Number(c['18:00']) > 0,
+    mensualidad_lista_espera: le
+      ? { horario: le.hora === '19:00' ? '7 pm' : '6 pm', puede_pagar_ahora: le.puede_pagar === true && Number(le.libres) > 0 }
+      : null,
     lista_de_espera_6pm_7pm: true,
   };
 }
