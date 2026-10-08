@@ -192,4 +192,67 @@ export const REGLAS_DE_CIFRAS = `CIFRAS (lo más importante del informe)
 export const REGLAS_DE_CIFRAS_AGENTE = `CIFRAS (reglas que no se rompen)
 - Los precios oficiales están arriba en "DATOS FIJOS DEL NEGOCIO". La mensualidad vale lo que ahí dice. Jamás la cambies, la promedies ni la reemplaces por un promedio de pagos ("valor típico", "ticket promedio" o lo cobrado dividido entre mensualidades): eso NO es el precio.
 - Nada de cuentas de cabeza. Toda suma, promedio, porcentaje, diferencia o multiplicación se hace en SQL con la herramienta (sum, avg, round, count) y copias el resultado. Para "cuánto representan N renovaciones" usa select renovaciones_en_juego(7) (ya trae el valor en plata).
-- Si el resultado de la base no trae una cifra, no la inventes ni la estimes: dilo.`;
+- Si el resultado de la base no trae una cifra, no la inventes ni la estimes: dilo.
+- MENSUALIDADES (cuántas hay, activas, vigentes, cupos, ocupación por horario): usa SIEMPRE select mensualidades_resumen() y copia sus campos con su nombre. Tiene tres números que NO son lo mismo y nunca se mezclan: "vigentes" (personas con el plan al día), "en_gracia" (vencieron hace pocos días y se les guarda el cupo) y "ocupan_cupo" (vigentes + en gracia: lo que cuenta la página contra el tope). Los totales ya vienen sumados (total_vigentes, total_en_gracia, total_ocupan_cupo): no los sumes ni los restes tú. Si en una misma respuesta pones un número por horario y un total, el total tiene que ser el de la MISMA columna. Si te dicen que la página muestra otro número, explica con esas tres columnas cuál es cuál, sin inventar.`;
+
+
+/* ── 0159 · mensualidades: una sola verdad ───────────────────────────────────────────────────────────────
+ * Damián (8 oct): «¿cuántos activos en mensualidad hay?» → «58»; «¿en cada horario?» → 26 / 20 / 23 y «Total: 58».
+ * Eran dos cuentas distintas (vigentes y los que ocupan cupo) con un total de la otra columna: la suma real era 69.
+ * Tres defensas: (1) las preguntas de conteo se contestan SIN modelo, con el texto armado de mensualidades_resumen();
+ * (2) las reglas de arriba obligan al modelo a copiar esa función en lo demás; (3) si aun así una lista trae un
+ * «Total» que no es la suma de sus renglones, no se envía.
+ */
+
+/** ¿Es una pregunta directa por cuántas mensualidades hay vigentes/activas? Solo estas se contestan sin modelo. */
+export function esConteoDeMensualidades(texto) {
+  const t = String(texto || '').toLowerCase();
+  if (!t || t.length > 160) return false;
+  if (/vend|ingres|plata|\$|pes[oa]s|mes\b|semana|ayer|venc|renov|precio|cuest|valor|lista de espera|cupos?\b|clase|suelta|tiquet/.test(t)) return false;
+  const cuantos = /(cu[aá]nt[oa]s\b|cantidad|n[uú]mero|total)/.test(t);
+  const sujeto = /(mensualidad|afiliad|activ[oa]s?|vigentes?|inscrit|plan(es)?\b)/.test(t);
+  return cuantos && sujeto;
+}
+
+const AM = { '07:00': '7 am', '18:00': '6 pm', '19:00': '7 pm' };
+const num = (n) => `*${Number(n) || 0}*`;
+
+/** El texto exacto, armado solo con lo que trae mensualidades_resumen(): nadie suma ni redondea. */
+export function textoMensualidades(r) {
+  if (!r || !Array.isArray(r.por_horario)) return null;
+  const hs = r.por_horario;
+  const et = (h) => h.etiqueta ? String(h.etiqueta).replace(/^(\d{1,2}):00\s*(am|pm)$/i, '$1 $2').toLowerCase() : (AM[h.hora] || h.hora);
+  const lin = (campo) => hs.map((h) => `${et(h)}: ${num(h[campo])}`).join(' · ');
+  const libres = hs.filter((h) => h.libres_pagina != null).map((h) => `${et(h)}: ${num(h.libres_pagina)}`).join(' · ');
+  return [
+    '*Mensualidades hoy*',
+    '',
+    `• *Activas* (plan al día): ${num(r.total_vigentes)} → ${lin('vigentes')}`,
+    `• *En gracia* (vencieron hace ${r.dias_de_gracia} días o menos y se les guarda el cupo): ${num(r.total_en_gracia)} → ${lin('en_gracia')}`,
+    `• *Ocupan cupo* (activas + en gracia; es lo que cuenta la página): ${num(r.total_ocupan_cupo)} → ${lin('ocupan_cupo')}`,
+    libres ? `• *Cupos que la página puede vender hoy*: ${libres}` : null,
+  ].filter((x) => x !== null).join('\n');
+}
+
+/**
+ * ¿Hay una lista de renglones con número y debajo un «Total» que no es la suma? Devuelve la lista de desajustes.
+ * Lee renglones del estilo «• 7 am: *26*» o «- 6 pm: 20» y un «Total: 58» (con o sin asteriscos, punto o «en total»).
+ */
+export function totalesNoCuadran(texto) {
+  const lineas = String(texto || '').split(/\r?\n/);
+  const malos = [];
+  for (let i = 0; i < lineas.length; i++) {
+    const m = /^\W*(?:en\s+)?total\b[^0-9\n]{0,40}\*?(\d[\d.]*)\*?/i.exec(lineas[i].replace(/\*/g, ''));
+    if (!m) continue;
+    const total = Number(m[1].replace(/\./g, ''));
+    const suma = [];
+    for (let j = i - 1; j >= 0; j--) {
+      if (!lineas[j].trim()) { if (suma.length) break; continue; }
+      const r = /^\s*[•\-*·]\s*.*?(\d[\d.]*)\s*[.)]?\s*$/.exec(lineas[j].replace(/\*/g, ''));
+      if (!r) break;
+      suma.push(Number(r[1].replace(/\./g, '')));
+    }
+    if (suma.length >= 2 && suma.reduce((a, b) => a + b, 0) !== total) malos.push({ total, suma: suma.reduce((a, b) => a + b, 0) });
+  }
+  return malos;
+}

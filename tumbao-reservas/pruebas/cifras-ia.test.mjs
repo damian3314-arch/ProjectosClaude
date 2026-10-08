@@ -11,7 +11,8 @@
  *   node cifras-ia.test.mjs
  */
 import { readFileSync } from 'node:fs';
-import { prepararTablero, derivar, cifrasSospechosas, montosEnTexto, numerosDe, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE }
+import { prepararTablero, derivar, cifrasSospechosas, montosEnTexto, numerosDe, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE,
+         esConteoDeMensualidades, textoMensualidades, totalesNoCuadran }
   from '../../tumbao-caja/src/cifras.js';
 
 let fallos = 0;
@@ -100,6 +101,35 @@ titulo('5. Cableado en el Worker');
   ok('el asistente recibe los precios oficiales y las reglas', /DATOS FIJOS DEL NEGOCIO/.test(w) && /REGLAS_DE_CIFRAS_AGENTE/.test(w) && /renovaciones_en_juego/.test(REGLAS_DE_CIFRAS_AGENTE));
   ok('el asistente revisa sus cifras y reintenta', /cifrasSospechosas\(respuesta, registro\.salidas/.test(w) && /Revisión interna/.test(w));
   ok('si persiste, la línea «por confirmar» va en el mensaje', /Cifras por confirmar/.test(w) && /Confirma estas cifras antes de usarlas/.test(w));
+}
+
+titulo('4. Mensualidades: una sola verdad (8 oct: «58» y luego 26 / 20 / 23 con «Total: 58»)');
+{
+  const w = readFileSync(new URL('../../tumbao-caja/src/index.js', import.meta.url), 'utf8');
+  const sql = readFileSync(new URL('../supabase/migrations/0159_mensualidades_resumen_una_sola_verdad.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  // Lo que devolvió la base el 8 de octubre.
+  const resumen = { dias_de_gracia: 5, total_vigentes: 58, total_en_gracia: 11, total_ocupan_cupo: 69, por_horario: [
+    { hora: '07:00', etiqueta: '7:00 am', vigentes: 24, en_gracia: 2, ocupan_cupo: 26, libres_pagina: 9 },
+    { hora: '18:00', etiqueta: '6:00 pm', vigentes: 19, en_gracia: 1, ocupan_cupo: 20, libres_pagina: 0 },
+    { hora: '19:00', etiqueta: '7:00 pm', vigentes: 15, en_gracia: 8, ocupan_cupo: 23, libres_pagina: 0 }] };
+  const t = textoMensualidades(resumen);
+  ok('la pregunta de Damián se contesta sin modelo', esConteoDeMensualidades('Cuantos activos en mensualidad hay?'));
+  ok('lo demás NO se desvía (ventas, vencimientos, cupos de clase, precio, seguimiento)',
+     !['cuántas mensualidades vendimos este mes', 'cuántas mensualidades vencen esta semana', 'cuántos cupos hay el jueves 5 pm', 'cuánto vale la mensualidad', 'En cada horario?']
+       .some(esConteoDeMensualidades));
+  ok('el texto trae los tres números rotulados y cada total es la suma de su columna',
+     /Activas.*\*58\*.*\*24\*.*\*19\*.*\*15\*/.test(t) && /En gracia.*\*11\*.*\*2\*.*\*1\*.*\*8\*/.test(t) && /Ocupan cupo.*\*69\*.*\*26\*.*\*20\*.*\*23\*/.test(t)
+     && 24 + 19 + 15 === 58 && 2 + 1 + 8 === 11 && 26 + 20 + 23 === 69 && 58 + 11 === 69);
+  ok('el texto exacto no dispara la revisión de totales', totalesNoCuadran(t).length === 0);
+  ok('el error de Damián se detecta: 26 + 20 + 23 con «Total: 58»',
+     totalesNoCuadran('Activos en mensualidad por horario:\n\n• 7:00 am: *26*\n• 6:00 pm: *20*\n• 7:00 pm: *23*\n\n*Total: 58.*')[0].suma === 69);
+  ok('un total correcto o una frase suelta no se marcan', !totalesNoCuadran('• 7 am: *24*\n• 6 pm: *19*\n• 7 pm: *15*\n\n*Total: 58*').length && !totalesNoCuadran('Hoy: 7 am: 2 reservas + 24 mensualidades. Total de la semana: 90').length);
+  ok('las reglas del asistente mandan a mensualidades_resumen() y prohíben sumar a mano', /mensualidades_resumen\(\)/.test(REGLAS_DE_CIFRAS_AGENTE) && /no los sumes ni los restes tú/.test(REGLAS_DE_CIFRAS_AGENTE) && /MISMA columna/.test(REGLAS_DE_CIFRAS_AGENTE));
+  ok('el asistente usa el atajo exacto y la revisión de totales', /esConteoDeMensualidades\(m\.texto\)/.test(w) && /mensualidades_resumen/.test(w) && /totalesNoCuadran\(respuesta\)/.test(w));
+  ok('0159: cuenta personas (no filas), con los totales sumados en SQL y lo que cuenta la página',
+     /count\(distinct coalesce\(nullif\(right\(regexp_replace/.test(sql) && /'total_ocupan_cupo'/.test(sql) && /mensualidad_cupos\(\)/.test(sql) && /'en_gracia', o\.n - v\.n/.test(sql));
+  ok('0159: el informe diario deja de contar filas y trae el resumen exacto', /tablero_tumbao/.test(sql) && /'resumen_exacto', mensualidades_resumen\(d\)/.test(sql));
+  ok('0159: sin DROP ni DELETE', !/\bdrop\b/i.test(sql) && !/\bdelete\b/i.test(sql));
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');

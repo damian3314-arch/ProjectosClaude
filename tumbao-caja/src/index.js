@@ -34,7 +34,7 @@
 // La invitación a la tiquetera del cierre de «¿cómo te fue?» (0121, 29 sep).
 import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
-import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE } from './cifras.js';
+import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat } from './ventas.js';
 
 const PERMITIDOS = new Set([
@@ -2640,6 +2640,8 @@ async function agenteWA(request, env, origen) {
         : 'No tengo resúmenes pendientes 👌 Pregúntame lo que necesites de Tumbao.';
     } else if (m.tipo !== 'text' || !m.texto) {
       respuesta = 'Por ahora solo entiendo mensajes de texto 🙏 Escríbeme tu pregunta.';
+    } else if (esConteoDeMensualidades(m.texto) && (respuesta = textoMensualidades(await rpc(env, 'mensualidades_resumen', {}).catch(() => null)))) {
+      // 0159: «¿cuántas mensualidades hay?» no pasa por el modelo: el texto sale de mensualidades_resumen(), sin cuentas de cabeza.
     } else if (!env.OPENAI_API_KEY) {
       respuesta = 'Todavía no tengo cerebro conectado: falta la llave OPENAI_API_KEY en el Worker.';
     } else {
@@ -2660,6 +2662,18 @@ async function agenteWA(request, env, origen) {
         if (s2.length < sosp.length) { respuesta = otra; sosp = s2; }
       }
       if (sosp.length) respuesta = `${respuesta}\n\n⚠️ Confirma estas cifras antes de usarlas: ${sosp.map(pesosTxt).join(', ')}.`;
+      // 0159: un «Total» que no es la suma de sus renglones no se envía: se le pide corregir y, si no puede, se avisa.
+      let mal = totalesNoCuadran(respuesta);
+      if (mal.length) {
+        console.log('agente: total no cuadra', JSON.stringify(mal));
+        const msgs = armarConversacion(m, precios);
+        msgs.push({ role: 'assistant', content: respuesta }, { role: 'user', content:
+          `[Revisión interna] En tu respuesta el total (${mal[0].total}) no es la suma de los renglones (${mal[0].suma}). ` +
+          'Para mensualidades usa select mensualidades_resumen() y copia sus totales (total_vigentes, total_en_gracia, total_ocupan_cupo) sin sumar tú. Responde de nuevo con números que cuadren.' });
+        const otra = await pensar(env, msgs, { salidas: [] }).catch(() => null);
+        if (otra && !totalesNoCuadran(otra).length) respuesta = otra;
+        else respuesta = `${respuesta}\n\n⚠️ Ojo: el total de arriba no cuadra con la suma de los renglones. No lo uses; pregúntame de nuevo.`;
+      }
     }
     await responderYGuardar(env, m.telefono, respuesta || 'No tengo respuesta para eso.');
     await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'respondido' });
