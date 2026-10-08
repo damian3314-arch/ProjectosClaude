@@ -150,7 +150,10 @@ export function guardarRespuestaVentas(respuesta, perfil) {
   }
   // Promesas que el negocio no hizo.
   // Sin \b: en JavaScript no reconoce las letras con tilde (la «ú» de «últimos» quedaba suelta).
-  if (/(?<![\p{L}\p{N}])(descuento|promoci[oó]n|promo|gratis|regalo|2\s*x\s*1|oferta\s+(?:limitada|especial)|[uú]ltimos?\s+cupos?)(?![\p{L}\p{N}])/iu.test(texto)) {
+  // «Apuntarte a la lista de espera es gratis» es verdad y el prompt lo manda decir: esa frase, y solo esa, no cuenta
+  // como promesa. «Clase gratis», «gratis» suelto o cualquier otra sigue bloqueada.
+  const sinListaGratis = texto.replace(/(?<![\p{L}\p{N}])(?:apunt|anot|inscrib)\p{L}*[^.!?\n]{0,50}?(?<![\p{L}\p{N}])gratis(?![\p{L}\p{N}])(?![^.!?\n]*(?:clase|regalo|tiquetera))/giu, ' ');
+  if (/(?<![\p{L}\p{N}])(descuento|promoci[oó]n|promo|gratis|regalo|2\s*x\s*1|oferta\s+(?:limitada|especial)|[uú]ltimos?\s+cupos?)(?![\p{L}\p{N}])/iu.test(sinListaGratis)) {
     return { ok: false, motivo: 'promesa_no_autorizada' };
   }
   return { ok: true, texto };

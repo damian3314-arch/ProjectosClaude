@@ -200,6 +200,10 @@ titulo('6. El Worker y la base: todo cableado y apagado');
   ok('Worker: el enlace sale con el número de la conversación', /conEnlaceDeChat\(respuesta, chat\.id\)/.test(w));
   ok('0158: anota la primera visita y cuenta, informa en los resultados y no borra nada',
      /ventas_marcar_visita/.test(m158) && /abrieron_enlace/.test(m158) && /'visito'/.test(m158) && !/\bdrop\b/i.test(m158) && !/\bdelete\b/i.test(m158));
+  ok('baranda: «apuntarte a la lista de espera es gratis» es verdad y pasa (a Mónica, que tocó «7:00 pm», se le mandó el mensaje seguro por esto)',
+     guardarRespuestaVentas('A las 7 pm hay lista de espera; apuntarte es gratis en tumbaobaila.com/mensualidad y te avisamos apenas se libere un cupo.', perfil).ok);
+  ok('baranda: cualquier otro «gratis», regalo o descuento sigue bloqueado',
+     ['Tu primera clase es gratis', 'Apuntarte es gratis y además te regalamos una clase', 'Es gratis', 'Hay 20% de descuento'].every(t => !guardarRespuestaVentas(t, perfil).ok));
     const m153 = readFileSync(new URL('../supabase/migrations/0153_gracia_5_dias_y_aviso_automatico_a_la_lista_de_espera.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('0153: la gracia sube a 5 días y las funciones de ventas la leen del ajuste (sin «fin + 3» fijo)',
      /'mensualidad_gracia_dias', '5'/.test(m153) && /ventas_candidatos_historial/.test(m153) && /fin \+ 3/.test(m153) && /replace\(pg_get_functiondef\(r\.oid\), 'fin \+ 3'/.test(m153));
