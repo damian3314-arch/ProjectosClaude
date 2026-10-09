@@ -50,6 +50,7 @@ const SUITES = [
   'tiquetera-oferta',
   'ventas-whatsapp',
   'novedades',
+  'informes-tranqui',
   'cifras-ia',
 ];
 

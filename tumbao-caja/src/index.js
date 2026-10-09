@@ -35,6 +35,7 @@
 import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
+import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat } from './ventas.js';
 
 const PERMITIDOS = new Set([
@@ -2085,17 +2086,21 @@ const pesosTxt = (n) => '$' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d)
 /* 0150 · El informe con las cifras revisadas: los precios oficiales y las cuentas van hechos en el JSON, y lo que
  * escribe el modelo se compara con los datos. Si trae un monto que no sale de ahí, se le pide corregir (hasta 2
  * veces); si persiste, el informe lleva una línea «cifras por confirmar» en vez de dejar pasar un número inventado. */
-async function redactarInforme(env, tableroBruto, esfuerzo) {
+async function redactarInforme(env, tableroBruto, esfuerzo, estilo = 'completo') {
+  // 0160: el informe TRANQUI (muy corto) o el COMPLETO. Las alertas las decide el código, no el modelo.
+  const tranqui = estilo === 'tranqui';
+  const instrucciones = tranqui ? `${INSTRUCCIONES_INFORME_TRANQUI}\n\n${REGLAS_DE_CIFRAS}` : INSTRUCCIONES_INFORME;
   const [precios, renov] = await Promise.all([
     rpc(env, 'precios_oficiales', {}).catch(() => null),
     rpc(env, 'renovaciones_en_juego', { p_dias: 7 }).catch(() => null),
   ]);
   const tablero = prepararTablero(tableroBruto, precios, renov);
-  let texto = await redactar(env, INSTRUCCIONES_INFORME, JSON.stringify(tablero), esfuerzo);
+  if (tranqui) { tablero.estilo = 'tranqui'; tablero.alertas = alertasDelDia(tableroBruto); }
+  let texto = await redactar(env, instrucciones, JSON.stringify(tablero), esfuerzo);
   let sosp = cifrasSospechosas(texto, tablero);
   for (let i = 0; i < 2 && sosp.length; i++) {
     console.log('informe: cifras sospechosas', sosp.join(','));
-    const otra = await redactar(env, INSTRUCCIONES_INFORME, JSON.stringify({
+    const otra = await redactar(env, instrucciones, JSON.stringify({
       ...tablero,
       correccion: `Tu versión anterior traía montos que NO salen de los datos: ${sosp.map(pesosTxt).join(', ')}. ` +
                   'Reescribe el informe usando solo las cifras de "datos_fijos", "calculos_hechos" y el resto del JSON. No calcules nada.',
@@ -2551,6 +2556,22 @@ async function costosWA(env) {
   return { ok: true };
 }
 
+function diaSemanaBogota() {
+  const d = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(new Date());
+  return { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[d] || 1;
+}
+
+/** El estilo del informe de hoy: el calendario del modo (ajustes.informe_modo) o el que se pida a mano. */
+async function estiloParaHoy(env, tipo, forzado) {
+  if (forzado === 'tranqui' || forzado === 'completo') return forzado;
+  let modo = 'mixto';
+  try {
+    const f = await leer(env, 'ajustes', 'clave=eq.informe_modo&select=valor');
+    if (f[0] && f[0].valor) modo = String(f[0].valor);
+  } catch (_) {}
+  return estiloDelInforme(tipo, diaSemanaBogota(), modo);
+}
+
 async function informeWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -2567,14 +2588,15 @@ async function informeWA(request, env, origen) {
     try {
       const tablero = await rpc(env, 'tablero_tumbao_del_dia', { p_tipo: tipo, p_dia: dia });
       let cuentas = null;
-      if (tipo === 'manana' && (b.lunes === true || esLunesBogota())) {
+      const estiloB = await estiloParaHoy(env, tipo, b.estilo);
+      if (tipo === 'manana' && estiloB === 'completo' && (b.lunes === true || esLunesBogota())) {
         tablero.voz_de_la_semana = await vozDeLaSemana(env);
         // Solo cuentas (sin datos de nadie): para saber si opina respondió.
         const v = tablero.voz_de_la_semana;
         cuentas = { opina: Array.isArray(v.opina) ? v.opina.length : null,
                     whatsapp: Array.isArray(v.whatsapp) ? v.whatsapp.length : null };
       }
-      const t = await redactarInforme(env, tablero, 'medium');
+      const t = await redactarInforme(env, tablero, 'medium', estiloB);
       await rpc(env, 'wa_guardar_borrador', { p_tipo: tipo, p_dia: dia, p_texto: t || '(vacío)' });
       return json({ ok: true, borrador: true, voz: cuentas }, 200, origen);
     } catch (e) {
@@ -2590,9 +2612,11 @@ async function informeWA(request, env, origen) {
   let texto;
   try {
     const tablero = await rpcLectura(env, 'tablero_tumbao', { p_tipo: tipo });
-    // 0119: los lunes en la mañana va también la voz de los clientes.
-    if (tipo === 'manana' && esLunesBogota()) tablero.voz_de_la_semana = await vozDeLaSemana(env);
-    texto = await redactarInforme(env, tablero, 'medium');
+    // 0160: completo o tranqui según el calendario (o el modo que haya pedido Damián).
+    const estilo = await estiloParaHoy(env, tipo, null);
+    // 0119: los lunes en la mañana va también la voz de los clientes (en el informe completo).
+    if (tipo === 'manana' && estilo === 'completo' && esLunesBogota()) tablero.voz_de_la_semana = await vozDeLaSemana(env);
+    texto = await redactarInforme(env, tablero, 'medium', estilo);
     if (!texto) throw new Error('informe vacío');
   } catch (e) {
     console.log('informe', e && e.message);
@@ -2640,6 +2664,22 @@ async function agenteWA(request, env, origen) {
         : 'No tengo resúmenes pendientes 👌 Pregúntame lo que necesites de Tumbao.';
     } else if (m.tipo !== 'text' || !m.texto) {
       respuesta = 'Por ahora solo entiendo mensajes de texto 🙏 Escríbeme tu pregunta.';
+    } else if (esPedidoDeDetalle(m.texto) && env.OPENAI_API_KEY) {
+      // 0160: «detalle» = el informe completo, ahora. Mañana si todavía no son las 3 pm; si no, el del día.
+      await responderYGuardar(env, m.telefono, 'Dame un momento y te armo el detalle 🙌');
+      const hora = Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', hour12: false }).format(new Date())) % 24;
+      const tipoAhora = hora < 15 ? 'manana' : 'noche';
+      const tablero = await rpcLectura(env, 'tablero_tumbao', { p_tipo: tipoAhora });
+      if (tipoAhora === 'manana' && esLunesBogota()) tablero.voz_de_la_semana = await vozDeLaSemana(env);
+      respuesta = await redactarInforme(env, tablero, 'medium', 'completo');
+    } else if (modoPedido(m.texto)) {
+      const modo = modoPedido(m.texto);
+      await rpc(env, 'informe_modo_cambiar', { p_modo: modo });
+      respuesta = modo === 'tranqui'
+        ? 'Listo 🙌 Desde ahora todos los informes salen en versión tranquila. Cuando quieras el detalle de cualquiera, escribe *detalle*.'
+        : modo === 'completo'
+          ? 'Listo: todos los informes saldrán completos, como antes. Si quieres volver a los tranquilos, escríbeme "informes mixtos".'
+          : 'Listo: vuelvo al ritmo mixto. Completos los lunes y miércoles en la mañana y los viernes en la noche; los demás días, tranquilos. Escribe *detalle* cuando quieras todo.';
     } else if (esConteoDeMensualidades(m.texto) && (respuesta = textoMensualidades(await rpc(env, 'mensualidades_resumen', {}).catch(() => null)))) {
       // 0159: «¿cuántas mensualidades hay?» no pasa por el modelo: el texto sale de mensualidades_resumen(), sin cuentas de cabeza.
     } else if (!env.OPENAI_API_KEY) {
