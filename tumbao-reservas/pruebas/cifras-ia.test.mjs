@@ -93,9 +93,11 @@ titulo('4. El asistente de preguntas');
 titulo('5. Cableado en el Worker');
 {
   const w = readFileSync(new URL('../../tumbao-caja/src/index.js', import.meta.url), 'utf8');
-  ok('el informe pasa por redactarInforme (borrador y real)', (w.match(/redactarInforme\(env, tablero, 'medium'\)/g) || []).length === 2);
+  // 0160: ahora también lleva el estilo (tranqui o completo) y «detalle» arma el completo.
+  ok('el informe pasa por redactarInforme (borrador, real y «detalle»)', (w.match(/redactarInforme\(env, tablero, 'medium', /g) || []).length === 3);
   const desde = w.indexOf('async function redactarInforme'), hasta = w.indexOf('async function redactar(env');
-  const usos = [...w.matchAll(/redactar\(env, INSTRUCCIONES_INFORME/g)].map((x) => x.index);
+  const usos = [...w.matchAll(/(?<!function )redactar\(env, instrucciones/g)].map((x) => x.index);
+  ok('ningún informe se redacta fuera de redactarInforme con las instrucciones del informe', !/redactar\(env, INSTRUCCIONES_INFORME/.test(w));
   ok('el informe solo se redacta dentro de redactarInforme (nunca con el tablero crudo)', usos.length > 0 && usos.every((i) => i > desde && i < hasta));
   ok('las reglas de cifras van al prompt del informe', /\$\{REGLAS_DE_CIFRAS\}/.test(w) && /calculos_hechos/.test(REGLAS_DE_CIFRAS));
   ok('el asistente recibe los precios oficiales y las reglas', /DATOS FIJOS DEL NEGOCIO/.test(w) && /REGLAS_DE_CIFRAS_AGENTE/.test(w) && /renovaciones_en_juego/.test(REGLAS_DE_CIFRAS_AGENTE));
