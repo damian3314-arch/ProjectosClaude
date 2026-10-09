@@ -201,7 +201,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
 
   // La tarjeta de la puerta de entrada (ya oculta: se lee el textContent).
   const tarjeta = await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent();
-  ok('la tarjeta de entrada dice dónde sí hay cupo', /Hoy solo hay cupo a las\s*7:00 am/.test(tarjeta), tarjeta);
+  ok('la tarjeta de entrada dice dónde sí hay cupo, con el número exacto (9 oct)', /Hay cupo a las\s*7:00 am \(15 cupos\)/.test(tarjeta), tarjeta);
   ok('y que en los otros es solo lista, sin pago',
      /6:00 pm y 7:00 pm: apúntate a la lista de espera, es gratis/.test(tarjeta), tarjeta);
 

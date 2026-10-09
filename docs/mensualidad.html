@@ -1262,12 +1262,16 @@ const CONFIG = {
   // La tarjeta dice $125.000: si en algún horario no hay cupo, lo dice ahí
   // mismo, antes de hacer clic.
   function notaCupoTarjeta() {
+    if (!horas.length) return '';
     const cerradas = horasSinCupo();
-    if (!cerradas.length) return '';
     const abiertas = horas.filter(h => Number(h.libres) > 0);
+    // El número exacto de cupos por horario, a la vista desde la primera pantalla (9 oct): «9 cupos» mueve más que «hay cupo».
+    const conCupos = (h) => `${h.etiqueta} (${Number(h.libres) === 1 ? '1 cupo' : `${Number(h.libres)} cupos`})`;
+    const lista = abiertas.map(conCupos);
+    const hayCupo = lista.length > 1 ? `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}` : lista[0];
     const donde = abiertas.length
-      ? `Hoy solo hay cupo a las <b>${esc(unirHoras(abiertas))}</b>. ` +
-        `${esc(unirHoras(cerradas))}: apúntate a la lista de espera, es gratis.`
+      ? `Hay cupo a las <b>${esc(hayCupo)}</b>.` +
+        (cerradas.length ? ` ${esc(unirHoras(cerradas))}: apúntate a la lista de espera, es gratis.` : '')
       : 'Hoy no hay cupo libre: apúntate a la lista de espera, es gratis.';
     return `<p class="desc"><b>${donde}</b></p>`;
   }

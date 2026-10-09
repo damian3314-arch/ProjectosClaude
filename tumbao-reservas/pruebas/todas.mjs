@@ -53,6 +53,7 @@ const SUITES = [
   'informes-tranqui',
   'freno-automatico',
   'paginas-venta',
+  'cupos-gracia',
   'cifras-ia',
 ];
 
