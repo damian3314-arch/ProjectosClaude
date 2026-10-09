@@ -879,7 +879,7 @@ const CONFIG = {
        alguien está pagando su clase no se le pone nada encima. -->
   <a class="franja-promo" href="mensualidad.html" id="franja-promo">
     <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
-    <span class="tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
+    <span class="tx" id="franja-promo-tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
       y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
     <span class="flecha" aria-hidden="true">→</span>
   </a>
@@ -2267,6 +2267,27 @@ const CONFIG = {
      precio por clase más bajo, con la cuenta real (clases × $15.000 contra
      lo que cuesta). Si el servidor no contesta, no se muestra nada. */
   let paquetesTiq = null;
+  /* La franja de arriba, con la cuenta real y no con un «ahorras» a secas: «cada clase te sale a $12.000». Los números salen
+     de los paquetes del sistema (los mismos de la página de mensualidad). Si no cargan, queda el texto de siempre. */
+  async function pintarFranjaPromo(){
+    try{
+      const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
+      const d = await r.json();
+      const ref = 15000;
+      const paquetes = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
+      if (!paquetesTiq) paquetesTiq = paquetes;
+      const mejor = paquetes
+        .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0 && Number(p.precio_cop) / Number(p.clases) < ref)
+        .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
+      if (!mejor) return;
+      const porClase = Math.round(mejor.precio_cop / mejor.clases);
+      const ahorro = mejor.clases * ref - mejor.precio_cop;
+      $('#franja-promo-tx').innerHTML =
+        `¿Vienes seguido? Con la <b>tiquetera de ${mejor.clases}</b> cada clase te sale a <b>${pesos(porClase)}</b> ` +
+        `(ahorras ${pesos(ahorro)}). O aparta tu <b>mensualidad</b> con horario fijo.`;
+    }catch(_){ /* se queda el texto de siempre */ }
+  }
+
   async function ofrecerTiquetera(mostrar){
     const caja = $('#oferta-tiq');
     caja.hidden = true;
@@ -2291,6 +2312,8 @@ const CONFIG = {
       caja.hidden = false;
     }catch(_){ /* sin oferta antes que una oferta rota */ }
   }
+
+  pintarFranjaPromo();   // después de declarar paquetesTiq (let): antes habría un error de «aún no definida»
 
   function mostrarResultado(estado, d){
     detenerEspera();

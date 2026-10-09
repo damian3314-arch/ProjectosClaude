@@ -35,6 +35,8 @@ const CONFIG = {
   // Solo para el "ahorras $X" de las tarjetas de entrada. El precio real
   // de cada clase lo decide la clase que se reserve, no esto.
   PRECIO_SUELTA_REF: 15000,
+  // Para decir «alrededor de $X por clase»: clases de un mes de lunes a sábado (23-26). Igual a ajustes.mensualidad_clases_mes.
+  CLASES_MES_REF: 25,
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -130,6 +132,8 @@ const CONFIG = {
   }
   .plan .cada{display:block;text-align:center;font-size:.8rem;color:var(--tx-3);
     text-transform:uppercase;letter-spacing:.13em;margin-top:.35rem}
+  .plan .por-clase-plan{display:block;text-align:center;font-size:.86rem;font-weight:600;color:var(--hot-2);margin-top:.35rem;line-height:1.35}
+  .plan .por-clase-plan:empty{display:none}
   .plan ul{list-style:none;padding:0;margin:1.1rem 0 0;display:grid;gap:.5rem}
   .plan li{display:flex;gap:.6rem;align-items:flex-start;font-size:.88rem;color:var(--tx-2)}
   .plan li b{color:var(--tx);font-weight:600}
@@ -296,6 +300,7 @@ const CONFIG = {
   .tarjeta .precio-cada{font-size:.74rem;color:var(--tx-3);font-weight:600}
   .tarjeta .ahorro{font-size:.76rem;color:var(--ok);font-weight:600}
   .tarjeta .por-clase{font-size:.95rem;font-weight:700;color:var(--hot-2)}
+  .tarjeta .por-clase.larga{font-size:.84rem;font-weight:600;line-height:1.35}
   .oferta-espera{margin:1.1rem 0 .4rem;padding:1rem 1.05rem;border-radius:var(--r-card,14px);text-align:left;
     background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(192,24,95,.12));box-shadow:inset 3px 0 0 var(--hot)}
   .oferta-espera b{display:block;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.3rem}
@@ -619,10 +624,11 @@ const CONFIG = {
   <div class="plan">
     <b class="valor" id="precio">$125.000</b>
     <span class="cada">al mes · un horario fijo</span>
+    <span class="por-clase-plan" id="plan-por-clase"></span>
     <ul>
-      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>Todas tus clases de <b>lunes a viernes</b> en el horario que elijas.</span></li>
-      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>No reservas entre semana: <b>solo llegas y entras</b>.</span></li>
-      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>El <b>sábado</b> también está incluido, solo se aparta cupo.</span></li>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>Entras a todas tus clases de <b>lunes a sábado</b>, sin domingos ni festivos.</span></li>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>De lunes a viernes <b>no reservas</b>: solo llegas y entras en tu horario.</span></li>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>El <b>sábado</b> sí se aparta cupo.</span></li>
     </ul>
   </div>
 
@@ -918,6 +924,7 @@ const CONFIG = {
       if (!d || !d.ok) throw new Error('sin datos');
       horas = d.horas || [];
       valorCop = Number(d.valor_cop || 125000);
+      { const e = document.getElementById('plan-por-clase'); if (e) e.textContent = textoPorClasePlan(); }
       $('#precio').textContent = pesos(valorCop);
       $('#monto').textContent = pesos(valorCop);
       pintarHoras();
@@ -988,8 +995,8 @@ const CONFIG = {
       return `<button type="button" class="clase hora" data-hora="${esc(h.hora)}">
           <span class="hr">${esc(h.etiqueta)}</span>
           <span class="info">
-            <span class="nom">${libre ? 'Lunes a viernes' : 'Lista de espera'}</span>
-            <span class="meta">${libre ? 'Sábado incluido' : 'Sin pago · te avisamos'}</span>
+            <span class="nom">${libre ? 'Lunes a sábado' : 'Lista de espera'}</span>
+            <span class="meta">${libre ? 'Sin domingos ni festivos' : 'Sin pago · te avisamos'}</span>
           </span>
           <span class="cupos ${libre ? (n <= 3 ? 'pocos' : '') : 'invita'}">${pastilla}</span>
         </button>`;
@@ -1265,6 +1272,12 @@ const CONFIG = {
     return `<p class="desc"><b>${donde}</b></p>`;
   }
 
+  /* «Alrededor de $5.000 por clase»: la cuenta que convence, dicha como cuenta y no como descuento. Siempre «alrededor de»
+     porque el número de clases cambia de un mes a otro (23 a 26). Sale del valor que manda el sistema. */
+  const porClasePlan = () => Math.round(valorCop / CONFIG.CLASES_MES_REF / 100) * 100;
+  const textoPorClasePlan = () =>
+    `Alrededor de ${pesos(porClasePlan())} por clase si vienes a todas (la suelta cuesta ${pesos(CONFIG.PRECIO_SUELTA_REF)})`;
+
   function pintarEleccion() {
     const tarjetaMensualidad = `
       <button type="button" class="tarjeta" data-elegir="mensualidad">
@@ -1272,7 +1285,8 @@ const CONFIG = {
         <span class="titulo">Plan mensualidad</span>
         <span class="precio">${pesos(valorCop)}</span>
         <span class="precio-cada">al mes · horario fijo</span>
-        <p class="desc">Todas tus clases de lunes a viernes en tu horario. No reservas entre semana: solo llegas y entras.</p>
+        <span class="por-clase larga">${textoPorClasePlan()}</span>
+        <p class="desc">Todas tus clases de lunes a sábado, sin domingos ni festivos. De lunes a viernes no reservas: solo llegas y entras.</p>
         ${notaCupoTarjeta()}
       </button>`;
 
@@ -1287,7 +1301,9 @@ const CONFIG = {
         <span class="precio">${pesos(p.precio_cop)}</span>
         <span class="por-clase">${pesos(Math.round(Number(p.precio_cop || 0) / (clases || 1)))} por clase</span>
         ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
-        <p class="desc">Compra una vez y ven cuando quieras.</p>
+        <p class="desc">Compra una vez y ven cuando quieras. ${clases >= 8
+          ? 'Ideal si vienes dos veces por semana o solo una parte del mes.'
+          : 'Ideal para empezar o para venir una vez por semana.'}</p>
         <div class="clave"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-clock"/></svg><span><b>Reservas cada clase</b> en la página de reservas.
           Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.</span></div>
       </button>`;

@@ -52,6 +52,7 @@ const SUITES = [
   'novedades',
   'informes-tranqui',
   'freno-automatico',
+  'paginas-venta',
   'cifras-ia',
 ];
 
