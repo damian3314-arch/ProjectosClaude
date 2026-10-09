@@ -2506,9 +2506,10 @@ async function ventasWA(request, env, origen) {
       p_resultado: resultado || null, p_interes: (j && j.interes) || null, p_resumen: (j && j.resumen) || null,
     });
     if (pasar) await avisarRecepcionVenta(env, chat, perfil, m.telefono, motivo || (j && j.resumen) || 'Necesita que la atienda una persona.');
-    // 9 oct: si el bot le pasó el enlace de compra a alguien con interés, recepción se entera para estar pendiente
-    // (una sola nota por conversación; a la persona no se le escribe nada más).
-    else if (llevaEnlaceDeCompra(respuesta) && ['alto', 'medio'].includes(String((j && j.interes) || ''))) {
+    // 9 oct: si el bot le pasó el enlace de compra a alguien con interés ALTO (quiere comprar), recepción se entera para
+    // estar pendiente (una nota por conversación; a la persona no se le escribe nada más). Solo alto: con «medio» llegaron
+    // tres avisos en una mañana y recepción ya recibe bastantes (0161 los agrupa en un solo «Ver resumen»).
+    else if (llevaEnlaceDeCompra(respuesta) && String((j && j.interes) || '') === 'alto') {
       await avisarRecepcionEnlace(env, chat, perfil, m.telefono, (j && j.resumen) || '');
     }
     return json({ ok: true, cerrada: cerrar }, 200, origen);
@@ -2673,8 +2674,12 @@ async function agenteWA(request, env, origen) {
     let respuesta;
     if (m.texto && /^\s*ver\s+resumen\s*$/i.test(m.texto)) {
       const inf = await rpc(env, 'wa_informe_pendiente', { p_tel: m.telefono });
-      respuesta = inf && inf.texto
-        ? inf.texto
+      // 0161: un toque entrega también las notas que esperan (hasta 5), una por mensaje: antes era una cosa por toque.
+      const mas = inf && inf.texto ? await rpc(env, 'wa_notas_pendientes', { p_tel: m.telefono, p_max: 5 }).catch(() => []) : [];
+      const textos = [inf && inf.texto].concat(Array.isArray(mas) ? mas : []).filter(Boolean);
+      for (const t of textos.slice(0, -1)) await responderYGuardar(env, m.telefono, t);
+      respuesta = textos.length
+        ? textos[textos.length - 1]
         : 'No tengo resúmenes pendientes 👌 Pregúntame lo que necesites de Tumbao.';
     } else if (m.tipo !== 'text' || !m.texto) {
       respuesta = 'Por ahora solo entiendo mensajes de texto 🙏 Escríbeme tu pregunta.';

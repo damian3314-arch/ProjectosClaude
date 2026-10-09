@@ -226,8 +226,15 @@ titulo('6. El Worker y la base: todo cableado y apagado');
   ok('recepción: la nota dice quién es, su celular sin 57, qué iba a comprar y qué hacer',
      /^Lady \(cel\. 3006120398\)/.test(tr) && /volver a las clases/.test(tr) && /mitad del mes/.test(tr) && /estén pendientes/.test(tr) && /301 783 3550/.test(tr));
   ok('recepción: sin nombre ni resumen la nota sigue completa', /^Una persona \(cel\. 3001234567\)/.test(textoRecepcionEnlace({ telefono: '3001234567', objetivo: 'tiquetera' })) && /una tiquetera/.test(textoRecepcionEnlace({ telefono: '3001234567', objetivo: 'tiquetera' })));
-  ok('Worker: avisa a recepción al pasar el enlace (alto/medio, una nota por conversación, sin escribirle más a la persona) y no duplica el aviso de «necesita una persona»',
-     /llevaEnlaceDeCompra\(respuesta\) && \['alto', 'medio'\]\.includes/.test(w) && /'venta-enlace:' \+ chat\.id/.test(w) && /if \(pasar\) await avisarRecepcionVenta[\s\S]{0,600}else if \(llevaEnlaceDeCompra/.test(w));
+  ok('Worker: avisa a recepción al pasar el enlace (solo interés alto, una nota por conversación, sin escribirle más a la persona) y no duplica el aviso de «necesita una persona»',
+     /llevaEnlaceDeCompra\(respuesta\) && String\(\(j && j\.interes\) \|\| ''\) === 'alto'/.test(w) && /'venta-enlace:' \+ chat\.id/.test(w) && /if \(pasar\) await avisarRecepcionVenta[\s\S]{0,600}else if \(llevaEnlaceDeCompra/.test(w));
+    const m161 = readFileSync(new URL('../supabase/migrations/0161_un_solo_aviso_de_resumen_listo.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  ok('0161: una nota con un «resumen_listo» sin abrir (12 h) no manda otra plantilla: queda esperando el próximo toque',
+     /plantilla = 'resumen_listo'/.test(m161) && /interval '12 hours'/.test(m161) && /a\.clave <> 'nota:' \|\| v\.id/.test(m161) && /estado in \('pendiente', 'enviando', 'enviado'\)/.test(m161));
+  ok('0161: «Ver resumen» entrega además las notas que esperan (hasta 5), marcándolas entregadas, y no borra nada',
+     /wa_notas_pendientes/.test(m161) && /estado = 'entregado'/.test(m161) && /for update skip locked/.test(m161) && !/\bdrop\b/i.test(m161) && !/\bdelete\b/i.test(m161));
+  ok('Worker: un toque en «Ver resumen» entrega el pendiente y las notas que esperan, un mensaje por cada una',
+     /wa_notas_pendientes', \{ p_tel: m\.telefono, p_max: 5 \}/.test(w) && /for \(const t of textos\.slice\(0, -1\)\) await responderYGuardar/.test(w));
     ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 
