@@ -2674,8 +2674,8 @@ async function agenteWA(request, env, origen) {
     let respuesta;
     if (m.texto && /^\s*ver\s+resumen\s*$/i.test(m.texto)) {
       const inf = await rpc(env, 'wa_informe_pendiente', { p_tel: m.telefono });
-      // 0161: un toque entrega también las notas que esperan (hasta 5), una por mensaje: antes era una cosa por toque.
-      const mas = inf && inf.texto ? await rpc(env, 'wa_notas_pendientes', { p_tel: m.telefono, p_max: 5 }).catch(() => []) : [];
+      // 0161: un toque entrega también las notas que esperan (hasta 8), una por mensaje: antes era una cosa por toque.
+      const mas = inf && inf.texto ? await rpc(env, 'wa_notas_pendientes', { p_tel: m.telefono, p_max: 8 }).catch(() => []) : [];
       const textos = [inf && inf.texto].concat(Array.isArray(mas) ? mas : []).filter(Boolean);
       for (const t of textos.slice(0, -1)) await responderYGuardar(env, m.telefono, t);
       respuesta = textos.length
