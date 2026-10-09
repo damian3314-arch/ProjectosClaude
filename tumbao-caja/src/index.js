@@ -2194,6 +2194,17 @@ async function centinelaWA(env, origen) {
     }
   } catch (_) {}
 
+  // 0163 · Freno automático: si Meta baja la calidad, pasan demasiadas bajas o fallan los envíos, las ventas por
+  // WhatsApp se apagan solas (ajustes.wa_ventas = 'apagado') y Damián se entera; volver a encenderlas es decisión suya.
+  try {
+    const f = await frenoAutomatico(env);
+    if (f && f.accion === 'apagado') {
+      alerta(`freno:${hoy}`, '🛑 Apagué las ventas por WhatsApp',
+        `Las apagué sola: ${f.motivo}. Ya no salen aperturas, seguimientos ni la encuesta. ` +
+        'Lo demás sigue igual (reservas, renovaciones, informes). Cuando lo revises, me dices y las vuelvo a encender.');
+    }
+  } catch (e) { console.log('freno', e && e.message); }
+
   try {
     const s = await (await salud(env, null)).json();
     if (s && s.ok === false) {
@@ -2766,6 +2777,19 @@ async function conectarWA(request, env) {
     { method: 'POST', body: form })).json();
   pasos.webhook = s.success === true ? 'ok' : ((s.error && s.error.message) || 'sin respuesta');
   return { ok: pasos.cuenta === 'ok' && pasos.webhook === 'ok', pasos };
+}
+
+/* 0163 · Calidad del número y freno automático de las ventas (ver migración 0163). */
+async function calidadDelNumero(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return null;
+  const n = await (await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}?fields=quality_rating`,
+    { headers: cabecerasWA(env) })).json().catch(() => ({}));
+  return n && n.quality_rating ? String(n.quality_rating) : null;
+}
+
+async function frenoAutomatico(env) {
+  const calidad = await calidadDelNumero(env).catch(() => null);
+  return await rpc(env, 'ventas_freno_revisar', { p_calidad: calidad });
 }
 
 async function estadoWA(env) {
@@ -3581,6 +3605,10 @@ export default {
    * ----------------------------------------------------------------- */
   async scheduled(evento, env, ctx) {
     ctx.waitUntil((async () => {
+      // 0163 · Latido: queda anotada la hora en que Cloudflare disparó este cron (ajustes.cf_cron_ultimo), para saber
+      // sin abrir el panel si el reloj del Worker ya funciona en esta cuenta. Y el freno automático de las ventas.
+      await rpc(env, 'cron_latido', { p_cron: evento && evento.cron }).catch((e) => console.log('latido', e && e.message));
+      await frenoAutomatico(env).catch((e) => console.log('freno', e && e.message));
       try {
         const r = await rpc(env, 'liberar_cupos_expirados', {});
         // PostgREST devuelve el entero pelado o envuelto según el caso.

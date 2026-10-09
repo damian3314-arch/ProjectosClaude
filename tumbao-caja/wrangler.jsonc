@@ -36,12 +36,18 @@
   // O sea que no es la expresión ni el `scheduled` de abajo: es que en
   // esta cuenta no se están ejecutando. La causa quedó sin encontrar.
   //
+  // 9 oct (0163): se agregó "*/10 * * * *" y scheduled() ahora anota un
+  // latido (ajustes.cf_cron_ultimo / cf_cron_total) y corre el freno
+  // automático de las ventas. Si cf_cron_total sube, el reloj de Cloudflare
+  // ya funciona en esta cuenta; si se queda en 0, el freno igual corre cada
+  // hora desde el centinela (pg_cron).
+  //
   // Se dejan puestos porque el día que empiecen a funcionar, esto ya
   // está listo y solo habría que apagar el de n8n. Y si arrancaran solos
   // no rompen nada: liberar_cupos_expirados() es idempotente, así que
   // convivir con n8n es inofensivo.
   "triggers": {
-    "crons": ["0 11-23 * * *", "0 0-3 * * *"]
+    "crons": ["0 11-23 * * *", "0 0-3 * * *", "*/10 * * * *"]
   },
 
   // Para leer la captura del comprobante sin salir de Cloudflare.

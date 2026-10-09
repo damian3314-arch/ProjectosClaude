@@ -51,6 +51,7 @@ const SUITES = [
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
+  'freno-automatico',
   'cifras-ia',
 ];
 
