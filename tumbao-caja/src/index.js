@@ -36,7 +36,7 @@ import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
-import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat } from './ventas.js';
+import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -2506,6 +2506,11 @@ async function ventasWA(request, env, origen) {
       p_resultado: resultado || null, p_interes: (j && j.interes) || null, p_resumen: (j && j.resumen) || null,
     });
     if (pasar) await avisarRecepcionVenta(env, chat, perfil, m.telefono, motivo || (j && j.resumen) || 'Necesita que la atienda una persona.');
+    // 9 oct: si el bot le pasó el enlace de compra a alguien con interés, recepción se entera para estar pendiente
+    // (una sola nota por conversación; a la persona no se le escribe nada más).
+    else if (llevaEnlaceDeCompra(respuesta) && ['alto', 'medio'].includes(String((j && j.interes) || ''))) {
+      await avisarRecepcionEnlace(env, chat, perfil, m.telefono, (j && j.resumen) || '');
+    }
     return json({ ok: true, cerrada: cerrar }, 200, origen);
   } catch (e) {
     console.log('ventas', e && e.message);
@@ -2522,6 +2527,15 @@ async function avisarRecepcionVenta(env, chat, perfil, telefono, motivo) {
              `respondió a nuestra oferta (${String(chat.objetivo || '').replace('_', ' ')}).\n\n` +
              `${motivo}\n\nAcción: escríbele hoy desde el 301 783 3550. Ya le dije que el equipo le escribe.`,
     p_clave: 'venta-recepcion:' + chat.id,
+  }).catch(() => {});
+}
+
+// Cuando el bot pasa el enlace de compra: aviso corto a recepción para que esté pendiente. Una nota por conversación.
+async function avisarRecepcionEnlace(env, chat, perfil, telefono, resumen) {
+  await rpc(env, 'nota_recepcion', {
+    p_titulo: '👀 Venta en curso: alguien va a comprar',
+    p_texto: textoRecepcionEnlace({ nombre: chat.nombre || perfil.nombre, telefono, objetivo: chat.objetivo, resumen }),
+    p_clave: 'venta-enlace:' + chat.id,
   }).catch(() => {});
 }
 

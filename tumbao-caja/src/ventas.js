@@ -65,6 +65,8 @@ TONO (suena a una persona del equipo, no a un anuncio)
 
 QUÉ OFRECES (según perfil.objetivo; los datos están en "perfil" y SOLO usas esos datos)
 - tiquetera: paquetes en perfil.paquetes_tiquetera (clases, precio_cop, vigencia_dias). Es para quien ya viene seguido o prefiere flexibilidad. La cuenta: precio por clase contra la clase suelta (perfil.precio_suelta). Es flexible: la usa cuando quiera durante su vigencia, y la vigencia es de 30 días, así que no se la ofrezcas como la mejor opción a quien casi no viene. Se compra en ${ENLACE_PAGINA}: elige la tiquetera y paga en un minuto.
+- Si dice que solo puede ir algunos días al mes, «la mitad del mes», «15 días», o que antes pagaba el mes completo y se le perdía parte: la tiquetera es justo para eso. Ofrece la de 8 clases (clases = 8 en perfil.paquetes_tiquetera; la de 4 si va menos): son clases que usa cuando pueda durante su vigencia, sin horario fijo y sin pagar el mes completo. Dile la cuenta (precio por clase contra la suelta) y pásale el enlace ${ENLACE_PAGINA} en ESE mismo mensaje, para que entre a comprar. NUNCA inventes un plan de «15 días» ni otra duración: lo único que existe es lo que dice perfil.paquetes_tiquetera.
+- Cuando la persona muestra ganas de comprar (dice que sí, que quiere, que va a comprar, pregunta cómo se paga), pásale el enlace ${ENLACE_PAGINA} en ese mismo mensaje y dile que el equipo estará pendiente por si necesita ayuda. No hagas otra pregunta antes de darle el enlace.
 - reactivar: con calidez de "te extrañamos", sin culpa ni reclamo por no haber venido. Qué ofrecerle, EN ESTE ORDEN: (1) si perfil.opciones_hoy.mensualidad_7am es true, la mensualidad de 7 am como la forma de volver con un horario fijo y su lugar guardado (si perfil.cupos_mensualidad["07:00"] es 5 o menos puedes decir cuántos quedan, el número exacto; si son más, no lo menciones); (2) si dice que a esa hora no puede o prefiere flexibilidad, la tiquetera con la cuenta contra la suelta; (3) si duda de comprometerse, una clase suelta (perfil.precio_suelta) para volver a probar, que reserva en tumbaobaila.com. Si perfil.historial existe, ya bailó con nosotros: puedes decir cuántos meses estuvo (historial.meses_con_plan) y que se le extraña, y SOLO eso del pasado (no inventes fechas, motivos ni horarios que no estén ahí). Si su horario de antes (historial.horario) era 07:00 y perfil.cupos_mensualidad["07:00"] es mayor que 0, puedes ofrecerle también retomar su mensualidad de 7 am; si era 6 pm o 7 pm, esos horarios tienen lista de espera (mientras tanto, la tiquetera). Si pregunta por qué se fue o por qué no vuelve, escucha: no discutas ni la presiones.
 - mensualidad_7am: la mensualidad ($ en perfil.valor_mensualidad) en el horario de 7 am, mientras perfil.cupos_mensualidad["07:00"] sea mayor que 0. Se inscribe en ${ENLACE_PAGINA}.
 - La mensualidad incluye las clases de su horario de lunes a sábado, sin domingos ni festivos (entre 23 y 26 al mes). Si perfil.mensualidad_por_clase existe, la cuenta que convence es esa: «alrededor de $X por clase» contra la suelta (perfil.precio_suelta). Dilo como cuenta, nunca como descuento, y siempre con «alrededor de» porque el número de clases cambia de un mes a otro.
@@ -130,7 +132,24 @@ export function enlacesEnTexto(texto) {
     .map((m) => m[0].toLowerCase());
 }
 
-const ENLACES_OK = /^(?:https?:\/\/)?(?:www\.)?(tumbaobaila\.com(?:\/mensualidad)?\/?(?:\?r=\d{1,9})?|wa\.me\/573017833550\/?)$/i;
+/** ¿La respuesta lleva el enlace de compra (la página de Tumbao)? El WhatsApp del equipo no cuenta. */
+export function llevaEnlaceDeCompra(texto) {
+  return enlacesEnTexto(texto).some((e) => /^(?:https?:\/\/)?(?:www\.)?tumbaobaila\.com/i.test(e));
+}
+
+/**
+ * El aviso a recepción cuando el bot le pasa el enlace de compra a alguien con interés: quién es, qué iba a comprar
+ * y qué hacer. Interno (le llega al equipo, no a la clienta): una nota por conversación.
+ */
+export function textoRecepcionEnlace({ nombre, telefono, objetivo, resumen } = {}) {
+  const que = { tiquetera: 'una tiquetera', mensualidad_7am: 'la mensualidad de 7 am', mensualidad_6pm: 'la mensualidad de 6 pm', reactivar: 'volver a las clases' }[objetivo] || 'una compra';
+  const cel = String(telefono || '').replace(/\D/g, '').replace(/^57(?=3\d{9}$)/, '');
+  return `${nombre || 'Una persona'} (cel. ${cel}) recibió el enlace para comprar ${que} y puede llegar a pagar o a preguntar por recepción.\n\n` +
+    `${resumen ? resumen + '\n\n' : ''}` +
+    'Acción: estén pendientes. Si llega o escribe, atiéndela; si en unas horas no ha pagado, escríbele tú desde el 301 783 3550.';
+}
+
+const ENLACES_OK =/^(?:https?:\/\/)?(?:www\.)?(tumbaobaila\.com(?:\/mensualidad)?\/?(?:\?r=\d{1,9})?|wa\.me\/573017833550\/?)$/i;
 
 /**
  * La baranda: ¿se puede enviar lo que escribió el modelo?

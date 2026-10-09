@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import {
   guardarRespuestaVentas, montosEnTexto, enlacesEnTexto, cifrasPermitidas, opcionesDeVenta,
-  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS, textoSeguimientoVentas, conEnlaceDeChat,
+  INSTRUCCIONES_VENTAS, RESPUESTA_SEGURA_VENTAS, MAX_TURNOS_VENTAS, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace,
 } from '../../tumbao-caja/src/ventas.js';
 
 let fallos = 0;
@@ -213,6 +213,21 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      /estado = 'anulada'/.test(m153) && /lista_espera_horas_para_pagar/.test(m153) && /v_ocup > v_tope/.test(m153));
   ok('0153: corre a las 9:10 am Bogotá de lunes a sábado y se apaga con wa_lista_espera_auto', /'10 14 \* \* 1-6'/.test(m153) && /wa_lista_espera_auto/.test(m153));
   ok('0153: sin DROP ni DELETE', !/\bdrop\b/i.test(m153) && !/\bdelete\b/i.test(m153));
+  ok('prompt: «solo puedo la mitad del mes / 15 días» → tiquetera de 8 con la cuenta y el enlace en el mismo mensaje, sin inventar un plan de 15 días',
+     /la mitad del mes/.test(INSTRUCCIONES_VENTAS) && /clases = 8/.test(INSTRUCCIONES_VENTAS) && /en ESE mismo mensaje/.test(INSTRUCCIONES_VENTAS) && /NUNCA inventes un plan de «15 días»/.test(INSTRUCCIONES_VENTAS));
+  ok('prompt: con ganas de comprar, el enlace va de una y se dice que el equipo está pendiente',
+     /Cuando la persona muestra ganas de comprar/.test(INSTRUCCIONES_VENTAS) && /el equipo estará pendiente/.test(INSTRUCCIONES_VENTAS));
+  ok('baranda: la tiquetera de 8 con su cuenta ($12.000 por clase contra $15.000) y el enlace pasa',
+     guardarRespuestaVentas('Para ir cuando puedas te sirve la tiquetera de 8 clases: $96.000, o sea $12.000 por clase contra $15.000 la suelta. Entra a comprarla en tumbaobaila.com/mensualidad 💃', perfil).ok);
+  ok('baranda: un «plan de 15 días» con precio inventado NO pasa', !guardarRespuestaVentas('Tenemos un plan de 15 días por $70.000, entra a tumbaobaila.com/mensualidad', perfil).ok);
+  ok('recepción: el enlace de compra se detecta; el WhatsApp del equipo o un texto sin enlace, no',
+     llevaEnlaceDeCompra('Entra a tumbaobaila.com/mensualidad') && llevaEnlaceDeCompra('Mira https://www.tumbaobaila.com') && !llevaEnlaceDeCompra('Escríbenos al 301 783 3550 o wa.me/573017833550') && !llevaEnlaceDeCompra('Qué bueno, te espero'));
+  const tr = textoRecepcionEnlace({ nombre: 'Lady', telefono: '573006120398', objetivo: 'reactivar', resumen: 'Quiere una opción para la mitad del mes.' });
+  ok('recepción: la nota dice quién es, su celular sin 57, qué iba a comprar y qué hacer',
+     /^Lady \(cel\. 3006120398\)/.test(tr) && /volver a las clases/.test(tr) && /mitad del mes/.test(tr) && /estén pendientes/.test(tr) && /301 783 3550/.test(tr));
+  ok('recepción: sin nombre ni resumen la nota sigue completa', /^Una persona \(cel\. 3001234567\)/.test(textoRecepcionEnlace({ telefono: '3001234567', objetivo: 'tiquetera' })) && /una tiquetera/.test(textoRecepcionEnlace({ telefono: '3001234567', objetivo: 'tiquetera' })));
+  ok('Worker: avisa a recepción al pasar el enlace (alto/medio, una nota por conversación, sin escribirle más a la persona) y no duplica el aviso de «necesita una persona»',
+     /llevaEnlaceDeCompra\(respuesta\) && \['alto', 'medio'\]\.includes/.test(w) && /'venta-enlace:' \+ chat\.id/.test(w) && /if \(pasar\) await avisarRecepcionVenta[\s\S]{0,600}else if \(llevaEnlaceDeCompra/.test(w));
     ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 
