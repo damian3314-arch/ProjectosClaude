@@ -235,6 +235,9 @@ titulo('6. El Worker y la base: todo cableado y apagado');
      /wa_notas_pendientes/.test(m161) && /estado = 'entregado'/.test(m161) && /for update skip locked/.test(m161) && !/\bdrop\b/i.test(m161) && !/\bdelete\b/i.test(m161));
   ok('Worker: un toque en «Ver resumen» entrega el pendiente y las notas que esperan, un mensaje por cada una',
      /wa_notas_pendientes', \{ p_tel: m\.telefono, p_max: 8 \}/.test(w) && /for \(const t of textos\.slice\(0, -1\)\) await responderYGuardar/.test(w));
+    const m162 = readFileSync(new URL('../supabase/migrations/0162_alerta_ya_pague_espera_30_minutos.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  ok('0162: la alerta «ya pagué» sin pago espera 30 minutos, avisa que el banco a veces tarda, es repetible y no borra nada',
+     /interval ''30 minutes''/.test(m162) && /el banco a veces tarda en avisar/.test(m162) && /then return; end if/.test(m162) && !/\bdrop\b/i.test(m162) && !/\bdelete\b/i.test(m162));
     ok('la migración 0142 no borra nada (sin DROP)', !/\bdrop function\b/i.test(m2.replace(/--.*$/gm, '')));
 }
 
