@@ -1193,6 +1193,25 @@ const GRAPH = 'https://graph.facebook.com/v21.0';
 
 const PLANTILLAS_WA = [
   {
+    // 9 oct (0165): a quien reservó una clase suelta y no ha pagado se le recuerda, a los ~8 minutos y UNA sola vez, que
+    // su cupo sigue guardado. Es sobre SU reserva (utilidad), sin oferta ni descuento.
+    name: 'reserva_pendiente_pago',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, tu cupo en Tumbao para {{2}} sigue guardado unos minutos ⏳\n\n' +
+          'Para confirmarlo, completa el pago en tumbaobaila.com. ' +
+          'Si ya pagaste, no hagas nada: tu reserva se confirma sola.\n\n' +
+          '¿Dudas? Escríbenos al WhatsApp de siempre: 301 783 3550',
+        example: { body_text: [['Laura', 'el sábado 10 de octubre a las 8:00 am']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
     name: 'reserva_confirmada',
     language: 'es',
     category: 'UTILITY',

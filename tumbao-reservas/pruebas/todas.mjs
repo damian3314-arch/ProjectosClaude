@@ -54,6 +54,7 @@ const SUITES = [
   'freno-automatico',
   'paginas-venta',
   'cupos-gracia',
+  'recordatorio-pago',
   'cifras-ia',
 ];
 
