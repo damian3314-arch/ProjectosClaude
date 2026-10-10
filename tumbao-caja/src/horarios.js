@@ -82,17 +82,34 @@ export function diasDe(horarios) {
   return [...por.values()];
 }
 
-// ── el horario fijo, en un bloque corto ────────────────────────────────────────────────────────────────────────
+// ── el horario fijo, en un bloque corto y con aire ─────────────────────────────────────────────────────────────
 // «Clase 7:00 am» no dice nada que la hora no diga; «Rumba básica» sí.
 const nombreEspecial = (h) => (h && h.clase && !/^clase\b/i.test(String(h.clase)) ? String(h.clase) : '');
-const horaConNombre = (h) => `${h.hora_texto}${nombreEspecial(h) ? ` (${nombreEspecial(h)})` : ''}`;
 const unir = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} y ${a[a.length - 1]}`);
 
+const RELOJ_EN_PUNTO = ['🕛', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚'];
+const RELOJ_Y_MEDIA = ['🕧', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦'];
+/** El relojito de una hora («5:00 pm» → 🕔; «7:30 am» → 🕢). Cualquier minuto se redondea a la hora o a la media. */
+export function relojDe(horaTexto) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(horaTexto || '').trim());
+  if (!m) return '🕐';
+  const hh = Number(m[1]) % 12;
+  return Number(m[2]) >= 15 && Number(m[2]) < 45 ? RELOJ_Y_MEDIA[hh] : RELOJ_EN_PUNTO[(hh + (Number(m[2]) >= 45 ? 1 : 0)) % 12];
+}
+
+/** Una línea por hora: «🕔 5:00 pm · _Rumba básica_». */
+const lineaDeHora = (h) => `${relojDe(h.hora_texto)} ${h.hora_texto}${nombreEspecial(h) ? ` · _${nombreEspecial(h)}_` : ''}`;
+
 /**
- * El horario fijo, agrupando los días que tienen las mismas horas:
- *   • Martes y jueves: 7:00 am, 5:00 pm (Rumba básica), 6:00 pm y 7:00 pm
- *   • Miércoles y viernes: 7:00 am, 6:00 pm y 7:00 pm
- *   • Sábado: 8:00 am y 9:00 am
+ * El horario fijo, para WhatsApp: el día en negrita y cada hora en su línea, con una línea en blanco entre un grupo y otro
+ * (los días que tienen las mismas horas van juntos):
+ *   *Martes y jueves*
+ *   🕖 7:00 am
+ *   🕔 5:00 pm · _Rumba básica_
+ *   🕕 6:00 pm
+ *
+ *   *Sábado*
+ *   🕗 8:00 am
  * Sale de las clases con cupo de los próximos días; de cada día de la semana se toma la fecha que tiene MÁS horas (hoy, a media
  * mañana, solo conserva las de la tarde: no es «el horario del sábado»).
  */
@@ -100,22 +117,21 @@ export function horarioSemanal(horarios) {
   const por = new Map();
   for (const d of diasDe(horarios)) {
     const dia = String(d.fecha_texto || '').split(' ')[0];
-    const horas = d.clases.map(horaConNombre);
     const previo = por.get(dia);
-    if (!previo || horas.length > previo.length) por.set(dia, horas);
+    if (!previo || d.clases.length > previo.length) por.set(dia, d.clases);
   }
   const grupos = new Map(); // firma de horas → días
   for (const dia of ORDEN_SEMANA) {
     if (!por.has(dia)) continue;
-    const firma = por.get(dia).join('|');
-    if (!grupos.has(firma)) grupos.set(firma, { dias: [], horas: por.get(dia) });
+    const firma = por.get(dia).map((h) => `${h.hora_texto}|${nombreEspecial(h)}`).join(';');
+    if (!grupos.has(firma)) grupos.set(firma, { dias: [], clases: por.get(dia) });
     grupos.get(firma).dias.push(dia);
   }
-  return [...grupos.values()].map((g) => `• ${cap(unir(g.dias))}: ${unir(g.horas)}`).join('\n');
+  return [...grupos.values()].map((g) => `*${cap(unir(g.dias))}*\n${g.clases.map(lineaDeHora).join('\n')}`).join('\n\n');
 }
 
 /** Lo que se pide al final: un solo mensaje, y ella contesta escribiendo (como con una persona). */
-export const CIERRE_HORARIOS = 'Dime qué día y a qué hora te sirve y a nombre de quién la reservo, y te la dejo lista por aquí 🙌 Si prefieres, también puedes reservar tú en https://tumbaobaila.com';
+export const CIERRE_HORARIOS = '✍️ Cuéntame *qué día y hora* te sirve y *a nombre de quién* la reservo, y te la dejo lista por aquí 🙌\n\nSi prefieres, reserva tú en https://tumbaobaila.com';
 
 /** El mensaje de los horarios: una frase de arranque (del modelo, si pasó la baranda), el bloque y lo que falta. */
 export function textoHorarios(horarios, lead) {

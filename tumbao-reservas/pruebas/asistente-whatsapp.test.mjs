@@ -22,7 +22,7 @@ import {
 } from '../../tumbao-caja/src/asistente.js';
 import { enlaceRecepcion, conRecepcion, ENLACE_RECEPCION } from '../../tumbao-caja/src/recepcion.js';
 import {
-  hoyBogota, textoDeFecha, fechaDeTexto, conFechas, diasDe, horarioSemanal, textoHorarios, traeListaDeHoras, CIERRE_HORARIOS,
+  hoyBogota, textoDeFecha, fechaDeTexto, conFechas, diasDe, horarioSemanal, textoHorarios, traeListaDeHoras, CIERRE_HORARIOS, relojDe,
 } from '../../tumbao-caja/src/horarios.js';
 import worker from '../../tumbao-caja/src/index.js';
 
@@ -95,7 +95,8 @@ titulo('2b. Los botones');
 titulo('3. Los textos fijos');
 {
   const p = textoPropuesta({ nombre: 'María Fernández', clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm', precio_cop: 15000 });
-  ok('el resumen dice qué clase, qué día, qué hora y cuánto', /Rumba básica/.test(p) && /martes 13 de octubre a las 5:00 pm/.test(p) && /\$15\.000/.test(p));
+  ok('el resumen dice qué clase, qué día, qué hora y cuánto', /\*Rumba básica\*/.test(p) && /Martes 13 de octubre/.test(p) && /5:00 pm/.test(p) && /\$15\.000/.test(p));
+  ok('el resumen se ve ordenado: la clase, el día, la hora y el precio cada uno en su línea, con negritas y aire entre bloques', /^Perfecto, \*María\* 🙌/.test(p) && /💃 \*Rumba básica\*\n🗓️ Martes 13 de octubre\n🕔 5:00 pm\n💵 \*\$15\.000\*/.test(p) && /\n\n🔒 \*Autorización de datos\*\n/.test(p) && /\n\n¿Autorizas\?/.test(p));
   ok('pide la autorización de datos con la Ley 1581 y el enlace a la política', /Ley 1581 de 2012/.test(p) && /https:\/\/tumbaobaila\.com\/privacidad/.test(p) && /autorizo|autorización/i.test(p));
   ok('la pregunta es la AUTORIZACIÓN de datos: "¿Autorizas?" con los botones Sí, autorizo / No autorizo, y deja cambiar escribiendo',
      /¿Autorizas\?/.test(p) && /Toca \*Sí, autorizo\* para reservar, o \*No autorizo\*/.test(p) && /escríbemelo/.test(p) && !/Responde S[ÍI]/.test(p) && !/Sí, reservar|No, gracias/.test(p));
@@ -103,6 +104,7 @@ titulo('3. Los textos fijos');
   ok('cabe en un mensaje con botones (hasta 1024 caracteres)', p.length < 1024, String(p.length));
   ok('NO dice que ya quedó reservado', !/qued[óo]|ya te (reserv|apart)/i.test(p));
   const h = textoReservaHecha({ nombre: 'María Fernández', info: { clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm' }, codigo: 'AB12CD', minutos: 15 });
+  ok('la reserva hecha se ve ordenada: la ficha de la clase, el código en negrita y los minutos para pagar con aire', /\n\n💃 \*Rumba básica\*\n🗓️ Martes 13 de octubre\n🕔 5:00 pm\n🎟️ Código: \*AB12CD\*\n\n⏳ Tienes unos \*15 minutos\*/.test(h));
   ok('la reserva hecha dice el código y los 15 minutos para pagar', /AB12CD/.test(h) && /15 minutos/.test(h) && /Te aparté/.test(h));
   ok('los errores se dicen sin culpa y sin prometer que alguien escribe',
      ['SIN_CUPO', 'CLASE_NO_DISPONIBLE', 'YA_RESERVADA', 'NOMBRE_INVALIDO', 'PENDIENTES', 'LIMITE_DIARIO'].every(e => textoErrorReserva(e, { codigo: 'X' }) && !/te escrib|te contact/i.test(textoErrorReserva(e, { codigo: 'X' }))));
@@ -371,15 +373,16 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
   ok('cada horario trae su fecha y si es «hoy» o «mañana»', SEMANA[0].fecha === '2026-10-13' && SEMANA[0].cuando === '' && conFechas([mk(1, 'sábado 10 de octubre', '5:00 pm')], AHORA)[0].cuando === 'hoy' && conFechas([mk(1, 'domingo 11 de octubre', '7:00 am')], AHORA)[0].cuando === 'mañana');
   ok('los días salen agrupados y en orden', diasDe(SEMANA).length === 5 && diasDe(SEMANA)[0].clases.length === 4 && diasDe(SEMANA)[4].fecha === '2026-10-17');
   const bloque = horarioSemanal(SEMANA);
-  ok('el horario fijo agrupa los días con las mismas horas, en una línea cada grupo',
-     bloque === '• Martes y jueves: 7:00 am, 5:00 pm (Rumba básica), 6:00 pm y 7:00 pm\n• Miércoles y viernes: 7:00 am, 6:00 pm y 7:00 pm\n• Sábado: 8:00 am y 9:00 am', '\n' + bloque);
-  ok('«Clase 7:00 am» no se repite: solo se pone el nombre cuando dice algo (Rumba básica)', !/Clase 7/.test(bloque) && /Rumba básica/.test(bloque));
+  ok('el horario fijo agrupa los días con las mismas horas: el día en negrita, una hora por línea con su relojito y aire entre grupos',
+     bloque === '*Martes y jueves*\n🕖 7:00 am\n🕔 5:00 pm · _Rumba básica_\n🕕 6:00 pm\n🕖 7:00 pm\n\n*Miércoles y viernes*\n🕖 7:00 am\n🕕 6:00 pm\n🕖 7:00 pm\n\n*Sábado*\n🕗 8:00 am\n🕘 9:00 am', '\n' + bloque);
+  ok('los relojitos: en punto, y media', relojDe('5:00 pm') === '🕔' && relojDe('12:00 pm') === '🕛' && relojDe('7:30 am') === '🕢' && relojDe('12:30 pm') === '🕧' && relojDe('6:50 pm') === '🕖' && relojDe('algo') === '🕐');
+  ok('«Clase 7:00 am» no se repite: solo se pone el nombre cuando dice algo (Rumba básica, en cursiva)', !/Clase 7/.test(bloque) && /_Rumba básica_/.test(bloque));
   ok('si hoy solo quedan las clases de la tarde, el sábado no se muestra como «solo la tarde»: se toma la fecha con más horas',
-     horarioSemanal(conFechas([mk(1, 'sábado 10 de octubre', '5:00 pm'), mk(2, 'sábado 17 de octubre', '8:00 am'), mk(3, 'sábado 17 de octubre', '9:00 am')], AHORA)) === '• Sábado: 8:00 am y 9:00 am');
+     horarioSemanal(conFechas([mk(1, 'sábado 10 de octubre', '5:00 pm'), mk(2, 'sábado 17 de octubre', '8:00 am'), mk(3, 'sábado 17 de octubre', '9:00 am')], AHORA)) === '*Sábado*\n🕗 8:00 am\n🕘 9:00 am');
   ok('sin clases con cupo no hay bloque', horarioSemanal([]) === '' && textoHorarios([], 'Hola') === null);
   const t1 = textoHorarios(SEMANA, '¡Claro! Soy el asistente virtual de Tumbao 💃');
-  ok('el mensaje: frase de arranque, el bloque y lo que falta (día, hora y nombre) en un solo mensaje, con la página como alternativa',
-     t1.startsWith('¡Claro! Soy el asistente virtual de Tumbao 💃\n\n• Martes y jueves') && t1.endsWith(CIERRE_HORARIOS) && /Dime qué día y a qué hora te sirve y a nombre de quién la reservo/.test(t1) && /tumbaobaila\.com/.test(t1));
+  ok('el mensaje: frase de arranque, el bloque y lo que falta (día, hora y nombre) en un solo mensaje, con la página como alternativa, cada parte separada por una línea en blanco',
+     t1.startsWith('¡Claro! Soy el asistente virtual de Tumbao 💃\n\n*Martes y jueves*') && t1.endsWith(CIERRE_HORARIOS) && /Cuéntame \*qué día y hora\* te sirve y \*a nombre de quién\* la reservo/.test(t1) && /\n\nSi prefieres, reserva tú en https:\/\/tumbaobaila\.com$/.test(t1));
   ok('sin frase del modelo, hay una por defecto; y si el modelo ya escribió una lista de horarios, se descarta (el bloque las trae)',
      /^Estos son nuestros horarios/.test(textoHorarios(SEMANA, '')) && !/Martes 13: 7:00/.test(textoHorarios(SEMANA, 'Martes 13: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles 14: 7:00 am · 6:00 pm · 7:00 pm; jueves 15: 7:00 am')));
   ok('contestar un solo día (4 horas) es natural y NO se cambia por el bloque; un párrafo de varios días sí', !traeListaDeHoras('El martes hay clase a las 7:00 am, 5:00 pm, 6:00 pm y 7:00 pm') && traeListaDeHoras('Martes: 7:00 am, 5:00 pm, 6:00 pm, 7:00 pm; miércoles: 7:00 am, 6:00 pm, 7:00 pm; jueves 7:00 am'));
@@ -398,8 +401,8 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
 
   // «Quiero una clase» → un solo mensaje: presentación + horario fijo + qué falta. Sin botones.
   let t = await correr({ msg: { texto: 'Quiero una clase' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Soy el asistente virtual de Tumbao 💃 ¡Con gusto te ayudo!', accion: 'mostrar_horarios', resumen: 'Quiere una clase' } });
-  ok('«quiero una clase»: UN mensaje de texto con la presentación, el horario fijo y la pregunta (día, hora y nombre); sin botones ni listas', t.enviados.length === 1 && sinBotones(t) && /^Soy el asistente virtual de Tumbao/.test(t.enviados[0]) && /• /.test(t.enviados[0]) && /a nombre de quién la reservo/.test(t.enviados[0]));
-  ok('el horario sale de la base (7:00 am, 5:00 pm con su nombre y 6:00 pm), no del modelo', /7:00 am y 5:00 pm \(Rumba básica\)|7:00 am, 5:00 pm \(Rumba básica\)/.test(t.enviados[0]) && /6:00 pm/.test(t.enviados[0]));
+  ok('«quiero una clase»: UN mensaje de texto con la presentación, el horario fijo y la pregunta (día, hora y nombre); sin botones ni listas', t.enviados.length === 1 && sinBotones(t) && /^Soy el asistente virtual de Tumbao/.test(t.enviados[0]) && /\*Martes\*/.test(t.enviados[0]) && /a nombre de quién\* la reservo/.test(t.enviados[0]));
+  ok('el horario sale de la base (7:00 am, 5:00 pm con su nombre y 6:00 pm), no del modelo', /🕖 7:00 am\n🕔 5:00 pm · _Rumba básica_/.test(t.enviados[0]) && /🕕 6:00 pm/.test(t.enviados[0]));
   ok('no reserva ni propone nada, y la conversación sigue abierta', t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_cerrar === false);
   const e = t.entrada();
   ok('el modelo recibe la fecha de HOY en Bogotá y cada horario con su fecha y «cuando»', e && e.hoy && e.hoy.fecha === hoyIso && /^(lunes|martes|miércoles|jueves|viernes|sábado|domingo)$/.test(e.hoy.dia) && e.horarios.every(h => /^\d{4}-\d{2}-\d{2}$/.test(h.fecha) && 'cuando' in h) && e.horarios[0].fecha === d3, JSON.stringify(e && e.hoy));
@@ -410,11 +413,11 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
 
   // el modelo escribió el párrafo largo de horarios → sale el bloque
   t = await correr({ msg: { texto: 'qué horarios hay' }, ctx: { horarios: HOR }, modelo: { respuesta: `Martes 13: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles 14: 7:00 am · 6:00 pm · 7:00 pm; jueves 15: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm. ¿Cuál quieres?`, accion: 'ninguna' } });
-  ok('si el modelo escribe el párrafo apretado de horarios, NO sale así: sale el bloque corto', t.enviados.length === 1 && /^• |\n• /m.test(t.enviados[0]) && !/ · /.test(t.enviados[0]) && sinBotones(t));
+  ok('si el modelo escribe el párrafo apretado de horarios, NO sale así: sale el bloque ordenado', t.enviados.length === 1 && /\*Martes\*\n🕖 7:00 am/.test(t.enviados[0]) && !/ · 6:00 pm/.test(t.enviados[0]) && sinBotones(t));
   t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: '', accion: 'mostrar_horarios' } });
   ok('aunque el modelo no escriba frase, el horario sale (no cae en el mensaje seguro)', /^Estos son nuestros horarios/.test(t.enviados[0]) && !/wa\.me/.test(t.enviados[0]));
   t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Te escribimos con los horarios', accion: 'mostrar_horarios' } });
-  ok('si la frase del modelo promete «te escribimos», se descarta y sale solo el horario', !/te escribimos/i.test(t.enviados.join(' ')) && /• /.test(t.enviados[0]));
+  ok('si la frase del modelo promete «te escribimos», se descarta y sale solo el horario', !/te escribimos/i.test(t.enviados.join(' ')) && /🕖 7:00 am/.test(t.enviados[0]));
   t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: [] }, modelo: { respuesta: 'Claro', accion: 'mostrar_horarios' } });
   ok('sin clases con cupo: no inventa horarios, manda a la página y al enlace de recepción', /Ahora mismo no veo clases con cupo/.test(t.enviados[0]) && /wa\.me\/573017833550/.test(t.enviados[0]) && sinBotones(t));
 
@@ -433,6 +436,7 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
 titulo('7. El prompt trae las reglas duras');
 {
   ok('es honesto si le preguntan si es un bot', /Soy el asistente virtual de Tumbao/.test(INSTRUCCIONES_ASISTENTE) && /di la verdad/.test(INSTRUCCIONES_ASISTENTE));
+  ok('escribe con formato de WhatsApp: negritas, párrafos separados, sin listas con guiones ni párrafos pegados', /\*negritas\*/.test(INSTRUCCIONES_ASISTENTE) && /una línea en blanco entre párrafos/.test(INSTRUCCIONES_ASISTENTE) && /nada de listas con guiones/.test(INSTRUCCIONES_ASISTENTE));
   ok('habla natural: sin menús ni «elige una opción», sin repetir la misma pregunta', /como una persona de recepción/.test(INSTRUCCIONES_ASISTENTE) && /sin sonar a formulario ni a menú/.test(INSTRUCCIONES_ASISTENTE) && /ni de repetir la misma pregunta o el mismo mensaje/.test(INSTRUCCIONES_ASISTENTE));
   ok('los horarios los arma el código (mostrar_horarios): el modelo no escribe la lista', /accion = "mostrar_horarios"/.test(INSTRUCCIONES_ASISTENTE) && /NO escribas tú la lista de horarios/.test(INSTRUCCIONES_ASISTENTE) && !/una línea por día/.test(INSTRUCCIONES_ASISTENTE));
   ok('sabe qué día es hoy y nunca lo adivina (dijo «hoy, martes 13» un sábado)', /hoy: la fecha y la hora de HOY en Colombia/.test(INSTRUCCIONES_ASISTENTE) && /nunca adivines qué día es/.test(INSTRUCCIONES_ASISTENTE) && /cuando = "hoy"/.test(INSTRUCCIONES_ASISTENTE));

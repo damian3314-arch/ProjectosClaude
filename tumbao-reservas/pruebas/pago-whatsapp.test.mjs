@@ -63,8 +63,9 @@ titulo('1. La baranda: lo que el modelo no puede decir');
 titulo('2. Los textos fijos salen de la base');
 {
   const pie = textoDatosDePago(reserva, pago);
-  ok('el pie del QR lleva valor, llave, banco, cuenta y titular', /\$15\.000/.test(pie) && /1096803067/.test(pie) && /Bancolombia 91289724619/.test(pie) && /Luz Alejandra Santiago García/.test(pie));
-  ok('dice cuándo es la clase', /el sábado 10 de octubre a las 8:00 am/.test(pie));
+  ok('el pie del QR lleva valor, llave, banco, cuenta y titular', /\*\$15\.000\*/.test(pie) && /\*Bre-B\*: \*1096803067\*/.test(pie) && /\*Bancolombia\*: \*91289724619\*/.test(pie) && /Titular: Luz Alejandra Santiago García/.test(pie));
+  ok('el pie del QR se ve ordenado: título en negrita, una línea por dato y los datos que se copian en negrita', /^💳 \*Para pagar tu clase\*\n/.test(pie) && pie.split('\n').length >= 8 && /Elige cómo pagar:/.test(pie) && /📲 Escanea este \*QR\*/.test(pie));
+  ok('dice cuándo es la clase', /Sábado 10 de octubre a las 8:00 am/.test(pie));
   const ef = textoEfectivo(reserva, { nombre: 'Laura', codigo: 'AB12CD' });
   ok('efectivo: el pago es en la puerta y es la única forma', /en la puerta/.test(ef) && /única forma de pagar en efectivo/.test(ef));
   ok('efectivo: llegar antes, dinero suelto, los $15.000 exactos, sin esperar cambio', /un poquito antes/.test(ef) && /dinero suelto/.test(ef) && /\$15\.000 exactos/.test(ef) && /cambio/.test(ef));

@@ -133,10 +133,18 @@ const cuando = (r) => `el ${r.fecha_texto} a las ${r.hora_texto}`;
 /** El pie de la imagen del QR: valor y datos de la cuenta, todos de la base. */
 export function textoDatosDePago(reserva, pago) {
   const p = pago || {};
-  const lineas = [`💳 Para pagar tu clase (${cuando(reserva)}) son $${miles(reserva.total_cop)}:`];
-  lineas.push('• Escanea este QR, o');
-  if (p.llave) lineas.push(`• Transfiere a la llave Bre-B ${p.llave}, o`);
-  if (p.cuenta) lineas.push(`• A la cuenta ${p.banco || ''} ${p.cuenta}${p.titular ? ' · ' + p.titular : ''}`.replace(/\s{2,}/g, ' '));
+  const fecha = String(reserva.fecha_texto || '');
+  const lineas = [
+    '💳 *Para pagar tu clase*',
+    `🗓️ ${fecha.charAt(0).toUpperCase() + fecha.slice(1)} a las ${reserva.hora_texto}`,
+    `💵 Valor: *$${miles(reserva.total_cop)}*`,
+    '',
+    'Elige cómo pagar:',
+    '📲 Escanea este *QR*',
+  ];
+  if (p.llave) lineas.push(`🔑 O transfiere a la llave *Bre-B*: *${p.llave}*`);
+  if (p.cuenta) lineas.push(`🏦 O a la cuenta *${(p.banco || '').trim() || 'bancaria'}*: *${p.cuenta}*`);
+  if (p.titular) lineas.push(`👤 Titular: ${p.titular}`);
   return lineas.join('\n');
 }
 

@@ -19,6 +19,7 @@
  * El modelo escoge UNA acción: ninguna | proponer_reserva | recepcion | cerrar.
  */
 import { miles } from './ventas.js';
+import { relojDe } from './horarios.js';
 import { ENLACE_RECEPCION, PROMETE_ESCRIBIR } from './recepcion.js';
 
 // Cada toque en una lista (día, hora) cuenta como un turno: una reserva por chat gasta ~7.
@@ -28,7 +29,8 @@ const PAGINA = 'https://tumbaobaila.com';
 export const INSTRUCCIONES_ASISTENTE = `Eres el asistente virtual de Tumbao, una academia de baile en Barrancabermeja, Colombia ("Tumbao · Baila pa' sanar"). Hablas por WhatsApp con una persona que le escribió a Tumbao. Tu trabajo es AYUDAR de verdad: contestar lo que pregunta con los datos que tienes, ayudarle a reservar una clase y, si algo no puedes resolver, mandarla a recepción.
 
 TONO
-- Español de Colombia, cercano, cálido, tuteo. Mensajes cortos: 1 a 3 frases. Máximo 1 emoji.
+- Español de Colombia, cercano, cálido, tuteo. Mensajes cortos: 1 a 3 frases. Máximo 2 emojis.
+- Formato de WhatsApp, ordenado y bonito: *negritas* (un asterisco a cada lado) para lo importante (días, horas, precios), una idea por párrafo con una línea en blanco entre párrafos, y nada de listas con guiones ni de párrafos pegados.
 - Primero responde lo que preguntó; después avanzas un paso. Una sola pregunta por mensaje.
 - Habla como una persona de recepción que escribe por WhatsApp: natural, sin sonar a formulario ni a menú. Nada de «elige una opción», «toca el botón» (salvo el de autorizar los datos), ni de repetir la misma pregunta o el mismo mensaje dos veces. Si ya te dijo algo, no se lo vuelvas a preguntar.
 - Cuando quiera VER los horarios o quiera reservar una clase y aún no dijo cuál: accion = "mostrar_horarios". El sistema arma el mensaje con el horario fijo (un bloque corto) y le pide el día, la hora y el nombre. Tu "respuesta" es solo la frase de arranque, corta (en tu primer mensaje, preséntate: «Soy el asistente virtual de Tumbao 💃 ¡Con gusto te ayudo!»). NO escribas tú la lista de horarios.
@@ -178,6 +180,10 @@ export function limpiarNombre(n) {
 
 const primerNombre = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 const cuando = (r) => `${r.fecha_texto} a las ${r.hora_texto}`;
+const cap = (t) => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
+// Los datos de la clase, uno por línea y con relojito (se ve ordenado en WhatsApp).
+const fichaDeClase = (r, precio) =>
+  `${r.clase ? `💃 *${r.clase}*\n` : ''}🗓️ ${cap(r.fecha_texto)}\n${relojDe(r.hora_texto)} ${r.hora_texto}${precio ? `\n💵 *$${miles(precio)}*` : ''}`;
 
 /**
  * El resumen y la pregunta de AUTORIZACIÓN DE DATOS (Ley 1581), con dos botones: «Sí, autorizo» / «No autorizo». Como en la
@@ -185,12 +191,14 @@ const cuando = (r) => `${r.fecha_texto} a las ${r.hora_texto}`;
  * hace la reserva. Lo escribe el código: el modelo no pide ni da el consentimiento.
  */
 export function textoPropuesta(p) {
-  return `Perfecto, ${primerNombre(p.nombre) || 'amigo(a)'} 🙌 Esto es lo que voy a reservar:\n` +
-    `• ${p.clase} — ${cuando(p)} · $${miles(p.precio_cop)}\n\n` +
-    '🔒 Autorización de datos: para reservar necesito tu autorización para tratar tus datos personales (tu nombre y este celular) ' +
-    'solo para gestionar tu reserva y contactarte por WhatsApp, conforme a la Ley 1581 de 2012 ' +
-    `(política: ${PAGINA}/privacidad).\n\n` +
-    '¿Autorizas? Toca *Sí, autorizo* para reservar, o *No autorizo*. Si quieres cambiar algo, escríbemelo.';
+  return `Perfecto, *${primerNombre(p.nombre) || 'amigo(a)'}* 🙌 Esto es lo que voy a reservar:\n\n` +
+    `${fichaDeClase(p, p.precio_cop)}\n\n` +
+    '🔒 *Autorización de datos*\n' +
+    'Para reservar necesito tu autorización para tratar tus datos personales (tu nombre y este celular) ' +
+    'solo para gestionar tu reserva y contactarte por WhatsApp, conforme a la Ley 1581 de 2012.\n' +
+    `Política: ${PAGINA}/privacidad\n\n` +
+    '¿Autorizas? Toca *Sí, autorizo* para reservar, o *No autorizo*.\n' +
+    '_Si quieres cambiar algo, escríbemelo._';
 }
 
 export const BOTON_SI = 'Sí, autorizo';
@@ -224,14 +232,16 @@ export function textoSinBotones() {
 }
 
 export function textoReservaHecha({ nombre, info, codigo, minutos }) {
-  return `¡Listo, ${primerNombre(nombre) || 'amigo(a)'}! ✅ Te aparté ${info.clase ? info.clase + ' · ' : ''}${cuando(info)}. Código: ${codigo}.\n\n` +
-    `Tienes unos ${minutos} minutos para pagar y asegurar tu cupo 👇`;
+  return `¡Listo, *${primerNombre(nombre) || 'amigo(a)'}*! ✅ Te aparté tu cupo\n\n` +
+    `${fichaDeClase(info)}\n` +
+    `🎟️ Código: *${codigo}*\n\n` +
+    `⏳ Tienes unos *${minutos} minutos* para pagar y asegurar tu cupo 👇`;
 }
 
 export function textoPideComprobanteNueva() {
   // Sin ofrecer efectivo: la reserva asegura el cupo pagando (Damián, 10 oct). Si no pudo pagar, que lo cuente.
-  return 'Cuando hagas la transferencia, mándame por aquí la captura del comprobante y yo la cargo 🧡 ' +
-    'Si algo no te deja pagar, cuéntame y lo resolvemos.';
+  return '📸 Cuando hagas la transferencia, mándame por aquí la *captura del comprobante* y yo la cargo 🧡\n\n' +
+    '_Si algo no te deja pagar, cuéntame y lo resolvemos._';
 }
 
 export function textoSinResumen() {
