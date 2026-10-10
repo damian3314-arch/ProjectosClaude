@@ -20,7 +20,7 @@ import {
   INSTRUCCIONES_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, MAX_TURNOS_ASISTENTE, cifrasDelAsistente,
   leerBoton, botonesPropuesta, BOTON_SI, BOTON_NO, textoToqueElBoton, textoBotonViejo, textoSinBotones,
 } from '../../tumbao-caja/src/asistente.js';
-import { enlaceRecepcion, conRecepcion, ENLACE_RECEPCION } from '../../tumbao-caja/src/recepcion.js';
+import { enlaceRecepcion, conRecepcion, ENLACE_RECEPCION, enPrimeraPersona } from '../../tumbao-caja/src/recepcion.js';
 import {
   hoyBogota, textoDeFecha, fechaDeTexto, conFechas, diasDe, horarioSemanal, textoHorarios, traeListaDeHoras, CIERRE_HORARIOS, relojDe,
 } from '../../tumbao-caja/src/horarios.js';
@@ -116,6 +116,15 @@ titulo('3. Los textos fijos');
     const texto = decodeURIComponent(enlaceRecepcion({ nombre: 'Laura', motivo: 'mira https://x.co o llama al 3001234567' }).split('?text=')[1]);
     return !/https|x\.co|3001234567/.test(texto) && /Laura/.test(texto);
   })());
+  // Damián (10 oct), viendo el chat de Andrea: «sale "Hola, soy Andrea. Necesito ayuda con: Andrea quiere pagar en efectivo", como si hablara en tercera persona»
+  const t1p = (nom, mot) => decodeURIComponent(enlaceRecepcion({ nombre: nom, motivo: mot }).split('?text=')[1] || '');
+  ok('el mensaje del enlace va en PRIMERA persona: «Hola, soy Andrea. Quiero pagar en efectivo…», no «Andrea quiere…»', t1p('Andrea', 'Andrea quiere pagar en efectivo en lugar de hacer la transferencia') === 'Hola, soy Andrea. Quiero pagar en efectivo en lugar de hacer la transferencia.');
+  ok('…también «Necesita ayuda porque no puede…», «Solicita hablar con un asesor» y «Su pago no aparece y ya pagó»', t1p('Yurley', 'Necesita ayuda porque no puede completar el pago por transferencia ni con el QR') === 'Hola, soy Yurley. Necesito ayuda porque no puedo completar el pago por transferencia ni con el QR.'
+     && t1p('Laura', 'Solicita hablar con un asesor de Tumbao') === 'Hola, soy Laura. Solicito hablar con un asesor de Tumbao.' && t1p('Laura', 'Su pago no aparece y ya pagó') === 'Hola, soy Laura. Mi pago no aparece y ya pagué.');
+  ok('…aunque el nombre del motivo no sea el del chat (Ana María, Andrea…)', t1p('Laura', 'Ana María necesita ayuda porque no puede pagar') === 'Hola, soy Laura. Necesito ayuda porque no puedo pagar.');
+  ok('lo que ya viene en primera persona se deja igual; una frase suelta va con «Necesito ayuda con:»', t1p('Laura', 'Quiero cambiar mi clase del martes') === 'Hola, soy Laura. Quiero cambiar mi clase del martes.' && t1p('Laura', 'cambiar mi clase') === 'Hola, soy Laura. Necesito ayuda con: cambiar mi clase.' && t1p('Laura', 'revisar un comprobante que envié') === 'Hola, soy Laura. Necesito ayuda con: revisar un comprobante que envié.');
+  ok('sin motivo: «Hola, soy Laura. Necesito ayuda.»; sin nombre ni motivo: el enlace pelado', t1p('Laura', '') === 'Hola, soy Laura. Necesito ayuda.' && enlaceRecepcion({}) === ENLACE_RECEPCION && enPrimeraPersona('', 'Laura') === '');
+  ok('«La persona necesita ayuda con su pago» queda «Necesito ayuda con mi pago»: sin «la persona» ni «el cliente»', t1p('Andrea', 'La persona necesita ayuda con su pago') === 'Hola, soy Andrea. Necesito ayuda con mi pago.', t1p('Andrea', 'La persona necesita ayuda con su pago'));
   ok('conRecepcion no repite el enlace', (conRecepcion(`Listo ${ENLACE_RECEPCION}`, {}).match(/wa\.me/g) || []).length === 1);
 }
 

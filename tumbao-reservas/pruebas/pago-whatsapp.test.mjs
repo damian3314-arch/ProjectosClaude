@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs';
 import {
   guardarRespuestaPago, INSTRUCCIONES_PAGO, RESPUESTA_SEGURA_PAGO, MAX_TURNOS_PAGO,
-  textoDatosDePago, textoEfectivo, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision,
+  textoDatosDePago, textoEfectivo, esProblemaDePago, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision,
   pagadoEnDeHora, leerMarcaDeImagen, textoRecepcionPago,
   validarComprobante, destinoEsTumbao, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE,
 } from '../../tumbao-caja/src/pago.js';
@@ -68,8 +68,9 @@ titulo('2. Los textos fijos salen de la base');
   ok('dice cuándo es la clase', /Sábado 10 de octubre a las 8:00 am/.test(pie));
   const ef = textoEfectivo(reserva, { nombre: 'Laura', codigo: 'AB12CD' });
   ok('efectivo: el pago es en la puerta y es la única forma', /en la puerta/.test(ef) && /única forma de pagar en efectivo/.test(ef));
-  ok('efectivo: llegar antes, dinero suelto, los $15.000 exactos, sin esperar cambio', /un poquito antes/.test(ef) && /dinero suelto/.test(ef) && /\$15\.000 exactos/.test(ef) && /cambio/.test(ef));
-  ok('efectivo: lleva el código de la reserva', /Código: AB12CD/.test(ef));
+  ok('efectivo: llegar antes, dinero suelto, los $15.000 exactos, sin esperar cambio', /un poquito antes/.test(ef) && /dinero suelto/.test(ef) && /\*\$15\.000\* exactos/.test(ef) && /cambio/.test(ef));
+  ok('efectivo: lleva el código de la reserva', /Código: \*AB12CD\*/.test(ef));
+  ok('efectivo: tranquiliza primero («No te preocupes») y se ve ordenado: día, hora y código cada uno en su línea, el aviso aparte', /^No te preocupes, Laura 🧡 Te dejé tu reserva lista para pagar en efectivo ✅\n\n🗓️ /.test(ef) && /\n\n💵 El efectivo se paga \*solo en la puerta\*/.test(ef));
   ok('efectivo con 2 cupos dice el total', /\$30\.000 \(2 cupos\)/.test(textoEfectivo({ ...reserva, personas: 2, total_cop: 30000 }, { nombre: 'Laura' })));
   const sr = textoSoporteRecibido(reserva, { nombre: 'Laura' });
   ok('comprobante válido: la reserva «ya está realizada», se piden «uno o dos minutos» y se avisa por aquí; NUNCA «confirmada» ni «aprobado»',
@@ -330,7 +331,7 @@ titulo('6. Efectivo');
     modelo: { respuesta: 'Listo, te hago la reserva ✅', accion: 'efectivo', resumen: 'Pagará en efectivo' },
   });
   ok('hace la reserva (pago_efectivo) y manda el texto fijo, no el del modelo', t.usos('pago_efectivo').length === 1 && /en la puerta/.test(t.enviados[0]) && !/te hago la reserva/.test(t.enviados[0]));
-  ok('le pide llegar antes y traer los $15.000 sueltos', /un poquito antes/.test(t.enviados[0]) && /\$15\.000 exactos/.test(t.enviados[0]));
+  ok('le pide llegar antes y traer los $15.000 sueltos', /un poquito antes/.test(t.enviados[0]) && /\*\$15\.000\* exactos/.test(t.enviados[0]));
   ok('cierra la conversación con resultado «efectivo»', t.usos('pago_turno')[0].b.p_cerrar === true && t.usos('pago_turno')[0].b.p_resultado === 'efectivo');
   ok('no manda el QR ni los datos de la cuenta', t.imagenes.length === 0 && !t.enviados.some(x => /1096803067/.test(x)));
 }
@@ -347,6 +348,52 @@ titulo('6. Efectivo');
     modelo: { respuesta: 'Listo', accion: 'efectivo' },
   });
   ok('si su pago ya está en revisión, le dice que no hace falta pagar de nuevo', /no hace falta pagar/.test(t.enviados[0]));
+}
+
+titulo('6b. Rescatar con efectivo: un problema para pagar no se manda a recepción');
+{
+  // Yurley: «tengo un error en la cuenta y no puedo pagar» / «el QR también me falla» → el modelo escoge «recepción» por costumbre.
+  const EF = { pago_efectivo: () => ({ ok: true, estado: 'confirmada', codigo: 'AB12CD', cobra_en_puerta: true, info: { ...reserva, estado: 'confirmada', cobra_en_puerta: true } }) };
+  let t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'Si, el QR también me da error' }), ...EF },
+    modelo: { respuesta: 'Eso lo resuelven en recepción', accion: 'recepcion', motivo: 'Necesita ayuda porque no puede completar el pago por transferencia ni con el QR', resumen: 'No puede pagar' },
+  });
+  ok('el modelo escogió «recepción» por un problema de pago: el código lo RESCATA con efectivo (pago_efectivo) y no manda el enlace', t.usos('pago_efectivo').length === 1 && /No te preocupes/.test(t.enviados[0]) && /en la puerta/.test(t.enviados[0]) && !t.enviados.some(x => /wa\.me/.test(x)));
+  ok('…y cierra con resultado «efectivo»', t.usos('pago_turno')[0].b.p_resultado === 'efectivo' && t.usos('pago_turno')[0].b.p_cerrar === true);
+
+  // Andrea: «no tuve problemas, pero quiero pagar en efectivo» → ahí NO hay rescate; no se cae en efectivo por el motivo
+  t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'No tuve problemas, pero quiero pagar en efectivo' }), pago_preparar: () => ({ ok: true, codigo: 'AB12CD', estado: 'pendiente_pago', info: reserva }), ...EF },
+    modelo: { respuesta: 'La reserva se asegura pagando por transferencia. Te dejo de nuevo el QR 👇 ¿Hay algo que te impida pagar hoy?', accion: 'datos_de_pago', resumen: 'Prefiere efectivo' },
+  });
+  ok('quien solo prefiere efectivo (sin problema): no se le da efectivo, se le vuelve a mandar el QR y los datos', t.usos('pago_efectivo').length === 0 && t.imagenes.length === 1 && /1096803067/.test(t.imagenes[0].caption));
+  t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'No tuve problemas, pero quiero pagar en efectivo' }), ...EF },
+    modelo: { respuesta: 'Entiendo', accion: 'recepcion', motivo: 'Andrea quiere pagar en efectivo en lugar de hacer la transferencia', resumen: 'Prefiere efectivo' },
+  });
+  ok('si el modelo igual la pasa a recepción por «preferir efectivo» (no es un problema de pago), el código NO la rescata con efectivo', t.usos('pago_efectivo').length === 0);
+  ok('…y el enlace a recepción va en PRIMERA persona («Hola, soy …. Quiero pagar en efectivo…»), no «Andrea quiere…»', (() => {
+    const link = (t.enviados.join(' ').match(/https:\/\/wa\.me\/573017833550\?text=[^\s]+/) || [''])[0];
+    const txt = decodeURIComponent(link.split('?text=')[1] || '');
+    return /^Hola, soy \w+\. Quiero pagar en efectivo en lugar de hacer la transferencia\.$/.test(txt) && !/Andrea quiere|Necesito ayuda con: Andrea/.test(txt);
+  })(), (t.enviados.join(' ').match(/wa\.me[^\s]*/) || [''])[0]);
+
+  // El rescate solo funciona con la reserva sin pagar: con el comprobante ya cargado no se toca
+  t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'no me funciona la app y ya mandé el comprobante', reserva: { ...reserva, estado: 'verificando' } }), ...EF },
+    modelo: { respuesta: 'Eso lo resuelven en recepción', accion: 'recepcion', motivo: 'No puede pagar por error en la app', resumen: 'x' },
+  });
+  ok('con el comprobante ya cargado (verificando) no se rescata con efectivo', t.usos('pago_efectivo').length === 0);
+}
+{
+  ok('esProblemaDePago: error, «no puede», QR o cuenta que falla → sí', [
+    'Necesita ayuda porque no puede completar el pago por transferencia ni con el QR', 'Tiene un error en la cuenta y no puede pagar', 'La app del banco falla al transferir',
+    'No le funciona el QR', 'Sin saldo en la cuenta para pagar', 'Intentó pagar y el banco rechazó la transferencia',
+  ].every(esProblemaDePago));
+  ok('esProblemaDePago: preferir efectivo, cambiar de clase, devolución → no', [
+    'Andrea quiere pagar en efectivo en lugar de hacer la transferencia', 'Quiere cambiar su clase del martes', 'Pide una devolución',
+    'No tuvo problemas, pero prefiere pagar en efectivo', 'Sin ningún problema para pagar, solo prefiere efectivo', '', null,
+  ].every(m => !esProblemaDePago(m)));
 }
 
 titulo('7. Conversación, recepción y límites');
@@ -447,10 +494,13 @@ titulo('9. El prompt trae las reglas duras');
   ok('con el comprobante ya cargado no ofrece efectivo ni pide otro: la reserva ya está realizada', /NO le preguntes por el pago ni le ofrezcas efectivo/.test(INSTRUCCIONES_PAGO) && /su reserva ya está realizada y el pago se está verificando/.test(INSTRUCCIONES_PAGO) && /NO uses efectivo/.test(INSTRUCCIONES_PAGO));
   ok('el sistema revisa el comprobante, no el modelo', /tú no lo evalúas/.test(INSTRUCCIONES_PAGO));
   // Damián (10 oct): el efectivo no se ofrece; solo para quien intentó pagar y no pudo, o dice que por ahora no tiene en la cuenta.
-  ok('NUNCA ofrece el efectivo ni lo menciona primero', /NUNCA ofrezcas el efectivo ni lo menciones tú primero/.test(INSTRUCCIONES_PAGO) && !/Ofrécele las dos formas/.test(INSTRUCCIONES_PAGO) && !/o en efectivo al llegar/.test(INSTRUCCIONES_PAGO));
+  ok('NO ofrece el efectivo al empezar ni lo menciona primero (es la salida cuando el pago no se logra)', /No ofrezcas el efectivo al empezar ni lo menciones tú primero/.test(INSTRUCCIONES_PAGO) && !/Ofrécele las dos formas/.test(INSTRUCCIONES_PAGO) && !/o en efectivo al llegar/.test(INSTRUCCIONES_PAGO));
   ok('lo explica: la reserva asegura el cupo pagando, se agotan rápido y hay quien no llega', /asegurar el cupo pagando/.test(INSTRUCCIONES_PAGO) && /se agotan rápido/.test(INSTRUCCIONES_PAGO) && /no llega/.test(INSTRUCCIONES_PAGO));
-  ok('efectivo solo si intentó pagar y no pudo, o si dice que por ahora no tiene en la cuenta y lo pide', /intentó pagar y no pudo/.test(INSTRUCCIONES_PAGO) && /por ahora no tiene plata en la cuenta/.test(INSTRUCCIONES_PAGO));
-  ok('si pide efectivo sin motivo: no lo usa, ofrece el QR y pregunta si tuvo problema; si insiste, recepción', /SIN contar ninguno de esos dos motivos/.test(INSTRUCCIONES_PAGO) && /NO uses efectivo todavía/.test(INSTRUCCIONES_PAGO) && /Si insiste en efectivo sin dar motivo: accion = "recepcion"/.test(INSTRUCCIONES_PAGO));
+  // Damián (10 oct): el bot nació para RESCATAR; si no logra que pague, deja la reserva en efectivo y NO manda a recepción.
+  ok('RESCATA: si el pago no se logra, deja la reserva para efectivo y no la manda a recepción (ni espera a que lo pida)', /RESCATAR CON EFECTIVO/.test(INSTRUCCIONES_PAGO) && /NO la mandes a recepción: deja la reserva para pagar en efectivo/.test(INSTRUCCIONES_PAGO) && /No esperes a que lo pida: ofrécelo tú como salida/.test(INSTRUCCIONES_PAGO));
+  ok('rescata cuando intentó y no pudo, cuando no tiene saldo o cuando sigue sin poder tras el QR y los datos', /intentó pagar y no pudo/.test(INSTRUCCIONES_PAGO) && /por ahora no tiene plata en la cuenta/.test(INSTRUCCIONES_PAGO) && /sigue sin poder pagar y no lo resuelves en uno o dos mensajes/.test(INSTRUCCIONES_PAGO));
+  ok('quien solo prefiere efectivo sin problema: no se le da; se le vuelve a mandar el QR, se le pregunta qué se lo impide y si insiste se despide (sin mandarlo a recepción)', /NO es para quien simplemente prefiere pagar así sin haber tenido ningún problema/.test(INSTRUCCIONES_PAGO) && /vuelve a mandarle el QR y los datos \(accion = "datos_de_pago"\)/.test(INSTRUCCIONES_PAGO) && /Si insiste otra vez sin ningún problema, despídete con calidez/.test(INSTRUCCIONES_PAGO));
+  ok('un problema para PAGAR no va a recepción', /Un problema para PAGAR no va a recepción: se rescata con efectivo/.test(INSTRUCCIONES_PAGO));
 }
 
 titulo('10. La migración 0166 y el cableado del Worker');

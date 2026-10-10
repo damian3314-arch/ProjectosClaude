@@ -40,7 +40,7 @@ import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guard
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
 import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
-import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
+import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, esProblemaDePago, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -2872,7 +2872,10 @@ async function pagoWA(request, env, origen) {
       conversacion,
     }), 'low');
     const j = leerJSON(salida) || {};
-    const accion = ['datos_de_pago', 'efectivo', 'recepcion', 'cerrar'].includes(j.accion) ? j.accion : 'ninguna';
+    let accion = ['datos_de_pago', 'efectivo', 'recepcion', 'cerrar'].includes(j.accion) ? j.accion : 'ninguna';
+    // Rescatar, no mandar a recepción: si el modelo pasa a recepción por un problema para PAGAR y la reserva sigue sin pagar, se deja
+    // para pago en efectivo (Damián, 10 oct). Quien solo prefiere efectivo sin ningún problema no cuenta (esProblemaDePago).
+    if (accion === 'recepcion' && reserva.estado === 'pendiente_pago' && esProblemaDePago(j.motivo)) accion = 'efectivo';
     const g = guardarRespuestaPago(j.respuesta, reserva, accion);
     const resumen = j.resumen || null;
 
