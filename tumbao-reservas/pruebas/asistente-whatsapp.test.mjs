@@ -105,6 +105,8 @@ titulo('3. Los textos fijos');
   ok('NO dice que ya quedó reservado', !/qued[óo]|ya te (reserv|apart)/i.test(p));
   const h = textoReservaHecha({ nombre: 'María Fernández', info: { clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm' }, codigo: 'AB12CD', minutos: 15 });
   ok('la reserva hecha se ve ordenada: la ficha de la clase, el código en negrita y los minutos para pagar con aire', /\n\n💃 \*Rumba básica\*\n🗓️ Martes 13 de octubre\n🕔 5:00 pm\n🎟️ Código: \*AB12CD\*\n\n⏳ Tienes unos \*15 minutos\*/.test(h));
+  const gen = textoPropuesta({ nombre: 'Andrea', clase: 'Clase 9:00 am', fecha_texto: 'sábado 17 de octubre', hora_texto: '9:00 am', precio_cop: 15000 });
+  ok('una clase con nombre genérico («Clase 9:00 am») no repite la hora: la ficha empieza por el día', !/Clase 9:00 am/.test(gen) && /Perfecto, \*Andrea\* 🙌 Esto es lo que voy a reservar:\n\n🗓️ Sábado 17 de octubre\n🕘 9:00 am\n💵 \*\$15\.000\*/.test(gen), gen);
   ok('la reserva hecha dice el código y los 15 minutos para pagar', /AB12CD/.test(h) && /15 minutos/.test(h) && /Te aparté/.test(h));
   ok('los errores se dicen sin culpa y sin prometer que alguien escribe',
      ['SIN_CUPO', 'CLASE_NO_DISPONIBLE', 'YA_RESERVADA', 'NOMBRE_INVALIDO', 'PENDIENTES', 'LIMITE_DIARIO'].every(e => textoErrorReserva(e, { codigo: 'X' }) && !/te escrib|te contact/i.test(textoErrorReserva(e, { codigo: 'X' }))));

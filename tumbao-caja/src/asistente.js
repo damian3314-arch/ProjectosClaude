@@ -183,7 +183,8 @@ const cuando = (r) => `${r.fecha_texto} a las ${r.hora_texto}`;
 const cap = (t) => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
 // Los datos de la clase, uno por línea y con relojito (se ve ordenado en WhatsApp).
 const fichaDeClase = (r, precio) =>
-  `${r.clase ? `💃 *${r.clase}*\n` : ''}🗓️ ${cap(r.fecha_texto)}\n${relojDe(r.hora_texto)} ${r.hora_texto}${precio ? `\n💵 *$${miles(precio)}*` : ''}`;
+  // «Clase 9:00 am» repite la hora de abajo: solo se muestra el nombre cuando dice algo (Rumba básica).
+  `${r.clase && !/^clase\b/i.test(String(r.clase)) ? `💃 *${r.clase}*\n` : ''}🗓️ ${cap(r.fecha_texto)}\n${relojDe(r.hora_texto)} ${r.hora_texto}${precio ? `\n💵 *$${miles(precio)}*` : ''}`;
 
 /**
  * El resumen y la pregunta de AUTORIZACIÓN DE DATOS (Ley 1581), con dos botones: «Sí, autorizo» / «No autorizo». Como en la
