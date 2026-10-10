@@ -37,7 +37,7 @@ import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
-import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen } from './pago.js';
+import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -601,6 +601,14 @@ const LEER_COMPROBANTE =
   'el pago se cruce con el equivocado; un null solo hace que la persona lo ' +
   'escriba a mano.';
 
+// Lo que se le pide EXTRA al leer un comprobante que llega por WhatsApp (el asistente de pagos, 0166): además de lo de
+// siempre, la fecha y a quién va el dinero, para poder revisar que sea de hoy y para Tumbao ANTES de registrarlo. La
+// página sigue usando el guion de arriba, sin cambios.
+const LEER_COMPROBANTE_AMPLIADO =
+  LEER_COMPROBANTE.replace('estas cuatro claves: hora, referencia, pagador, valor.', 'estas seis claves: hora, referencia, pagador, valor, fecha, destino.') +
+  '\n\nfecha: la fecha de la transaccion en formato AAAA-MM-DD (si no muestra el ano, null). Si no la ves con claridad, null.\n' +
+  'destino: el nombre, la llave, el numero de cuenta o el celular de quien RECIBE el dinero, tal cual aparece. Si no lo ves, null.';
+
 // El modelo puede devolver "6:31 p.m.", "18:31:07" o cualquier cosa.
 // Aquí solo pasa lo que tenga forma de hora de verdad.
 function hora24(v) {
@@ -644,7 +652,7 @@ function soloJSON(crudo) {
   try { return JSON.parse(s.slice(a, b + 1)); } catch (_) { return {}; }
 }
 
-async function leerComprobante(env, imagen) {
+async function leerComprobante(env, imagen, { ampliado = false } = {}) {
   // Se filtra ANTES de llamar al modelo: una entrada basura no mejora
   // por mandarla, y cada llamada cuesta.
   if (!/^data:image\/(jpe?g|png|webp);base64,/.test(imagen)) {
@@ -668,10 +676,10 @@ async function leerComprobante(env, imagen) {
       body: JSON.stringify({
         model: env.MODELO_OCR || 'gpt-4o-mini',
         temperature: 0,
-        max_tokens: 200,
+        max_tokens: ampliado ? 300 : 200,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: LEER_COMPROBANTE },
+          { role: 'system', content: ampliado ? LEER_COMPROBANTE_AMPLIADO : LEER_COMPROBANTE },
           { role: 'user', content: [
             { type: 'text', text: 'Lee este comprobante y devuelve el JSON.' },
             { type: 'image_url', image_url: { url: imagen, detail: 'high' } },
@@ -712,7 +720,7 @@ async function leerComprobante(env, imagen) {
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
     const d = await env.AI.run(MODELO_VISION, {
       image: [...bytes],
-      prompt: LEER_COMPROBANTE + '\n\nLee este comprobante y devuelve el JSON.',
+      prompt: (ampliado ? LEER_COMPROBANTE_AMPLIADO : LEER_COMPROBANTE) + '\n\nLee este comprobante y devuelve el JSON.',
       max_tokens: 300,
     });
     crudo = d.description || d.response || '';
@@ -726,8 +734,17 @@ async function leerComprobante(env, imagen) {
 
   // ok:true aunque no se haya sacado nada: para la página eso no es un
   // error, es que hay que escribirlo a mano.
-  return { ok: true, hora, referencia, pagador, valor,
-           leidos: [hora, referencia, pagador].filter(Boolean).length };
+  const lectura = { ok: true, hora, referencia, pagador, valor,
+                    leidos: [hora, referencia, pagador].filter(Boolean).length };
+  if (ampliado) {
+    const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d.fecha == null ? '' : d.fecha).trim());
+    const real = f && !Number.isNaN(Date.parse(`${f[0]}T12:00:00Z`)) && new Date(`${f[0]}T12:00:00Z`).toISOString().startsWith(f[0]);
+    lectura.fecha = real ? f[0] : null;
+    // Igual que el pagador: el modelo abierto confunde a quien envía con quien recibe, y un destino mal leído rechazaría
+    // comprobantes buenos. Sin la llave de OpenAI no se usa.
+    lectura.destino = fiarseDelPagador ? textoLimpio(d.destino, 120) : null;
+  }
+  return lectura;
 }
 
 /* ---------------------------------------------------------------------
@@ -2705,14 +2722,14 @@ async function pagoWA(request, env, origen) {
       let lectura = null;
       try {
         const url = await imagenWAComoDataURL(env, marca.id);
-        if (url) lectura = await leerComprobante(env, url);
+        if (url) lectura = await leerComprobante(env, url, { ampliado: true });
       } catch (e) { console.log('pago lectura', e && e.message); }
-      const leidos = lectura && lectura.ok ? Number(lectura.leidos || 0) : 0;
       const valor = lectura && lectura.ok && lectura.valor ? Number(lectura.valor) : null;
 
-      // Nada legible: una vez se le pide una captura mejor; a la segunda se registra igual y lo valida una persona.
+      // Sin el valor no se puede revisar lo principal: una vez se le pide una captura mejor; a la segunda se registra
+      // igual (sin afirmar nada del valor) y lo valida una persona.
       let ilegible = false;
-      if (leidos === 0 && !valor) {
+      if (!valor) {
         const intentos = Number(await rpc(env, 'pago_marcar_lectura', { p_chat: chat.id }).catch(() => 2));
         if (intentos < 2) {
           await hablar(textoComprobanteIlegible(), { entrante });
@@ -2721,10 +2738,27 @@ async function pagoWA(request, env, origen) {
         ilegible = true;
       }
 
-      const valorDistinto = valor && Number(reserva.total_cop) > 0 && valor < Number(reserva.total_cop) ? valor : null;
+      // La revisión inicial (Damián, 10 oct): el comprobante tiene que corresponder a lo que se cobra. Si el valor,
+      // la cuenta de destino o la fecha lo contradicen, NO se registra: se le dice qué se ve distinto y se le pide el
+      // correcto. A la tercera que no cuadra lo sigue una persona. La reserva no se toca.
+      const revision = validarComprobante({ lectura, reserva, pago });
+      if (!revision.ok) {
+        const intentos = Number(await rpc(env, 'pago_marcar_lectura', { p_chat: chat.id }).catch(() => MAX_INTENTOS_COMPROBANTE));
+        const detalle = revision.motivo === 'valor' ? `dice $${revision.leido} y la reserva es de $${reserva.total_cop}`
+          : revision.motivo === 'destino' ? `va a «${revision.leido}», no a la cuenta de Tumbao`
+          : `parece de otro día u hora (${revision.leido})`;
+        if (intentos >= MAX_INTENTOS_COMPROBANTE) {
+          await aRecepcion(`Mandó ${intentos} comprobantes que no corresponden a la reserva (el último ${detalle}). Escríbele para resolverlo.`, reserva, '💳 Pago por WhatsApp: el comprobante no corresponde');
+          await hablar(textoComprobanteRevisaEquipo({ nombre }), { entrante, cerrar: true, resultado: 'recepcion', resumen: `Comprobante que no corresponde (${detalle})` });
+        } else {
+          await hablar(textoComprobanteNoCuadra(revision, reserva, { nombre }), { entrante, resumen: `Comprobante que no corresponde (${detalle})` });
+        }
+        return json({ ok: true, rechazado: revision.motivo }, 200, origen);
+      }
+
       const r = await rpc(env, 'pago_registrar_soporte', {
         p_chat: chat.id,
-        p_pagado_en: pagadoEnDeHora(lectura && lectura.hora),
+        p_pagado_en: pagadoEnDeHora(lectura && lectura.hora, Date.now(), lectura && lectura.fecha),
         p_referencia: (lectura && lectura.referencia) || null,
         p_pagador: (lectura && lectura.pagador) || null,
         p_media: marca.id,
@@ -2746,14 +2780,13 @@ async function pagoWA(request, env, origen) {
         return json({ ok: true, error: err }, 200, origen);
       }
 
-      if (valorDistinto) await aRecepcion(`El comprobante dice $${valorDistinto} y la reserva es de $${reserva.total_cop}: revisar antes de confirmar.`, info, '💳 Pago por WhatsApp: el valor no coincide');
       if (ilegible) await aRecepcion('El comprobante no se pudo leer: validar el pago a mano.', info, '💳 Pago por WhatsApp: comprobante ilegible');
 
       let texto;
       let cerrar = false;
       if (r.estado === 'confirmada') { texto = textoPagoConfirmado(info, { nombre }); cerrar = true; }
       else if (r.repetido) { texto = `Ya tengo tu comprobante, ${String(nombre || '').split(/\s+/)[0] || 'amigo(a)'} 🙌 Se está validando y apenas el banco lo reporte te confirmo por aquí.`; }
-      else texto = textoSoporteRecibido(info, { nombre, valorDistinto });
+      else texto = textoSoporteRecibido(info, { nombre, valorVerificado: revision.valorVerificado });
       await hablar(texto, { entrante, cerrar });
       return json({ ok: true, estado: r.estado }, 200, origen);
     }
@@ -2891,7 +2924,7 @@ async function pagoSeguimientoWA(env, origen) {
       else if (s.tipo === 'en_revision') {
         texto = textoEnRevision({ nombre: s.nombre });
         await avisarRecepcionPago(env, 'pago-revision', '💳 Pago por WhatsApp: validar a mano', chat, s.telefono, s.codigo, info,
-          'Mandó el comprobante por WhatsApp y el banco no lo mostró en 6 minutos: la reserva quedó «pendiente de validación». Revisa el pago y confírmala o escríbele.');
+          'Mandó el comprobante por WhatsApp y el banco no lo mostró en 3 minutos: la reserva quedó realizada y «pendiente de validación» (la persona ya sabe que el pago queda en verificación). Revisa el pago y confírmalo.');
       } else {
         texto = textoPagoNoValidado({ nombre: s.nombre });
         await avisarRecepcionPago(env, 'pago-revision', '💳 Pago por WhatsApp: no se pudo validar', chat, s.telefono, s.codigo, info,
