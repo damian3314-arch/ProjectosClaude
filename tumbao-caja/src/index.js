@@ -32,7 +32,7 @@
 
 // De dónde se acepta que llamen. Un endpoint de plata no lleva '*'.
 // La invitación a la tiquetera del cierre de «¿cómo te fue?» (0121, 29 sep).
-import { invitacionTiquetera, debeInvitarATiquetera } from './oferta.js';
+import { invitacionTiquetera, invitacionPlanes, debeInvitarATiquetera } from './oferta.js';
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
@@ -2443,13 +2443,19 @@ async function opinionWA(request, env, origen) {
 
     const cerrar = !!j.cerrar || Number(op.turnos || 0) + 1 >= 3;
     let respuesta = String(j.respuesta).trim().slice(0, 600);
-    // La invitación a la tiquetera la escribe el código, no el modelo: a quien
-    // dijo que le encantó le llega siempre igual y con el precio de verdad.
+    // La invitación la escribe el código, no el modelo: a quien dijo que le encantó le llega siempre igual y con el precio
+    // de verdad. 10 oct: si hay cupo real de mensualidad va primero (con los cupos por horario) y la tiquetera queda
+    // como la forma suave de empezar; sin cupos, o si falla la consulta, queda la de la tiquetera de siempre.
     if (texto && debeInvitarATiquetera({ estadoAntes: op.estado, cerrar, tipo: j.tipo, urgente: !!j.urgente })) {
-      const oferta = invitacionTiquetera(await rpc(env, 'tiquetera_paquetes', {}).catch(() => null));
+      const [paquetes, perfil] = await Promise.all([
+        rpc(env, 'tiquetera_paquetes', {}).catch(() => null),
+        rpc(env, 'ventas_perfil', { p_tel: m.telefono }).catch(() => null),
+      ]);
+      const oferta = invitacionPlanes({ paquetes, perfil });
       if (oferta) respuesta += '\n\n' + oferta;
     }
-    await responderYGuardar(env, m.telefono, respuesta.slice(0, 900));
+    // 1400 y no 900: con la invitación (precio, cupos y enlace) el mensaje pasa de 900 y el enlace quedaba cortado.
+    await responderYGuardar(env, m.telefono, respuesta.slice(0, 1400));
     await rpc(env, 'wa_opinion_turno', {
       p_opinion: op.id, p_mensaje: m.id,
       p_texto_entrante: transcrito ? `(nota de voz) ${transcrito}` : null,

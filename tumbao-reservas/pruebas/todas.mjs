@@ -44,6 +44,7 @@ const SUITES = [
   'tiquetera-panel',
   'tiquetera-mensualidad',
   'oferta-tiquetera',
+  'oferta-mensualidad',
   'premium-bot',
   'cupo-sin-pago',
   'recordatorio-clase',

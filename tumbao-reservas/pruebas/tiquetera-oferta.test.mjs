@@ -41,13 +41,28 @@ const nav = await chromium.launch({ executablePath: CHROME });
 
 /* Reserva una suelta en la página de reservas y la deja confirmada
    (el estado se reescribe: el espejo no sabe de pagos). */
-async function reservarConfirmada(paquetes) {
+// Cupos de mensualidad que devuelve el servidor. Por defecto NO hay ninguno libre: la tarjeta cae en la tiquetera, que es
+// lo que probaban los casos 1 y 2 antes de que la mensualidad pudiera ir primero (10 oct).
+const SIN_CUPOS = { ok: true, tope: 25, valor_cop: 125000, horas: [
+  { hora: '07:00', etiqueta: '7:00 am', ocupadas: 35, tope: 35, libres: 0 },
+  { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 23, tope: 23, libres: 0 },
+  { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 23, libres: 0 },
+] };
+const CON_CUPOS = { ok: true, tope: 25, valor_cop: 125000, horas: [
+  { hora: '07:00', etiqueta: '7:00 am', ocupadas: 27, tope: 35, libres: 8 },
+  { hora: '18:00', etiqueta: '6:00 pm', ocupadas: 20, tope: 23, libres: 3 },
+  { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 23, libres: 0 },
+] };
+
+async function reservarConfirmada(paquetes, cupos = SIN_CUPOS) {
   const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-CO' });
   const p = await ctx.newPage();
   const errores = [];
   p.on('pageerror', e => errores.push(e.message));
   await p.route('**/tumbao/tiquetera/paquetes', r =>
     paquetes ? r.fulfill({ json: paquetes }) : r.abort());
+  await p.route('**/tumbao/mensualidad', r =>
+    cupos ? r.fulfill({ json: cupos }) : r.abort());
   await p.route('**/tumbao/estado**', async (ruta) => {
     const r = await ruta.fetch();
     const d = await r.json();
@@ -92,6 +107,44 @@ titulo('2. Sin paquetes del servidor no se muestra nada');
   ok('la oferta sigue escondida', await p.locator('#oferta-tiq').isHidden());
   ok('y la confirmación se ve normal', await p.locator('#s5.on').isVisible());
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+}
+
+titulo('2b. Con cupos de mensualidad, la mensualidad va primero');
+{
+  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, CON_CUPOS);
+  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
+  const tit = (await p.locator('#oferta-tiq-tit').innerText()).trim();
+  const txt = (await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ');
+  ok('el título dice el mes por $125.000 y $5.000 la clase', /\$125\.000/.test(tit) && /\$5\.000 la clase/.test(tit), tit);
+  ok('dice cuánto cuesta cada vez que no es mensualidad ($15.000)', /\$15\.000/.test(txt), txt);
+  ok('lista los cupos REALES por horario y calla el horario lleno', /8 cupos a las 7:00 am/.test(txt) && /3 cupos a las 6:00 pm/.test(txt) && !/7:00 pm/.test(txt), txt);
+  ok('deja la tiquetera como la forma suave de empezar, con la cuenta real', /tiquetera de 8 clases/.test(txt) && /\$12\.000 cada una/.test(txt), txt);
+  ok('el botón es de la mensualidad y lleva a su página', (await p.locator('#oferta-tiq-ir').innerText()).trim() === 'Apartar mi mensualidad'
+     && (await p.locator('#oferta-tiq-ir').getAttribute('href')) === 'mensualidad.html');
+  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+}
+{
+  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, { ...CON_CUPOS, horas: [{ hora: '18:00', etiqueta: '6:00 pm', ocupadas: 22, tope: 23, libres: 1 }] });
+  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
+  ok('con un solo cupo dice «1 cupo» (no «1 cupos»)', /Quedan 1 cupo a las 6:00 pm\./.test((await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ')));
+  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+}
+{
+  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, null);
+  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
+  ok('si los cupos no cargan, queda la tiquetera de siempre (no se promete un cupo que no se conoce)',
+     /Baila a \$12\.000 la clase/.test(await p.locator('#oferta-tiq-tit').innerText()) && (await p.locator('#oferta-tiq-ir').innerText()).trim() === 'Ver la tiquetera');
+  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+}
+{
+  const { p, ctx } = await reservarConfirmada(null, CON_CUPOS);
+  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
+  const txt = (await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ');
+  ok('sin tiquetera pero con cupos, igual ofrece la mensualidad (y no menciona una tiquetera que no existe)', /Quedan 8 cupos/.test(txt) && !/tiquetera/i.test(txt), txt);
   await ctx.close();
 }
 

@@ -46,6 +46,8 @@ const CONFIG = {
   // El aviso del banco tarda de 1 a 2 minutos. Con 3 basta, y esperar 5
   // solo hace que la gente crea que algo se rompió.
   MINUTOS_ESPERA: 3,
+  // Para decir «a $5.000 la clase»: el mismo número que usa la página de mensualidad (CLASES_MES_REF).
+  CLASES_MES_REF: 25,
   // Cuánto se le guarda el cupo a quien reserva y todavía no avisa que
   // pagó. La hora exacta la manda el servidor (expira_en); esto solo
   // vale si no la mandara.
@@ -2288,27 +2290,65 @@ const CONFIG = {
     }catch(_){ /* se queda el texto de siempre */ }
   }
 
+  /* Los cupos de mensualidad que de verdad se pueden vender hoy, por horario, con los mismos números de la página de
+     mensualidad (el servidor ya descuenta a quienes están en sus días de gracia). Si no cargan o no hay ninguno, no se
+     ofrece nada: mejor callar que prometer un cupo que no existe. */
+  async function cuposMensualidad(){
+    try{
+      const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/mensualidad`, { headers:{ Accept:'application/json' } });
+      const d = await r.json();
+      const valor = Number(d && d.valor_cop);
+      const horas = (d && d.ok && Array.isArray(d.horas) ? d.horas : [])
+        .filter(h => Number(h.libres) > 0 && h.etiqueta)
+        .map(h => ({ etiqueta: String(h.etiqueta), libres: Number(h.libres) }));
+      return (valor > 0 && horas.length) ? { valor, horas } : null;
+    }catch(_){ return null; }
+  }
+
   async function ofrecerTiquetera(mostrar){
     const caja = $('#oferta-tiq');
     caja.hidden = true;
     if (!mostrar) return;
     try{
-      if (!paquetesTiq){
-        const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
-        const d = await r.json();
-        paquetesTiq = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
-      }
+      // Cada oferta carga por su lado: si los paquetes de tiquetera no cargan, la mensualidad se ofrece igual (y al revés).
+      try{
+        if (!paquetesTiq){
+          const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
+          const d = await r.json();
+          paquetesTiq = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
+        }
+      }catch(_){ /* sin tiquetera por ahora */ }
       const ref = (elegida && elegida.precio_cop) || 15000;
-      const mejor = paquetesTiq
+      const mejor = (paquetesTiq || [])
         .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0 && Number(p.precio_cop) / Number(p.clases) < ref)
         .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
+      const porClaseTiq = mejor ? Math.round(mejor.precio_cop / mejor.clases) : 0;
+
+      // 10 oct: quien acaba de reservar una suelta está en el mejor momento para la mensualidad ($5.000 la clase frente a
+      // $15.000), pero la tarjeta solo le hablaba de la tiquetera. Con cupo real, la mensualidad va primero y la tiquetera
+      // queda como la forma suave de empezar.
+      const m = await cuposMensualidad();
+      if (m){
+        const porClase = Math.round(m.valor / CONFIG.CLASES_MES_REF / 100) * 100;
+        const cupos = m.horas.map(h => `${h.libres} ${h.libres === 1 ? 'cupo' : 'cupos'} a las ${h.etiqueta}`);
+        const lista = cupos.length > 1 ? cupos.slice(0, -1).join(', ') + ' y ' + cupos[cupos.length - 1] : cupos[0];
+        $('#oferta-tiq-tit').textContent = `Todo el mes por ${pesos(m.valor)}: ${pesos(porClase)} la clase`;
+        $('#oferta-tiq-txt').textContent =
+          `Tu horario fijo de lunes a sábado, en vez de ${pesos(ref)} cada vez. Quedan ${lista}.` +
+          (mejor ? ` ¿Prefieres empezar más suave? La tiquetera de ${mejor.clases} clases te sale a ${pesos(porClaseTiq)} cada una.` : '');
+        $('#oferta-tiq-ir').textContent = 'Apartar mi mensualidad';
+        caja.hidden = false;
+        return;
+      }
+
       if (!mejor) return;
-      const porClase = Math.round(mejor.precio_cop / mejor.clases);
+      const porClase = porClaseTiq;
       const ahorro = mejor.clases * ref - mejor.precio_cop;
       $('#oferta-tiq-tit').textContent = `Baila a ${pesos(porClase)} la clase`;
       $('#oferta-tiq-txt').textContent =
         `Con la tiquetera de ${mejor.clases} clases (${pesos(mejor.precio_cop)}) ahorras ${pesos(ahorro)} ` +
         `y la usas cuando quieras durante ${mejor.vigencia_dias} días.`;
+      $('#oferta-tiq-ir').textContent = 'Ver la tiquetera';
       caja.hidden = false;
     }catch(_){ /* sin oferta antes que una oferta rota */ }
   }
