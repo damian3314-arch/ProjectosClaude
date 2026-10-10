@@ -93,7 +93,7 @@ titulo('4. Vacío, largo y opciones');
      && opcionesDeVenta(le('19:00', false, 1)).mensualidad_lista_espera.puede_pagar_ahora === false
      && opcionesDeVenta(le('19:00', true, 0)).mensualidad_lista_espera.puede_pagar_ahora === false);
   ok('sin lista de espera la opción no existe', opcionesDeVenta(perfil).mensualidad_lista_espera === null);
-  ok('el mensaje seguro manda a recepción', /301 783 3550/.test(RESPUESTA_SEGURA_VENTAS));
+  ok('el mensaje seguro manda a recepción con el enlace wa.me, sin prometer que alguien escribe', /wa\.me\/573017833550/.test(RESPUESTA_SEGURA_VENTAS) && /recepción/.test(RESPUESTA_SEGURA_VENTAS) && !/te escrib/i.test(RESPUESTA_SEGURA_VENTAS));
   ok('hay un tope de turnos', MAX_TURNOS_VENTAS >= 4 && MAX_TURNOS_VENTAS <= 12, String(MAX_TURNOS_VENTAS));
 }
 

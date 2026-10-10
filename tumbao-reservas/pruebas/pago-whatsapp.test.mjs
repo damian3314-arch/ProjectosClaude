@@ -56,6 +56,7 @@ titulo('1. La baranda: lo que el modelo no puede decir');
   ok('sin comprobante (pendiente_pago) «quedó reservada» tampoco se deja', !dice('Tu cupo quedó reservado').ok);
   ok('con la reserva ya confirmada sí puede decirlo', dice('Tu reserva ya está confirmada ✅', { ...reserva, estado: 'confirmada' }, 'cerrar').ok);
   ok('rechaza vacío y muy largo', !dice('').ok && !dice('a'.repeat(701)).ok);
+  ok('NO deja prometer que alguien le va a escribir o llamar (10 oct)', !dice('Tranquila, te escribimos hoy').ok && !dice('El equipo te escribe desde otro número').ok && !dice('Te llamamos en un rato').ok);
   ok('no manda datos de pago si la reserva ya está confirmada', !dice('Te paso los datos', { ...reserva, estado: 'confirmada' }, 'datos_de_pago').ok);
 }
 
@@ -79,7 +80,7 @@ titulo('2. Los textos fijos salen de la base');
   const er = textoEnRevision({ nombre: 'Laura' });
   ok('banco sin mostrar el pago: la reserva sigue realizada y el pago queda en verificación hasta que una persona lo confirme',
      /reserva ya está realizada/.test(er) && /en verificación hasta que una persona del equipo lo confirme/.test(er) && /No necesitas pagar de nuevo/.test(er) && !/confirmada/.test(er));
-  ok('la nota a recepción lleva celular sin 57, reserva y qué hacer', /cel\. 3001234567/.test(textoRecepcionPago({ nombre: 'Laura', telefono: '573001234567', codigo: 'AB12CD', reserva, motivo: 'x' })) && /AB12CD/.test(textoRecepcionPago({ nombre: 'L', telefono: '3001234567', codigo: 'AB12CD', reserva })) && /Acción: escríbele hoy/.test(textoRecepcionPago({ telefono: '3001234567' })));
+  ok('la nota a recepción lleva celular sin 57, reserva y qué hacer', /cel\. 3001234567/.test(textoRecepcionPago({ nombre: 'Laura', telefono: '573001234567', codigo: 'AB12CD', reserva, motivo: 'x' })) && /AB12CD/.test(textoRecepcionPago({ nombre: 'L', telefono: '3001234567', codigo: 'AB12CD', reserva })) && /le di el enlace para que escriba a recepción/.test(textoRecepcionPago({ telefono: '3001234567' })));
 }
 
 titulo('2b. La revisión inicial del comprobante');
@@ -111,7 +112,10 @@ titulo('2b. La revisión inicial del comprobante');
   ok('rechazo por cuenta: pide el pago a la cuenta de Tumbao', /otra cuenta/.test(t('destino')) && /cuenta de Tumbao/.test(t('destino')));
   ok('rechazo por fecha: dice la fecha que ve', /no parece del pago de hoy \(dice 2026-10-08\)/.test(t('fecha', { leido: '2026-10-08' })));
   ok('ningún rechazo dice que algo quedó confirmado, registrado ni realizado', ['valor', 'destino', 'fecha'].every(m => !/confirmad|registrad|realizad/.test(t(m))));
-  ok('a la tercera lo sigue una persona, con el 301 783 3550, y no pagar de nuevo', MAX_INTENTOS_COMPROBANTE === 3 && /301 783 3550/.test(textoComprobanteRevisaEquipo({ nombre: 'Laura' })) && /no pagues de nuevo/.test(textoComprobanteRevisaEquipo({})));
+  ok('a la tercera: «escríbenos a recepción» con el enlace wa.me (ya con su mensaje escrito), sin prometer que alguien le escribe, y no pagar de nuevo',
+     MAX_INTENTOS_COMPROBANTE === 3 && /escríbenos a recepción/.test(textoComprobanteRevisaEquipo({ nombre: 'Laura' }))
+     && /https:\/\/wa\.me\/573017833550\?text=/.test(textoComprobanteRevisaEquipo({ nombre: 'Laura' }))
+     && /no pagues de nuevo/.test(textoComprobanteRevisaEquipo({})) && !/te escrib/i.test(textoComprobanteRevisaEquipo({ nombre: 'Laura' })));
 }
 
 titulo('3. La hora del comprobante y la marca de imagen');
@@ -259,7 +263,7 @@ titulo('5. La captura del comprobante: se registra, NO se confirma sola');
   });
   ok('al tercer comprobante que no cuadra: recepción lo sigue, la persona lo sabe y la reserva sigue sin tocarse',
      t4.usos('pago_registrar_soporte').length === 0 && t4.notas.length === 1 && /no corresponde/.test(t4.notas[0].p_titulo)
-     && /\$10000|\$10\.000|10000/.test(t4.notas[0].p_texto) && /al equipo/.test(t4.enviados[0]) && t4.usos('pago_turno')[0].b.p_resultado === 'recepcion' && t4.usos('pago_turno')[0].b.p_cerrar === true);
+     && /\$10000|\$10\.000|10000/.test(t4.notas[0].p_texto) && /escríbenos a recepción/.test(t4.enviados[0]) && /wa\.me\/573017833550/.test(t4.enviados[0]) && t4.usos('pago_turno')[0].b.p_resultado === 'recepcion' && t4.usos('pago_turno')[0].b.p_cerrar === true);
   const t5 = await correr({
     rpcs: { wa_tomar_pago: mensaje({ tipo: 'image', texto: '[imagen:MEDIA1]' }), pago_registrar_soporte: reg, pago_marcar_lectura: () => 1 },
     ocr: { referencia: 'M1', valor: 15000, destino: '*4619' },
@@ -348,9 +352,23 @@ titulo('7. Conversación, recepción y límites');
 {
   const t = await correr({
     rpcs: { wa_tomar_pago: mensaje({ texto: 'La página no me deja pagar, necesito cambiar de horario' }) },
-    modelo: { respuesta: 'Eso lo resuelve el equipo 🙌 Te escriben hoy desde el 301 783 3550.', accion: 'recepcion', motivo: 'Quiere cambiar de horario' },
+    modelo: { respuesta: 'Eso lo resuelven en recepción 🙌', accion: 'recepcion', motivo: 'Quiere cambiar de horario' },
   });
   ok('pasa a recepción con el motivo y cierra', t.notas.length === 1 && /cambiar de horario/.test(t.notas[0].p_texto) && t.usos('pago_turno')[0].b.p_resultado === 'recepcion');
+  // 10 oct (Damián): nada de «te escribimos de otro número». Se le da el enlace para que ESCRIBA a recepción, con el mensaje escrito.
+  ok('le da el enlace wa.me a recepción, con su nombre y el motivo ya escritos', /Eso lo resuelven en recepción/.test(t.enviados[0])
+     && /https:\/\/wa\.me\/573017833550\?text=/.test(t.enviados[0]) && /Laura/.test(decodeURIComponent(t.enviados[0])) && /cambiar de horario/.test(decodeURIComponent(t.enviados[0])), t.enviados[0].slice(-140));
+  ok('y no promete que alguien le escriba', !/te escrib|te contact|te llamamos/i.test(t.enviados[0]));
+  ok('la nota para recepción dice que ya se le dio el enlace', /le di el enlace para que escriba a recepción/.test(t.notas[0].p_texto));
+}
+{
+  // Si el modelo igual escribe «te escribimos», se corta: va el mensaje seguro con el enlace, no la promesa.
+  const t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'necesito ayuda' }) },
+    modelo: { respuesta: 'Tranquila, te escribimos hoy desde otro número', accion: 'recepcion', motivo: 'ayuda' },
+  });
+  ok('nunca sale una promesa de «te escribimos» aunque el modelo la escriba: el texto seguro lleva el enlace',
+     !/te escribimos/i.test(t.enviados.join(' ')) && /wa\.me\/573017833550/.test(t.enviados.join(' ')));
 }
 {
   const t = await correr({
