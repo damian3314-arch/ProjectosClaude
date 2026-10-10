@@ -38,6 +38,7 @@ import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
+import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
@@ -1911,6 +1912,9 @@ async function entranteWA(env, m, nombre) {
   if (g.opinion) return;
   // 0141: quien responde a una apertura de ventas lo atiende /wa/ventas (lo despierta la base).
   if (g.ventas) return;
+  // 0169: lo que no es de ninguna otra conversación lo atiende el asistente general (/wa/asistente, lo despierta la base).
+  // Mientras esté en piloto o apagado, esta bandera es falsa y sigue el aviso de siempre.
+  if (g.asistente) return;
   if (g.responder && !(await rpc(env, 'wa_respondido_24h', { p_tel: m.from }))) {
     await responderYGuardar(env, m.from, RESPUESTA_AUTO);
   }
@@ -2915,6 +2919,180 @@ async function pagoWA(request, env, origen) {
   }
 }
 
+/* 0169 · /wa/asistente: el asistente general. La base lo despierta (pg_net) cuando escribe alguien que no tiene una
+ * conversación viva de pago, opinión o ventas. Informa con datos de la base, manda a la página y, si la persona pide que la
+ * ayude por aquí, reúne nombre y clase, PROPONE (el código escribe el resumen y pide la autorización de datos) y solo con
+ * un «sí» claro llama a asistente_reservar(); de ahí el pago sigue por /wa/pago. Lo que no puede resolver lo manda a recepción
+ * con un enlace wa.me, sin prometer que alguien le va a escribir (ver asistente.js y recepcion.js). */
+async function asistenteWA(request, env, origen) {
+  let b = {};
+  try { b = await request.json(); } catch (_) {}
+  const id = Number(b.id);
+  if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
+  const m = await rpc(env, 'wa_tomar_asistente', { p_id: id });
+  if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+
+  // Tenía una reserva de la página con el pago pendiente: la base le abrió su conversación de pago; sigue por ahí.
+  if (m.adoptado) {
+    return await pagoWA(new Request(request.url, { method: 'POST', body: JSON.stringify({ id }) }), env, origen);
+  }
+
+  const chat = m.chat || {};
+  const ctx = m.contexto || {};
+  const pago = m.pago || {};
+  const tel = m.telefono;
+  const nombre = chat.nombre || null;
+  const datos = chat.datos || {};
+  const pend = datos.pendiente && Date.parse(datos.pendiente.pedido_at) > Date.now() - 20 * 60 * 1000 ? datos.pendiente : null;
+
+  const hablar = async (texto, { cerrar = false, resultado = null, resumen = null, entrante = null, nombreNuevo = null, limpiar = false } = {}) => {
+    if (texto) await responderYGuardar(env, tel, String(texto).slice(0, 1500));
+    await rpc(env, 'asistente_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: cerrar,
+      p_resultado: resultado, p_resumen: resumen, p_nombre: nombreNuevo, p_limpiar: limpiar });
+  };
+
+  try {
+    await marcarLeido(env, m.wa_msg_id).catch(() => {});
+
+    // «No quiero más mensajes» lo atiende entranteWA (baja); aquí no se contesta.
+    if (m.texto && PIDE_SALIR.test(m.texto)) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' });
+      return json({ ok: true, salir: true }, 200, origen);
+    }
+
+    // Pasado el tope de turnos, a recepción.
+    if (Number(chat.turnos || 0) >= MAX_TURNOS_ASISTENTE) {
+      await hablar(conRecepcion('Llevamos un buen rato conversando y prefiero que esto lo siga una persona de recepción 🙏', { nombre, motivo: 'seguir una conversación del chat' }),
+        { cerrar: true, resultado: 'recepcion', resumen: 'Conversación larga: pasó a recepción' });
+      return json({ ok: true, tope: true }, 200, origen);
+    }
+
+    // Una imagen o un archivo sin reserva pendiente (si la hubiera, la base la habría adoptado y habría ido a /wa/pago).
+    if (m.tipo === 'image' || m.tipo === 'document') {
+      await hablar(conRecepcion(textoImagenSinReserva(), { nombre, motivo: 'revisar un comprobante que envié' }), { entrante: '(envió una imagen)' });
+      return json({ ok: true, imagen: true }, 200, origen);
+    }
+
+    let texto = m.texto;
+    let transcrito = null;
+    const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
+    if (au) {
+      transcrito = await transcribirAudioWA(env, au[1]).catch(() => null);
+      texto = transcrito ? `(nota de voz) ${transcrito}` : null;
+    }
+    const entrante = transcrito ? `(nota de voz) ${transcrito}` : null;
+    // Sin texto y que no es una nota de voz (sticker, reacción, emoji suelto): no se contesta ni gasta un turno.
+    if (!texto && !au) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' }).catch(() => {});
+      return json({ ok: true, sin_texto: true }, 200, origen);
+    }
+    if (!texto) {
+      await hablar('No alcancé a escuchar bien tu nota de voz 🙈 ¿Me lo escribes?', { entrante });
+      return json({ ok: true, sin_voz: true }, 200, origen);
+    }
+
+    // ── hay un resumen esperando el «sí»: eso lo decide la persona, no el modelo ───────────────────────────────
+    if (pend && !au) {
+      if (esAfirmativo(texto)) {
+        const r = await rpc(env, 'asistente_reservar', { p_chat: chat.id });
+        if (r && r.ok === true) {
+          const info = r.info || {};
+          const minutos = Math.max(1, Math.round((Date.parse(r.expira_en) - Date.now()) / 60000)) || 15;
+          await responderYGuardar(env, tel, textoReservaHecha({ nombre: pend.nombre, info, codigo: r.codigo, minutos }));
+          const pie = textoDatosDePago(info, pago);
+          try {
+            if (!pago.qr_url) throw new Error('sin_qr');
+            const idImg = await enviarImagenWA(env, tel, pago.qr_url, pie);
+            await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: '[QR] ' + pie, p_wa_msg_id: idImg });
+          } catch (e) {
+            console.log('asistente qr', e && e.message);
+            await responderYGuardar(env, tel, pie);
+          }
+          await hablar(textoPideComprobanteNueva(), { entrante, cerrar: true, resultado: 'reservo', resumen: `Reservó ${info.clase || 'una clase'} por el chat` });
+          return json({ ok: true, reservo: true, codigo: r.codigo }, 200, origen);
+        }
+        const err = (r && r.error) || 'desconocido';
+        const t = textoErrorReserva(err, r || {});
+        if (err === 'sin_propuesta') { await hablar(textoSinResumen(), { entrante, limpiar: true }); return json({ ok: true, error: err }, 200, origen); }
+        if (t) {
+          const lleva = ['PENDIENTES', 'LIMITE_DIARIO'].includes(err);
+          await hablar(lleva ? conRecepcion(t, { nombre, motivo: 'reservar una clase por el chat' }) : t, { entrante, limpiar: true });
+        } else {
+          await hablar(conRecepcion('No pude dejarte la reserva por aquí 🙈', { nombre, motivo: 'reservar una clase por el chat' }), { entrante, limpiar: true, resultado: 'recepcion' });
+        }
+        return json({ ok: true, error: err }, 200, origen);
+      }
+      if (esNegativo(texto)) {
+        await hablar(textoNoReserve(), { entrante, limpiar: true });
+        return json({ ok: true, rechazo: true }, 200, origen);
+      }
+    }
+
+    // ── la conversación ───────────────────────────────────────────────────────────────────────────────────────
+    const horarios = Array.isArray(ctx.horarios) ? ctx.horarios : [];
+    const perfil = ctx.perfil || {};
+    const conversacion = (Array.isArray(m.historial) ? m.historial : [])
+      .map((h) => `${h.direccion === 'saliente' ? 'Tumbao' : 'Cliente'}: ${/^\[imagen:/.test(h.texto || '') ? '(envió una imagen)' : h.texto}`)
+      .concat(`Cliente: ${texto}`).join('\n');
+    const salida = await redactar(env, INSTRUCCIONES_ASISTENTE, JSON.stringify({
+      nombre_perfil: m.nombre_perfil || null,
+      nombre_guardado: nombre,
+      turno: Number(chat.turnos || 0) + 1,
+      horarios: horarios.map((h) => ({ n: h.n, clase: h.clase, fecha_texto: h.fecha_texto, hora_texto: h.hora_texto, precio_cop: h.precio_cop, libres: h.libres })),
+      reservas: Array.isArray(ctx.reservas) ? ctx.reservas : [],
+      perfil: {
+        plan_vigente: perfil.plan_vigente || null, tiquetera_vigente: perfil.tiquetera_vigente || null,
+        valor_mensualidad: perfil.valor_mensualidad, mensualidad_por_clase: perfil.mensualidad_por_clase,
+        cupos_mensualidad: perfil.cupos_mensualidad, paquetes_tiquetera: perfil.paquetes_tiquetera, precio_suelta: perfil.precio_suelta,
+      },
+      info: ctx.info || '',
+      pendiente: pend ? { nombre: pend.nombre, clase_n: (horarios.find((h) => h.clase_id === pend.clase_id) || {}).n || null } : null,
+      conversacion,
+    }), 'low');
+    const j = leerJSON(salida) || {};
+    const accion = ['proponer_reserva', 'recepcion', 'cerrar'].includes(j.accion) ? j.accion : 'ninguna';
+    const resumen = j.resumen ? String(j.resumen).slice(0, 200) : null;
+    const g = guardarRespuestaAsistente(j.respuesta, { horarios, perfil, reservas: Array.isArray(ctx.reservas) ? ctx.reservas : [] });
+
+    if (!g.ok) {
+      console.log('asistente baranda', g.motivo);
+      await hablar(RESPUESTA_SEGURA_ASISTENTE, { entrante, resumen: resumen || 'Pasó a recepción por la baranda' });
+      return json({ ok: true, baranda: g.motivo }, 200, origen);
+    }
+
+    if (accion === 'proponer_reserva') {
+      const h = horarios.find((x) => Number(x.n) === Number(j.clase_n));
+      const nom = limpiarNombre(j.nombre);
+      if (!h || !nom) {
+        // Faltó la clase o el nombre: se manda lo del modelo (que pregunta lo que falta) o, si no hay, la pregunta fija.
+        await hablar(g.texto || textoPreguntaFaltante(), { entrante, resumen });
+        return json({ ok: true, falta: true }, 200, origen);
+      }
+      const r = await rpc(env, 'asistente_proponer', { p_chat: chat.id, p_clase_id: h.clase_id, p_nombre: nom });
+      if (r && r.ok === true) {
+        await hablar(textoPropuesta({ nombre: r.nombre, clase: r.clase, fecha_texto: r.fecha_texto, hora_texto: r.hora_texto, precio_cop: r.precio_cop }),
+          { entrante, resumen: resumen || `Quiere reservar ${r.clase} el ${r.fecha_texto}`, nombreNuevo: r.nombre });
+        return json({ ok: true, propuso: true }, 200, origen);
+      }
+      const err = (r && r.error) || 'desconocido';
+      await hablar(textoErrorReserva(err, r || {}) || conRecepcion('No pude armar tu reserva por aquí 🙈', { nombre, motivo: 'reservar una clase por el chat' }), { entrante, resumen });
+      return json({ ok: true, error: err }, 200, origen);
+    }
+
+    if (accion === 'recepcion') {
+      await hablar(conRecepcion(g.texto, { nombre, motivo: j.motivo || resumen || '' }), { entrante, cerrar: true, resultado: 'recepcion', resumen });
+      return json({ ok: true, accion }, 200, origen);
+    }
+
+    await hablar(g.texto, { entrante, cerrar: accion === 'cerrar', resumen, resultado: accion === 'cerrar' ? 'cerrada' : null });
+    return json({ ok: true, accion }, 200, origen);
+  } catch (e) {
+    console.log('asistente', e && e.message);
+    await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'error' }).catch(() => {});
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
+}
+
 /* 0166 · /wa/pago-seguimiento: la base lo llama cada 2 minutos SOLO si hay un comprobante recibido por WhatsApp
  * esperando al banco. La base decide qué pasó (confirmada / en revisión / no validada) y lo marca para que sea UNA
  * sola vez; aquí solo se le avisa a la persona y, si toca, a recepción. */
@@ -3264,6 +3442,9 @@ export default {
     }
     if (ruta === '/wa/pago' && request.method === 'POST') {
       return await pagoWA(request, env, origen);
+    }
+    if (ruta === '/wa/asistente' && request.method === 'POST') {
+      return await asistenteWA(request, env, origen);
     }
     if (ruta === '/wa/pago-seguimiento' && request.method === 'POST') {
       return await pagoSeguimientoWA(env, origen);
