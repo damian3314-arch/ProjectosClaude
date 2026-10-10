@@ -38,7 +38,7 @@ import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
-import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
+import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
@@ -1862,7 +1862,7 @@ async function enviarTextoWA(env, para, texto) {
   return id;
 }
 
-// El toque de un botón del asistente llega como «[boton:asist:si:<clave>] Sí, reservar». Los demás bots (pago, ventas, opinión)
+// El toque de un botón del asistente llega como «[boton:asist:si:<clave>] Sí, autorizo». Los demás bots (pago, ventas, opinión)
 // no tienen por qué ver la marca interna si alguien toca un botón viejo estando en otra conversación: se quedan con el título.
 function sinMarcaDeBoton(texto) {
   return texto == null ? texto : String(texto).replace(/^\[boton:[^\]]*\]\s*/, '');
@@ -3029,7 +3029,7 @@ async function asistenteWA(request, env, origen) {
     }
 
     // ── hay un resumen esperando: confirmar lo decide la PERSONA, tocando un botón; no el modelo ───────────────────
-    // Muestra el resumen con los botones «Sí, reservar» / «No, gracias» (el id lleva la clave de ESTA propuesta).
+    // Muestra el resumen y la autorización de datos con los botones «Sí, autorizo» / «No autorizo» (el id lleva la clave de ESTA propuesta).
     const proponerConBotones = async (r, { prefijo = null, entrante = null, resumen = null } = {}) => {
       if (prefijo) await responderYGuardar(env, tel, prefijo);
       const cuerpo = textoPropuesta({ nombre: r.nombre, clase: r.clase, fecha_texto: r.fecha_texto, hora_texto: r.hora_texto, precio_cop: r.precio_cop });
@@ -3096,7 +3096,7 @@ async function asistenteWA(request, env, origen) {
         return json({ ok: true, boton_viejo: true }, 200, origen);
       }
       if (boton.accion === 'no') {
-        await hablar(textoNoReserve(), { entrante: entranteBoton, limpiar: true });
+        await hablar(textoNoAutoriza(), { entrante: entranteBoton, limpiar: true, resultado: 'no_autorizo' });
         return json({ ok: true, rechazo: true }, 200, origen);
       }
       const c = await rpc(env, 'asistente_confirmar', { p_chat: chat.id, p_token: boton.token });

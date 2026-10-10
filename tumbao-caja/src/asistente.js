@@ -9,7 +9,7 @@
  *
  * Qué NO se le deja al modelo (por eso hay una baranda y textos fijos escritos por el código):
  *   · reservar. El modelo reúne el nombre y la clase; el CÓDIGO escribe el resumen, pide la autorización de datos (Ley 1581) y
- *     lo muestra con DOS BOTONES de WhatsApp (Sí, reservar / No, gracias). Solo el toque en el botón —un mensaje «interactive»
+ *     lo muestra con DOS BOTONES de WhatsApp (Sí, autorizo / No autorizo). Solo el toque en el botón —un mensaje «interactive»
  *     que nadie puede fabricar escribiendo— confirma, y llama a asistente_reservar() (el mismo cupo de la página). Quien consiente
  *     es la persona, no el modelo; y una palabra escrita («sí», «dale») no reserva: Damián (10 oct) prefirió botones porque, con
  *     la puerta abierta, la gente contesta cualquier cosa;
@@ -42,7 +42,7 @@ QUÉ SABES (todo viene en el JSON de entrada; usa SOLO eso)
 CÓMO AYUDAS
 1. Preguntas (horarios, precios, mensualidad, tiquetera, cómo es una clase): responde con los datos. La dirección o cualquier dato que no esté en lo que sabes: accion = "recepcion".
 2. Quiere reservar una clase: invítala a la página ${PAGINA}, donde elige el día y la hora y paga en un minuto. Ofrécele también hacerlo por aquí: «si prefieres, te la reservo yo por este chat». NO pidas datos hasta que ella diga que quiere que la ayudes por aquí.
-3. Quiere que la reserves por aquí: necesitas SOLO dos cosas: (a) a nombre de quién va (nombre y apellido si los da) y (b) qué clase (día y hora) de la lista "horarios". Pregunta lo que falte, de a una cosa. Cuando tengas las dos: accion = "proponer_reserva" con clase_n (el número "n" de la lista, nunca inventado) y nombre. NO digas que quedó reservada: el sistema le muestra el resumen con dos botones («Sí, reservar» / «No, gracias») para confirmar y autorizar sus datos, y solo cuando ella toca «Sí, reservar» reserva. Tu "respuesta" en ese caso es una frase corta de arranque.
+3. Quiere que la reserves por aquí: necesitas SOLO dos cosas: (a) a nombre de quién va (nombre y apellido si los da) y (b) qué clase (día y hora) de la lista "horarios". Pregunta lo que falte, de a una cosa. Cuando tengas las dos: accion = "proponer_reserva" con clase_n (el número "n" de la lista, nunca inventado) y nombre. NO digas que quedó reservada: el sistema le muestra el resumen y le pregunta si autoriza el uso de sus datos, con dos botones («Sí, autorizo» / «No autorizo»), y solo cuando ella toca «Sí, autorizo» reserva. Tu "respuesta" en ese caso es una frase corta de arranque.
 4. Si ya hay "pendiente" y la persona cambia de idea (otra clase u otro nombre): vuelve a proponer (accion = "proponer_reserva"). Si ya no quiere: despídete con calidez, accion = "cerrar".
 5. Mensualidad o tiquetera: explícalas con los datos (precio, cuenta por clase, cupos libres por horario) y dale ${PAGINA}/mensualidad. No se compran por este chat. Si perfil.plan_vigente o perfil.tiquetera_vigente existen, ya tiene: no se las vendas.
 6. Cambiar o cancelar una reserva, devoluciones, un pago que no cuadra, una queja, un problema con la página, o cualquier cosa que no sepas: accion = "recepcion" con "motivo" corto, y dile en una frase que eso lo resuelven en recepción. El sistema le agrega el enlace para escribirles: tú NO lo escribas.
@@ -174,17 +174,22 @@ export function limpiarNombre(n) {
 const primerNombre = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 const cuando = (r) => `${r.fecha_texto} a las ${r.hora_texto}`;
 
-/** El resumen y la pregunta de autorización. Lo escribe el código: el modelo no pide ni da el consentimiento. */
+/**
+ * El resumen y la pregunta de AUTORIZACIÓN DE DATOS (Ley 1581), con dos botones: «Sí, autorizo» / «No autorizo». Como en la
+ * página (la casilla de autorización y el botón de reservar van juntos), tocar «Sí, autorizo» autoriza el uso de los datos y
+ * hace la reserva. Lo escribe el código: el modelo no pide ni da el consentimiento.
+ */
 export function textoPropuesta(p) {
-  return `Perfecto, ${primerNombre(p.nombre) || 'amigo(a)'} 🙌 Te aparto:\n` +
+  return `Perfecto, ${primerNombre(p.nombre) || 'amigo(a)'} 🙌 Esto es lo que voy a reservar:\n` +
     `• ${p.clase} — ${cuando(p)} · $${miles(p.precio_cop)}\n\n` +
-    'Para reservar necesito tu autorización para usar tus datos (tu nombre y este celular) solo para gestionar tu reserva y ' +
-    `contactarte por WhatsApp, conforme a la Ley 1581 de 2012 (política: ${PAGINA}/privacidad).\n\n` +
-    'Toca *Sí, reservar* para confirmar y autorizar, o *No, gracias*. Si quieres cambiar algo, escríbemelo.';
+    '🔒 Autorización de datos: para reservar necesito tu autorización para tratar tus datos personales (tu nombre y este celular) ' +
+    'solo para gestionar tu reserva y contactarte por WhatsApp, conforme a la Ley 1581 de 2012 ' +
+    `(política: ${PAGINA}/privacidad).\n\n` +
+    '¿Autorizas? Toca *Sí, autorizo* para reservar, o *No autorizo*. Si quieres cambiar algo, escríbemelo.';
 }
 
-export const BOTON_SI = 'Sí, reservar';
-export const BOTON_NO = 'No, gracias';
+export const BOTON_SI = 'Sí, autorizo';
+export const BOTON_NO = 'No autorizo';
 
 /** Los dos botones del resumen. El id lleva la clave de un solo uso de ESTA propuesta (asistente_proponer). */
 export function botonesPropuesta(token) {
@@ -202,7 +207,7 @@ export function leerBoton(texto, tipo) {
 }
 
 export function textoToqueElBoton() {
-  return '¡Casi! Para confirmar toca el botón *Sí, reservar* 👇';
+  return '¡Casi! Para autorizar el uso de tus datos y reservar, toca el botón *Sí, autorizo* 👇';
 }
 
 export function textoBotonViejo() {
@@ -225,6 +230,11 @@ export function textoPideComprobanteNueva() {
 
 export function textoSinResumen() {
   return 'Se me venció el resumen de tu reserva 🙈 ¿Me dices otra vez qué día y hora quieres, y a nombre de quién?';
+}
+
+/** Tocó «No autorizo»: sin la autorización no se reserva por el chat, y se le dice qué puede hacer. */
+export function textoNoAutoriza() {
+  return `Entendido 🙂 Sin tu autorización no puedo hacer la reserva por aquí, así que no reservé nada. Si cambias de idea, dímelo; o reserva directo en ${PAGINA}.`;
 }
 
 export function textoNoReserve() {
