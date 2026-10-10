@@ -22,8 +22,7 @@ import {
 } from '../../tumbao-caja/src/asistente.js';
 import { enlaceRecepcion, conRecepcion, ENLACE_RECEPCION } from '../../tumbao-caja/src/recepcion.js';
 import {
-  hoyBogota, textoDeFecha, fechaDeTexto, conFechas, diasDe, etiquetaDia, filasDeDias, filasDeHoras, leerLista, eleccionPrevia, traeListaDeHoras,
-  textoSinClasesEseDia, textoPideNombre, textoDiasPlano, cuerpoDeDias, cuerpoDeHoras,
+  hoyBogota, textoDeFecha, fechaDeTexto, conFechas, diasDe, horarioSemanal, textoHorarios, traeListaDeHoras, CIERRE_HORARIOS,
 } from '../../tumbao-caja/src/horarios.js';
 import worker from '../../tumbao-caja/src/index.js';
 
@@ -352,7 +351,7 @@ titulo('6. Reservar por el chat: el modelo propone, la persona TOCA un botón');
   ok('una nota de voz NO confirma (el consentimiento es tocar el botón)', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0);
 }
 
-titulo('6b. Los horarios: el código sabe qué día es y manda una LISTA para elegir');
+titulo('6b. Los horarios: el código sabe qué día es y los dice como una persona (sin listas ni botones)');
 {
   // El mismo sábado 10 de octubre del chat real (9:51 am en Bogotá = 14:51 UTC).
   const AHORA = Date.parse('2026-10-10T14:51:00Z');
@@ -361,33 +360,30 @@ titulo('6b. Los horarios: el código sabe qué día es y manda una LISTA para el
   ok('a las 11:30 pm de Bogotá todavía es el mismo día, y a las 12:05 am ya es el siguiente', hoyBogota(Date.parse('2026-10-11T04:30:00Z')).fecha === '2026-10-10' && hoyBogota(Date.parse('2026-10-11T05:05:00Z')).fecha === '2026-10-11' && hoyBogota(Date.parse('2026-10-11T05:05:00Z')).hora === '12:05 am');
   ok('textoDeFecha y fechaDeTexto son inversas, y cambian de año en diciembre', textoDeFecha('2026-10-13') === 'martes 13 de octubre' && fechaDeTexto('martes 13 de octubre', AHORA) === '2026-10-13'
      && fechaDeTexto('viernes 1 de enero', Date.parse('2026-12-30T15:00:00Z')) === '2027-01-01' && fechaDeTexto('algo raro', AHORA) === null && fechaDeTexto('martes 31 de febrero', AHORA) === null);
-  const H = conFechas([
-    { n: 1, clase_id: 'a', clase: 'Clase 7:00 am', fecha_texto: 'sábado 10 de octubre', hora_texto: '5:00 pm', libres: 5, precio_cop: 15000 },
-    { n: 2, clase_id: 'b', clase: 'Clase 7:00 am', fecha_texto: 'domingo 11 de octubre', hora_texto: '7:00 am', libres: 5, precio_cop: 15000 },
-    { n: 3, clase_id: 'c', clase: 'Clase 7:00 am', fecha_texto: 'martes 13 de octubre', hora_texto: '7:00 am', libres: 17, precio_cop: 15000 },
+  const mk = (n, fecha_texto, hora_texto, clase = 'Clase', libres = 10) => ({ n, clase_id: `0000000${n}-0000-4000-8000-000000000000`, clase: clase === 'Clase' ? `Clase ${hora_texto}` : clase, fecha_texto, hora_texto, libres, precio_cop: 15000 });
+  const SEMANA = conFechas([
+    mk(1, 'martes 13 de octubre', '7:00 am'), mk(2, 'martes 13 de octubre', '5:00 pm', 'Rumba básica'), mk(3, 'martes 13 de octubre', '6:00 pm'), mk(4, 'martes 13 de octubre', '7:00 pm'),
+    mk(5, 'miércoles 14 de octubre', '7:00 am'), mk(6, 'miércoles 14 de octubre', '6:00 pm'), mk(7, 'miércoles 14 de octubre', '7:00 pm'),
+    mk(8, 'jueves 15 de octubre', '7:00 am'), mk(9, 'jueves 15 de octubre', '5:00 pm', 'Rumba básica'), mk(10, 'jueves 15 de octubre', '6:00 pm'), mk(11, 'jueves 15 de octubre', '7:00 pm'),
+    mk(12, 'viernes 16 de octubre', '7:00 am'), mk(13, 'viernes 16 de octubre', '6:00 pm'), mk(14, 'viernes 16 de octubre', '7:00 pm'),
+    mk(15, 'sábado 17 de octubre', '8:00 am'), mk(16, 'sábado 17 de octubre', '9:00 am'),
   ], AHORA);
-  ok('cada horario trae su fecha y si es «hoy» o «mañana»', H[0].fecha === '2026-10-10' && H[0].cuando === 'hoy' && H[1].cuando === 'mañana' && H[2].cuando === '' && H[2].fecha === '2026-10-13');
-  const dias = diasDe(H);
-  ok('los días salen agrupados y en orden', dias.length === 3 && dias[2].fecha === '2026-10-13' && dias[2].clases.length === 1);
-  ok('las etiquetas de los días caben (24) y dicen hoy/mañana', filasDeDias(dias).every(f => f.title.length <= 24 && f.description.length <= 72) && filasDeDias(dias)[0].title === 'Hoy · sábado 10' && filasDeDias(dias)[1].title === 'Mañana · domingo 11' && filasDeDias(dias)[2].title === 'Martes 13 de octubre');
-  ok('hasta con el mes más largo cabe en 24 caracteres', etiquetaDia({ fecha_texto: 'miércoles 30 de septiembre', cuando: '' }).length <= 24 && etiquetaDia({ fecha_texto: 'miércoles 30 de septiembre', cuando: 'mañana' }).length <= 24);
-  const f = filasDeHoras({ clases: [
-    { clase_id: '11111111-1111-4111-8111-111111111111', clase: 'Clase 7:00 am', hora_texto: '7:00 am', libres: 17, precio_cop: 15000 },
-    { clase_id: '22222222-2222-4222-8222-222222222222', clase: 'Rumba básica', hora_texto: '5:00 pm', libres: 1, precio_cop: 15000 },
-  ] });
-  ok('las horas: «7:00 am» sin repetir «Clase 7:00 am», y la clase con nombre propio se ve (Rumba básica)', f[0].title === '7:00 am' && f[1].title === '5:00 pm · Rumba básica');
-  ok('cada hora dice cuántos cupos quedan y el precio (de la base)', f[0].description === 'Quedan 17 cupos · $15.000' && f[1].description === 'Queda 1 cupo · $15.000');
-  ok('el id de la fila lleva la clase (no un número que el modelo pueda inventar)', f[0].id === 'asist:c:11111111-1111-4111-8111-111111111111' && filasDeDias(dias)[0].id === 'asist:d:2026-10-10');
-  ok('máximo 10 filas (límite de WhatsApp)', filasDeHoras({ clases: Array.from({ length: 14 }, (_, i) => ({ clase_id: String(i), clase: 'Clase', hora_texto: '7:00 am', libres: 3, precio_cop: 15000 })) }).length === 10);
-  ok('hoy sin clases se dice claro, sin inventar otro día', /^Hoy ya no quedan clases con cupo/.test(textoSinClasesEseDia('2026-10-10', AHORA)) && /^El martes 13 de octubre no hay clases/.test(textoSinClasesEseDia('2026-10-13', AHORA)));
-  ok('los textos de las listas mandan a tocar el botón', /Ver días/.test(cuerpoDeDias()) && /Ver horas/.test(cuerpoDeHoras(dias[2])) && /\(hoy\)/.test(cuerpoDeHoras(dias[0])));
-  ok('al elegir una hora solo se le pide el nombre', /Elegiste el martes 13 de octubre a las 7:00 am/.test(textoPideNombre(H[2])) && /¿A nombre de quién la reservo\?/.test(textoPideNombre(H[2])));
-  ok('el toque en la lista se lee solo si es «interactive» (escrito a mano no cuenta)', JSON.stringify(leerLista('[lista:asist:d:2026-10-13] Martes 13', 'interactive')) === JSON.stringify({ tipo: 'dia', fecha: '2026-10-13' })
-     && leerLista('[lista:asist:c:11111111-1111-4111-8111-111111111111] 7:00 am', 'interactive').tipo === 'clase' && leerLista('[lista:asist:d:2026-10-13] x', 'text') === null && leerLista('hola', 'interactive') === null);
-  ok('una hora elegida se recuerda en el historial solo si fue lo último que escribió', eleccionPrevia([{ direccion: 'entrante', texto: '(eligió la clase del martes 13 de octubre a las 7:00 am)' }, { direccion: 'saliente', texto: '¿A nombre de quién?' }], H).n === 3
-     && eleccionPrevia([{ direccion: 'entrante', texto: '(eligió la clase del martes 13 de octubre a las 7:00 am)' }, { direccion: 'saliente', texto: 'x' }, { direccion: 'entrante', texto: 'mejor otro día' }, { direccion: 'saliente', texto: 'y' }], H) === null && eleccionPrevia([], H) === null);
-  ok('un texto con 3 o más horas es una lista escrita; con una o dos, una respuesta normal', traeListaDeHoras('Martes 13: 7:00 am · 5:00 pm · 6:00 pm') && !traeListaDeHoras('Hay clase a las 7:00 am y a las 6:00 pm') && !traeListaDeHoras('Claro'));
-  ok('si no se puede mandar la lista, los días van en texto, una línea por día', /^• Martes 13: 7:00 am/m.test(textoDiasPlano(dias.slice(2))));
+  ok('cada horario trae su fecha y si es «hoy» o «mañana»', SEMANA[0].fecha === '2026-10-13' && SEMANA[0].cuando === '' && conFechas([mk(1, 'sábado 10 de octubre', '5:00 pm')], AHORA)[0].cuando === 'hoy' && conFechas([mk(1, 'domingo 11 de octubre', '7:00 am')], AHORA)[0].cuando === 'mañana');
+  ok('los días salen agrupados y en orden', diasDe(SEMANA).length === 5 && diasDe(SEMANA)[0].clases.length === 4 && diasDe(SEMANA)[4].fecha === '2026-10-17');
+  const bloque = horarioSemanal(SEMANA);
+  ok('el horario fijo agrupa los días con las mismas horas, en una línea cada grupo',
+     bloque === '• Martes y jueves: 7:00 am, 5:00 pm (Rumba básica), 6:00 pm y 7:00 pm\n• Miércoles y viernes: 7:00 am, 6:00 pm y 7:00 pm\n• Sábado: 8:00 am y 9:00 am', '\n' + bloque);
+  ok('«Clase 7:00 am» no se repite: solo se pone el nombre cuando dice algo (Rumba básica)', !/Clase 7/.test(bloque) && /Rumba básica/.test(bloque));
+  ok('si hoy solo quedan las clases de la tarde, el sábado no se muestra como «solo la tarde»: se toma la fecha con más horas',
+     horarioSemanal(conFechas([mk(1, 'sábado 10 de octubre', '5:00 pm'), mk(2, 'sábado 17 de octubre', '8:00 am'), mk(3, 'sábado 17 de octubre', '9:00 am')], AHORA)) === '• Sábado: 8:00 am y 9:00 am');
+  ok('sin clases con cupo no hay bloque', horarioSemanal([]) === '' && textoHorarios([], 'Hola') === null);
+  const t1 = textoHorarios(SEMANA, '¡Claro! Soy el asistente virtual de Tumbao 💃');
+  ok('el mensaje: frase de arranque, el bloque y lo que falta (día, hora y nombre) en un solo mensaje, con la página como alternativa',
+     t1.startsWith('¡Claro! Soy el asistente virtual de Tumbao 💃\n\n• Martes y jueves') && t1.endsWith(CIERRE_HORARIOS) && /Dime qué día y a qué hora te sirve y a nombre de quién la reservo/.test(t1) && /tumbaobaila\.com/.test(t1));
+  ok('sin frase del modelo, hay una por defecto; y si el modelo ya escribió una lista de horarios, se descarta (el bloque las trae)',
+     /^Estos son nuestros horarios/.test(textoHorarios(SEMANA, '')) && !/Martes 13: 7:00/.test(textoHorarios(SEMANA, 'Martes 13: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles 14: 7:00 am · 6:00 pm · 7:00 pm; jueves 15: 7:00 am')));
+  ok('contestar un solo día (4 horas) es natural y NO se cambia por el bloque; un párrafo de varios días sí', !traeListaDeHoras('El martes hay clase a las 7:00 am, 5:00 pm, 6:00 pm y 7:00 pm') && traeListaDeHoras('Martes: 7:00 am, 5:00 pm, 6:00 pm, 7:00 pm; miércoles: 7:00 am, 6:00 pm, 7:00 pm; jueves 7:00 am'));
+  ok('no promete que alguien escribe ni lleva precios inventados', !/te escrib|te contact/i.test(t1) && !/\$/.test(t1));
 }
 {
   // Con el reloj real: horarios dentro de 3 y 4 días (nunca hoy), para que la prueba no dependa de la fecha de ejecución.
@@ -398,76 +394,53 @@ titulo('6b. Los horarios: el código sabe qué día es y manda una LISTA para el
     { n: 2, clase_id: '22222222-2222-4222-8222-222222222222', clase: 'Rumba básica', fecha_texto: textoDeFecha(d3), hora_texto: '5:00 pm', precio_cop: 15000, libres: 34 },
     { n: 3, clase_id: '33333333-3333-4333-8333-333333333333', clase: 'Clase 6:00 pm', fecha_texto: textoDeFecha(d4), hora_texto: '6:00 pm', precio_cop: 15000, libres: 20 },
   ];
-  const listaDe = (t) => t.interactivos.find(x => x.type === 'list');
+  const sinBotones = (t) => t.interactivos.length === 0;
 
-  // «Quiero una clase» → «Sí» → lista de DÍAS
-  let t = await correr({ msg: { texto: 'Si' }, ctx: { horarios: HOR }, modelo: { respuesta: '¡Claro! ¿Para qué día quieres tu clase?', accion: 'mostrar_horarios', fecha: null, resumen: 'Quiere reservar' } });
-  const L = listaDe(t);
-  ok('manda una LISTA de WhatsApp con el botón «Ver días» y su frase de arranque, no un párrafo', L && L.action.button === 'Ver días' && /¿Para qué día quieres tu clase\?/.test(L.body.text) && t.enviados.length === 0);
-  ok('una fila por día, con las horas de ese día a la vista', L.action.sections[0].rows.length === 2 && L.action.sections[0].rows[0].id === `asist:d:${d3}` && /7:00 am · 5:00 pm/.test(L.action.sections[0].rows[0].description) && L.action.sections[0].rows[1].description === '6:00 pm');
-  ok('no reserva ni propone nada', t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_cerrar === false);
-  ok('se guarda lo que se mandó (para el historial)', t.usos('wa_guardar_saliente').some(l => /\[Lista: /.test(l.b.p_texto)));
+  // «Quiero una clase» → un solo mensaje: presentación + horario fijo + qué falta. Sin botones.
+  let t = await correr({ msg: { texto: 'Quiero una clase' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Soy el asistente virtual de Tumbao 💃 ¡Con gusto te ayudo!', accion: 'mostrar_horarios', resumen: 'Quiere una clase' } });
+  ok('«quiero una clase»: UN mensaje de texto con la presentación, el horario fijo y la pregunta (día, hora y nombre); sin botones ni listas', t.enviados.length === 1 && sinBotones(t) && /^Soy el asistente virtual de Tumbao/.test(t.enviados[0]) && /• /.test(t.enviados[0]) && /a nombre de quién la reservo/.test(t.enviados[0]));
+  ok('el horario sale de la base (7:00 am, 5:00 pm con su nombre y 6:00 pm), no del modelo', /7:00 am y 5:00 pm \(Rumba básica\)|7:00 am, 5:00 pm \(Rumba básica\)/.test(t.enviados[0]) && /6:00 pm/.test(t.enviados[0]));
+  ok('no reserva ni propone nada, y la conversación sigue abierta', t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_cerrar === false);
   const e = t.entrada();
   ok('el modelo recibe la fecha de HOY en Bogotá y cada horario con su fecha y «cuando»', e && e.hoy && e.hoy.fecha === hoyIso && /^(lunes|martes|miércoles|jueves|viernes|sábado|domingo)$/.test(e.hoy.dia) && e.horarios.every(h => /^\d{4}-\d{2}-\d{2}$/.test(h.fecha) && 'cuando' in h) && e.horarios[0].fecha === d3, JSON.stringify(e && e.hoy));
 
-  // «Para hoy» (hoy no hay clases con cupo) → lo dice bien y muestra los días que sí
-  t = await correr({ msg: { texto: 'Para hoy' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Claro', accion: 'mostrar_horarios', fecha: hoyIso } });
-  ok('«para hoy» sin clases: «Hoy ya no quedan clases con cupo» (no inventa otro día como hoy) y muestra los días que sí hay', /^Hoy ya no quedan clases con cupo/.test(t.enviados[0]) && listaDe(t) && listaDe(t).action.sections[0].rows.length === 2 && !/hoy, martes/i.test(t.enviados.join(' ')));
+  // «A las 8 am?» (no existe): el modelo contesta en texto, no se repite nada
+  t = await correr({ msg: { texto: 'A las 8 am?' }, ctx: { horarios: HOR }, modelo: { respuesta: `Ese día no hay clase a las 8:00 am; sí hay a las 7:00 am y a las 5:00 pm (Rumba básica) 🙂 ¿Cuál te sirve?`, accion: 'ninguna' } });
+  ok('una pregunta puntual se contesta en UNA frase (no se vuelve a mandar el horario ni ningún botón)', t.enviados.length === 1 && /no hay clase a las 8:00 am/.test(t.enviados[0]) && !/• /.test(t.enviados[0]) && sinBotones(t));
 
-  // un día concreto → lista de HORAS de ese día
-  t = await correr({ msg: { texto: 'el martes' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Dale', accion: 'mostrar_horarios', fecha: d3 } });
-  const LH = listaDe(t);
-  ok('un día concreto → la lista de HORAS de ese día, con botón «Ver horas»', LH && LH.action.button === 'Ver horas' && LH.action.sections[0].rows.length === 2 && LH.action.sections[0].rows[1].title === '5:00 pm · Rumba básica' && /Quedan 34 cupos · \$15\.000/.test(LH.action.sections[0].rows[1].description));
-  ok('un día que no está en la lista (el modelo se equivoca de fecha): se dice y se muestran los días reales', await (async () => {
-    const x = await correr({ msg: { texto: 'el lunes' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Dale', accion: 'mostrar_horarios', fecha: iso(9) } });
-    return /no hay clases con cupo/.test(x.enviados[0]) && listaDe(x).action.button === 'Ver días';
-  })());
+  // el modelo escribió el párrafo largo de horarios → sale el bloque
+  t = await correr({ msg: { texto: 'qué horarios hay' }, ctx: { horarios: HOR }, modelo: { respuesta: `Martes 13: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles 14: 7:00 am · 6:00 pm · 7:00 pm; jueves 15: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm. ¿Cuál quieres?`, accion: 'ninguna' } });
+  ok('si el modelo escribe el párrafo apretado de horarios, NO sale así: sale el bloque corto', t.enviados.length === 1 && /^• |\n• /m.test(t.enviados[0]) && !/ · /.test(t.enviados[0]) && sinBotones(t));
+  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: '', accion: 'mostrar_horarios' } });
+  ok('aunque el modelo no escriba frase, el horario sale (no cae en el mensaje seguro)', /^Estos son nuestros horarios/.test(t.enviados[0]) && !/wa\.me/.test(t.enviados[0]));
+  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Te escribimos con los horarios', accion: 'mostrar_horarios' } });
+  ok('si la frase del modelo promete «te escribimos», se descarta y sale solo el horario', !/te escribimos/i.test(t.enviados.join(' ')) && /• /.test(t.enviados[0]));
+  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: [] }, modelo: { respuesta: 'Claro', accion: 'mostrar_horarios' } });
+  ok('sin clases con cupo: no inventa horarios, manda a la página y al enlace de recepción', /Ahora mismo no veo clases con cupo/.test(t.enviados[0]) && /wa\.me\/573017833550/.test(t.enviados[0]) && sinBotones(t));
 
-  // el modelo escribió la lista de horarios en el texto → no sale así: sale la lista
-  t = await correr({ msg: { texto: 'qué horarios hay' }, ctx: { horarios: HOR }, modelo: { respuesta: `Martes: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles: 7:00 am · 6:00 pm. ¿Cuál quieres?`, accion: 'ninguna' } });
-  ok('si el modelo escribe un párrafo de horarios, NO sale: sale la lista para elegir', t.enviados.length === 0 && listaDe(t) && !/7:00 am · 5:00 pm · 6:00 pm · 7:00 pm/.test(listaDe(t).body.text));
-  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: '', accion: 'mostrar_horarios', fecha: null } });
-  ok('aunque el modelo no escriba frase, la lista sale (no cae en el mensaje seguro)', listaDe(t) && /¿Para qué día quieres tu clase\?/.test(listaDe(t).body.text) && t.enviados.length === 0);
-  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Te escribimos con los horarios', accion: 'mostrar_horarios', fecha: null } });
-  ok('si la frase del modelo promete «te escribimos», se descarta y sale solo la lista', listaDe(t) && !/te escribimos/i.test(JSON.stringify(t.interactivos)) && t.enviados.length === 0);
-  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: [] }, modelo: { respuesta: 'Claro', accion: 'mostrar_horarios', fecha: null } });
-  ok('sin clases con cupo: no manda una lista vacía, manda a la página y a recepción', t.interactivos.length === 0 && /tumbaobaila\.com|wa\.me\/573017833550/.test(t.enviados[0]) && /wa\.me\/573017833550/.test(t.enviados[0]));
-  t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, botonesFallan: true, modelo: { respuesta: 'Claro', accion: 'mostrar_horarios', fecha: null } });
-  ok('si WhatsApp no deja mandar la lista, salen los días en texto (una línea por día) y se pide que escriba cuál', t.interactivos.length === 0 && /^• /m.test(t.enviados[0]) && /Dime qué día y a qué hora/.test(t.enviados[0]));
-
-  // el toque en un DÍA → horas, sin modelo
-  t = await correr({ msg: { tipo: 'interactive', texto: `[lista:asist:d:${d3}] Martes` }, ctx: { horarios: HOR } });
-  ok('tocar un día → la lista de horas de ese día, sin gastar el modelo', t.modelo() === 0 && listaDe(t) && listaDe(t).action.button === 'Ver horas' && listaDe(t).action.sections[0].rows.length === 2 && /Eligió|eligió el día/.test(JSON.stringify(t.usos('asistente_turno')[0].b)));
-  t = await correr({ msg: { tipo: 'interactive', texto: `[lista:asist:d:${iso(8)}] Algún día` }, ctx: { horarios: HOR } });
-  ok('tocar un día que ya no tiene cupo: se dice y se muestran los días que quedan', t.modelo() === 0 && /no hay clases con cupo/.test(t.enviados[0]) && listaDe(t).action.button === 'Ver días');
-
-  // el toque en una HORA → pide el nombre, sin modelo
-  t = await correr({ msg: { tipo: 'interactive', texto: `[lista:asist:c:${HOR[1].clase_id}] 5:00 pm · Rumba básica` }, ctx: { horarios: HOR } });
-  ok('tocar una hora → «Elegiste el … a las 5:00 pm» y pide solo el nombre; sin modelo ni reserva', t.modelo() === 0 && /Elegiste el .* a las 5:00 pm \(Rumba básica\)/.test(t.enviados[0]) && /¿A nombre de quién la reservo\?/.test(t.enviados[0]) && t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0);
-  ok('…y deja anotada la elección en el historial para que el modelo sepa cuál es', t.usos('asistente_turno')[0].b.p_texto_entrante === `(eligió la clase del ${HOR[1].fecha_texto} a las 5:00 pm)`, t.usos('asistente_turno')[0].b.p_texto_entrante);
-  t = await correr({ msg: { tipo: 'interactive', texto: '[lista:asist:c:99999999-9999-4999-8999-999999999999] 9:00 am' }, ctx: { horarios: HOR } });
-  ok('tocar una hora que ya no existe o se llenó: se dice y se muestran los días que quedan', t.modelo() === 0 && /ya no está disponible/.test(t.enviados[0]) && listaDe(t).action.button === 'Ver días');
-  t = await correr({ msg: { tipo: 'text', texto: `[lista:asist:c:${HOR[1].clase_id}] 5:00 pm` }, ctx: { horarios: HOR }, modelo: { respuesta: 'Hola, ¿en qué te ayudo?', accion: 'ninguna' } });
-  ok('quien ESCRIBE a mano «[lista:…]» no activa nada: es un texto cualquiera para el modelo', t.modelo() === 1 && !/Elegiste/.test(t.enviados[0] || ''));
-
-  // el nombre, después de elegir → el modelo recibe la elección y propone esa clase
-  t = await correr({ msg: { texto: 'María Fernández' }, ctx: { horarios: HOR },
-    rpcs: { wa_tomar_asistente: () => ({ id: 70, telefono: '573001234567', wa_msg_id: 'wamid.IN', tipo: 'text', texto: 'María Fernández', nombre_perfil: 'Ma Fer',
-      historial: [{ direccion: 'entrante', texto: `(eligió la clase del ${HOR[1].fecha_texto} a las 5:00 pm)` }, { direccion: 'saliente', texto: textoPideNombre({ ...HOR[1], fecha_texto: HOR[1].fecha_texto }) }],
-      chat: { id: 4, nombre: null, estado: 'abierta', turnos: 3, datos: {} }, contexto: { horarios: HOR, reservas: [], perfil: PERFIL, info: '' }, pago: PAGO }),
-      asistente_proponer: PROPONE() },
-    modelo: { respuesta: 'Perfecto, te dejo el resumen', accion: 'proponer_reserva', clase_n: 2, nombre: 'María Fernández' } });
-  ok('al dar el nombre, el modelo ve «eleccion» (la clase n=2) y se propone esa clase con botones', t.entrada().eleccion && t.entrada().eleccion.n === 2 && t.usos('asistente_proponer')[0].b.p_clase_id === HOR[1].clase_id && t.interactivos.some(x => x.type === 'button'));
+  // «el martes a las 7, a nombre de Laura Gómez» (todo junto) → propone de una, con los botones de autorización
+  t = await correr({ msg: { texto: `el ${textoDeFecha(d3).split(' ')[0]} a las 7 am, a nombre de Laura Gómez` }, ctx: { horarios: HOR }, rpcs: { asistente_proponer: PROPONE({ nombre: 'Laura Gómez' }) },
+    modelo: { respuesta: 'Perfecto, te dejo el resumen', accion: 'proponer_reserva', clase_n: 1, nombre: 'Laura Gómez' } });
+  ok('día, hora y nombre en un mensaje → propone esa clase (n=1) de una; los únicos botones son los de autorizar los datos', t.usos('asistente_proponer')[0].b.p_clase_id === HOR[0].clase_id && t.interactivos.length === 1 && t.interactivos[0].type === 'button' && t.interactivos[0].action.buttons.length === 2);
+  // solo la hora, sin nombre → pide solo el nombre (el modelo), sin botones
+  t = await correr({ msg: { texto: 'el martes a las 7 pm' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Dale 🙌 ¿A nombre de quién la reservo?', accion: 'ninguna' } });
+  ok('si falta el nombre, lo pide en una frase y sin botones', t.enviados.length === 1 && /¿A nombre de quién la reservo\?/.test(t.enviados[0]) && sinBotones(t) && t.usos('asistente_proponer').length === 0);
+  // un texto que imita el toque de una lista ya no significa nada
+  t = await correr({ msg: { tipo: 'interactive', texto: `[lista:asist:c:${HOR[1].clase_id}] 5:00 pm` }, ctx: { horarios: HOR }, modelo: { respuesta: 'Hola, ¿en qué te ayudo?', accion: 'ninguna' } });
+  ok('no existen listas: un «[lista:…]» es un texto cualquiera para el modelo (no reserva ni propone)', t.modelo() === 1 && t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0);
 }
 
 titulo('7. El prompt trae las reglas duras');
 {
   ok('es honesto si le preguntan si es un bot', /Soy el asistente virtual de Tumbao/.test(INSTRUCCIONES_ASISTENTE) && /di la verdad/.test(INSTRUCCIONES_ASISTENTE));
-  ok('NO escribe listas de horarios: usa mostrar_horarios y el sistema manda la lista de WhatsApp (el párrafo apretado se veía feo)', /NUNCA escribas una lista de horarios/.test(INSTRUCCIONES_ASISTENTE) && /accion = "mostrar_horarios"/.test(INSTRUCCIONES_ASISTENTE) && !/una línea por día/.test(INSTRUCCIONES_ASISTENTE));
+  ok('habla natural: sin menús ni «elige una opción», sin repetir la misma pregunta', /como una persona de recepción/.test(INSTRUCCIONES_ASISTENTE) && /sin sonar a formulario ni a menú/.test(INSTRUCCIONES_ASISTENTE) && /ni de repetir la misma pregunta o el mismo mensaje/.test(INSTRUCCIONES_ASISTENTE));
+  ok('los horarios los arma el código (mostrar_horarios): el modelo no escribe la lista', /accion = "mostrar_horarios"/.test(INSTRUCCIONES_ASISTENTE) && /NO escribas tú la lista de horarios/.test(INSTRUCCIONES_ASISTENTE) && !/una línea por día/.test(INSTRUCCIONES_ASISTENTE));
   ok('sabe qué día es hoy y nunca lo adivina (dijo «hoy, martes 13» un sábado)', /hoy: la fecha y la hora de HOY en Colombia/.test(INSTRUCCIONES_ASISTENTE) && /nunca adivines qué día es/.test(INSTRUCCIONES_ASISTENTE) && /cuando = "hoy"/.test(INSTRUCCIONES_ASISTENTE));
-  ok('si ya eligió en la lista, solo pide el nombre y propone con ese clase_n', /eleccion:/.test(INSTRUCCIONES_ASISTENTE) && /pídele solo el nombre/.test(INSTRUCCIONES_ASISTENTE));
-  ok('el JSON de salida trae mostrar_horarios y la fecha', /"mostrar_horarios"/.test(INSTRUCCIONES_ASISTENTE) && /"fecha": null\|"AAAA-MM-DD"/.test(INSTRUCCIONES_ASISTENTE));
-  ok('invita a la página y ofrece reservar por el chat, sin pedir datos antes de que lo pida', /tumbaobaila\.com/.test(INSTRUCCIONES_ASISTENTE) && /NO pidas datos hasta que ella diga/.test(INSTRUCCIONES_ASISTENTE));
+  ok('contesta lo puntual en una frase («¿a las 8 am?» → no hay a esa hora y cuáles sí) en vez de repetir los horarios', /a esa hora no hay y cuáles sí hay ese día/.test(INSTRUCCIONES_ASISTENTE));
+  ok('busca la reserva en pocos mensajes: si da día, hora y nombre juntos, no pregunta más', /menor cantidad de mensajes posible/.test(INSTRUCCIONES_ASISTENTE) && /no preguntes nada más/.test(INSTRUCCIONES_ASISTENTE));
+  ok('no hay listas ni botones de horarios (solo los de la autorización de datos)', !/Ver días|Ver horas|lista de WhatsApp/.test(INSTRUCCIONES_ASISTENTE));
+  ok('el JSON de salida trae mostrar_horarios', /"mostrar_horarios"/.test(INSTRUCCIONES_ASISTENTE) && !/"fecha": null/.test(INSTRUCCIONES_ASISTENTE));
+  ok('la página sigue como alternativa, y pide datos solo los dos que hacen falta (clase y nombre), nada más', /tumbaobaila\.com/.test(INSTRUCCIONES_ASISTENTE) && /también puede hacerlo en la página/.test(INSTRUCCIONES_ASISTENTE) && /SOLO dos cosas/.test(INSTRUCCIONES_ASISTENTE));
   ok('solo pide dos cosas: nombre y clase', /SOLO dos cosas/.test(INSTRUCCIONES_ASISTENTE));
   ok('no menciona el efectivo: la reserva asegura el cupo pagando (si no pudo pagar, lo atiende el bot de pagos o recepción)', !/efectivo/i.test(INSTRUCCIONES_ASISTENTE));
   ok('no dice que quedó reservado y no promete que alguien escribe', /NUNCA digas que algo quedó reservado/.test(INSTRUCCIONES_ASISTENTE) && /NUNCA prometas que alguien le va a escribir/.test(INSTRUCCIONES_ASISTENTE));
@@ -524,8 +497,7 @@ titulo('8. La migración 0169 y el cableado');
   ok('lo escrito («sí») no llama a reservar: solo vuelve a mostrar los botones', (() => { const f = w.split('async function asistenteWA')[1].split('/* 0166 · /wa/pago-seguimiento')[0];
               const t = f.split('if (pend && !au)')[1].split('// ── la conversación')[0]; return !/asistente_reservar|asistente_confirmar|reservarYPagar/.test(t) && /textoToqueElBoton/.test(t); })());
   ok('entranteWA guarda el id del botón del asistente en el texto (solo los asist:), para saber a qué resumen contesta', /\/\^asist:\/\.test\(m\.interactive\.button_reply\.id/.test(w) && /\[boton:\$\{String\(m\.interactive\.button_reply\.id\)/.test(w));
-  ok('entranteWA guarda el id de la fila tocada en la lista (asist:d / asist:c) y las demás conversaciones no ven la marca', /\/\^asist:\/\.test\(m\.interactive\.list_reply\.id/.test(w) && /\[lista:\$\{String\(m\.interactive\.list_reply\.id\)/.test(w) && /\(\?:boton\|lista\)/.test(w));
-  ok('la lista de WhatsApp se manda como «interactive» tipo list (botón ≤20, filas ≤10, título ≤24, descripción ≤72)', /type: 'list'/.test(w) && /slice\(0, 20\)/.test(w) && /filas\.slice\(0, 10\)/.test(w) && /String\(f\.title\)\.slice\(0, 24\)/.test(w) && /String\(f\.description\)\.slice\(0, 72\)/.test(w));
+  ok('ya no hay listas de WhatsApp para los horarios (solo los dos botones de autorizar los datos)', !/type: 'list'/.test(w) && !/enviarListaWA/.test(w) && !/list_reply\.id/.test(w));
   ok('los bots de pago, ventas y opinión no ven la marca interna del botón si alguien toca uno viejo', (w.match(/m\.texto = sinMarcaDeBoton\(m\.texto\);/g) || []).length === 3 && /function sinMarcaDeBoton/.test(w));
   ok('el envío de botones usa el mensaje interactivo de WhatsApp (hasta 3, título de hasta 20)', /type: 'interactive'/.test(w) && /type: 'button'/.test(w) && /slice\(0, 20\)/.test(w));
   ok('la propuesta usa la clase de la lista por su número', /horarios\.find\(\(x\) => Number\(x\.n\) === Number\(j\.clase_n\)\)/.test(w));

@@ -38,7 +38,7 @@ import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
-import { hoyBogota, conFechas, diasDe, filasDeDias, filasDeHoras, cuerpoDeDias, cuerpoDeHoras, textoSinClasesEseDia, textoPideNombre, textoDiasPlano, leerLista, textoEleccion, eleccionPrevia, traeListaDeHoras, BOTON_DIAS, BOTON_HORAS, TITULO_DIAS, TITULO_HORAS } from './horarios.js';
+import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
 import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
@@ -1866,7 +1866,7 @@ async function enviarTextoWA(env, para, texto) {
 // El toque de un botón del asistente llega como «[boton:asist:si:<clave>] Sí, autorizo». Los demás bots (pago, ventas, opinión)
 // no tienen por qué ver la marca interna si alguien toca un botón viejo estando en otra conversación: se quedan con el título.
 function sinMarcaDeBoton(texto) {
-  return texto == null ? texto : String(texto).replace(/^\[(?:boton|lista):[^\]]*\]\s*/, '');
+  return texto == null ? texto : String(texto).replace(/^\[boton:[^\]]*\]\s*/, '');
 }
 
 // Mensaje con botones de respuesta (hasta 3; título de hasta 20 caracteres). Solo dentro de la ventana de 24 h.
@@ -1880,30 +1880,6 @@ async function enviarBotonesWA(env, para, cuerpo, botones) {
         type: 'button',
         body: { text: String(cuerpo).slice(0, 1024) },
         action: { buttons: botones.slice(0, 3).map((b) => ({ type: 'reply', reply: { id: String(b.id).slice(0, 256), title: String(b.titulo).slice(0, 20) } })) },
-      },
-    }),
-  });
-  const d = await r.json().catch(() => ({}));
-  const id = d && d.messages && d.messages[0] && d.messages[0].id;
-  if (!r.ok || !id) throw new Error(d && d.error ? `${d.error.code}: ${d.error.message}` : `HTTP ${r.status}`);
-  return id;
-}
-
-// Lista de WhatsApp (se abre con un botón): hasta 10 filas con título (24) y descripción (72). Solo dentro de la ventana de 24 h.
-async function enviarListaWA(env, para, cuerpo, boton, tituloSeccion, filas) {
-  const r = await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}/messages`, {
-    method: 'POST',
-    headers: cabecerasWA(env),
-    body: JSON.stringify({
-      messaging_product: 'whatsapp', recipient_type: 'individual', to: para, type: 'interactive',
-      interactive: {
-        type: 'list',
-        body: { text: String(cuerpo).slice(0, 1024) },
-        action: {
-          button: String(boton).slice(0, 20),
-          sections: [{ title: String(tituloSeccion).slice(0, 24),
-            rows: filas.slice(0, 10).map((f) => ({ id: String(f.id).slice(0, 200), title: String(f.title).slice(0, 24), ...(f.description ? { description: String(f.description).slice(0, 72) } : {}) })) }],
-        },
       },
     }),
   });
@@ -1938,11 +1914,7 @@ async function entranteWA(env, m, nombre) {
                                                     (/^asist:/.test(m.interactive.button_reply.id || '')
                                                       ? `[boton:${String(m.interactive.button_reply.id).slice(0, 60)}] ${m.interactive.button_reply.title || ''}`
                                                       : m.interactive.button_reply.title)) ||
-                                                  // 10 oct: el toque en una fila de la lista de horarios (día / hora) lleva su id (asist:d:<fecha> / asist:c:<clase>).
-                                                  (m.interactive.list_reply &&
-                                                    (/^asist:/.test(m.interactive.list_reply.id || '')
-                                                      ? `[lista:${String(m.interactive.list_reply.id).slice(0, 60)}] ${m.interactive.list_reply.title || ''}`
-                                                      : m.interactive.list_reply.title)))) :
+                                                  (m.interactive.list_reply && m.interactive.list_reply.title))) :
     // 0120: la nota de voz se guarda con su id de Meta; /wa/opinion la
     // transcribe si es parte de una opinión.
     m.type === 'audio' && m.audio && m.audio.id ? `[audio:${m.audio.id}]` :
@@ -3061,22 +3033,6 @@ async function asistenteWA(request, env, origen) {
       return json({ ok: true, sin_voz: true }, 200, origen);
     }
 
-    // ── los horarios se muestran con una LISTA de WhatsApp (primero el día, luego la hora), no con un párrafo ───────────
-    const mandarLista = async (cuerpo, boton, tituloSeccion, filas, { entrante = null, resumen = null, prefijo = null, plano = null } = {}) => {
-      if (prefijo) await responderYGuardar(env, tel, prefijo);
-      try {
-        const idMsg = await enviarListaWA(env, tel, cuerpo, boton, tituloSeccion, filas);
-        await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: `${cuerpo}\n[Lista: ${filas.map((f) => f.title).join(' · ')}]`, p_wa_msg_id: idMsg });
-        await hablar(null, { entrante, resumen });
-      } catch (e) {
-        // Sin lista, los días en texto (una línea por día) para que escriba cuál quiere.
-        console.log('asistente lista', e && e.message);
-        await hablar(plano || textoDiasPlano(diasDe(horarios)), { entrante, resumen });
-      }
-    };
-    const mostrarDias = (opc = {}) => mandarLista(cuerpoDeDias(opc.lead), BOTON_DIAS, TITULO_DIAS, filasDeDias(diasDe(horarios)), { ...opc, plano: textoDiasPlano(diasDe(horarios)) });
-    const mostrarHoras = (dia, opc = {}) => mandarLista(cuerpoDeHoras(dia), BOTON_HORAS, TITULO_HORAS, filasDeHoras(dia), { ...opc, plano: textoDiasPlano([dia]) });
-
     // ── hay un resumen esperando: confirmar lo decide la PERSONA, tocando un botón; no el modelo ───────────────────
     // Muestra el resumen y la autorización de datos con los botones «Sí, autorizo» / «No autorizo» (el id lleva la clave de ESTA propuesta).
     const proponerConBotones = async (r, { prefijo = null, entrante = null, resumen = null } = {}) => {
@@ -3156,29 +3112,6 @@ async function asistenteWA(request, env, origen) {
       return await reservarYPagar(entranteBoton);
     }
 
-    // El toque en la lista: un día → las horas de ese día; una hora → se le pide el nombre. Sin gastar el modelo.
-    const fila = leerLista(m.texto, m.tipo);
-    if (fila) {
-      if (!horarios.length) {
-        await hablar(conRecepcion('Ahora mismo no veo clases con cupo en los próximos días 🙈 Mira la página para ver los horarios.', { nombre, motivo: 'saber los horarios de las clases' }), { entrante: '(tocó la lista de horarios)' });
-        return json({ ok: true, lista: 'sin_horarios' }, 200, origen);
-      }
-      if (fila.tipo === 'dia') {
-        const dia = diasDe(horarios).find((d) => d.fecha === fila.fecha);
-        const entranteDia = `(eligió el día ${dia ? dia.fecha_texto : fila.fecha})`;
-        if (!dia) await mostrarDias({ prefijo: textoSinClasesEseDia(fila.fecha, ahora), entrante: entranteDia });
-        else await mostrarHoras(dia, { entrante: entranteDia, resumen: `Eligió el ${dia.fecha_texto}` });
-        return json({ ok: true, lista: 'dia' }, 200, origen);
-      }
-      const h = horarios.find((x) => String(x.clase_id).toLowerCase() === fila.clase_id);
-      if (!h) {
-        await mostrarDias({ prefijo: 'Ese horario ya no está disponible 🙈 Estos son los que quedan 👇', entrante: '(eligió una clase que ya no tiene cupo)' });
-        return json({ ok: true, lista: 'clase_no_disponible' }, 200, origen);
-      }
-      await hablar(textoPideNombre(h), { entrante: textoEleccion(h), resumen: `Eligió ${h.clase || 'una clase'} el ${h.fecha_texto} a las ${h.hora_texto}` });
-      return json({ ok: true, lista: 'clase' }, 200, origen);
-    }
-
     // Con un resumen esperando, lo escrito NO confirma: «no» lo cancela; un «sí» escrito se contesta con los botones.
     if (pend && !au) {
       if (esNegativo(texto)) {
@@ -3207,7 +3140,6 @@ async function asistenteWA(request, env, origen) {
       turno: Number(chat.turnos || 0) + 1,
       hoy: { fecha: hoy.fecha, dia: hoy.dia, texto: hoy.texto, hora: hoy.hora },
       horarios: horarios.map((h) => ({ n: h.n, clase: h.clase, fecha: h.fecha, fecha_texto: h.fecha_texto, cuando: h.cuando, hora_texto: h.hora_texto, precio_cop: h.precio_cop, libres: h.libres })),
-      eleccion: eleccionPrevia(m.historial, horarios),
       reservas: Array.isArray(ctx.reservas) ? ctx.reservas : [],
       perfil: {
         plan_vigente: perfil.plan_vigente || null, tiquetera_vigente: perfil.tiquetera_vigente || null,
@@ -3222,7 +3154,7 @@ async function asistenteWA(request, env, origen) {
     let accion = ['mostrar_horarios', 'proponer_reserva', 'recepcion', 'cerrar'].includes(j.accion) ? j.accion : 'ninguna';
     const resumen = j.resumen ? String(j.resumen).slice(0, 200) : null;
     let g = guardarRespuestaAsistente(j.respuesta, { horarios, perfil, reservas: Array.isArray(ctx.reservas) ? ctx.reservas : [] });
-    // Para mostrar horarios la lista la escribe el código: si el texto del modelo falta o no pasa la baranda, se descarta y sale solo la lista.
+    // Para mostrar horarios el bloque lo escribe el código: si la frase del modelo falta o no pasa la baranda, se descarta y sale solo el bloque.
     if (!g.ok && accion === 'mostrar_horarios') { console.log('asistente baranda (lista)', g.motivo); g = { ok: true, texto: '' }; }
 
     if (!g.ok) {
@@ -3231,22 +3163,17 @@ async function asistenteWA(request, env, origen) {
       return json({ ok: true, baranda: g.motivo }, 200, origen);
     }
 
-    // Una lista de horas escrita en el texto se ve apretada: en su lugar va la lista para elegir.
+    // El horario fijo lo arma el código (bloque corto, horas de la base). Un párrafo largo de horarios escrito por el modelo se cambia por el bloque.
     let lead = g.texto;
     if (accion === 'ninguna' && traeListaDeHoras(g.texto)) { accion = 'mostrar_horarios'; lead = null; }
-    if (accion === 'mostrar_horarios' && traeListaDeHoras(lead)) lead = null;
 
     if (accion === 'mostrar_horarios') {
-      if (!horarios.length) {
+      const textoH = textoHorarios(horarios, lead);
+      if (!textoH) {
         await hablar(conRecepcion('Ahora mismo no veo clases con cupo en los próximos días 🙈 Mira la página para ver los horarios.', { nombre, motivo: 'saber los horarios de las clases' }), { entrante, resumen });
         return json({ ok: true, accion, sin_horarios: true }, 200, origen);
       }
-      const dias = diasDe(horarios);
-      const pedida = /^\d{4}-\d{2}-\d{2}$/.test(String(j.fecha || '')) ? String(j.fecha) : null;
-      const dia = pedida ? dias.find((d) => d.fecha === pedida) : (dias.length === 1 ? dias[0] : null);
-      if (dia) await mostrarHoras(dia, { entrante, resumen });
-      else if (pedida) await mostrarDias({ prefijo: textoSinClasesEseDia(pedida, ahora), entrante, resumen });
-      else await mostrarDias({ lead, entrante, resumen });
+      await hablar(textoH, { entrante, resumen });
       return json({ ok: true, accion }, 200, origen);
     }
 
