@@ -2929,7 +2929,11 @@ async function asistenteWA(request, env, origen) {
   try { b = await request.json(); } catch (_) {}
   const id = Number(b.id);
   if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
-  const m = await rpc(env, 'wa_tomar_asistente', { p_id: id });
+  let m;
+  try { m = await rpc(env, 'wa_tomar_asistente', { p_id: id }); } catch (e) {
+    console.log('wa_tomar_asistente', e && e.message);
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
   if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
 
   // Tenía una reserva de la página con el pago pendiente: la base le abrió su conversación de pago; sigue por ahí.

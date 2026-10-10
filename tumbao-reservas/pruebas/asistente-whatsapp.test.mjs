@@ -185,6 +185,17 @@ titulo('5. Recepción: con enlace, sin promesas');
   ok('un mensaje que no es del asistente: no hace nada', t.respuesta.nada === true && t.enviados.length === 0);
 }
 {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response('boom', { status: 500 });
+  let r;
+  try {
+    r = await worker.fetch(new Request('https://w.test/wa/asistente', { method: 'POST', body: JSON.stringify({ id: 70 }) }),
+      { SUPABASE_URL: 'https://sb.test', SUPABASE_SERVICE_KEY: 'k' }, { waitUntil() {} });
+  } finally { globalThis.fetch = original; }
+  const d = await r.json();
+  ok('si la base falla, el Worker no se cae (responde FALLA) y no manda nada', r.status === 200 && d.ok === false && d.error === 'FALLA');
+}
+{
   const llamadas = [];
   const original = globalThis.fetch;
   globalThis.fetch = async (url, opc = {}) => {
