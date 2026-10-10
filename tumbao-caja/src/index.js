@@ -3858,7 +3858,9 @@ export default {
           // viene, no se cobró nada y no hay nada que deshacer.
           p_medio: ['efectivo', 'transferencia', 'en_puerta']
             .includes(String(b.medio || '').toLowerCase())
-            ? String(b.medio).toLowerCase() : null,
+            ? String(b.medio).toLowerCase()
+            // 0168: «apúntala con plan igual» (no sale en AdminGym todavía). Solo con plan; Postgres lo vuelve a exigir.
+            : (String(b.medio || '').toLowerCase() === 'plan_manual' && b.tipo === 'miembro') ? 'plan_manual' : null,
         });
 
       } else if (ruta === '/api/juntar-pagos') {

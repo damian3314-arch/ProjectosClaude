@@ -2390,6 +2390,19 @@ const CONFIG = {
     </div>
     <p class="ap-pista" id="ap-pista">Queda confirmada: se apunta cuando ya llegó el comprobante.</p>
 
+    <!-- 0168: «Tiene plan» exige que el celular esté en la lista de AdminGym. Cuando AdminGym todavía no la trae
+         (Daniela Jaimes, 10 oct) recepción no tenía cómo seguir. Aquí no se apunta sola: se le dice y tiene que
+         confirmar. Va DENTRO de la ventana, como el aviso del medio de pago, porque el aviso flotante sale por
+         encima del modal y taparía el botón. -->
+    <div class="aviso ojo" id="ap-plan-manual" hidden>
+      <b>Ese celular no está en la lista de AdminGym.</b>
+      Si ya pagó su mensualidad y AdminGym todavía no la muestra, apúntala con plan igual: queda confirmada, sin cobro,
+      y marcada «plan a mano» para revisarla cuando AdminGym la traiga.
+      <div class="modal-pie" style="margin-top:.6rem">
+        <button class="btn primario" id="ap-plan-igual" type="button">Apuntarla con plan igual</button>
+      </div>
+    </div>
+
     <!-- Cómo pagó. No es un detalle: de esto depende que el arqueo
          cuadre. Si pagó en efectivo, esa plata está en el cajón y el
          cierre tiene que contarla; si transfirió, está en el banco y el
@@ -3356,6 +3369,7 @@ const CONFIG = {
       $('#ap-pista').textContent = apTipo === 'miembro'
         ? 'Con plan no se cobra. Si su plan no es de esta hora, Postgres lo rechaza.'
         : 'Queda confirmada: se apunta cuando ya llegó el comprobante.';
+      $('#ap-plan-manual').hidden = true;
       pintarMedio();
     }));
 
@@ -3375,22 +3389,28 @@ const CONFIG = {
     $('#ap-nombre').value = '';
     $('#ap-tel').value = '';
     $('#ap-nota').value = '';
+    $('#ap-plan-manual').hidden = true;
     $('#modal-apuntar').hidden = false;
     $('#ap-nombre').focus();
   }
 
   function cerrarApuntar() { $('#modal-apuntar').hidden = true; }
 
-  $('#ap-guardar').addEventListener('click', apuntar);
+  // Sin pasar el evento: el primer argumento de apuntar() es «forzarPlan».
+  $('#ap-guardar').addEventListener('click', () => apuntar());
+  // Cambiar el celular o el nombre invalida el «no sale en AdminGym» de antes.
+  ['#ap-tel', '#ap-nombre'].forEach(s => $(s).addEventListener('input', () => { $('#ap-plan-manual').hidden = true; }));
+  $('#ap-plan-igual').addEventListener('click', () => apuntar(true));
   // Enter en cualquier campo apunta. En un mostrador con cola, obligar a
   // buscar el botón con el mouse es tiempo que no hay.
   ['#ap-nombre', '#ap-tel', '#ap-nota'].forEach(s =>
     $(s).addEventListener('keydown', e => { if (e.key === 'Enter') apuntar(); }));
 
-  async function apuntar() {
+  async function apuntar(forzarPlan = false) {
     if (!puerta || !puerta.clase) return;
     const b = $('#ap-guardar');
     if (b.disabled) return;
+    $('#ap-plan-manual').hidden = true;
 
     const nombre = $('#ap-nombre').value.trim();
     const tel = $('#ap-tel').value.replace(/\D/g, '');
@@ -3433,7 +3453,10 @@ const CONFIG = {
         // Solo va cuando hay algo que cobrar. Con plan no se paga en la
         // puerta, y mandar un medio ahí sería pedirle a Postgres que
         // registre un ingreso que nadie entregó.
-        medio: apTipo === 'miembro' ? null : apMedio,
+        // 0168: la única excepción es «plan_manual», que NO es un pago: es
+        // recepción confirmando que apunta con plan a alguien que AdminGym
+        // todavía no muestra.
+        medio: apTipo === 'miembro' ? (forzarPlan ? 'plan_manual' : null) : apMedio,
       });
       cerrarApuntar();
       // Se recarga la lista para que quien acaba de entrar aparezca
@@ -3464,6 +3487,8 @@ const CONFIG = {
       } else {
         aviso($('#msg-puerta'),
           `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.` +
+          (r.plan_manual === true
+            ? ' <b>Quedó con plan puesto a mano</b>: AdminGym todavía no la muestra.' : '') +
           (r.efectivo_registrado === true
             ? ` Entraron ${pesos(r.precio_cop)} en efectivo a la caja.` : '') +
           // Que quede dicho: esa plata todavía no está, y la forma de
@@ -3475,6 +3500,13 @@ const CONFIG = {
           'bien');
       }
     } catch (e) {
+      // 0168: «Tiene plan» y el celular no está en AdminGym. En vez de un
+      // error sin salida, se ofrece apuntarla igual (con confirmación).
+      if (e && e.clave === 'MEMBRESIA_NO_ENCONTRADA' && apTipo === 'miembro' && !forzarPlan) {
+        $('#ap-plan-manual').hidden = false;
+        $('#ap-plan-manual').scrollIntoView({ block: 'nearest' });
+        return;
+      }
       // SIN_CUPO llega hasta aquí a propósito: es el único mensaje que
       // no se puede tragar, porque significa que no se puede vender.
       fallo(e, 'No se pudo apuntar');

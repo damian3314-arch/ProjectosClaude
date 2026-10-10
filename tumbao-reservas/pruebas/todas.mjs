@@ -56,6 +56,7 @@ const SUITES = [
   'cupos-gracia',
   'recordatorio-pago',
   'pago-whatsapp',
+  'apuntar-con-plan',
   'cifras-ia',
 ];
 

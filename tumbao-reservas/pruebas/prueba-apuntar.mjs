@@ -59,6 +59,7 @@ const CLASE = '11111111-2222-4333-8444-555555555555';
 let efectivoFalla = false;
 let gente = [{ codigo: 'TB-0001', nombre: 'Ana Ruiz', telefono: '3001112233',
                estado: 'confirmada', tipo: 'suelta', asistio: false }];
+let miembroNoEsta = false;   // 0168: AdminGym todavía no trae a esa persona
 let loQuePidio = null;       // lo último que el panel mandó a /api/reserva
 let respuesta = null;        // qué se le va a contestar
 
@@ -105,6 +106,13 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
                           body: JSON.stringify(respuesta) });
     return;
   }
+  // 0168: sin «plan_manual», Postgres rechaza a quien no está en AdminGym; con él, la apunta.
+  if (miembroNoEsta && b.tipo === 'miembro' && b.medio !== 'plan_manual') {
+    await route.fulfill({ status: 400, contentType: 'application/json',
+      body: JSON.stringify({ ok: false, error: 'MEMBRESIA_NO_ENCONTRADA',
+                             mensaje: 'No encontramos una mensualidad activa con ese celular.' }) });
+    return;
+  }
   gente = gente.concat([{ codigo: 'TB-0042', nombre: b.nombre, telefono: b.telefono,
                           estado: 'confirmada', tipo: b.tipo, asistio: false }]);
   // Se imita lo que devuelve admin_crear_reserva desde la 0042: si el
@@ -117,6 +125,7 @@ await pagina.route('**/tumbao-caja.*/api/**', async (route) => {
                            telefono: b.telefono, tipo: b.tipo,
                            precio_cop: 15000, medio: b.medio ?? null,
                            cobra_en_puerta: b.medio === 'en_puerta',
+                           plan_manual: b.medio === 'plan_manual',
                            efectivo_registrado: enEfectivo ? !efectivoFalla : null,
                            aviso_efectivo: (enEfectivo && efectivoFalla)
                              ? 'El día ya está cerrado. Este movimiento va mañana. '
@@ -314,6 +323,88 @@ await pagina.waitForTimeout(600);
 loQuePidio && loQuePidio.medio === null
   ? bien('y no manda ningún medio', 'null')
   : falla('y no manda ningún medio', loQuePidio && String(loQuePidio.medio));
+
+/* ─────────────────────────────────────────────────────────────
+   0168 · «Tiene plan» y el celular no sale en AdminGym
+
+   Daniela Jaimes pagó su mensualidad y AdminGym no la mostraba. Recepción
+   marcaba «Tiene plan» y el panel solo decía «no aparece con plan, cóbrale
+   como clase suelta»: sin salida. Ahora ofrece apuntarla igual, pero NO sola:
+   hay que confirmar, y lo que se manda es el medio especial «plan_manual».
+   ───────────────────────────────────────────────────────────── */
+console.log('\n── Con plan, pero AdminGym no la trae ──\n');
+miembroNoEsta = true;
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.locator('#modal-apuntar [data-tipo="miembro"]').click();
+await pagina.fill('#ap-nombre', 'Daniela Jaimes');
+await pagina.fill('#ap-tel', '310 111 2233');
+(await pagina.locator('#ap-plan-manual').isHidden())
+  ? bien('el aviso no estorba mientras no haga falta')
+  : falla('el aviso no estorba mientras no haga falta', 'ya se ve');
+
+loQuePidio = null;
+// Los avisos malos no se van solos, así que hay uno de pasos anteriores: se compara contra cuántos había.
+const avisosAntes = await pagina.locator('#avisos .nota').count();
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+(loQuePidio && loQuePidio.tipo === 'miembro' && loQuePidio.medio === null)
+  ? bien('el primer intento va como siempre, sin medio', String(loQuePidio.medio))
+  : falla('el primer intento va como siempre, sin medio', JSON.stringify(loQuePidio));
+(await pagina.locator('#modal-apuntar').isVisible())
+  ? bien('la ventana NO se cierra: no apuntó a nadie')
+  : falla('la ventana NO se cierra: no apuntó a nadie', 'se cerró');
+const ofrece = (await pagina.locator('#ap-plan-manual').innerText()).replace(/\s+/g, ' ');
+(await pagina.locator('#ap-plan-manual').isVisible()) && /AdminGym/.test(ofrece) && /Apuntarla con plan igual/.test(ofrece)
+  ? bien('en vez de un error sin salida, ofrece apuntarla igual', ofrece.slice(0, 70))
+  : falla('en vez de un error sin salida, ofrece apuntarla igual', ofrece || '(no se ve)');
+(await pagina.locator('#avisos .nota').count()) === avisosAntes
+  ? bien('y no suelta además un aviso de error encima')
+  : falla('y no suelta además un aviso de error encima', 'salió un aviso nuevo');
+!(await pagina.locator('#lista-puerta').innerText()).includes('Daniela Jaimes')
+  ? bien('todavía no aparece en la lista: falta que confirme')
+  : falla('todavía no aparece en la lista', 'ya está');
+
+// Cambiar el celular borra el aviso: ya no habla de ese número.
+await pagina.fill('#ap-tel', '310 111 2244');
+(await pagina.locator('#ap-plan-manual').isHidden())
+  ? bien('si cambia el celular, el aviso desaparece')
+  : falla('si cambia el celular, el aviso desaparece', 'sigue ahí');
+await pagina.fill('#ap-tel', '310 111 2233');
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(500);
+
+// La confirmación.
+loQuePidio = null;
+await pagina.click('#ap-plan-igual');
+await pagina.waitForTimeout(800);
+(loQuePidio && loQuePidio.medio === 'plan_manual' && loQuePidio.tipo === 'miembro' && loQuePidio.telefono === '3101112233')
+  ? bien('al confirmar manda «plan_manual» con plan y el celular limpio', loQuePidio.medio)
+  : falla('al confirmar manda «plan_manual»', JSON.stringify(loQuePidio));
+!(await pagina.locator('#modal-apuntar').isVisible())
+  ? bien('y la ventana se cierra')
+  : falla('y la ventana se cierra', 'quedó abierta');
+/Daniela Jaimes/.test(await pagina.locator('#lista-puerta').innerText())
+  ? bien('Daniela ya aparece en la lista de la puerta')
+  : falla('Daniela ya aparece en la lista de la puerta', 'no está');
+const msgPlan = (await pagina.locator('#msg-puerta').innerText()).replace(/\s+/g, ' ').trim();
+/plan puesto a mano/.test(msgPlan) && /AdminGym/.test(msgPlan) && !/Cóbrale|Entraron/.test(msgPlan)
+  ? bien('le dice a recepción que quedó «a mano» y que no hay nada que cobrar', msgPlan.slice(0, 90))
+  : falla('le dice a recepción que quedó «a mano»', msgPlan);
+
+// Una clase suelta NUNCA manda ese medio, aunque antes se hubiera usado.
+await pagina.click('#puerta-apuntar');
+await pagina.waitForTimeout(300);
+await pagina.fill('#ap-nombre', 'Sara Suelta');
+await pagina.fill('#ap-tel', '3125556677');
+await pagina.locator('#modal-apuntar [data-apmedio="efectivo"]').click();
+loQuePidio = null;
+await pagina.click('#ap-guardar');
+await pagina.waitForTimeout(600);
+(loQuePidio && loQuePidio.tipo === 'suelta' && loQuePidio.medio === 'efectivo')
+  ? bien('una clase suelta no hereda el «plan_manual»', loQuePidio.medio)
+  : falla('una clase suelta no hereda el «plan_manual»', JSON.stringify(loQuePidio));
+miembroNoEsta = false;
 
 // ── el caso feo: la reserva queda pero el efectivo NO entra ──
 // Pasa con el día ya cerrado. Es plata que está en el cajón y que el
