@@ -9,8 +9,10 @@
  *
  * Qué NO se le deja al modelo (por eso hay una baranda y textos fijos escritos por el código):
  *   · reservar. El modelo reúne el nombre y la clase; el CÓDIGO escribe el resumen, pide la autorización de datos (Ley 1581) y
- *     solo con un «sí» claro de la persona llama a asistente_reservar() —el mismo cupo de la página—. Quien consiente es la
- *     persona, no el modelo;
+ *     lo muestra con DOS BOTONES de WhatsApp (Sí, reservar / No, gracias). Solo el toque en el botón —un mensaje «interactive»
+ *     que nadie puede fabricar escribiendo— confirma, y llama a asistente_reservar() (el mismo cupo de la página). Quien consiente
+ *     es la persona, no el modelo; y una palabra escrita («sí», «dale») no reserva: Damián (10 oct) prefirió botones porque, con
+ *     la puerta abierta, la gente contesta cualquier cosa;
  *   · decir que algo «quedó reservado / confirmado / pagado», dar la llave o la cuenta, o escribir un valor que no sea de la base;
  *   · prometer que alguien va a escribirle o llamarle: este número no es el de recepción. Lo que no puede resolver, lo manda a
  *     recepción con un enlace wa.me que arma el código (recepcion.js).
@@ -40,7 +42,7 @@ QUÉ SABES (todo viene en el JSON de entrada; usa SOLO eso)
 CÓMO AYUDAS
 1. Preguntas (horarios, precios, mensualidad, tiquetera, cómo es una clase): responde con los datos. La dirección o cualquier dato que no esté en lo que sabes: accion = "recepcion".
 2. Quiere reservar una clase: invítala a la página ${PAGINA}, donde elige el día y la hora y paga en un minuto. Ofrécele también hacerlo por aquí: «si prefieres, te la reservo yo por este chat». NO pidas datos hasta que ella diga que quiere que la ayudes por aquí.
-3. Quiere que la reserves por aquí: necesitas SOLO dos cosas: (a) a nombre de quién va (nombre y apellido si los da) y (b) qué clase (día y hora) de la lista "horarios". Pregunta lo que falte, de a una cosa. Cuando tengas las dos: accion = "proponer_reserva" con clase_n (el número "n" de la lista, nunca inventado) y nombre. NO digas que quedó reservada: el sistema le muestra el resumen, le pide confirmar y autorizar sus datos, y solo entonces reserva. Tu "respuesta" en ese caso es una frase corta de arranque.
+3. Quiere que la reserves por aquí: necesitas SOLO dos cosas: (a) a nombre de quién va (nombre y apellido si los da) y (b) qué clase (día y hora) de la lista "horarios". Pregunta lo que falte, de a una cosa. Cuando tengas las dos: accion = "proponer_reserva" con clase_n (el número "n" de la lista, nunca inventado) y nombre. NO digas que quedó reservada: el sistema le muestra el resumen con dos botones («Sí, reservar» / «No, gracias») para confirmar y autorizar sus datos, y solo cuando ella toca «Sí, reservar» reserva. Tu "respuesta" en ese caso es una frase corta de arranque.
 4. Si ya hay "pendiente" y la persona cambia de idea (otra clase u otro nombre): vuelve a proponer (accion = "proponer_reserva"). Si ya no quiere: despídete con calidez, accion = "cerrar".
 5. Mensualidad o tiquetera: explícalas con los datos (precio, cuenta por clase, cupos libres por horario) y dale ${PAGINA}/mensualidad. No se compran por este chat. Si perfil.plan_vigente o perfil.tiquetera_vigente existen, ya tiene: no se las vendas.
 6. Cambiar o cancelar una reserva, devoluciones, un pago que no cuadra, una queja, un problema con la página, o cualquier cosa que no sepas: accion = "recepcion" con "motivo" corto, y dile en una frase que eso lo resuelven en recepción. El sistema le agrega el enlace para escribirles: tú NO lo escribas.
@@ -178,7 +180,37 @@ export function textoPropuesta(p) {
     `• ${p.clase} — ${cuando(p)} · $${miles(p.precio_cop)}\n\n` +
     'Para reservar necesito tu autorización para usar tus datos (tu nombre y este celular) solo para gestionar tu reserva y ' +
     `contactarte por WhatsApp, conforme a la Ley 1581 de 2012 (política: ${PAGINA}/privacidad).\n\n` +
-    '¿Confirmas y autorizas? Responde SÍ para reservar, o cuéntame si quieres cambiar algo.';
+    'Toca *Sí, reservar* para confirmar y autorizar, o *No, gracias*. Si quieres cambiar algo, escríbemelo.';
+}
+
+export const BOTON_SI = 'Sí, reservar';
+export const BOTON_NO = 'No, gracias';
+
+/** Los dos botones del resumen. El id lleva la clave de un solo uso de ESTA propuesta (asistente_proponer). */
+export function botonesPropuesta(token) {
+  return [{ id: `asist:si:${token}`, titulo: BOTON_SI }, { id: `asist:no:${token}`, titulo: BOTON_NO }];
+}
+
+/**
+ * ¿El mensaje es el toque de uno de NUESTROS botones? Solo cuenta si WhatsApp lo entregó como «interactive» (quien escribe a
+ * mano «[boton:asist:si:…]» llega como texto y no sirve). Devuelve {accion: 'si'|'no', token} o null.
+ */
+export function leerBoton(texto, tipo) {
+  if (tipo !== 'interactive') return null;
+  const m = /^\[boton:asist:(si|no):([a-f0-9]{6,16})\]/i.exec(String(texto || ''));
+  return m ? { accion: m[1].toLowerCase(), token: m[2].toLowerCase() } : null;
+}
+
+export function textoToqueElBoton() {
+  return '¡Casi! Para confirmar toca el botón *Sí, reservar* 👇';
+}
+
+export function textoBotonViejo() {
+  return 'Ese botón era de un resumen anterior 🙈 Este es el actual 👇';
+}
+
+export function textoSinBotones() {
+  return 'No pude mostrarte los botones para confirmar 🙈 Puedes reservar directo en https://tumbaobaila.com o escribirnos a recepción.';
 }
 
 export function textoReservaHecha({ nombre, info, codigo, minutos }) {

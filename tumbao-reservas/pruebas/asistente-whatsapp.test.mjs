@@ -4,8 +4,9 @@
  * Damián (10 oct): «ese bot debe ayudar y servir; si dicen que se les ayude desde el chat, que les tome los datos, haga la
  * reserva y luego el pago, en lenguaje natural; y si algo sale mal, "escríbenos al de recepción" con un enlace wa.me».
  * Esta prueba corre el Worker de verdad con un `fetch` simulado (Supabase, Meta, OpenAI) y protege lo que NO se negocia:
- *   1. el modelo no reserva: reúne nombre y clase; el CÓDIGO propone (resumen + autorización de datos, Ley 1581) y solo con un
- *      «sí» claro de la persona se reserva —sin volver a llamar al modelo—;
+ *   1. el modelo no reserva: reúne nombre y clase; el CÓDIGO propone (resumen + autorización de datos, Ley 1581) con DOS BOTONES
+ *      (Sí, reservar / No, gracias) y solo el TOQUE del botón de ese resumen reserva —sin volver a llamar al modelo—. Una palabra
+ *      escrita («sí», «dale») no reserva: Damián (10 oct) prefirió botones porque, con la puerta abierta, la gente contesta cualquier cosa;
  *   2. la clase sale de la lista de la base por su número, nunca de un id que invente el modelo;
  *   3. nada de «te escribimos»: si no puede resolver, enlace wa.me a recepción con el mensaje escrito;
  *   4. el modelo no dice «ya quedó reservado/pagado», ni escribe llaves o cifras que no son de la base;
@@ -17,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import {
   guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoErrorReserva,
   INSTRUCCIONES_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, MAX_TURNOS_ASISTENTE, cifrasDelAsistente,
+  leerBoton, botonesPropuesta, BOTON_SI, BOTON_NO, textoToqueElBoton, textoBotonViejo, textoSinBotones,
 } from '../../tumbao-caja/src/asistente.js';
 import { enlaceRecepcion, conRecepcion, ENLACE_RECEPCION } from '../../tumbao-caja/src/recepcion.js';
 import worker from '../../tumbao-caja/src/index.js';
@@ -75,12 +77,25 @@ titulo('2. El «sí» de la persona');
   ok('el nombre: NO acepta números, símbolos, enlaces ni vacío', limpiarNombre('Juan; drop table') === null && limpiarNombre('3001234567') === null && limpiarNombre('https://x.co') === null && limpiarNombre('') === null && limpiarNombre('A') === null && limpiarNombre(null) === null);
 }
 
+titulo('2b. Los botones');
+{
+  const b = botonesPropuesta('abc123def0');
+  ok('hay dos botones: Sí, reservar y No, gracias, con títulos de hasta 20 caracteres', b.length === 2 && b[0].titulo === BOTON_SI && b[1].titulo === BOTON_NO && b.every(x => x.titulo.length <= 20));
+  ok('el id lleva la acción y la clave del resumen', b[0].id === 'asist:si:abc123def0' && b[1].id === 'asist:no:abc123def0');
+  ok('leerBoton entiende el toque de un botón interactivo', JSON.stringify(leerBoton('[boton:asist:si:abc123def0] Sí, reservar', 'interactive')) === JSON.stringify({ accion: 'si', token: 'abc123def0' })
+     && leerBoton('[boton:asist:no:ABC123DEF0] No, gracias', 'interactive').accion === 'no');
+  ok('un texto escrito a mano que imita el botón NO cuenta (tipo «text»)', leerBoton('[boton:asist:si:abc123def0] Sí, reservar', 'text') === null);
+  ok('un botón de otra cosa NO cuenta', leerBoton('Sí', 'interactive') === null && leerBoton('[boton:otro:si:abc123def0] x', 'interactive') === null && leerBoton(null, 'interactive') === null);
+  ok('los textos de ayuda no prometen que alguien escribe', ![textoToqueElBoton(), textoBotonViejo(), textoSinBotones()].some(t => /te escrib|te contact/i.test(t)));
+}
+
 titulo('3. Los textos fijos');
 {
   const p = textoPropuesta({ nombre: 'María Fernández', clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm', precio_cop: 15000 });
   ok('el resumen dice qué clase, qué día, qué hora y cuánto', /Rumba básica/.test(p) && /martes 13 de octubre a las 5:00 pm/.test(p) && /\$15\.000/.test(p));
   ok('pide la autorización de datos con la Ley 1581 y el enlace a la política', /Ley 1581 de 2012/.test(p) && /https:\/\/tumbaobaila\.com\/privacidad/.test(p) && /autorizo|autorización/i.test(p));
-  ok('pide un SÍ explícito y deja cambiar', /Responde SÍ/.test(p) && /cambiar/.test(p));
+  ok('pide tocar un botón (Sí, reservar / No, gracias) y deja cambiar escribiendo', /Toca \*Sí, reservar\*/.test(p) && /\*No, gracias\*/.test(p) && /escríbemelo/.test(p) && !/Responde SÍ/.test(p));
+  ok('cabe en un mensaje con botones (hasta 1024 caracteres)', p.length < 1024, String(p.length));
   ok('NO dice que ya quedó reservado', !/qued[óo]|ya te (reserv|apart)/i.test(p));
   const h = textoReservaHecha({ nombre: 'María Fernández', info: { clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm' }, codigo: 'AB12CD', minutos: 15 });
   ok('la reserva hecha dice el código y los 15 minutos para pagar', /AB12CD/.test(h) && /15 minutos/.test(h) && /Te aparté/.test(h));
@@ -97,8 +112,8 @@ titulo('3. Los textos fijos');
 
 // ── el Worker con todo simulado ────────────────────────────────────────────
 const GRAPH = 'https://graph.facebook.com/v21.0';
-async function correr({ msg = {}, chat = {}, modelo = null, rpcs = {}, ctx = {} }) {
-  const llamadas = []; const enviados = []; const imagenes = []; let llamadasModelo = 0;
+async function correr({ msg = {}, chat = {}, modelo = null, rpcs = {}, ctx = {}, botonesFallan = false }) {
+  const llamadas = []; const enviados = []; const imagenes = []; const interactivos = []; let llamadasModelo = 0;
   const base = {
     wa_tomar_asistente: () => ({ id: 70, telefono: '573001234567', wa_msg_id: 'wamid.IN', tipo: 'text', texto: 'hola', nombre_perfil: 'Ma Fer', historial: [],
       chat: { id: 4, nombre: null, estado: 'abierta', turnos: 0, datos: {}, ...chat },
@@ -122,7 +137,11 @@ async function correr({ msg = {}, chat = {}, modelo = null, rpcs = {}, ctx = {} 
       const b = JSON.parse(cuerpo);
       if (b.type === 'text') enviados.push(b.text.body);
       else if (b.type === 'image') imagenes.push(b.image);
-      return res({ messages: [{ id: 'wamid.OUT' + (enviados.length + imagenes.length) }] });
+      else if (b.type === 'interactive') {
+        if (botonesFallan) return res({ error: { code: 131047, message: 'fuera de la ventana' } }, 400);
+        interactivos.push(b.interactive);
+      }
+      return res({ messages: [{ id: 'wamid.OUT' + (enviados.length + imagenes.length + interactivos.length) }] });
     }
     if (url === 'https://api.openai.com/v1/responses') { llamadasModelo++; return res({ output_text: JSON.stringify(modelo || { respuesta: 'Hola', accion: 'ninguna' }) }); }
     return res({}, 404);
@@ -130,10 +149,13 @@ async function correr({ msg = {}, chat = {}, modelo = null, rpcs = {}, ctx = {} 
   const env = { SUPABASE_URL: 'https://sb.test', SUPABASE_SERVICE_KEY: 'k', WHATSAPP_TOKEN: 't', WHATSAPP_PHONE_ID: '111', OPENAI_API_KEY: 'o' };
   try {
     const r = await worker.fetch(new Request('https://w.test/wa/asistente', { method: 'POST', body: JSON.stringify({ id: 70 }) }), env, { waitUntil() {} });
-    return { respuesta: await r.json(), llamadas, enviados, imagenes, modelo: () => llamadasModelo, usos: (fn) => llamadas.filter(l => l.fn === fn) };
+    return { respuesta: await r.json(), llamadas, enviados, imagenes, interactivos, modelo: () => llamadasModelo, usos: (fn) => llamadas.filter(l => l.fn === fn) };
   } finally { globalThis.fetch = original; }
 }
-const PEND = () => ({ pendiente: { clase_id: HORARIOS[1].clase_id, nombre: 'María Fernández', pedido_at: new Date().toISOString() } });
+const TOKEN = 'abc123def0';
+const PEND = (token = TOKEN) => ({ pendiente: { clase_id: HORARIOS[1].clase_id, nombre: 'María Fernández', pedido_at: new Date().toISOString(), token } });
+const TOQUE = (accion, token = TOKEN) => ({ tipo: 'interactive', texto: `[boton:asist:${accion}:${token}] ${accion === 'si' ? 'Sí, reservar' : 'No, gracias'}` });
+const PROPONE = (extra = {}) => () => ({ ok: true, nombre: 'María Fernández', clase: 'Rumba básica', precio_cop: 15000, libres: 34, token: 'nuevo99token', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm', ...extra });
 
 titulo('4. Conversar: informa y manda a la página');
 {
@@ -213,70 +235,115 @@ titulo('5. Recepción: con enlace, sin promesas');
   ok('quien tiene una reserva de la página con el pago pendiente: el mensaje pasa al asistente de pagos (/wa/pago)', llamadas.includes('pago'), llamadas.join(','));
 }
 
-titulo('6. Reservar por el chat: el modelo propone, la persona decide');
+titulo('6. Reservar por el chat: el modelo propone, la persona TOCA un botón');
 {
   const t = await correr({
     msg: { texto: 'quiero reservar para el martes a las 5, a nombre de María Fernández' },
     modelo: { respuesta: 'Perfecto, te dejo el resumen', accion: 'proponer_reserva', clase_n: 2, nombre: 'María Fernández', resumen: 'Quiere la Rumba del martes' },
-    rpcs: { asistente_proponer: () => ({ ok: true, nombre: 'María Fernández', clase: 'Rumba básica', precio_cop: 15000, libres: 34, fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm' }) },
+    rpcs: { asistente_proponer: PROPONE() },
   });
   const pr = t.usos('asistente_proponer')[0];
   ok('la clase sale de la lista por su número (n=2), no de un id que invente el modelo', pr && pr.b.p_clase_id === HORARIOS[1].clase_id && pr.b.p_nombre === 'María Fernández');
-  ok('manda el resumen y la autorización escritos por el código (no la frase del modelo)', /Responde SÍ para reservar/.test(t.enviados[0]) && /Ley 1581/.test(t.enviados[0]) && !/te dejo el resumen/.test(t.enviados[0]));
-  ok('TODAVÍA no reserva: sin el «sí» no se llama a asistente_reservar', t.usos('asistente_reservar').length === 0);
-  ok('guarda el nombre en el chat y no cierra la conversación', t.usos('asistente_turno')[0].b.p_nombre === 'María Fernández' && t.usos('asistente_turno')[0].b.p_cerrar === false);
+  const bt = t.interactivos[0];
+  ok('manda el resumen y la autorización escritos por el código, con DOS BOTONES', bt && bt.type === 'button' && /Ley 1581/.test(bt.body.text) && /Rumba básica/.test(bt.body.text) && bt.action.buttons.length === 2);
+  ok('los botones son «Sí, reservar» y «No, gracias» y llevan la clave de ese resumen', bt.action.buttons[0].reply.title === 'Sí, reservar' && bt.action.buttons[1].reply.title === 'No, gracias'
+     && bt.action.buttons[0].reply.id === 'asist:si:nuevo99token' && bt.action.buttons[1].reply.id === 'asist:no:nuevo99token');
+  ok('no manda la frase del modelo ni un «responde sí»', !t.enviados.some(x => /te dejo el resumen|Responde S/.test(x)));
+  ok('TODAVÍA no reserva ni confirma: falta que toque el botón', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0);
+  ok('guarda el nombre en el chat, anota el turno sin cerrar y deja el mensaje en el historial', t.usos('asistente_turno')[0].b.p_nombre === 'María Fernández' && t.usos('asistente_turno')[0].b.p_cerrar === false
+     && /Botones: Sí, reservar · No, gracias/.test(t.usos('wa_guardar_saliente').map(x => x.b.p_texto).join(' ')));
 }
 {
   const t = await correr({ msg: { texto: 'reserva la 9' }, modelo: { respuesta: 'Listo', accion: 'proponer_reserva', clase_n: 9, nombre: 'Ana Gómez' } });
-  ok('una clase que no está en la lista (n=9) NO se propone: se pide lo que falta', t.usos('asistente_proponer').length === 0 && t.enviados.length === 1);
+  ok('una clase que no está en la lista (n=9) NO se propone: se pide lo que falta', t.usos('asistente_proponer').length === 0 && t.interactivos.length === 0 && t.enviados.length === 1);
 }
 {
   const t = await correr({ msg: { texto: 'a nombre de 3001234567' }, modelo: { respuesta: 'Listo', accion: 'proponer_reserva', clase_n: 1, nombre: '3001234567' } });
-  ok('un nombre inválido (números) NO se propone', t.usos('asistente_proponer').length === 0);
+  ok('un nombre inválido (números) NO se propone', t.usos('asistente_proponer').length === 0 && t.interactivos.length === 0);
 }
 {
   const t = await correr({ msg: { texto: 'quiero la del martes' }, modelo: { respuesta: 'Listo', accion: 'proponer_reserva', clase_n: 1, nombre: 'Ana Gómez' },
     rpcs: { asistente_proponer: () => ({ ok: false, error: 'SIN_CUPO' }) } });
-  ok('si la clase se llenó entre tanto, lo dice y no propone', /se acaba de llenar/.test(t.enviados[0]) && !/Responde SÍ/.test(t.enviados[0]));
+  ok('si la clase se llenó entre tanto, lo dice y no muestra botones', /se acaba de llenar/.test(t.enviados[0]) && t.interactivos.length === 0);
 }
 {
-  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: PEND() },
-    rpcs: { asistente_reservar: () => ({ ok: true, codigo: 'AB12CD', reserva_id: 'r1', expira_en: new Date(Date.now() + 15 * 60000).toISOString(),
-      info: { clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm', total_cop: 15000 } }) } });
-  ok('con el «sí» reserva (asistente_reservar) SIN volver a llamar al modelo', t.usos('asistente_reservar').length === 1 && t.modelo() === 0);
+  const t = await correr({ msg: { texto: 'quiero la del martes' }, botonesFallan: true, modelo: { respuesta: 'Listo', accion: 'proponer_reserva', clase_n: 2, nombre: 'Ana Gómez' },
+    rpcs: { asistente_proponer: PROPONE({ nombre: 'Ana Gómez' }) } });
+  ok('si WhatsApp no deja mandar los botones: no queda un resumen colgado; se manda a la página o a recepción',
+     t.usos('asistente_reservar').length === 0 && /No pude mostrarte los botones/.test(t.enviados.join(' ')) && /tumbaobaila\.com/.test(t.enviados.join(' ')) && /wa\.me\/573017833550/.test(t.enviados.join(' '))
+     && t.usos('asistente_turno').some(x => x.b.p_limpiar === true));
+}
+{
+  // EL TOQUE DE «SÍ, RESERVAR»
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: PEND() },
+    rpcs: { asistente_confirmar: () => ({ ok: true }),
+            asistente_reservar: () => ({ ok: true, codigo: 'AB12CD', reserva_id: 'r1', expira_en: new Date(Date.now() + 15 * 60000).toISOString(),
+              info: { clase: 'Rumba básica', fecha_texto: 'martes 13 de octubre', hora_texto: '5:00 pm', total_cop: 15000 } }) } });
+  const conf = t.usos('asistente_confirmar')[0];
+  ok('al tocar «Sí, reservar» primero confirma con la clave del botón y después reserva, SIN llamar al modelo', conf && conf.b.p_token === TOKEN && t.usos('asistente_reservar').length === 1 && t.modelo() === 0
+     && t.llamadas.findIndex(l => l.fn === 'asistente_confirmar') < t.llamadas.findIndex(l => l.fn === 'asistente_reservar'));
   ok('confirma el código y el tiempo para pagar', /AB12CD/.test(t.enviados[0]) && /15 minutos/.test(t.enviados[0]));
   ok('manda el QR con el valor y los datos de la base (llave, cuenta, titular)', t.imagenes.length === 1 && t.imagenes[0].link === PAGO.qr_url && /1096803067/.test(t.imagenes[0].caption) && /\$15\.000/.test(t.imagenes[0].caption) && /Luz Alejandra/.test(t.imagenes[0].caption));
   ok('pide el comprobante y ofrece el efectivo', /captura del comprobante/.test(t.enviados[t.enviados.length - 1]) && /efectivo al llegar/.test(t.enviados[t.enviados.length - 1]));
-  ok('cierra la conversación con resultado «reservo»', t.usos('asistente_turno')[0].b.p_cerrar === true && t.usos('asistente_turno')[0].b.p_resultado === 'reservo');
+  ok('cierra la conversación con resultado «reservo» y anota qué tocó', t.usos('asistente_turno')[0].b.p_cerrar === true && t.usos('asistente_turno')[0].b.p_resultado === 'reservo' && /Sí, reservar/.test(t.usos('asistente_turno')[0].b.p_texto_entrante));
 }
 {
-  const t = await correr({ msg: { texto: 'sí, y a qué hora abren?' }, chat: { datos: PEND() }, modelo: { respuesta: 'Abrimos 10 minutos antes de la clase. ¿Confirmas la reserva?', accion: 'ninguna' } });
-  ok('un «sí» con una pregunta NO reserva: pasa al modelo', t.usos('asistente_reservar').length === 0 && t.modelo() === 1);
+  // UNA PALABRA ESCRITA NO RESERVA
+  for (const palabra of ['sí', 'Sí.', 'dale', 'listo', 'ok', 'de una', 'confirmo', 'acepto']) {
+    const t = await correr({ msg: { texto: palabra }, chat: { datos: PEND() }, rpcs: { asistente_proponer: PROPONE() } });
+    if (t.usos('asistente_reservar').length || t.usos('asistente_confirmar').length) { ok(`«${palabra}» escrito NO reserva ni confirma`, false); }
+  }
+  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: PEND() }, rpcs: { asistente_proponer: PROPONE() } });
+  ok('un «sí» ESCRITO no reserva ni confirma, y no gasta el modelo', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0 && t.modelo() === 0);
+  ok('…se contesta con «toca el botón» y se vuelven a mostrar los botones (con una clave nueva)', /toca el botón \*Sí, reservar\*/.test(t.enviados[0]) && t.interactivos.length === 1 && t.interactivos[0].action.buttons[0].reply.id === 'asist:si:nuevo99token');
+  ok('«ok», «dale», «listo» y «acepto» escritos tampoco reservan', true);
+}
+{
+  const t = await correr({ msg: { tipo: 'text', texto: `[boton:asist:si:${TOKEN}] Sí, reservar` }, chat: { datos: PEND() }, modelo: { respuesta: 'Hola, ¿en qué te ayudo?', accion: 'ninguna' } });
+  ok('quien ESCRIBE a mano «[boton:asist:si:…]» como texto no confirma nada (no es un toque)', t.usos('asistente_confirmar').length === 0 && t.usos('asistente_reservar').length === 0);
+}
+{
+  const t = await correr({ msg: TOQUE('si', 'deadbeef01'), chat: { datos: PEND() }, rpcs: { asistente_proponer: PROPONE() } });
+  ok('un botón de un resumen ANTERIOR no confirma nada: se muestra el resumen actual con botones nuevos',
+     t.usos('asistente_confirmar').length === 0 && t.usos('asistente_reservar').length === 0 && /resumen anterior/.test(t.enviados[0]) && t.interactivos.length === 1);
+}
+{
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: PEND() }, rpcs: { asistente_confirmar: () => ({ ok: false, error: 'token' }) } });
+  ok('si la base no acepta la clave del botón, NO reserva', t.usos('asistente_reservar').length === 0 && /venció/.test(t.enviados[0]));
+}
+{
+  const t = await correr({ msg: TOQUE('no'), chat: { datos: PEND() } });
+  ok('el toque de «No, gracias» limpia la propuesta, no reserva y no gasta el modelo', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0
+     && t.usos('asistente_turno')[0].b.p_limpiar === true && /no reservé nada/.test(t.enviados[0]) && t.modelo() === 0);
+}
+{
+  const viejo = { pendiente: { clase_id: HORARIOS[1].clase_id, nombre: 'María', pedido_at: new Date(Date.now() - 30 * 60000).toISOString(), token: TOKEN } };
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: viejo } });
+  ok('un resumen de hace 30 minutos ya no vale: el botón no reserva y se pide empezar de nuevo', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0 && /venció/.test(t.enviados[0]));
+}
+{
+  const t = await correr({ msg: { texto: 'sí, y a qué hora abren?' }, chat: { datos: PEND() }, modelo: { respuesta: 'Abrimos 10 minutos antes de la clase. Cuando quieras, toca el botón para confirmar.', accion: 'ninguna' } });
+  ok('un «sí» con una pregunta pasa al modelo y tampoco reserva', t.usos('asistente_reservar').length === 0 && t.modelo() === 1);
 }
 {
   const t = await correr({ msg: { texto: 'mejor no' }, chat: { datos: PEND() } });
-  ok('un «no» limpia la propuesta y no reserva', t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_limpiar === true && /no reservé nada/.test(t.enviados[0]) && t.modelo() === 0);
+  ok('un «no» ESCRITO sí cancela (cancelar no necesita consentimiento): limpia y no reserva', t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_limpiar === true && /no reservé nada/.test(t.enviados[0]) && t.modelo() === 0);
 }
 {
-  const viejo = { pendiente: { clase_id: HORARIOS[1].clase_id, nombre: 'María', pedido_at: new Date(Date.now() - 30 * 60000).toISOString() } };
-  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: viejo }, modelo: { respuesta: 'Hola, ¿en qué te ayudo?', accion: 'ninguna' } });
-  ok('un resumen de hace 30 minutos ya no vale: un «sí» suelto no reserva', t.usos('asistente_reservar').length === 0);
-}
-{
-  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: PEND() }, rpcs: { asistente_reservar: () => ({ ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó.' }) } });
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: PEND() }, rpcs: { asistente_confirmar: () => ({ ok: true }), asistente_reservar: () => ({ ok: false, error: 'SIN_CUPO', mensaje: 'Esa clase se llenó.' }) } });
   ok('si la clase se llenó justo al confirmar, lo dice y limpia', /se acaba de llenar/.test(t.enviados[0]) && t.usos('asistente_turno')[0].b.p_limpiar === true && t.imagenes.length === 0);
 }
 {
-  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: PEND() }, rpcs: { asistente_reservar: () => ({ ok: false, error: 'PENDIENTES' }) } });
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: PEND() }, rpcs: { asistente_confirmar: () => ({ ok: true }), asistente_reservar: () => ({ ok: false, error: 'PENDIENTES' }) } });
   ok('con dos reservas sin pagar: lo dice y da el enlace a recepción', /dos reservas esperando el pago/.test(t.enviados[0]) && /wa\.me\/573017833550/.test(t.enviados[0]));
 }
 {
-  const t = await correr({ msg: { texto: 'sí' }, chat: { datos: PEND() }, rpcs: { asistente_reservar: () => ({ ok: false, error: 'error_raro' }) } });
+  const t = await correr({ msg: TOQUE('si'), chat: { datos: PEND() }, rpcs: { asistente_confirmar: () => ({ ok: true }), asistente_reservar: () => ({ ok: false, error: 'error_raro' }) } });
   ok('un error que no conoce: no inventa, da el enlace a recepción', /wa\.me\/573017833550/.test(t.enviados[0]) && !/te escrib/i.test(t.enviados[0]));
 }
 {
-  const t = await correr({ msg: { tipo: 'audio', texto: '[audio:AUD1]' }, chat: { datos: PEND() }, modelo: { respuesta: 'No te escuché bien, ¿me confirmas por escrito?', accion: 'ninguna' } });
-  ok('un «sí» por nota de voz NO reserva (el consentimiento tiene que ser escrito)', t.usos('asistente_reservar').length === 0);
+  const t = await correr({ msg: { tipo: 'audio', texto: '[audio:AUD1]' }, chat: { datos: PEND() }, modelo: { respuesta: 'No te escuché bien, ¿me confirmas tocando el botón?', accion: 'ninguna' } });
+  ok('una nota de voz NO confirma (el consentimiento es tocar el botón)', t.usos('asistente_reservar').length === 0 && t.usos('asistente_confirmar').length === 0);
 }
 
 titulo('7. El prompt trae las reglas duras');
@@ -318,14 +385,30 @@ titulo('8. La migración 0169 y el cableado');
   ok('a quien reservó por WhatsApp no se le manda además la plantilla del recordatorio de pago', /r\.origen is distinct from 'whatsapp'/.test(m));
   ok('nada destructivo', !/\bdrop\b/i.test(raw) && !/\bdelete\b/i.test(raw));
 
+  const raw70 = leer('../supabase/migrations/0170_asistente_confirma_con_botones.sql');
+  const m70 = raw70.replace(/--.*$/gm, '');
+  ok('0170: la propuesta guarda una clave de un solo uso (token) que viaja en los botones', /v_token := substr\(md5\(random\(\)::text/.test(m70) && /'token', v_token/.test(m70) && /'token', v_token,/.test(m70));
+  ok('0170: solo asistente_confirmar marca la confirmación, y solo si el token coincide y la propuesta tiene menos de 20 minutos',
+     /create or replace function public\.asistente_confirmar\(p_chat bigint, p_token text\)/.test(m70) && /\(pend ->> 'token'\) is distinct from p_token/.test(m70) && /interval '20 minutes'/.test(m70) && /'\{pendiente,confirmado_at\}'/.test(m70));
+  ok('0170: asistente_reservar exige esa confirmación (sin ella, nada) y deja anotado que fue por botón', /\(pend ->> 'confirmado_at'\) is null then\s+return jsonb_build_object\('ok', false, 'error', 'sin_confirmar'\)/.test(m70) && /'consentimiento', jsonb_build_object\('at', now\(\), 'via', 'boton'\)/.test(m70));
+  ok('0170: reemplaza las funciones con la misma firma (no deja una versión sin la exigencia) y solo el Worker las ejecuta',
+     !/asistente_reservar\(bigint, text\)/.test(m70) && /grant execute on function public\.asistente_confirmar\(bigint, text\) to service_role/.test(m70) && /revoke all on function public\.asistente_reservar\(bigint\) from public, anon, authenticated/.test(m70));
+  ok('0170: nada destructivo', !/\bdrop\b/i.test(raw70) && !/\bdelete\b/i.test(raw70));
+
   ok('el Worker: ruta /wa/asistente', /ruta === '\/wa\/asistente' && request\.method === 'POST'/.test(w));
   ok('entranteWA no manda el «no revisamos mensajes» cuando lo atiende el asistente', /if \(g\.asistente\) return;[\s\S]{0,200}RESPUESTA_AUTO/.test(w));
-  ok('el Worker no reserva por su cuenta: solo llama a las funciones de la base, y solo con el «sí» de la persona',
+  ok('el Worker no reserva por su cuenta: solo llama a las funciones de la base, y solo tras el toque del botón (leerBoton → confirmar → reservar)',
      (() => { const f = w.split('async function asistenteWA')[1].split('/* 0166 · /wa/pago-seguimiento')[0];
-              const i = f.indexOf("rpc(env, 'asistente_reservar'"); const j = f.indexOf('esAfirmativo(texto)');
-              return i > 0 && j > 0 && j < i && !/rpc\(env, 'tomar_cupo'/.test(f); })());
+              const i = f.indexOf("rpc(env, 'asistente_reservar'"); const k = f.indexOf("rpc(env, 'asistente_confirmar'"); const j = f.indexOf('leerBoton(m.texto, m.tipo)');
+              return i > 0 && j > 0 && k > 0 && j < k && /return await reservarYPagar/.test(f) && !/rpc\(env, 'tomar_cupo'/.test(f)
+                && (f.match(/reservarYPagar\(/g) || []).length === 1; })());
+  ok('lo escrito («sí») no llama a reservar: solo vuelve a mostrar los botones', (() => { const f = w.split('async function asistenteWA')[1].split('/* 0166 · /wa/pago-seguimiento')[0];
+              const t = f.split('if (pend && !au)')[1].split('// ── la conversación')[0]; return !/asistente_reservar|asistente_confirmar|reservarYPagar/.test(t) && /textoToqueElBoton/.test(t); })());
+  ok('entranteWA guarda el id del botón del asistente en el texto (solo los asist:), para saber a qué resumen contesta', /\/\^asist:\/\.test\(m\.interactive\.button_reply\.id/.test(w) && /\[boton:\$\{String\(m\.interactive\.button_reply\.id\)/.test(w));
+  ok('los bots de pago, ventas y opinión no ven la marca interna del botón si alguien toca uno viejo', (w.match(/m\.texto = sinMarcaDeBoton\(m\.texto\);/g) || []).length === 3 && /function sinMarcaDeBoton/.test(w));
+  ok('el envío de botones usa el mensaje interactivo de WhatsApp (hasta 3, título de hasta 20)', /type: 'interactive'/.test(w) && /type: 'button'/.test(w) && /slice\(0, 20\)/.test(w));
   ok('la propuesta usa la clase de la lista por su número', /horarios\.find\(\(x\) => Number\(x\.n\) === Number\(j\.clase_n\)\)/.test(w));
-  ok('un «sí» por nota de voz no cuenta', /if \(pend && !au\)/.test(w));
+  ok('una nota de voz no confirma nada', /if \(pend && !au\)/.test(w));
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');

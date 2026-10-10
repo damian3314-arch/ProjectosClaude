@@ -38,7 +38,7 @@ import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
-import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva } from './asistente.js';
+import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
@@ -1862,6 +1862,32 @@ async function enviarTextoWA(env, para, texto) {
   return id;
 }
 
+// El toque de un botón del asistente llega como «[boton:asist:si:<clave>] Sí, reservar». Los demás bots (pago, ventas, opinión)
+// no tienen por qué ver la marca interna si alguien toca un botón viejo estando en otra conversación: se quedan con el título.
+function sinMarcaDeBoton(texto) {
+  return texto == null ? texto : String(texto).replace(/^\[boton:[^\]]*\]\s*/, '');
+}
+
+// Mensaje con botones de respuesta (hasta 3; título de hasta 20 caracteres). Solo dentro de la ventana de 24 h.
+async function enviarBotonesWA(env, para, cuerpo, botones) {
+  const r = await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}/messages`, {
+    method: 'POST',
+    headers: cabecerasWA(env),
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', recipient_type: 'individual', to: para, type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: { text: String(cuerpo).slice(0, 1024) },
+        action: { buttons: botones.slice(0, 3).map((b) => ({ type: 'reply', reply: { id: String(b.id).slice(0, 256), title: String(b.titulo).slice(0, 20) } })) },
+      },
+    }),
+  });
+  const d = await r.json().catch(() => ({}));
+  const id = d && d.messages && d.messages[0] && d.messages[0].id;
+  if (!r.ok || !id) throw new Error(d && d.error ? `${d.error.code}: ${d.error.message}` : `HTTP ${r.status}`);
+  return id;
+}
+
 async function responderYGuardar(env, para, texto) {
   const id = await enviarTextoWA(env, para, texto);
   await rpc(env, 'wa_guardar_saliente', { p_tel: para, p_texto: texto, p_wa_msg_id: id });
@@ -1882,7 +1908,11 @@ async function entranteWA(env, m, nombre) {
   const texto =
     m.type === 'text' ? m.text && m.text.body :
     m.type === 'button' ? m.button && m.button.text :
-    m.type === 'interactive' ? (m.interactive && ((m.interactive.button_reply && m.interactive.button_reply.title) ||
+    // 0170: el toque de un botón del asistente lleva su id (asist:si:<clave>) para saber a qué resumen contesta.
+    m.type === 'interactive' ? (m.interactive && ((m.interactive.button_reply &&
+                                                    (/^asist:/.test(m.interactive.button_reply.id || '')
+                                                      ? `[boton:${String(m.interactive.button_reply.id).slice(0, 60)}] ${m.interactive.button_reply.title || ''}`
+                                                      : m.interactive.button_reply.title)) ||
                                                   (m.interactive.list_reply && m.interactive.list_reply.title))) :
     // 0120: la nota de voz se guarda con su id de Meta; /wa/opinion la
     // transcribe si es parte de una opinión.
@@ -2406,6 +2436,7 @@ async function opinionWA(request, env, origen) {
   if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
   const m = await rpc(env, 'wa_tomar_opinion', { p_id: id });
   if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+  m.texto = sinMarcaDeBoton(m.texto);
   const op = m.opinion || {};
   try {
     await marcarLeido(env, m.wa_msg_id).catch(() => {});
@@ -2513,6 +2544,7 @@ async function ventasWA(request, env, origen) {
   if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
   const m = await rpc(env, 'wa_tomar_ventas', { p_id: id });
   if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+  m.texto = sinMarcaDeBoton(m.texto);
   const chat = m.chat || {};
   const perfil = m.perfil || {};
   try {
@@ -2681,6 +2713,7 @@ async function pagoWA(request, env, origen) {
   if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
   const m = await rpc(env, 'wa_tomar_pago', { p_id: id });
   if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+  m.texto = sinMarcaDeBoton(m.texto);
   const chat = m.chat || {};
   const reserva = m.reserva || {};
   const pago = m.pago || {};
@@ -2995,40 +3028,99 @@ async function asistenteWA(request, env, origen) {
       return json({ ok: true, sin_voz: true }, 200, origen);
     }
 
-    // ── hay un resumen esperando el «sí»: eso lo decide la persona, no el modelo ───────────────────────────────
-    if (pend && !au) {
-      if (esAfirmativo(texto)) {
-        const r = await rpc(env, 'asistente_reservar', { p_chat: chat.id });
-        if (r && r.ok === true) {
-          const info = r.info || {};
-          const minutos = Math.max(1, Math.round((Date.parse(r.expira_en) - Date.now()) / 60000)) || 15;
-          await responderYGuardar(env, tel, textoReservaHecha({ nombre: pend.nombre, info, codigo: r.codigo, minutos }));
-          const pie = textoDatosDePago(info, pago);
-          try {
-            if (!pago.qr_url) throw new Error('sin_qr');
-            const idImg = await enviarImagenWA(env, tel, pago.qr_url, pie);
-            await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: '[QR] ' + pie, p_wa_msg_id: idImg });
-          } catch (e) {
-            console.log('asistente qr', e && e.message);
-            await responderYGuardar(env, tel, pie);
-          }
-          await hablar(textoPideComprobanteNueva(), { entrante, cerrar: true, resultado: 'reservo', resumen: `Reservó ${info.clase || 'una clase'} por el chat` });
-          return json({ ok: true, reservo: true, codigo: r.codigo }, 200, origen);
-        }
-        const err = (r && r.error) || 'desconocido';
-        const t = textoErrorReserva(err, r || {});
-        if (err === 'sin_propuesta') { await hablar(textoSinResumen(), { entrante, limpiar: true }); return json({ ok: true, error: err }, 200, origen); }
-        if (t) {
-          const lleva = ['PENDIENTES', 'LIMITE_DIARIO'].includes(err);
-          await hablar(lleva ? conRecepcion(t, { nombre, motivo: 'reservar una clase por el chat' }) : t, { entrante, limpiar: true });
-        } else {
-          await hablar(conRecepcion('No pude dejarte la reserva por aquí 🙈', { nombre, motivo: 'reservar una clase por el chat' }), { entrante, limpiar: true, resultado: 'recepcion' });
-        }
-        return json({ ok: true, error: err }, 200, origen);
+    // ── hay un resumen esperando: confirmar lo decide la PERSONA, tocando un botón; no el modelo ───────────────────
+    // Muestra el resumen con los botones «Sí, reservar» / «No, gracias» (el id lleva la clave de ESTA propuesta).
+    const proponerConBotones = async (r, { prefijo = null, entrante = null, resumen = null } = {}) => {
+      if (prefijo) await responderYGuardar(env, tel, prefijo);
+      const cuerpo = textoPropuesta({ nombre: r.nombre, clase: r.clase, fecha_texto: r.fecha_texto, hora_texto: r.hora_texto, precio_cop: r.precio_cop });
+      try {
+        const idMsg = await enviarBotonesWA(env, tel, cuerpo, botonesPropuesta(r.token));
+        await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: `${cuerpo}\n[Botones: ${BOTON_SI} · ${BOTON_NO}]`, p_wa_msg_id: idMsg });
+      } catch (e) {
+        // Sin botones no hay confirmación posible: se borra el resumen y se manda a la página o a recepción.
+        console.log('asistente botones', e && e.message);
+        await hablar(conRecepcion(textoSinBotones(), { nombre, motivo: 'confirmar una reserva por el chat' }), { entrante, limpiar: true, resumen });
+        return false;
       }
+      await hablar(null, { entrante, resumen: resumen || `Quiere reservar ${r.clase} el ${r.fecha_texto}`, nombreNuevo: r.nombre });
+      return true;
+    };
+
+    // La reserva ya confirmada con el botón: aparta el cupo y sigue el pago (QR, comprobante, efectivo).
+    const reservarYPagar = async (entrante) => {
+      const r = await rpc(env, 'asistente_reservar', { p_chat: chat.id });
+      if (r && r.ok === true) {
+        const info = r.info || {};
+        const minutos = Math.max(1, Math.round((Date.parse(r.expira_en) - Date.now()) / 60000)) || 15;
+        await responderYGuardar(env, tel, textoReservaHecha({ nombre: (pend && pend.nombre) || nombre, info, codigo: r.codigo, minutos }));
+        const pie = textoDatosDePago(info, pago);
+        try {
+          if (!pago.qr_url) throw new Error('sin_qr');
+          const idImg = await enviarImagenWA(env, tel, pago.qr_url, pie);
+          await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: '[QR] ' + pie, p_wa_msg_id: idImg });
+        } catch (e) {
+          console.log('asistente qr', e && e.message);
+          await responderYGuardar(env, tel, pie);
+        }
+        await hablar(textoPideComprobanteNueva(), { entrante, cerrar: true, resultado: 'reservo', resumen: `Reservó ${info.clase || 'una clase'} por el chat` });
+        return json({ ok: true, reservo: true, codigo: r.codigo }, 200, origen);
+      }
+      const err = (r && r.error) || 'desconocido';
+      const t = textoErrorReserva(err, r || {});
+      if (err === 'sin_propuesta' || err === 'sin_confirmar') { await hablar(textoSinResumen(), { entrante, limpiar: true }); return json({ ok: true, error: err }, 200, origen); }
+      if (t) {
+        const lleva = ['PENDIENTES', 'LIMITE_DIARIO'].includes(err);
+        await hablar(lleva ? conRecepcion(t, { nombre, motivo: 'reservar una clase por el chat' }) : t, { entrante, limpiar: true });
+      } else {
+        await hablar(conRecepcion('No pude dejarte la reserva por aquí 🙈', { nombre, motivo: 'reservar una clase por el chat' }), { entrante, limpiar: true, resultado: 'recepcion' });
+      }
+      return json({ ok: true, error: err }, 200, origen);
+    };
+
+    // El toque de un botón (WhatsApp lo entrega como «interactive»; un texto escrito a mano no cuenta).
+    const boton = leerBoton(m.texto, m.tipo);
+    if (boton) {
+      const entranteBoton = boton.accion === 'si' ? `(tocó «${BOTON_SI}»)` : `(tocó «${BOTON_NO}»)`;
+      if (!pend) {
+        await hablar(textoSinResumen(), { entrante: entranteBoton, limpiar: true });
+        return json({ ok: true, sin_propuesta: true }, 200, origen);
+      }
+      // Un botón de un resumen anterior no confirma nada: se muestra el actual.
+      if (String(pend.token || '').toLowerCase() !== boton.token) {
+        const r = await rpc(env, 'asistente_proponer', { p_chat: chat.id, p_clase_id: pend.clase_id, p_nombre: pend.nombre });
+        if (r && r.ok === true) {
+          await proponerConBotones(r, { prefijo: textoBotonViejo(), entrante: entranteBoton });
+          return json({ ok: true, boton_viejo: true }, 200, origen);
+        }
+        await hablar(textoSinResumen(), { entrante: entranteBoton, limpiar: true });
+        return json({ ok: true, boton_viejo: true }, 200, origen);
+      }
+      if (boton.accion === 'no') {
+        await hablar(textoNoReserve(), { entrante: entranteBoton, limpiar: true });
+        return json({ ok: true, rechazo: true }, 200, origen);
+      }
+      const c = await rpc(env, 'asistente_confirmar', { p_chat: chat.id, p_token: boton.token });
+      if (!c || c.ok !== true) {
+        await hablar(textoSinResumen(), { entrante: entranteBoton, limpiar: true });
+        return json({ ok: true, error: (c && c.error) || 'confirmar' }, 200, origen);
+      }
+      return await reservarYPagar(entranteBoton);
+    }
+
+    // Con un resumen esperando, lo escrito NO confirma: «no» lo cancela; un «sí» escrito se contesta con los botones.
+    if (pend && !au) {
       if (esNegativo(texto)) {
         await hablar(textoNoReserve(), { entrante, limpiar: true });
         return json({ ok: true, rechazo: true }, 200, origen);
+      }
+      if (esAfirmativo(texto)) {
+        const r = await rpc(env, 'asistente_proponer', { p_chat: chat.id, p_clase_id: pend.clase_id, p_nombre: pend.nombre });
+        if (r && r.ok === true) {
+          await proponerConBotones(r, { prefijo: textoToqueElBoton(), entrante });
+          return json({ ok: true, toque_el_boton: true }, 200, origen);
+        }
+        await hablar(textoErrorReserva((r && r.error) || '', r || {}) || textoSinResumen(), { entrante, limpiar: true });
+        return json({ ok: true, error: (r && r.error) || 'desconocido' }, 200, origen);
       }
     }
 
@@ -3074,8 +3166,7 @@ async function asistenteWA(request, env, origen) {
       }
       const r = await rpc(env, 'asistente_proponer', { p_chat: chat.id, p_clase_id: h.clase_id, p_nombre: nom });
       if (r && r.ok === true) {
-        await hablar(textoPropuesta({ nombre: r.nombre, clase: r.clase, fecha_texto: r.fecha_texto, hora_texto: r.hora_texto, precio_cop: r.precio_cop }),
-          { entrante, resumen: resumen || `Quiere reservar ${r.clase} el ${r.fecha_texto}`, nombreNuevo: r.nombre });
+        await proponerConBotones(r, { entrante, resumen });
         return json({ ok: true, propuso: true }, 200, origen);
       }
       const err = (r && r.error) || 'desconocido';
