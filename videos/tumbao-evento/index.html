@@ -213,6 +213,15 @@
         inset: 0;
         overflow: hidden;
       }
+      #s5photo #hero {
+        top: 0;
+        left: 0;
+        right: auto;
+        bottom: auto;
+        width: 1920px;
+        height: 1500px;
+        object-fit: cover;
+      }
       #s5dim {
         position: absolute;
         inset: 0;
@@ -459,6 +468,8 @@
       hide("#s4", T.s5 + 0.2);
       // 2) un compas despues la foto se oscurece para dar paso a los datos
       const cta = B(30);
+      // la foto sube: el neon sale del cuadro y el logo queda como unico TUMBAO, centrado
+      tl.fromTo("#hero", { y: 0 }, { y: -345, duration: 1.0, ease: "power3.inOut" }, cta - 0.55);
       tl.fromTo("#s5dim", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power2.inOut" }, cta - 0.35);
       tl.fromTo("#logo", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, cta - 0.05);
       tl.fromTo("#web", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "power4.out" }, cta + 0.2);
