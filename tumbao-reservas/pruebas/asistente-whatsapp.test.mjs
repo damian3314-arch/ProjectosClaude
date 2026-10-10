@@ -351,6 +351,7 @@ titulo('6. Reservar por el chat: el modelo propone, la persona TOCA un botón');
 titulo('7. El prompt trae las reglas duras');
 {
   ok('es honesto si le preguntan si es un bot', /Soy el asistente virtual de Tumbao/.test(INSTRUCCIONES_ASISTENTE) && /di la verdad/.test(INSTRUCCIONES_ASISTENTE));
+  ok('si lista horarios, una línea por día y máximo 4 días (la lista seguida salió apretada en la prueba real)', /una línea por día/.test(INSTRUCCIONES_ASISTENTE) && /Máximo 4 días/.test(INSTRUCCIONES_ASISTENTE));
   ok('invita a la página y ofrece reservar por el chat, sin pedir datos antes de que lo pida', /tumbaobaila\.com/.test(INSTRUCCIONES_ASISTENTE) && /NO pidas datos hasta que ella diga/.test(INSTRUCCIONES_ASISTENTE));
   ok('solo pide dos cosas: nombre y clase', /SOLO dos cosas/.test(INSTRUCCIONES_ASISTENTE));
   ok('no dice que quedó reservado y no promete que alguien escribe', /NUNCA digas que algo quedó reservado/.test(INSTRUCCIONES_ASISTENTE) && /NUNCA prometas que alguien le va a escribir/.test(INSTRUCCIONES_ASISTENTE));
