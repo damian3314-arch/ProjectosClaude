@@ -225,8 +225,9 @@ export function textoReservaHecha({ nombre, info, codigo, minutos }) {
 }
 
 export function textoPideComprobanteNueva() {
+  // Sin ofrecer efectivo: la reserva asegura el cupo pagando (Damián, 10 oct). Si no pudo pagar, que lo cuente.
   return 'Cuando hagas la transferencia, mándame por aquí la captura del comprobante y yo la cargo 🧡 ' +
-    'Si prefieres pagar en efectivo al llegar, dímelo y te lo dejo listo.';
+    'Si algo no te deja pagar, cuéntame y lo resolvemos.';
 }
 
 export function textoSinResumen() {

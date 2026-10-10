@@ -445,6 +445,11 @@ titulo('9. El prompt trae las reglas duras');
   ok('pregunta si pudo pagar o tuvo algún inconveniente', /si pudo hacer el pago o si tuvo algún inconveniente/.test(INSTRUCCIONES_PAGO));
   ok('con el comprobante ya cargado no ofrece efectivo ni pide otro: la reserva ya está realizada', /NO le preguntes por el pago ni le ofrezcas efectivo/.test(INSTRUCCIONES_PAGO) && /su reserva ya está realizada y el pago se está verificando/.test(INSTRUCCIONES_PAGO) && /NO uses efectivo/.test(INSTRUCCIONES_PAGO));
   ok('el sistema revisa el comprobante, no el modelo', /tú no lo evalúas/.test(INSTRUCCIONES_PAGO));
+  // Damián (10 oct): el efectivo no se ofrece; solo para quien intentó pagar y no pudo, o dice que por ahora no tiene en la cuenta.
+  ok('NUNCA ofrece el efectivo ni lo menciona primero', /NUNCA ofrezcas el efectivo ni lo menciones tú primero/.test(INSTRUCCIONES_PAGO) && !/Ofrécele las dos formas/.test(INSTRUCCIONES_PAGO) && !/o en efectivo al llegar/.test(INSTRUCCIONES_PAGO));
+  ok('lo explica: la reserva asegura el cupo pagando, se agotan rápido y hay quien no llega', /asegurar el cupo pagando/.test(INSTRUCCIONES_PAGO) && /se agotan rápido/.test(INSTRUCCIONES_PAGO) && /no llega/.test(INSTRUCCIONES_PAGO));
+  ok('efectivo solo si intentó pagar y no pudo, o si dice que por ahora no tiene en la cuenta y lo pide', /intentó pagar y no pudo/.test(INSTRUCCIONES_PAGO) && /por ahora no tiene plata en la cuenta/.test(INSTRUCCIONES_PAGO));
+  ok('si pide efectivo sin motivo: no lo usa, ofrece el QR y pregunta si tuvo problema; si insiste, recepción', /SIN contar ninguno de esos dos motivos/.test(INSTRUCCIONES_PAGO) && /NO uses efectivo todavía/.test(INSTRUCCIONES_PAGO) && /Si insiste en efectivo sin dar motivo: accion = "recepcion"/.test(INSTRUCCIONES_PAGO));
 }
 
 titulo('10. La migración 0166 y el cableado del Worker');
