@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Bricolage Grotesque";
+        font-style: normal;
+        font-weight: 200 800;
+        src: url("assets/fonts/bricolage-grotesque-variable-latin.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Instrument Serif";
+        font-style: italic;
+        font-weight: 400;
+        src: url("assets/fonts/instrument-serif-italic-latin.woff2") format("woff2");
+      }
+      :root {
+        --bg: #0d0b0f;
+        --night: #120a18;
+        --surface: #18141c;
+        --tx: #f4eff6;
+        --tx-2: #b3a7bd;
+        --orange: #f26b3a;
+        --pink: #ff4f7d;
+        --on-hot: #1c0b03;
+        --wa: #25d366;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--tx);
+        font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+      }
+      .glow {
+        position: absolute;
+        width: 1400px;
+        height: 1400px;
+        border-radius: 50%;
+      }
+
+      /* ---------- paneles de video / foto ---------- */
+      .panel {
+        position: relative;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .slide,
+      .kb {
+        position: absolute;
+        inset: 0;
+      }
+      .kb video,
+      .kb img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .tri {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      /* ---------- S2 / S3: panel + texto ---------- */
+      #s2panel,
+      #s3panel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 760px;
+      }
+      #s2panel {
+        right: 0;
+      }
+      #s3panel {
+        left: 0;
+      }
+      .copy {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 140px 120px;
+      }
+      #s2copy {
+        left: 0;
+      }
+      #s3copy {
+        right: 0;
+      }
+      .stack {
+        display: grid;
+      }
+      .stack > * {
+        grid-area: 1 / 1;
+      }
+      .line {
+        max-width: 920px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1;
+      }
+      #l1 {
+        font-size: 122px;
+      }
+      #l2 {
+        font-size: 132px;
+      }
+      .mask {
+        display: inline-block;
+        overflow: hidden;
+        padding: 0.08em 0.06em 0.18em;
+        margin: -0.08em -0.06em -0.18em;
+        vertical-align: top;
+      }
+      .mask > span,
+      .ch {
+        display: inline-block;
+      }
+      #rel {
+        display: block;
+        font-size: 1.4em;
+        line-height: 0.95;
+        white-space: nowrap;
+        color: var(--orange);
+      }
+      .kicker {
+        margin-bottom: 40px;
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--pink);
+      }
+
+      /* ---------- S3: terapia ---------- */
+      .q {
+        font-family: "Instrument Serif", Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 118px;
+        line-height: 1.02;
+        letter-spacing: -0.01em;
+      }
+      #qmark {
+        font-size: 260px;
+        line-height: 0.5;
+        height: 110px;
+        color: var(--pink);
+      }
+      #q3 {
+        font-size: 230px;
+        line-height: 0.92;
+        color: var(--pink);
+        transform-origin: left center;
+      }
+      #attr {
+        margin-top: 46px;
+        font-size: 34px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        color: var(--tx-2);
+      }
+
+      /* ---------- S4: el espacio ---------- */
+      .tab {
+        position: absolute;
+        left: 50%;
+        bottom: 84px;
+        margin-left: -240px;
+        width: 480px;
+        padding: 20px 0 26px;
+        border-radius: 999px;
+        background: var(--orange);
+        color: var(--on-hot);
+        font-size: 64px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        text-align: center;
+        transform-origin: center;
+      }
+
+      /* ---------- S5: cierre a pantalla completa con foto real ---------- */
+      #s5photo {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+      #s5dim {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 55%, rgba(13, 11, 15, 0.8) 0%, rgba(13, 11, 15, 0.62) 60%, rgba(13, 11, 15, 0.46) 100%);
+      }
+      #s5in {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+        text-shadow: 0 4px 28px rgba(13, 11, 15, 0.65);
+      }
+      #logo {
+        width: 640px;
+        height: auto;
+        display: block;
+        transform-origin: center;
+        filter: drop-shadow(0 6px 30px rgba(13, 11, 15, 0.6));
+      }
+      #web {
+        margin-top: 20px;
+        font-size: 108px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+      #wa {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font-size: 64px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      #wa svg {
+        width: 66px;
+        height: 66px;
+        fill: var(--wa);
+        display: block;
+      }
+      #pill {
+        padding: 6px 26px 10px;
+        border-radius: 999px;
+        background: var(--orange);
+        color: var(--on-hot);
+        font-size: 46px;
+        font-weight: 800;
+        text-shadow: none;
+      }
+      #ig {
+        font-size: 40px;
+        font-weight: 600;
+        color: var(--tx);
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-at0g" id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+      <audio data-hf-id="hf-shkc" id="bgm" src="assets/music/tumbao-mix.wav" data-start="0" data-duration="20" data-track-index="9" data-volume="1"></audio>
+
+      <!-- S1 · la vibra de la clase (0 - 4.52) -->
+      <div data-hf-id="hf-h5gt" id="s1" class="scene tri">
+        <div data-hf-id="hf-owjm" class="panel"><div data-hf-id="hf-1zdz" class="slide"><div data-hf-id="hf-h0jf" class="kb">
+          <video data-hf-id="hf-w05t" id="v1a" class="clip" src="assets/clips/s1-clase-llena.mp4" muted playsinline data-start="0" data-duration="4.522" data-media-start="0" data-track-index="0"></video>
+        </div></div></div>
+        <div data-hf-id="hf-gxly" class="panel"><div data-hf-id="hf-rnd3" class="slide"><div data-hf-id="hf-av97" class="kb">
+          <video data-hf-id="hf-y39p" id="v1b" class="clip" src="assets/clips/s1-sonrisa.mp4" muted playsinline data-start="0" data-duration="4.522" data-media-start="0" data-track-index="1"></video>
+        </div></div></div>
+        <div data-hf-id="hf-hbwz" class="panel"><div data-hf-id="hf-r922" class="slide"><div data-hf-id="hf-agy6" class="kb">
+          <video data-hf-id="hf-hhgu" id="v1c" class="clip" src="assets/clips/s1-multitud.mp4" muted playsinline data-start="0" data-duration="4.522" data-media-start="0" data-track-index="2"></video>
+        </div></div></div>
+      </div>
+
+      <!-- S2 · llegas con el dia encima -> lo sueltas (4.52 - 9.38) -->
+      <div data-hf-id="hf-ukdt" id="s2" class="scene">
+        <div data-hf-id="hf-6t0q" class="glow" id="g2"></div>
+        <div data-hf-id="hf-ajhv" id="s2panel" class="panel"><div data-hf-id="hf-qur1" class="slide"><div data-hf-id="hf-a2n5" class="kb">
+          <video data-hf-id="hf-qxa5" id="v2a" class="clip" src="assets/clips/s2-entrada.mp4" muted playsinline data-start="4.522" data-duration="2.286" data-media-start="0" data-track-index="0"></video>
+          <video data-hf-id="hf-4dnz" id="v2b" class="clip" src="assets/clips/s2-suelta.mp4" muted playsinline data-start="6.808" data-duration="2.572" data-media-start="0" data-track-index="1"></video>
+        </div></div></div>
+        <div data-hf-id="hf-h48x" id="s2copy" class="copy">
+          <div data-hf-id="hf-omes" class="kicker" id="k2">Baila pa' sanar</div>
+          <div data-hf-id="hf-d1zs" class="stack">
+            <div data-hf-id="hf-hr2p" class="line" id="l1"></div>
+            <div data-hf-id="hf-nwsi" class="line" id="l2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S3 · la clienta: es terapia (8.81 - 13.67, entra en crossfade) -->
+      <div data-hf-id="hf-tsq0" id="s3" class="scene">
+        <div data-hf-id="hf-ar4r" class="glow" id="g3"></div>
+        <div data-hf-id="hf-shoc" id="s3panel" class="panel"><div data-hf-id="hf-xovc" class="slide"><div data-hf-id="hf-9oc4" class="kb">
+          <video data-hf-id="hf-u93y" id="v3" class="clip" src="assets/clips/s3-terapia.mp4" muted playsinline data-start="8.808" data-duration="4.857" data-media-start="0" data-track-index="2"></video>
+        </div></div></div>
+        <div data-hf-id="hf-lhio" id="s3copy" class="copy">
+          <div data-hf-id="hf-2gi5" class="q" id="qmark">“</div>
+          <div data-hf-id="hf-uxac" class="q" id="q1">Aquí me desconecto.</div>
+          <div data-hf-id="hf-snat" class="q" id="q2">Para mí, esto es</div>
+          <div data-hf-id="hf-8bi5" class="q" id="q3">terapia.</div>
+          <div data-hf-id="hf-zguj" id="attr">— Clienta de Tumbao</div>
+        </div>
+      </div>
+
+      <!-- S4 · seguro, tranquilo, climatizado (13.67 - 16.52) -->
+      <div data-hf-id="hf-szsw" id="s4" class="scene tri">
+        <div data-hf-id="hf-hq80" class="panel"><div data-hf-id="hf-xakb" class="slide"><div data-hf-id="hf-9a13" class="kb">
+          <video data-hf-id="hf-dq8w" id="v4a" class="clip" src="assets/clips/s4-fachada.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="0"></video>
+        </div></div><div data-hf-id="hf-zi3e" class="tab">Seguro</div></div>
+        <div data-hf-id="hf-ey2t" class="panel"><div data-hf-id="hf-sua6" class="slide"><div data-hf-id="hf-8vq2" class="kb">
+          <video data-hf-id="hf-kn8g" id="v4b" class="clip" src="assets/clips/s4-neon.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="1"></video>
+        </div></div><div data-hf-id="hf-47gg" class="tab">Tranquilo</div></div>
+        <div data-hf-id="hf-fcdu" class="panel"><div data-hf-id="hf-sfz5" class="slide"><div data-hf-id="hf-8hf1" class="kb">
+          <video data-hf-id="hf-l4vp" id="v4c" class="clip" src="assets/clips/s4-salon.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="2"></video>
+        </div></div><div data-hf-id="hf-bom4" class="tab">Climatizado</div></div>
+      </div>
+
+      <!-- S5 · cierre: foto real a pantalla completa + web + WhatsApp 24/7 (16.24 - 20) -->
+      <div data-hf-id="hf-lwhy" id="s5" class="scene">
+        <div data-hf-id="hf-drhr" id="s5photo"><div data-hf-id="hf-za3g" class="slide"><div data-hf-id="hf-eg0g" class="kb">
+          <img data-hf-id="hf-qprr" id="hero" src="assets/photos/hero-grupo.jpg" alt="Comunidad de Tumbao bajo el letrero">
+        </div></div></div>
+        <div id="s5dim"></div>
+        <div data-hf-id="hf-t8g8" id="s5in">
+          <img data-hf-id="hf-lkqu" id="logo" src="assets/brand/logo-tumbao.png" alt="Tumbao, baila pa' sanar">
+          <div data-hf-id="hf-puf3" id="web">tumbaobaila.com</div>
+          <div data-hf-id="hf-6l0h" id="wa">
+            <svg data-hf-id="hf-35ls" viewBox="0 0 24 24" aria-hidden="true"><path data-hf-id="hf-njtl" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+            <span data-hf-id="hf-92dy">301 783 3550</span>
+            <span data-hf-id="hf-14q7" id="pill">24/7</span>
+          </div>
+          <div data-hf-id="hf-d6fr" id="ig">@tumbao.bca</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+      // pulso de la musica: 105 BPM, primer tiempo fuerte en 0.522 s
+      const B = (n) => 0.522 + n * (60 / 105);
+      const T = { s2: B(7), drop: B(11), s3: B(14.5), terapia: B(19), s4: B(23), s5: B(28), last: B(32) };
+
+      const words = (el, text, cls) =>
+        text.split(" ").forEach((w, i, arr) => {
+          const m = document.createElement("span");
+          m.className = "mask";
+          const s = document.createElement("span");
+          s.className = cls;
+          s.textContent = w;
+          m.append(s);
+          el.append(m);
+          if (i < arr.length - 1) el.append(document.createTextNode(" "));
+        });
+      words($("#l1"), "Llegas con el día encima.", "w1");
+      words($("#l2"), "Y aquí lo", "w2");
+      const rel = document.createElement("span");
+      rel.id = "rel";
+      Array.from("sueltas.").forEach((c) => {
+        const ch = document.createElement("span");
+        ch.className = "ch";
+        ch.textContent = c;
+        rel.append(ch);
+      });
+      $("#l2").append(rel);
+
+      Object.assign($("#g2").style, {
+        left: "-300px",
+        top: "-200px",
+        background: "radial-gradient(circle, rgba(242,107,58,0.24) 0%, rgba(242,107,58,0) 62%)",
+      });
+      Object.assign($("#g3").style, {
+        right: "-360px",
+        top: "-160px",
+        background: "radial-gradient(circle, rgba(255,79,125,0.22) 0%, rgba(255,79,125,0) 62%)",
+      });
+
+      const tl = gsap.timeline({ paused: true });
+      const show = (sel, t) => tl.fromTo(sel, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.001 }, t);
+      const hide = (sel, t) => tl.to(sel, { autoAlpha: 0, duration: 0.001 }, t);
+
+      // ---------- S1 · la vibra ----------
+      show("#s1", 0);
+      const s1slides = $$("#s1 .slide");
+      // el panel central cae en el primer golpe; los lados entran en las corcheas siguientes
+      tl.fromTo(s1slides[1], { yPercent: 105 }, { yPercent: 0, duration: 0.75, ease: "expo.out" }, B(0) - 0.06);
+      tl.fromTo(s1slides[0], { yPercent: -105 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(0.5) - 0.06);
+      tl.fromTo(s1slides[2], { yPercent: -105 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(1) - 0.06);
+      tl.fromTo("#s1 .kb", { scale: 1.14 }, { scale: 1.0, duration: T.s2, ease: "sine.out" }, 0);
+      hide("#s1", T.s2);
+
+      // ---------- S2 · el peso del dia ----------
+      show("#s2", T.s2);
+      tl.fromTo("#s2panel .slide", { xPercent: 100 }, { xPercent: 0, duration: 0.55, ease: "expo.out" }, T.s2 - 0.04);
+      tl.fromTo("#s2panel .kb", { scale: 1.0 }, { scale: 1.1, duration: T.s3 + 0.6 - T.s2, ease: "none" }, T.s2);
+      tl.fromTo("#g2", { scale: 0.85, opacity: 0.6 }, { scale: 1.1, opacity: 1, duration: 4.8, ease: "sine.inOut" }, T.s2);
+      tl.fromTo("#k2", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, T.s2 + 0.12);
+      tl.fromTo(".w1", { yPercent: 110 }, { yPercent: 0, duration: 0.6, ease: "power4.out", stagger: 0.08 }, T.s2 + 0.18);
+      tl.to("#l1", { opacity: 0, y: -40, duration: 0.25, ease: "power2.in" }, T.drop - 0.3);
+      // drop: el panel da un golpe de zoom con el bajo
+      tl.fromTo("#s2panel .slide", { scale: 1.12 }, { scale: 1, duration: 0.45, ease: "expo.out" }, T.drop);
+      tl.fromTo(".w2", { yPercent: 110 }, { yPercent: 0, duration: 0.45, ease: "expo.out", stagger: 0.06 }, T.drop - 0.06);
+      tl.fromTo("#l2 .ch", { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.42, ease: "back.out(2)", stagger: 0.035 }, T.drop + 0.14);
+      // "sueltas": las letras se aflojan, como el cuerpo cuando suelta
+      $$("#l2 .ch").forEach((c, i) => {
+        tl.to(c, { x: i * 8, rotation: (i % 2 ? 1 : -1) * 4, duration: 1.2, ease: "sine.out" }, T.drop + 0.8);
+      });
+      tl.to("#s2", { opacity: 0, duration: 0.5, ease: "power2.in" }, T.s3);
+      hide("#s2", T.s3 + 0.58);
+
+      // ---------- S3 · terapia ----------
+      show("#s3", T.s3);
+      tl.fromTo("#s3", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "sine.inOut" }, T.s3);
+      tl.fromTo("#s3panel .kb", { scale: 1.08 }, { scale: 1.0, duration: T.s4 - T.s3, ease: "sine.out" }, T.s3);
+      tl.fromTo("#g3", { scale: 0.9 }, { scale: 1.15, duration: T.s4 - T.s3, ease: "sine.inOut" }, T.s3);
+      tl.fromTo("#qmark", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, T.s3 + 0.3);
+      tl.fromTo("#q1", { opacity: 0, filter: "blur(12px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.9, ease: "sine.out" }, T.s3 + 0.55);
+      tl.fromTo("#q2", { opacity: 0, filter: "blur(12px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.9, ease: "sine.out" }, T.s3 + 1.4);
+      tl.fromTo("#q3", { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 1.0, ease: "expo.out" }, T.terapia - 0.05);
+      tl.to("#q3", { scale: 1.04, duration: 1.4, ease: "sine.inOut" }, T.terapia + 0.95);
+      tl.fromTo("#attr", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, T.terapia + 0.6);
+      hide("#s3", T.s4);
+
+      // ---------- S4 · el espacio ----------
+      show("#s4", T.s4);
+      const s4slides = $$("#s4 .slide");
+      tl.fromTo(s4slides[0], { xPercent: -105 }, { xPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 - 0.05);
+      tl.fromTo(s4slides[1], { yPercent: 105 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 + 0.03);
+      tl.fromTo(s4slides[2], { xPercent: 105 }, { xPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 + 0.11);
+      tl.fromTo("#s4 .kb", { scale: 1.0 }, { scale: 1.08, duration: T.s5 - T.s4, ease: "none" }, T.s4);
+      $$("#s4 .tab").forEach((t, i) =>
+        tl.fromTo(t, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.42, ease: "back.out(2.6)" }, B(24 + i) - 0.05)
+      );
+
+      // ---------- S5 · cierre ----------
+      // 1) la foto de la comunidad entra a pantalla completa en el golpe
+      show("#s5", T.s5 - 0.29);
+      tl.fromTo("#s5photo .slide", { yPercent: 100 }, { yPercent: 0, duration: 0.42, ease: "expo.out" }, T.s5 - 0.29);
+      tl.fromTo("#s5photo .kb", { scale: 1.12 }, { scale: 1.0, duration: 20 - T.s5 + 0.29, ease: "sine.out" }, T.s5 - 0.29);
+      hide("#s4", T.s5 + 0.2);
+      // 2) un compas despues la foto se oscurece para dar paso a los datos
+      const cta = B(30);
+      tl.fromTo("#s5dim", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power2.inOut" }, cta - 0.35);
+      tl.fromTo("#logo", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, cta - 0.05);
+      tl.fromTo("#web", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "power4.out" }, cta + 0.2);
+      tl.fromTo("#wa", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, cta + 0.4);
+      tl.fromTo("#pill", { scale: 0.5 }, { scale: 1, duration: 0.4, ease: "back.out(3)" }, cta + 0.62);
+      tl.fromTo("#ig", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "sine.out" }, cta + 0.75);
+      // golpe final de la musica: el logo late una vez
+      tl.to("#logo", { keyframes: [{ scale: 1.07, duration: 0.12 }, { scale: 1, duration: 0.5 }], ease: "power2.out" }, T.last - 0.04);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
