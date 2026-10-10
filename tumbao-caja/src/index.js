@@ -37,6 +37,7 @@ import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
 import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
+import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen } from './pago.js';
 
 const PERMITIDOS = new Set([
   'https://tumbaobaila.com',
@@ -1212,6 +1213,25 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 9 oct (0166): el mismo recordatorio, pero invita a responder: quien tuvo un inconveniente con el pago lo termina
+    // por este chat con el asistente de pagos. Sigue siendo sobre SU reserva (utilidad), sin oferta ni descuento.
+    // Se usa cuando Meta la aprueba (ajustes.wa_recordar_pago_plantilla).
+    name: 'reserva_pago_ayuda',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, tu cupo en Tumbao para {{2}} sigue guardado unos minutos ⏳\n\n' +
+          'Si tuviste algún inconveniente con el pago, respóndeme por aquí y te ayudo a terminar tu reserva en este mismo chat. ' +
+          'Si ya pagaste, no hagas nada: tu reserva se confirma sola.',
+        example: { body_text: [['Laura', 'el sábado 10 de octubre a las 8:00 am']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
     name: 'reserva_confirmada',
     language: 'es',
     category: 'UTILITY',
@@ -1848,6 +1868,9 @@ async function entranteWA(env, m, nombre) {
     // 0120: la nota de voz se guarda con su id de Meta; /wa/opinion la
     // transcribe si es parte de una opinión.
     m.type === 'audio' && m.audio && m.audio.id ? `[audio:${m.audio.id}]` :
+    // 0166: la captura del comprobante se guarda con su id de Meta (y el pie, si lo trae); la base solo la conserva si la
+    // persona tiene una conversación de pago viva. /wa/pago la descarga y la lee.
+    m.type === 'image' && m.image && m.image.id ? `[imagen:${m.image.id}]${m.image.caption ? ' ' + String(m.image.caption).slice(0, 300) : ''}` :
     null;
   const g = await rpc(env, 'wa_guardar_entrante', {
     p_wa_msg_id: m.id, p_tel: m.from, p_nombre: nombre || null, p_tipo: m.type, p_texto: texto || null,
@@ -1863,6 +1886,8 @@ async function entranteWA(env, m, nombre) {
     }
     return;
   }
+  // 0166: quien tiene un pago pendiente y responde al recordatorio lo atiende /wa/pago (lo despierta la base).
+  if (g.pago) return;
   // 0120: quien está contando su opinión no recibe el «no revisamos
   // mensajes»: lo atiende /wa/opinion (lo despierta la base).
   if (g.opinion) return;
@@ -2367,7 +2392,7 @@ async function opinionWA(request, env, origen) {
       await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' });
       return json({ ok: true, salir: true }, 200, origen);
     }
-    let texto = m.texto;
+    let texto = /^\[imagen:/.test(m.texto || '') ? null : m.texto;
     let transcrito = null;
     const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
     if (au) {
@@ -2471,7 +2496,7 @@ async function ventasWA(request, env, origen) {
         p_resultado: 'no_interesado', p_interes: 'ninguno', p_resumen: 'Pidió no recibir más mensajes' }).catch(() => {});
       return json({ ok: true, salir: true }, 200, origen);
     }
-    let texto = m.texto;
+    let texto = /^\[imagen:/.test(m.texto || '') ? null : m.texto;
     let transcrito = null;
     const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
     if (au) {
@@ -2568,6 +2593,315 @@ async function avisarRecepcionEnlace(env, chat, perfil, telefono, resumen) {
     p_texto: textoRecepcionEnlace({ nombre: chat.nombre || perfil.nombre, telefono, objetivo: chat.objetivo, resumen }),
     p_clave: 'venta-enlace:' + chat.id,
   }).catch(() => {});
+}
+
+/* 0166 · /wa/pago: el asistente de pagos. La base lo despierta (pg_net) cuando responde alguien a quien se le
+ * recordó el pago de su reserva. Conversa dentro de la ventana de 24 h. El modelo solo escoge una acción; los datos de
+ * pago, los valores y toda frase de «confirmado» las escribe el código con lo que dice la base (ver pago.js).
+ * Una captura NO confirma nada: se registra como el «ya pagó» de la página y el banco la cuadra. */
+
+async function enviarImagenWA(env, para, link, caption) {
+  const r = await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}/messages`, {
+    method: 'POST',
+    headers: cabecerasWA(env),
+    body: JSON.stringify({
+      messaging_product: 'whatsapp', recipient_type: 'individual', to: para,
+      type: 'image', image: { link, caption: String(caption || '').slice(0, 1000) },
+    }),
+  });
+  const d = await r.json().catch(() => ({}));
+  const id = d && d.messages && d.messages[0] && d.messages[0].id;
+  if (!r.ok || !id) throw new Error(d && d.error ? `${d.error.code}: ${d.error.message}` : `HTTP ${r.status}`);
+  return id;
+}
+
+/** La imagen que mandó la persona, como data URL (para leerla con la misma lectura de la página). */
+async function imagenWAComoDataURL(env, mediaId) {
+  const meta = await (await fetch(`${GRAPH}/${mediaId}`, { headers: cabecerasWA(env) })).json();
+  if (!meta || !meta.url) return null;
+  const mime = String(meta.mime_type || '').toLowerCase().replace('image/jpg', 'image/jpeg');
+  if (!/^image\/(jpeg|png|webp)$/.test(mime)) return null;
+  const a = await fetch(meta.url, { headers: { Authorization: 'Bearer ' + env.WHATSAPP_TOKEN } });
+  if (!a.ok) return null;
+  const bytes = new Uint8Array(await a.arrayBuffer());
+  if (bytes.length > 4.5 * 1024 * 1024) return null;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return `data:${mime};base64,${btoa(bin)}`;
+}
+
+function paraWA(tel) {
+  const d = String(tel || '').replace(/\D/g, '');
+  return d.length === 10 ? '57' + d : d;
+}
+
+async function avisarRecepcionPago(env, clave, titulo, chat, telefono, codigo, reserva, motivo) {
+  await rpc(env, 'nota_recepcion', {
+    p_titulo: titulo,
+    p_texto: textoRecepcionPago({ nombre: chat.nombre, telefono, codigo, reserva, motivo }),
+    p_clave: clave + ':' + chat.id,
+  }).catch((e) => console.log('nota pago', e && e.message));
+}
+
+async function pagoWA(request, env, origen) {
+  let b = {};
+  try { b = await request.json(); } catch (_) {}
+  const id = Number(b.id);
+  if (!id) return json({ ok: false, error: 'SIN_ID' }, 400, origen);
+  const m = await rpc(env, 'wa_tomar_pago', { p_id: id });
+  if (!m || !m.id) return json({ ok: true, nada: true }, 200, origen);
+  const chat = m.chat || {};
+  const reserva = m.reserva || {};
+  const pago = m.pago || {};
+  const tel = m.telefono;
+  const nombre = chat.nombre || null;
+
+  // Manda el texto, anota el turno y (si hace falta) deja el resultado.
+  const hablar = async (texto, { cerrar = false, resultado = null, resumen = null, entrante = null } = {}) => {
+    if (texto) await responderYGuardar(env, tel, String(texto).slice(0, 1500));
+    await rpc(env, 'pago_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: cerrar,
+      p_resultado: resultado, p_resumen: resumen });
+  };
+  const aRecepcion = async (motivo, info = reserva, titulo = '💳 Pago por WhatsApp: alguien necesita una persona') =>
+    avisarRecepcionPago(env, 'pago-recepcion', titulo, chat, tel, info.codigo || reserva.codigo, info, motivo);
+
+  try {
+    await marcarLeido(env, m.wa_msg_id).catch(() => {});
+
+    // «No quiero más mensajes» lo atiende entranteWA (baja); aquí no se contesta.
+    if (m.texto && PIDE_SALIR.test(m.texto)) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' });
+      await rpc(env, 'pago_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: null, p_cerrar: true,
+        p_resultado: 'no_quiere', p_resumen: 'Pidió no recibir más mensajes' }).catch(() => {});
+      return json({ ok: true, salir: true }, 200, origen);
+    }
+
+    // Tope de turnos: pasado eso, la conversación la sigue una persona.
+    if (Number(chat.turnos || 0) >= MAX_TURNOS_PAGO) {
+      await aRecepcion('La conversación de pago se alargó; conviene que la siga una persona.');
+      await hablar(RESPUESTA_SEGURA_PAGO, { cerrar: true, resultado: 'recepcion', resumen: 'Conversación larga: la sigue el equipo' });
+      return json({ ok: true, tope: true }, 200, origen);
+    }
+
+    // ── la captura del comprobante ───────────────────────────────
+    const marca = m.tipo === 'image' ? leerMarcaDeImagen(m.texto) : null;
+    if (m.tipo === 'document' || (m.tipo === 'image' && !marca)) {
+      await hablar(textoSoloImagen(), { entrante: '(envió un archivo)' });
+      return json({ ok: true, archivo: true }, 200, origen);
+    }
+    if (marca) {
+      const entrante = '(envió un comprobante)';
+      // Ya confirmada: no se registra nada. Si era de efectivo y pagó igual por transferencia, recepción lo concilia.
+      if (reserva.estado === 'confirmada') {
+        if (reserva.cobra_en_puerta) {
+          await aRecepcion('Reservó para pagar en efectivo pero mandó un comprobante de transferencia: revisar el pago y dejarlo como pagado.', reserva, '💳 Pago por WhatsApp: comprobante de una reserva en efectivo');
+          await hablar(`Recibí tu comprobante, ${String(nombre || '').split(/\s+/)[0] || 'amigo(a)'} 🙌 Le aviso al equipo para que lo cargue y no tengas que pagar de nuevo en la puerta.`, { entrante, cerrar: true, resultado: 'recepcion' });
+        } else {
+          await hablar(`Tu reserva ya está confirmada ✅ ${reserva.fecha_texto ? 'Es el ' + reserva.fecha_texto + ' a las ' + reserva.hora_texto + '. ' : ''}Llega unos 10 minutos antes 🧡`, { entrante, cerrar: true });
+        }
+        return json({ ok: true, ya_confirmada: true }, 200, origen);
+      }
+
+      let lectura = null;
+      try {
+        const url = await imagenWAComoDataURL(env, marca.id);
+        if (url) lectura = await leerComprobante(env, url);
+      } catch (e) { console.log('pago lectura', e && e.message); }
+      const leidos = lectura && lectura.ok ? Number(lectura.leidos || 0) : 0;
+      const valor = lectura && lectura.ok && lectura.valor ? Number(lectura.valor) : null;
+
+      // Nada legible: una vez se le pide una captura mejor; a la segunda se registra igual y lo valida una persona.
+      let ilegible = false;
+      if (leidos === 0 && !valor) {
+        const intentos = Number(await rpc(env, 'pago_marcar_lectura', { p_chat: chat.id }).catch(() => 2));
+        if (intentos < 2) {
+          await hablar(textoComprobanteIlegible(), { entrante });
+          return json({ ok: true, ilegible: true }, 200, origen);
+        }
+        ilegible = true;
+      }
+
+      const valorDistinto = valor && Number(reserva.total_cop) > 0 && valor < Number(reserva.total_cop) ? valor : null;
+      const r = await rpc(env, 'pago_registrar_soporte', {
+        p_chat: chat.id,
+        p_pagado_en: pagadoEnDeHora(lectura && lectura.hora),
+        p_referencia: (lectura && lectura.referencia) || null,
+        p_pagador: (lectura && lectura.pagador) || null,
+        p_media: marca.id,
+      });
+      const info = (r && r.info) || reserva;
+
+      if (!r || r.ok !== true) {
+        const err = (r && r.error) || 'desconocido';
+        if (err === 'referencia_repetida') {
+          await aRecepcion('Mandó un comprobante que ya figura en otra reserva: revisar si es el mismo pago.', info);
+          await hablar(`Ese comprobante ya figura en otra reserva 🤔 Le pido al equipo que lo revise y te escribe hoy desde el 301 783 3550. Tu cupo sigue guardado.`, { entrante, cerrar: true, resultado: 'recepcion' });
+        } else if (['SIN_CUPO', 'CLASE_YA_PASO', 'CLASE_INACTIVA', 'CLASE_NO_EXISTE', 'grupo_expirado'].includes(err)) {
+          await aRecepcion('PAGÓ (mandó comprobante) pero el cupo ya no está disponible: ofrecerle otro horario o devolverle el dinero.', info, '🚨 Pago por WhatsApp: pagó y no hay cupo');
+          await hablar(textoSinCupo(err), { entrante, cerrar: true, resultado: 'recepcion' });
+        } else {
+          await aRecepcion(`No pude registrar su comprobante (${err}).`, info);
+          await hablar(RESPUESTA_SEGURA_PAGO, { entrante, cerrar: true, resultado: 'recepcion' });
+        }
+        return json({ ok: true, error: err }, 200, origen);
+      }
+
+      if (valorDistinto) await aRecepcion(`El comprobante dice $${valorDistinto} y la reserva es de $${reserva.total_cop}: revisar antes de confirmar.`, info, '💳 Pago por WhatsApp: el valor no coincide');
+      if (ilegible) await aRecepcion('El comprobante no se pudo leer: validar el pago a mano.', info, '💳 Pago por WhatsApp: comprobante ilegible');
+
+      let texto;
+      let cerrar = false;
+      if (r.estado === 'confirmada') { texto = textoPagoConfirmado(info, { nombre }); cerrar = true; }
+      else if (r.repetido) { texto = `Ya tengo tu comprobante, ${String(nombre || '').split(/\s+/)[0] || 'amigo(a)'} 🙌 Se está validando y apenas el banco lo reporte te confirmo por aquí.`; }
+      else texto = textoSoporteRecibido(info, { nombre, valorDistinto });
+      await hablar(texto, { entrante, cerrar });
+      return json({ ok: true, estado: r.estado }, 200, origen);
+    }
+
+    // ── conversación ─────────────────────────────────────────────
+    let texto = m.texto;
+    let transcrito = null;
+    const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
+    if (au) {
+      transcrito = await transcribirAudioWA(env, au[1]).catch(() => null);
+      texto = transcrito ? `(nota de voz) ${transcrito}` : null;
+    }
+    const entrante = transcrito ? `(nota de voz) ${transcrito}` : null;
+    // Sin texto y que no es una nota de voz (sticker, reacción, emoji suelto): no se contesta ni gasta un turno.
+    if (!texto && !au) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' }).catch(() => {});
+      return json({ ok: true, sin_texto: true }, 200, origen);
+    }
+    if (!texto) {
+      await hablar('No alcancé a escuchar bien tu nota de voz 🙈 ¿Me lo escribes?', { entrante });
+      return json({ ok: true, sin_voz: true }, 200, origen);
+    }
+
+    const conversacion = (Array.isArray(m.historial) ? m.historial : [])
+      .map((h) => `${h.direccion === 'saliente' ? 'Tumbao' : 'Cliente'}: ${/^\[imagen:/.test(h.texto || '') ? '(envió una imagen)' : h.texto}`)
+      .concat(`Cliente: ${texto}`).join('\n');
+    const salida = await redactar(env, INSTRUCCIONES_PAGO, JSON.stringify({
+      nombre,
+      turno: Number(chat.turnos || 0) + 1,
+      reserva: {
+        clase: reserva.clase, fecha_texto: reserva.fecha_texto, hora_texto: reserva.hora_texto, lugar: reserva.lugar,
+        estado: reserva.estado, total_cop: reserva.total_cop, personas: reserva.personas,
+        cupo_libre: reserva.cupo_libre === true,
+      },
+      conversacion,
+    }), 'low');
+    const j = leerJSON(salida) || {};
+    const accion = ['datos_de_pago', 'efectivo', 'recepcion', 'cerrar'].includes(j.accion) ? j.accion : 'ninguna';
+    const g = guardarRespuestaPago(j.respuesta, reserva, accion);
+    const resumen = j.resumen || null;
+
+    // Acciones que ejecuta el código: lo del modelo es, a lo sumo, la frase de arranque.
+    if (accion === 'datos_de_pago') {
+      const p = await rpc(env, 'pago_preparar', { p_chat: chat.id });
+      if (!p || p.ok !== true) {
+        const err = (p && p.error) || 'desconocido';
+        await aRecepcion(`Quería pagar y no pude dejarle la reserva lista (${err}).`);
+        await hablar(['SIN_CUPO', 'CLASE_YA_PASO', 'CLASE_INACTIVA', 'grupo_expirado'].includes(err) ? textoSinCupo(err) : RESPUESTA_SEGURA_PAGO,
+          { entrante, cerrar: true, resultado: 'recepcion', resumen });
+        return json({ ok: true, error: err }, 200, origen);
+      }
+      const info = p.info || reserva;
+      if (info.estado === 'confirmada') {
+        await hablar(`Tu reserva ya está confirmada ✅ Es el ${info.fecha_texto} a las ${info.hora_texto}. Llega unos 10 minutos antes 🧡`, { entrante, cerrar: true, resultado: 'pagado', resumen });
+        return json({ ok: true, ya_confirmada: true }, 200, origen);
+      }
+      if (info.estado === 'verificando' || info.estado === 'pendiente_validacion') {
+        await hablar('Ya tengo tu comprobante y se está validando 🙌 Apenas el banco lo reporte te confirmo por aquí; no necesitas pagar de nuevo.', { entrante, resumen });
+        return json({ ok: true, en_validacion: true }, 200, origen);
+      }
+      await responderYGuardar(env, tel, g.ok ? g.texto : 'Claro, con gusto te ayudo 🙌 Te dejo el QR y los datos 👇');
+      const pie = textoDatosDePago(info, pago);
+      try {
+        if (!pago.qr_url) throw new Error('sin_qr');
+        const idImg = await enviarImagenWA(env, tel, pago.qr_url, pie);
+        await rpc(env, 'wa_guardar_saliente', { p_tel: tel, p_texto: '[QR] ' + pie, p_wa_msg_id: idImg });
+      } catch (e) {
+        console.log('pago qr', e && e.message);
+        await responderYGuardar(env, tel, pie);
+      }
+      await hablar(textoPideComprobante(), { entrante, resumen: resumen || 'Pidió los datos de pago' });
+      return json({ ok: true, accion }, 200, origen);
+    }
+
+    if (accion === 'efectivo') {
+      const e = await rpc(env, 'pago_efectivo', { p_chat: chat.id });
+      if (e && e.ok === true) {
+        const info = e.info || reserva;
+        if (e.ya_estaba && !e.cobra_en_puerta) {
+          await hablar(`Tu reserva ya está confirmada ✅ Es el ${info.fecha_texto} a las ${info.hora_texto}. Llega unos 10 minutos antes 🧡`, { entrante, cerrar: true, resultado: 'pagado', resumen });
+        } else {
+          await hablar(textoEfectivo(info, { nombre, codigo: e.codigo }), { entrante, cerrar: true, resultado: 'efectivo', resumen: resumen || 'Reservó para pagar en efectivo en la puerta' });
+        }
+        return json({ ok: true, accion, estado: 'confirmada' }, 200, origen);
+      }
+      const err = (e && e.error) || 'desconocido';
+      if (['SIN_CUPO', 'CLASE_YA_PASO', 'CLASE_INACTIVA', 'clase_no_disponible', 'grupo_expirado'].includes(err)) {
+        await hablar(textoSinCupo(err), { entrante, cerrar: true, resultado: 'sin_cupo', resumen });
+      } else if (['efectivo_no_disponible', 'no_aplica', 'ya_tiene_efectivo', 'pago_en_revision'].includes(err)) {
+        await hablar(textoEfectivoNoDisponible(err), { entrante, resumen });
+      } else {
+        await aRecepcion(`Quería pagar en efectivo y no pude dejarle la reserva (${err}).`);
+        await hablar(RESPUESTA_SEGURA_PAGO, { entrante, cerrar: true, resultado: 'recepcion', resumen });
+      }
+      return json({ ok: true, accion, error: err }, 200, origen);
+    }
+
+    // Lo demás es conversación: si la baranda no deja pasar lo del modelo, va el mensaje seguro y recepción se entera.
+    if (!g.ok) {
+      console.log('pago baranda', g.motivo);
+      await aRecepcion(`El asistente no pudo responder con seguridad (${g.motivo}). Lo último que dijo: «${String(texto).slice(0, 200)}»`);
+      await hablar(RESPUESTA_SEGURA_PAGO, { entrante, cerrar: true, resultado: 'recepcion', resumen: resumen || 'Pasó a recepción por la baranda' });
+      return json({ ok: true, baranda: g.motivo }, 200, origen);
+    }
+    if (accion === 'recepcion') await aRecepcion(j.motivo || resumen || 'Necesita que la atienda una persona.');
+    const cerrar = accion === 'recepcion' || accion === 'cerrar';
+    await hablar(g.texto, {
+      entrante, cerrar, resumen,
+      resultado: accion === 'recepcion' ? 'recepcion' : accion === 'cerrar' ? (j.resultado === 'no_quiere' ? 'no_quiere' : null) : null,
+    });
+    return json({ ok: true, accion, cerrada: cerrar }, 200, origen);
+  } catch (e) {
+    console.log('pago', e && e.message);
+    await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'error' }).catch(() => {});
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
+}
+
+/* 0166 · /wa/pago-seguimiento: la base lo llama cada 2 minutos SOLO si hay un comprobante recibido por WhatsApp
+ * esperando al banco. La base decide qué pasó (confirmada / en revisión / no validada) y lo marca para que sea UNA
+ * sola vez; aquí solo se le avisa a la persona y, si toca, a recepción. */
+async function pagoSeguimientoWA(env, origen) {
+  let lote = [];
+  try { lote = await rpc(env, 'pago_seguimientos_tomar', { p_limite: 5 }); } catch (e) {
+    console.log('pago_seguimientos_tomar', e && e.message);
+    return json({ ok: false, error: 'FALLA' }, 200, origen);
+  }
+  let enviados = 0;
+  for (const s of (Array.isArray(lote) ? lote : [])) {
+    try {
+      const info = s.info || {};
+      const chat = { id: s.chat, nombre: s.nombre };
+      let texto;
+      if (s.tipo === 'confirmada') texto = textoPagoConfirmado(info, { nombre: s.nombre });
+      else if (s.tipo === 'en_revision') {
+        texto = textoEnRevision({ nombre: s.nombre });
+        await avisarRecepcionPago(env, 'pago-revision', '💳 Pago por WhatsApp: validar a mano', chat, s.telefono, s.codigo, info,
+          'Mandó el comprobante por WhatsApp y el banco no lo mostró en 6 minutos: la reserva quedó «pendiente de validación». Revisa el pago y confírmala o escríbele.');
+      } else {
+        texto = textoPagoNoValidado({ nombre: s.nombre });
+        await avisarRecepcionPago(env, 'pago-revision', '💳 Pago por WhatsApp: no se pudo validar', chat, s.telefono, s.codigo, info,
+          'La reserva quedó sin validar después de que mandó el comprobante: revisa y escríbele.');
+      }
+      await responderYGuardar(env, paraWA(s.telefono), texto);
+      enviados++;
+    } catch (e) { console.log('seguimiento pago', s.chat, e && e.message); }
+  }
+  return json({ ok: true, enviados }, 200, origen);
 }
 
 /* 0149 · /wa/costos: cuánto cobra Meta de verdad. Trae pricing_analytics de los últimos 14 días (costo y
@@ -2884,6 +3218,12 @@ export default {
     }
     if (ruta === '/wa/ventas-seguimiento' && request.method === 'POST') {
       return await ventasSeguimientoWA(env, origen);
+    }
+    if (ruta === '/wa/pago' && request.method === 'POST') {
+      return await pagoWA(request, env, origen);
+    }
+    if (ruta === '/wa/pago-seguimiento' && request.method === 'POST') {
+      return await pagoSeguimientoWA(env, origen);
     }
     if (ruta === '/wa/notas') {
       try { return await notasWA(env, origen); }

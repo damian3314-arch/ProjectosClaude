@@ -9,7 +9,7 @@ let fallos = 0;
 const ok = (n, c, extra = '') => { if (!c) fallos++; console.log(`${c ? '✓' : '✗'} ${n}${extra ? '  → ' + extra : ''}`); };
 const m = readFileSync(new URL('../supabase/migrations/0165_recordatorio_de_pago_de_la_reserva.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
 const w = readFileSync(new URL('../../tumbao-caja/src/index.js', import.meta.url), 'utf8');
-const i = w.indexOf("name: 'reserva_pendiente_pago'"); const t = w.slice(i, i + 1100);
+const i = w.indexOf("name: 'reserva_pendiente_pago'"); const t = w.slice(i, w.indexOf('{\n    // ', i + 10) > 0 ? w.indexOf('{\n    // ', i + 10) : i + 1100);
 
 ok('nace apagado y se apaga con el mismo ajuste', /'wa_recordar_pago', 'apagado'/.test(m) && /<> 'encendido' then\s+return 0/.test(m));
 ok('solo reservas sueltas pendientes de pago creadas hace 7 a 12 minutos con el cupo todavía guardado y la clase por venir',

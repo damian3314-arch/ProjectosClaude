@@ -55,6 +55,7 @@ const SUITES = [
   'paginas-venta',
   'cupos-gracia',
   'recordatorio-pago',
+  'pago-whatsapp',
   'cifras-ia',
 ];
 
