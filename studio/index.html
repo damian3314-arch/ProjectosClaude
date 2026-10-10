@@ -1,10 +1,33 @@
 <!doctype html>
-<html lang="es" data-resolution="landscape">
+<html
+  lang="es"
+  data-resolution="landscape"
+  data-composition-variables='[
+    {"id":"topic","type":"string","label":"Palabra hero (escena 1)","default":"IA"},
+    {"id":"topicLabel","type":"string","label":"Etiqueta bajo la palabra hero","default":"Inteligencia artificial"},
+    {"id":"keywords","type":"string","label":"Palabras clave, separadas por coma","default":"Stack,Herramientas,Sistemas,Flujos"},
+    {"id":"eyebrow","type":"string","label":"Etiqueta superior","default":"Curso de IA aplicada"},
+    {"id":"label2","type":"string","label":"Etiqueta del golpe","default":"Pensamiento ingenieril"},
+    {"id":"problem","type":"string","label":"Problema (se tacha)","default":"Cuellos de botella"},
+    {"id":"solved","type":"string","label":"Resultado (golpe final)","default":"resueltos."},
+    {"id":"title","type":"string","label":"Título de cierre","default":"Introducción a la IA aplicada"},
+    {"id":"meta","type":"string","label":"Línea de cierre","default":"Curso · 4 semanas"},
+    {"id":"accent","type":"color","label":"Color de acento","default":"#FF5A36"},
+    {"id":"bg","type":"color","label":"Color de fondo","default":"#0B0B0F"}
+  ]'
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
+      :root {
+        --bg: #0b0b0f;
+        --ink: #f4f1ea;
+        --muted: #8f8c84;
+        --accent: #ff5a36;
+        --pad: 160px;
+      }
       * {
         margin: 0;
         padding: 0;
@@ -16,70 +39,249 @@
         width: 1920px;
         height: 1080px;
         overflow: hidden;
-        background: #08090c;
+        background: var(--bg);
       }
       #root {
         position: relative;
         width: 100%;
         height: 100%;
         overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
         font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-        background: #08090c;
       }
+
+      /* ---------- capa 1: fondo ---------- */
       #glow {
         position: absolute;
         left: 50%;
         top: 50%;
-        width: 1500px;
-        height: 1500px;
-        margin: -750px 0 0 -750px;
+        width: 1700px;
+        height: 1700px;
+        margin: -850px 0 0 -850px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(212, 175, 105, 0.22) 0%, rgba(212, 175, 105, 0) 62%);
+        background: radial-gradient(
+          circle,
+          color-mix(in srgb, var(--accent) 22%, transparent) 0%,
+          transparent 62%
+        );
       }
-      #stage {
+
+      #ghost {
+        position: absolute;
+        right: -140px;
+        top: 50%;
+        margin-top: -640px;
+        font-size: 1500px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.06em;
+        color: rgba(244, 241, 234, 0.045);
+        white-space: nowrap;
+      }
+
+      /* ---------- capa 2: marco persistente ---------- */
+      #frame {
+        position: absolute;
+        inset: 56px;
+        border: 1px solid rgba(244, 241, 234, 0.14);
+      }
+      #eyebrow {
+        position: absolute;
+        left: 96px;
+        top: 84px;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      #prog {
+        position: absolute;
+        left: 96px;
+        right: 96px;
+        bottom: 84px;
+        height: 2px;
+        background: rgba(244, 241, 234, 0.14);
+      }
+      #progFill {
+        width: 100%;
+        height: 100%;
+        background: var(--accent);
+        transform-origin: left center;
+      }
+
+      /* ---------- capa 3: escenas ---------- */
+      .scene {
         position: absolute;
         inset: 0;
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 36px;
-      }
-      #eyebrow {
-        color: #d4af69;
-        font-size: 26px;
-        font-weight: 500;
-        letter-spacing: 0.42em;
-        text-transform: uppercase;
-      }
-      #title {
-        display: flex;
-        gap: 28px;
-        color: #f5f3ee;
-        font-size: 150px;
-        font-weight: 700;
-        letter-spacing: -0.035em;
-        line-height: 1.05;
+        padding: 140px var(--pad);
       }
       .mask {
         display: inline-block;
         overflow: hidden;
-        padding: 0 4px 14px;
+        padding: 0.12em 0.08em 0.2em;
+        margin: -0.12em -0.08em -0.2em;
       }
-      .word {
+      .mask > span {
         display: inline-block;
       }
-      #rule {
-        width: 360px;
-        height: 3px;
-        background: #d4af69;
-        transform-origin: center;
+
+      /* escena A: hook */
+      #sA {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
       }
-      #subtitle {
-        color: #a8a69e;
+      #bigWrap {
+        display: flex;
+        font-size: 620px;
+        font-weight: 800;
+        line-height: 0.85;
+        letter-spacing: -0.06em;
+        transform-origin: left center;
+      }
+      .dot {
+        color: var(--accent);
+        transform-origin: 30% 88%;
+      }
+      #topicLabel {
+        align-self: flex-end;
+        margin-bottom: 60px;
+        font-size: 54px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      /* escena B: ciclo de palabras */
+      #sB {
+        display: grid;
+        align-items: center;
+      }
+      .kw {
+        grid-area: 1 / 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .kw .mask {
+        position: relative;
+      }
+      .w {
+        font-size: 200px;
+        font-weight: 800;
+        letter-spacing: -0.045em;
+        line-height: 1;
+        transform-origin: left center;
+      }
+      .ul {
+        position: absolute;
+        left: 0.08em;
+        right: 0.08em;
+        bottom: 0.06em;
+        height: 8px;
+        background: var(--accent);
+        transform-origin: left center;
+        display: block;
+      }
+      .idx {
+        font-size: 40px;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .idx b {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      /* escena C: golpe */
+      #sC {
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      #stackC {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 28px;
+      }
+      #label2 {
         font-size: 34px;
-        font-weight: 400;
-        letter-spacing: 0.04em;
+        font-weight: 500;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      #l1wrap {
+        position: relative;
+      }
+      #l1words {
+        display: flex;
+        gap: 0.26em;
+        font-size: 168px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+      }
+      #strike {
+        position: absolute;
+        left: -14px;
+        right: -14px;
+        top: 55%;
+        height: 12px;
+        background: var(--accent);
+        transform-origin: left center;
+      }
+      #l2 {
+        font-size: 250px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 0.95;
+        color: var(--accent);
+        transform-origin: left center;
+      }
+
+      /* escena D: cierre */
+      #sD {
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 44px;
+      }
+      #title {
+        max-width: 1400px;
+        font-size: 132px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1.02;
+        text-wrap: balance;
+        transform-origin: left center;
+      }
+      #rule {
+        width: 420px;
+        height: 4px;
+        background: var(--accent);
+        transform-origin: left center;
+      }
+      #meta {
+        font-size: 40px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      #endFade {
+        position: absolute;
+        inset: 0;
+        background: var(--bg);
+        opacity: 0;
       }
     </style>
   </head>
@@ -88,38 +290,228 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="6"
+      data-duration="8"
       data-width="1920"
       data-height="1080"
     >
-      <div id="glow" class="clip" data-start="0" data-duration="6" data-track-index="0"></div>
-      <div id="stage" class="clip" data-start="0" data-duration="6" data-track-index="1">
-        <div id="eyebrow">Intro de prueba</div>
-        <div id="title">
-          <span class="mask"><span class="word">Tu</span></span>
-          <span class="mask"><span class="word">marca</span></span>
-          <span class="mask"><span class="word">en</span></span>
-          <span class="mask"><span class="word">movimiento</span></span>
-        </div>
-        <div id="rule"></div>
-        <div id="subtitle">HyperFrames · HTML → MP4</div>
-      </div>
-    </div>
-    <script>
-      const tl = gsap.timeline({ paused: true });
+      <div id="glow"></div>
+      <div id="ghost" data-layout-ignore aria-hidden="true"></div>
+      <div id="frame"></div>
+      <div id="eyebrow"></div>
+      <div id="prog"><div id="progFill"></div></div>
 
-      tl.fromTo("#glow", { scale: 0.6, opacity: 0 }, { scale: 1.15, opacity: 1, duration: 4.5, ease: "power2.out" }, 0);
-      tl.fromTo("#eyebrow", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.2);
+      <div id="sA" class="scene">
+        <div id="bigWrap"></div>
+        <div id="topicLabel"></div>
+      </div>
+
+      <div id="sB" class="scene"></div>
+
+      <div id="sC" class="scene">
+        <div id="stackC">
+          <div id="label2"></div>
+          <div id="l1wrap">
+            <div id="l1words"></div>
+            <div id="strike"></div>
+          </div>
+          <div id="l2"></div>
+        </div>
+      </div>
+
+      <div id="sD" class="scene">
+        <div id="title"></div>
+        <div id="rule"></div>
+        <div id="meta"></div>
+      </div>
+
+      <div id="endFade"></div>
+    </div>
+
+    <script>
+      const V = window.__hyperframes.getVariables();
+      const $ = (s) => document.querySelector(s);
+      const make = (tag, cls, text) => {
+        const n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
+      };
+
+      // ---- variables -> CSS + DOM (deterministico, una sola vez) ----
+      document.documentElement.style.setProperty("--accent", V.accent);
+      document.documentElement.style.setProperty("--bg", V.bg);
+
+      $("#ghost").textContent = V.topic;
+      $("#eyebrow").textContent = V.eyebrow;
+      $("#topicLabel").textContent = V.topicLabel;
+      $("#label2").textContent = V.label2;
+      $("#l2").textContent = V.solved;
+      $("#title").textContent = V.title;
+      $("#meta").textContent = V.meta;
+
+      const bigWrap = $("#bigWrap");
+      Array.from(V.topic).forEach((ch) => {
+        const m = make("span", "mask");
+        m.append(make("span", "ch", ch));
+        bigWrap.append(m);
+      });
+      const dm = make("span", "mask");
+      dm.append(make("span", "dot", "."));
+      bigWrap.append(dm);
+
+      V.problem
+        .split(/\s+/)
+        .filter(Boolean)
+        .forEach((word) => {
+          const m = make("span", "mask");
+          m.append(make("span", "w2", word));
+          $("#l1words").append(m);
+        });
+
+      const kws = V.keywords
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const pad2 = (n) => String(n).padStart(2, "0");
+      kws.forEach((word, i) => {
+        const kw = make("div", "kw");
+        kw.id = "kw" + i;
+        const m = make("span", "mask");
+        m.append(make("span", "w", word), make("span", "ul"));
+        const idx = make("div", "idx");
+        const cur = make("b", "", pad2(i + 1));
+        idx.append(cur, document.createTextNode(" / " + pad2(kws.length)));
+        kw.append(m, idx);
+        $("#sB").append(kw);
+      });
+
+      // ---- timeline ----
+      const T = { a0: 0.25, b0: 1.8, b1: 4.35, c0: 4.35, c1: 6.4, d0: 6.4, end: 8 };
+      const tl = gsap.timeline({ paused: true });
+      const show = (sel, t) =>
+        tl.fromTo(sel, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.001 }, t);
+      const hide = (sel, t) => tl.to(sel, { autoAlpha: 0, duration: 0.001 }, t);
+
+      // capa 1+2: ambiente y marco
       tl.fromTo(
-        ".word",
-        { yPercent: 110 },
-        { yPercent: 0, duration: 0.9, ease: "expo.out", stagger: 0.12 },
-        0.5
+        "#glow",
+        { scale: 0.8, x: -160, opacity: 0 },
+        { scale: 1.2, x: 160, opacity: 1, duration: T.end, ease: "sine.inOut" },
+        0
       );
-      tl.fromTo("#rule", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: "power3.inOut" }, 1.5);
-      tl.fromTo("#subtitle", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 1.9);
-      tl.to("#stage", { opacity: 0, duration: 0.5, ease: "power2.in" }, 5.4);
-      tl.to("#glow", { opacity: 0, duration: 0.5, ease: "power2.in" }, 5.4);
+      tl.fromTo(
+        "#ghost",
+        { opacity: 0, x: 140 },
+        { opacity: 1, x: -140, duration: T.end - 1.6, ease: "sine.inOut" },
+        1.6
+      );
+      tl.fromTo("#frame", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.1);
+      tl.fromTo(
+        "#eyebrow",
+        { opacity: 0, x: -24 },
+        { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" },
+        0.2
+      );
+      tl.fromTo(
+        "#progFill",
+        { scaleX: 0 },
+        { scaleX: 1, duration: T.end - 0.3, ease: "none" },
+        0.1
+      );
+
+      // escena A: hook
+      show("#sA", T.a0);
+      Array.from(document.querySelectorAll("#bigWrap .ch")).forEach((c, i) => {
+        tl.fromTo(
+          c,
+          { yPercent: i % 2 ? 125 : -125 },
+          { yPercent: 0, duration: 0.75, ease: i % 2 ? "power4.out" : "expo.out" },
+          T.a0 + 0.05 + i * 0.09
+        );
+      });
+      tl.fromTo(
+        ".dot",
+        { scale: 0 },
+        { scale: 1, duration: 0.4, ease: "back.out(3)" },
+        T.a0 + 0.6
+      );
+      tl.fromTo(
+        "#topicLabel",
+        { opacity: 0, x: 40 },
+        { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" },
+        T.a0 + 0.5
+      );
+      tl.fromTo("#bigWrap", { scale: 1 }, { scale: 1.04, duration: T.b0 - T.a0, ease: "none" }, T.a0);
+      tl.to(
+        ["#bigWrap", "#topicLabel"],
+        { opacity: 0, yPercent: -18, duration: 0.22, ease: "power3.in" },
+        T.b0 - 0.22
+      );
+      hide("#sA", T.b0);
+
+      // escena B: ciclo de palabras (cada una con entrada distinta)
+      show("#sB", T.b0);
+      const per = (T.b1 - T.b0) / kws.length;
+      const enter = [
+        (w, s) => tl.fromTo(w, { yPercent: 110 }, { yPercent: 0, duration: 0.45, ease: "expo.out" }, s),
+        (w, s) =>
+          tl.fromTo(w, { xPercent: 60, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.4, ease: "power4.out" }, s),
+        (w, s) =>
+          tl.fromTo(w, { scale: 0.55, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.4)" }, s),
+        (w, s) => tl.fromTo(w, { yPercent: -110 }, { yPercent: 0, duration: 0.4, ease: "power3.out" }, s),
+      ];
+      kws.forEach((_, i) => {
+        const s = T.b0 + i * per;
+        const kw = "#kw" + i;
+        const w = kw + " .w";
+        show(kw, s);
+        enter[i % enter.length](w, s);
+        tl.fromTo(kw + " .ul", { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: "power3.out" }, s + 0.22);
+        tl.fromTo(kw + " .idx", { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, s + 0.08);
+        const ex = s + per - 0.17;
+        tl.to(w, { opacity: 0, yPercent: -35, duration: 0.17, ease: "power2.in" }, ex);
+        tl.to([kw + " .ul", kw + " .idx"], { opacity: 0, duration: 0.17, ease: "power2.in" }, ex);
+        hide(kw, s + per);
+      });
+      hide("#sB", T.b1);
+
+      // escena C: golpe (problema -> tachado -> resultado)
+      show("#sC", T.c0);
+      tl.fromTo("#label2", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, T.c0 + 0.05);
+      tl.fromTo(".w2", { yPercent: 110 }, { yPercent: 0, duration: 0.55, ease: "power4.out", stagger: 0.09 }, T.c0 + 0.1);
+      tl.fromTo("#strike", { scaleX: 0 }, { scaleX: 1, duration: 0.38, ease: "expo.inOut" }, T.c0 + 0.75);
+      tl.to("#l1words", { opacity: 0.28, duration: 0.3, ease: "power2.out" }, T.c0 + 0.8);
+      tl.fromTo("#l2", { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "power4.out" }, T.c0 + 0.95);
+      tl.to(
+        "#l2",
+        {
+          keyframes: [
+            { x: -12, duration: 0.04 },
+            { x: 12, duration: 0.05 },
+            { x: -6, duration: 0.05 },
+            { x: 0, duration: 0.05 },
+          ],
+          ease: "none",
+        },
+        T.c0 + 1.25
+      );
+      tl.to("#stackC", { opacity: 0, yPercent: -6, duration: 0.25, ease: "power2.in" }, T.c1 - 0.28);
+      hide("#sC", T.c1);
+
+      // escena D: cierre
+      show("#sD", T.d0);
+      tl.fromTo(
+        "#title",
+        { opacity: 0, y: 36, filter: "blur(14px)" },
+        { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "expo.out" },
+        T.d0 + 0.05
+      );
+      tl.fromTo("#rule", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.inOut" }, T.d0 + 0.45);
+      tl.fromTo("#meta", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, T.d0 + 0.65);
+      tl.to("#title", { scale: 1.015, duration: 1.0, ease: "sine.inOut" }, T.d0 + 0.9);
+
+      // fade final a fondo
+      tl.fromTo("#endFade", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.in" }, T.end - 0.4);
 
       window.__timelines["main"] = tl;
       tl.seek(0);
