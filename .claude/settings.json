@@ -33,7 +33,18 @@
       "mcp__Claude_Code_Remote__get_session",
       "mcp__Claude_Code_Remote__read_documentation",
       "mcp__Claude_Code_Remote__subscribe_pr_activity",
-      "mcp__Claude_Code_Remote__unsubscribe_pr_activity"
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
+      "PushNotification",
+      "Monitor",
+      "ListMcpResourcesTool",
+      "ReadMcpResourceTool",
+      "mcp__Claude_Code_Remote__create_trigger",
+      "mcp__Claude_Code_Remote__update_trigger",
+      "mcp__Claude_Code_Remote__list_sessions",
+      "mcp__Claude_Code_Remote__list_repos",
+      "mcp__Claude_Code_Remote__list_environments",
+      "mcp__ccd_session__spawn_task",
+      "mcp__ccd_session__dismiss_task"
     ],
     "ask": [
       "Bash(rm -rf*)",
@@ -46,7 +57,9 @@
       "mcp__Supabase__pause_project",
       "mcp__Supabase__create_project",
       "mcp__github__delete_file",
-      "mcp__github__merge_pull_request"
+      "mcp__github__merge_pull_request",
+      "mcp__Claude_Code_Remote__delete_trigger",
+      "mcp__Claude_Code_Remote__fire_trigger"
     ]
   }
 }
