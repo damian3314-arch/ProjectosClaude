@@ -378,6 +378,17 @@ titulo('6b. Rescatar con efectivo: un problema para pagar no se manda a recepci�
     return /^Hola, soy \w+\. Quiero pagar en efectivo en lugar de hacer la transferencia\.$/.test(txt) && !/Andrea quiere|Necesito ayuda con: Andrea/.test(txt);
   })(), (t.enviados.join(' ').match(/wa\.me[^\s]*/) || [''])[0]);
 
+  // Andrea insiste: ya se le explicó y se le mandó el QR; pide efectivo otra vez → se le deja la reserva en efectivo
+  t = await correr({
+    rpcs: { wa_tomar_pago: mensaje({ texto: 'No, de verdad prefiero pagar en efectivo', historial: [
+      { direccion: 'entrante', texto: 'Quiero pagar en efectivo' },
+      { direccion: 'saliente', texto: 'La reserva se asegura pagando por transferencia. Te dejo de nuevo el QR 👇 ¿Hay algo que te impida pagar hoy?' },
+      { direccion: 'entrante', texto: 'No tuve problemas, pero quiero pagar en efectivo' },
+      { direccion: 'saliente', texto: 'Entiendo. Te dejo los datos otra vez por si te sirven.' },
+    ] }), ...EF },
+    modelo: { respuesta: 'Listo, te dejo la reserva para pagar en efectivo ✅', accion: 'efectivo', resumen: 'Insistió en efectivo' },
+  });
+  ok('si insiste (ya se le explicó y se le mandó el QR), el bot le deja la reserva en efectivo: pago_efectivo, texto fijo y sin enlace a recepción', t.usos('pago_efectivo').length === 1 && /No te preocupes/.test(t.enviados[0]) && /solo en la puerta/.test(t.enviados[0]) && !t.enviados.some(x => /wa\.me/.test(x)) && t.usos('pago_turno')[0].b.p_resultado === 'efectivo');
   // El rescate solo funciona con la reserva sin pagar: con el comprobante ya cargado no se toca
   t = await correr({
     rpcs: { wa_tomar_pago: mensaje({ texto: 'no me funciona la app y ya mandé el comprobante', reserva: { ...reserva, estado: 'verificando' } }), ...EF },
@@ -499,7 +510,7 @@ titulo('9. El prompt trae las reglas duras');
   // Damián (10 oct): el bot nació para RESCATAR; si no logra que pague, deja la reserva en efectivo y NO manda a recepción.
   ok('RESCATA: si el pago no se logra, deja la reserva para efectivo y no la manda a recepción (ni espera a que lo pida)', /RESCATAR CON EFECTIVO/.test(INSTRUCCIONES_PAGO) && /NO la mandes a recepción: deja la reserva para pagar en efectivo/.test(INSTRUCCIONES_PAGO) && /No esperes a que lo pida: ofrécelo tú como salida/.test(INSTRUCCIONES_PAGO));
   ok('rescata cuando intentó y no pudo, cuando no tiene saldo o cuando sigue sin poder tras el QR y los datos', /intentó pagar y no pudo/.test(INSTRUCCIONES_PAGO) && /por ahora no tiene plata en la cuenta/.test(INSTRUCCIONES_PAGO) && /sigue sin poder pagar y no lo resuelves en uno o dos mensajes/.test(INSTRUCCIONES_PAGO));
-  ok('quien solo prefiere efectivo sin problema: no se le da; se le vuelve a mandar el QR, se le pregunta qué se lo impide y si insiste se despide (sin mandarlo a recepción)', /NO es para quien simplemente prefiere pagar así sin haber tenido ningún problema/.test(INSTRUCCIONES_PAGO) && /vuelve a mandarle el QR y los datos \(accion = "datos_de_pago"\)/.test(INSTRUCCIONES_PAGO) && /Si insiste otra vez sin ningún problema, despídete con calidez/.test(INSTRUCCIONES_PAGO));
+  ok('quien solo prefiere efectivo sin problema: la primera vez no se le da (se le explica, se le vuelve a mandar el QR y se le pregunta qué se lo impide); si insiste, se le deja la reserva en efectivo (Damián, 10 oct)', /NO se da a la primera a quien simplemente prefiere pagar así sin haber tenido ningún problema/.test(INSTRUCCIONES_PAGO) && /la primera vez no uses efectivo/.test(INSTRUCCIONES_PAGO) && /vuelve a mandarle el QR y los datos \(accion = "datos_de_pago"\)/.test(INSTRUCCIONES_PAGO) && /vuelve a pedir efectivo \(insiste\), déjale la reserva para pagar en efectivo \(accion = "efectivo"\)/.test(INSTRUCCIONES_PAGO) && !/despídete con calidez \(accion = "cerrar", resultado = "no_quiere"\): su cupo se libera solo\. Si estado/.test(INSTRUCCIONES_PAGO));
   ok('un problema para PAGAR no va a recepción', /Un problema para PAGAR no va a recepción: se rescata con efectivo/.test(INSTRUCCIONES_PAGO));
 }
 
