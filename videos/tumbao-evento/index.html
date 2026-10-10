@@ -64,7 +64,7 @@
       .panel {
         position: relative;
         overflow: hidden;
-        background: var(--surface);
+        background: var(--bg);
       }
       .slide,
       .kb {
@@ -190,22 +190,6 @@
       }
 
       /* ---------- S4: el espacio ---------- */
-      .tab {
-        position: absolute;
-        left: 50%;
-        bottom: 84px;
-        margin-left: -240px;
-        width: 480px;
-        padding: 20px 0 26px;
-        border-radius: 999px;
-        background: var(--orange);
-        color: var(--on-hot);
-        font-size: 64px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        text-align: center;
-        transform-origin: center;
-      }
 
       /* ---------- S5: cierre a pantalla completa con foto real ---------- */
       #s5photo {
@@ -329,17 +313,17 @@
         </div>
       </div>
 
-      <!-- S4 · seguro, tranquilo, climatizado (13.67 - 16.52) -->
+      <!-- S4 · el espacio: fachada, neon y salon (13.67 - 16.52) -->
       <div data-hf-id="hf-szsw" id="s4" class="scene tri">
         <div data-hf-id="hf-hq80" class="panel"><div data-hf-id="hf-xakb" class="slide"><div data-hf-id="hf-9a13" class="kb">
           <video data-hf-id="hf-dq8w" id="v4a" class="clip" src="assets/clips/s4-fachada.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="0"></video>
-        </div></div><div data-hf-id="hf-zi3e" class="tab">Seguro</div></div>
+        </div></div></div>
         <div data-hf-id="hf-ey2t" class="panel"><div data-hf-id="hf-sua6" class="slide"><div data-hf-id="hf-8vq2" class="kb">
           <video data-hf-id="hf-kn8g" id="v4b" class="clip" src="assets/clips/s4-neon.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="1"></video>
-        </div></div><div data-hf-id="hf-47gg" class="tab">Tranquilo</div></div>
+        </div></div></div>
         <div data-hf-id="hf-fcdu" class="panel"><div data-hf-id="hf-sfz5" class="slide"><div data-hf-id="hf-8hf1" class="kb">
           <video data-hf-id="hf-l4vp" id="v4c" class="clip" src="assets/clips/s4-salon.mp4" muted playsinline data-start="13.665" data-duration="2.857" data-media-start="0" data-track-index="2"></video>
-        </div></div><div data-hf-id="hf-bom4" class="tab">Climatizado</div></div>
+        </div></div></div>
       </div>
 
       <!-- S5 · cierre: foto real a pantalla completa + web + WhatsApp 24/7 (16.24 - 20) -->
@@ -411,9 +395,9 @@
       show("#s1", 0);
       const s1slides = $$("#s1 .slide");
       // el panel central cae en el primer golpe; los lados entran en las corcheas siguientes
-      tl.fromTo(s1slides[1], { yPercent: 105 }, { yPercent: 0, duration: 0.75, ease: "expo.out" }, B(0) - 0.06);
-      tl.fromTo(s1slides[0], { yPercent: -105 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(0.5) - 0.06);
-      tl.fromTo(s1slides[2], { yPercent: -105 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(1) - 0.06);
+      tl.fromTo(s1slides[1], { yPercent: 118 }, { yPercent: 0, duration: 0.75, ease: "expo.out" }, B(0) - 0.06);
+      tl.fromTo(s1slides[0], { yPercent: -118 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(0.5) - 0.06);
+      tl.fromTo(s1slides[2], { yPercent: -118 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, B(1) - 0.06);
       tl.fromTo("#s1 .kb", { scale: 1.14 }, { scale: 1.0, duration: T.s2, ease: "sine.out" }, 0);
       hide("#s1", T.s2);
 
@@ -449,16 +433,13 @@
       tl.fromTo("#attr", { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, T.terapia + 0.6);
       hide("#s3", T.s4);
 
-      // ---------- S4 · el espacio ----------
+      // ---------- S4 · el espacio (solo imagen) ----------
       show("#s4", T.s4);
       const s4slides = $$("#s4 .slide");
       tl.fromTo(s4slides[0], { xPercent: -105 }, { xPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 - 0.05);
       tl.fromTo(s4slides[1], { yPercent: 105 }, { yPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 + 0.03);
       tl.fromTo(s4slides[2], { xPercent: 105 }, { xPercent: 0, duration: 0.5, ease: "expo.out" }, T.s4 + 0.11);
       tl.fromTo("#s4 .kb", { scale: 1.0 }, { scale: 1.08, duration: T.s5 - T.s4, ease: "none" }, T.s4);
-      $$("#s4 .tab").forEach((t, i) =>
-        tl.fromTo(t, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.42, ease: "back.out(2.6)" }, B(24 + i) - 0.05)
-      );
 
       // ---------- S5 · cierre ----------
       // 1) la foto de la comunidad entra a pantalla completa en el golpe
