@@ -1,0 +1,11 @@
+-- 0149 · Cuánto cobra Meta de verdad por cada mensaje
+--
+-- Meta cobra por mensaje entregado y según su categoría (marketing es lo más caro; utilidad es más barata; las
+-- respuestas libres dentro de las 24 h siguientes a que el cliente escribe son gratis, y las plantillas de
+-- utilidad dentro de esa ventana también). Para decidir con datos y no con suposiciones:
+--   · wa_guardar_precio: el Worker anota en wa_avisos.datos.cobro la categoría y si fue facturable (lo trae el
+--     estado de entrega de cada mensaje);
+--   · wa_costos_mensajes(dias): por plantilla, cuántos se enviaron, cuántos se cobraron y cuántos fueron gratis;
+--   · /wa/costos + wa_guardar_costos_meta: costo y volumen reales por categoría según Meta (pricing_analytics),
+--     guardados en ajustes.wa_costos_meta; el cron tumbao-costos-meta lo actualiza todos los días a las 8 am.
+-- Sin columnas nuevas: todo en jsonb existente. (Se aplicó con las instrucciones SQL de esta conversación.)

@@ -1,0 +1,227 @@
+{
+  "name": "Tumbao · Reservas · Crear reserva",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tumbao/reservar",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000001",
+      "name": "POST /tumbao/reservar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "webhookId": "a1b2c3d4-0002-4000-8000-0000000000w2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza y recorta la entrada antes de tocar la base.\n// La validación de negocio de verdad vive en crear_reserva(); esto\n// solo evita basura y bots obvios.\nconst b = $input.first().json.body || {};\n\n// Honeypot: campo oculto en el formulario. Si viene lleno, es un bot.\nconst esBot = (b.apellido2 || '').toString().trim() !== '';\n\nconst txt = (v, max) => (v == null ? '' : v.toString().trim().slice(0, max));\n\nreturn [{ json: {\n  es_bot:      esBot,\n  slug:        txt(b.slug, 60) || 'tumbao',\n  sesion_id:   parseInt(b.sesion_id, 10) || 0,\n  first_name:  txt(b.first_name, 80),\n  last_name:   txt(b.last_name, 80),\n  phone:       txt(b.phone, 25),\n  email:       txt(b.email, 120),\n  habeas_data: b.habeas_data === true || b.habeas_data === 'true'\n} }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Normalizar entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-380, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-bot",
+              "leftValue": "={{ $json.es_bot }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-00000000000a",
+      "name": "¿Es bot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-160, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Al bot le devolvemos un 200 vacío: nunca toca la base y no\n// aprende nada del error.\nreturn [{ json: {\n  http_status: 200, ok: true, error: null, mensaje: '', codigo: 'OK'\n} }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-00000000000b",
+      "name": "Señuelo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, -240]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT crear_reserva($1, $2, $3, $4, $5, $6, $7, 'web') AS r;",
+        "options": {
+          "queryReplacement": "={{ [ $json.slug, $json.sesion_id, $json.first_name, $json.last_name, $json.phone, $json.email, $json.habeas_data ] }}"
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000003",
+      "name": "Supabase · crear_reserva()",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [60, 40],
+      "credentials": {
+        "postgres": {
+          "id": "REEMPLAZAR",
+          "name": "Supabase Tumbao"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-ok",
+              "leftValue": "={{ $json.r.ok }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000004",
+      "name": "¿Quedó reservada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [280, 40]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arma el texto de confirmación y la respuesta para la página.\nconst r = $input.first().json.r;\n\nconst fecha = new Intl.DateTimeFormat('es-CO', {\n  timeZone: 'America/Bogota', weekday: 'long', day: 'numeric', month: 'long'\n}).format(new Date(r.start_at));\nconst hora = new Intl.DateTimeFormat('es-CO', {\n  timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit', hour12: true\n}).format(new Date(r.start_at))\n  .replace(/\\u202f|\\u00a0/g, ' ')\n  .replace(/\\s*a\\.\\s*m\\./i, ' am')\n  .replace(/\\s*p\\.\\s*m\\./i, ' pm');\n\nconst mensaje =\n  `¡Listo ${r.nombre}! 💃\\n\\n` +\n  `Tu cupo en *${r.clase}* quedó reservado para el ${fecha} a las ${hora}.\\n\\n` +\n  `Tu código: *${r.codigo}*\\n` +\n  `Muéstralo en recepción cuando llegues.\\n\\n` +\n  `Llega 10 minutos antes. ¡Nos vemos! 🔥`;\n\nreturn [{ json: {\n  ok: true,\n  codigo: r.codigo,\n  clase: r.clase,\n  fecha,\n  hora,\n  ya_existia: r.ya_existia,\n  mensaje_cliente: mensaje,\n  telefono_e164: '57' + r.telefono\n} }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000005",
+      "name": "Armar confirmación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.telefono_e164, type: 'text', text: { preview_url: false, body: $json.mensaje_cliente } }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000006",
+      "name": "WhatsApp confirmación (DESACTIVADO)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, -60],
+      "disabled": true,
+      "notes": "ROJO en el framework: manda un mensaje a un cliente real. Se activa solo con autorización explícita y después de probarlo contra un número propio. Mientras esté desactivado, n8n deja pasar los datos sin llamar a Meta."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, codigo: $json.codigo, clase: $json.clase, fecha: $json.fecha, hora: $json.hora, ya_existia: $json.ya_existia }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000007",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [940, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Traduce el error de negocio a un código HTTP.\nconst r = $input.first().json.r || {};\n\nconst mapa = {\n  habeas_data_requerido:  400,\n  nombre_invalido:        400,\n  telefono_invalido:      400,\n  academia_no_encontrada: 404,\n  sesion_no_encontrada:   404,\n  sesion_cancelada:       409,\n  sesion_ya_empezo:       409,\n  sin_cupo:               409\n};\n\nreturn [{ json: {\n  http_status: mapa[r.error] || 400,\n  ok: false,\n  error: r.error || 'desconocido',\n  codigo: null,\n  mensaje: r.mensaje || 'No pudimos completar la reserva. Escríbenos por WhatsApp.'\n} }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000008",
+      "name": "Mapear error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $json.ok, error: $json.error, mensaje: $json.mensaje, codigo: $json.codigo }) }}",
+        "options": {
+          "responseCode": "={{ $json.http_status }}",
+          "responseHeaders": {
+            "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000009",
+      "name": "Responder (status calculado)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 180]
+    }
+  ],
+  "connections": {
+    "POST /tumbao/reservar": {
+      "main": [[{ "node": "Normalizar entrada", "type": "main", "index": 0 }]]
+    },
+    "Normalizar entrada": {
+      "main": [[{ "node": "¿Es bot?", "type": "main", "index": 0 }]]
+    },
+    "¿Es bot?": {
+      "main": [
+        [{ "node": "Señuelo", "type": "main", "index": 0 }],
+        [{ "node": "Supabase · crear_reserva()", "type": "main", "index": 0 }]
+      ]
+    },
+    "Señuelo": {
+      "main": [[{ "node": "Responder (status calculado)", "type": "main", "index": 0 }]]
+    },
+    "Supabase · crear_reserva()": {
+      "main": [[{ "node": "¿Quedó reservada?", "type": "main", "index": 0 }]]
+    },
+    "¿Quedó reservada?": {
+      "main": [
+        [{ "node": "Armar confirmación", "type": "main", "index": 0 }],
+        [{ "node": "Mapear error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Armar confirmación": {
+      "main": [[{ "node": "WhatsApp confirmación (DESACTIVADO)", "type": "main", "index": 0 }]]
+    },
+    "WhatsApp confirmación (DESACTIVADO)": {
+      "main": [[{ "node": "Responder 200", "type": "main", "index": 0 }]]
+    },
+    "Mapear error": {
+      "main": [[{ "node": "Responder (status calculado)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
