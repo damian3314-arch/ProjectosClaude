@@ -1714,6 +1714,31 @@ async function asegurarPlantillas(env) {
   return { ok: true, plantillas: out };
 }
 
+/* 0171 · /wa/campana-tiquetera: la campaña de la tiquetera por constancia. La llama un cron de la base cada hora.
+ * Solo encola si Meta YA aprobó la plantilla tiquetera_constancia (antes de eso no hace nada: un envío con una plantilla
+ * pendiente fallaría y la cola no reintenta). Damián (11 oct): «envíala apenas esté aprobada; el resto en los horarios
+ * permitidos». La base escoge a quién (cada persona una sola vez) y la cola solo manda campañas en horario de mercadeo.
+ * Se puede llamar las veces que sea: lo que ya se encoló no se repite. */
+async function campanaTiquetera(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
+  const lista = await (await fetch(
+    `${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates?fields=name,status,language&limit=200`,
+    { headers: cabecerasWA(env) })).json().catch(() => ({}));
+  if (!lista || lista.error) return { ok: false, error: 'META' };
+  const t = (lista.data || []).find((x) => x.name === 'tiquetera_constancia' && x.language === 'es');
+  const estado = t ? t.status : 'NO_EXISTE';
+  if (estado !== 'APPROVED') return { ok: true, estado, encolados: 0 };
+  const c = (await rpc(env, 'campana_tiquetera_constancia', { p_ejecutar: true })) || {};
+  // Lo encolado sale ya si es horario de mercadeo (si no, la cola lo guarda para el siguiente horario permitido).
+  let enviados = 0;
+  for (let i = 0; i < 3; i++) {
+    const d = await despacharAvisos(env).catch(() => null);
+    if (!d || !d.enviados) break;
+    enviados += d.enviados;
+  }
+  return { ok: true, estado, candidatos: c.candidatos || 0, encolados: c.encolados || 0, enviados };
+}
+
 let ultimoDespacho = 0;
 async function despacharAvisos(env) {
   if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return { ok: false, error: 'SIN_CONFIG' };
@@ -3623,6 +3648,10 @@ export default {
     if (ruta === '/wa/estado' && request.method === 'GET') {
       try { return json(await estadoWA(env), 200, origen); }
       catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
+    }
+    if (ruta === '/wa/campana-tiquetera' && (request.method === 'POST' || request.method === 'GET')) {
+      try { return json(await campanaTiquetera(env), 200, origen); }
+      catch (e) { console.log('campana tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
     }
     if (ruta === '/wa/plantillas' && request.method === 'GET') {
       try { return json(await asegurarPlantillas(env), 200, origen); }
