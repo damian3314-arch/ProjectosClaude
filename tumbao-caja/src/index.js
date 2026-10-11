@@ -1606,6 +1606,36 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 11 oct: la tiquetera vendida por constancia, no por ahorro. Damián: «anímate a tu tiquetera con constancia y disciplina;
+    // siempre vendrán cosas buenas; rétate tú y logras tus objetivos». Sin precios en el mensaje (los da la página o el
+    // asistente si toca «Cuéntame de la tiquetera»), sin sorpresas prometidas y en lenguaje neutro: también bailan hombres
+    // («compromiso contigo», no «contigo misma»). Reemplaza a tiquetera_semana para los frecuentes que no la recibieron.
+    name: 'tiquetera_constancia',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡\n\n' +
+          'Este mes bailaste {{2}} veces, y eso ya dice mucho de ti.\n\n' +
+          'Los objetivos no se cumplen con ganas, se cumplen con constancia. Rétate a seguir: tu tiquetera es ese compromiso ' +
+          'contigo, tus clases listas para cuando las necesites.\n\n' +
+          'Cuando uno no se detiene, siempre llegan cosas buenas 💃',
+        example: { body_text: [['Laura', '4']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Quiero mi tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'Cuéntame de la tiquetera' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     name: 'tiquetera_semana',
     language: 'es',
     category: 'MARKETING',

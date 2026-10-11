@@ -49,6 +49,7 @@ const SUITES = [
   'cupo-sin-pago',
   'recordatorio-clase',
   'tiquetera-oferta',
+  'tiquetera-constancia',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
