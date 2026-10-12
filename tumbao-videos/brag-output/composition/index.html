@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Brag · tumbaobaila.com</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: 'Anton'; src: url(assets/anton.woff2) format('woff2'); font-weight: 400; font-display: block; }
+      @font-face { font-family: 'Outfit'; src: url(assets/outfit.woff2) format('woff2'); font-weight: 100 900; font-display: block; }
+      :root {
+        --bg: #0b0710; --tx: #f7f2f8; --tx-2: #cfc6d6;
+        --hot: #ff6b35; --neon: #ff2e8f; --neon-2: #ff6fb1; --violeta: #8f3dff; --on-hot: #1c0b03;
+        --grad: linear-gradient(100deg, #ff6b35 0%, #ff4d62 55%, #ff2e8f 100%);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: 'Outfit', sans-serif; color: var(--tx); }
+      .clip { position: absolute; inset: 0; }
+
+      /* ── fondo: el salón con las luces apagadas ── */
+      #fondo { background: var(--bg); overflow: hidden; }
+      .luz { position: absolute; border-radius: 50%; }
+      #luz-a { left: -260px; top: -620px; width: 1600px; height: 1300px; background: radial-gradient(closest-side, rgba(143,61,255,.55), rgba(143,61,255,0)); }
+      #luz-b { left: 560px; top: 700px; width: 1000px; height: 1000px; background: radial-gradient(closest-side, rgba(255,46,143,.30), rgba(255,46,143,0)); }
+      #luz-c { left: -420px; top: 1300px; width: 1100px; height: 1000px; background: radial-gradient(closest-side, rgba(255,107,53,.20), rgba(255,107,53,0)); }
+      .led { position: absolute; left: -310px; width: 1700px; height: 7px; border-radius: 7px; }
+      #led-1 { top: 300px; background: linear-gradient(90deg, rgba(170,90,255,0), #b67aff 22%, #ff4fa3 60%, rgba(255,46,143,0)); box-shadow: 0 0 18px 4px rgba(170,90,255,.6), 0 0 60px 14px rgba(255,46,143,.25); }
+      #led-2 { top: 1180px; background: linear-gradient(90deg, rgba(255,46,143,0), #ff4fa3 35%, #ff8a5c 75%, rgba(255,107,53,0)); box-shadow: 0 0 16px 4px rgba(255,46,143,.55); }
+      #led-3 { top: 1660px; height: 5px; background: linear-gradient(90deg, rgba(143,61,255,0), #a46bff 45%, rgba(143,61,255,0)); box-shadow: 0 0 14px 3px rgba(143,61,255,.55); }
+      #grano { position: absolute; inset: 0; opacity: .06; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+      #rayo { position: absolute; left: -300px; top: 760px; width: 1700px; height: 220px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,111,177,.20) 45%, rgba(255,255,255,.35) 50%, rgba(255,111,177,.20) 55%, rgba(255,255,255,0)); filter: blur(18px); }
+
+      /* ── texto de neón ── */
+      .anton { font-family: 'Anton', sans-serif; font-weight: 400; text-transform: uppercase; line-height: .95; letter-spacing: .01em; }
+      .neon { color: #ffe6f2; text-shadow: 0 0 4px #fff, 0 0 14px #ff2e8f, 0 0 34px #ff2e8f, 0 0 80px rgba(255,46,143,.75); }
+      .centro { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+      /* 1 · gancho */
+      #g-grupo { top: 640px; }
+      #g-a { font-size: 96px; color: var(--tx); text-shadow: 0 0 30px rgba(143,61,255,.6); }
+      #g-b { font-size: 214px; margin-top: 34px; }
+
+      /* 2 · revelación */
+      #r-grupo { top: 600px; }
+      #r-a { font-size: 220px; color: #fff; text-shadow: 0 6px 40px rgba(0,0,0,.5); }
+      #r-caja { position: relative; margin-top: 26px; padding: 22px 46px 30px; }
+      #r-caja-fondo { position: absolute; inset: 0; background: linear-gradient(100deg, #ff2e8f, #ff3f7a); border-radius: 10px; box-shadow: 0 0 50px rgba(255,46,143,.6); transform-origin: left center; }
+      #r-b { position: relative; font-size: 196px; color: #fff; }
+      #r-sub { margin-top: 64px; font-size: 62px; font-weight: 500; letter-spacing: -.01em; }
+      #r-sub b { font-weight: 800; color: #ffb38f; }
+
+      /* 3-5 · el celular con la página de verdad */
+      #rotulo { top: 250px; }
+      #rot-fila { display: flex; align-items: center; gap: 34px; height: 170px; }
+      #rot-num { position: relative; width: 156px; height: 156px; border-radius: 34px; background: var(--grad); overflow: hidden; box-shadow: 0 0 46px rgba(255,46,143,.55); }
+      .num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; font-size: 118px; color: var(--on-hot); line-height: 1; }
+      #rot-palabras { position: relative; width: 560px; height: 170px; }
+      .pal { position: absolute; left: 0; top: 0; font-size: 168px; line-height: 170px; }
+      #rot-subs { position: relative; width: 900px; height: 70px; margin-top: 26px; }
+      .sub { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-size: 52px; font-weight: 500; color: var(--tx); }
+
+      #telefono { position: absolute; left: 172px; top: 640px; width: 736px; height: 1551px; border-radius: 88px; background: #05030a; padding: 18px;
+        box-shadow: 0 0 0 2px #3a2a4a, 0 0 0 9px #120b19, 0 0 70px rgba(255,46,143,.40), 0 0 160px rgba(143,61,255,.38); }
+      #pantalla { position: relative; width: 700px; height: 1515px; border-radius: 70px; overflow: hidden; background: var(--bg); }
+      .capa { position: absolute; left: 0; top: 0; width: 700px; height: 1515px; }
+      .capa img { display: block; width: 700px; height: auto; }
+      #c4 { height: 2333px; }
+      #toque-1, #toque-2 { position: absolute; border-radius: 25px; border: 3px solid #ff6fb1; box-shadow: 0 0 22px rgba(255,46,143,.75), inset 0 0 22px rgba(255,46,143,.35); }
+      #toque-1 { left: 32px; top: 994px; width: 637px; height: 183px; }
+      #toque-2 { left: 32px; top: 944px; width: 637px; height: 137px; }
+      #dedo { position: absolute; left: 0; top: 0; width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+      #dedo-punto { position: absolute; inset: 0; border-radius: 50%; background: rgba(255,255,255,.92); box-shadow: 0 0 0 6px rgba(255,255,255,.28), 0 10px 30px rgba(0,0,0,.45); }
+      #dedo-onda { position: absolute; inset: 0; border-radius: 50%; border: 4px solid #fff; }
+      #escaneo { position: absolute; left: 62px; top: 0; width: 576px; height: 6px; border-radius: 6px; background: #ff6fb1; box-shadow: 0 0 18px 6px rgba(255,46,143,.75); }
+      #brillo-codigo { position: absolute; left: 20px; top: 720px; width: 660px; height: 260px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,46,143,.55), rgba(255,46,143,0)); mix-blend-mode: screen; }
+      .chispa { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; }
+      .chispa::before { content: ''; position: absolute; inset: 0; background: #ffd1e6; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 6px #ff2e8f); }
+
+      /* 6 · cierre */
+      #o-grupo { top: 470px; }
+      #o-pre { font-size: 56px; font-weight: 400; color: var(--tx-2); }
+      #o-hoy { font-size: 190px; margin-top: 18px; }
+      #o-logo { width: 660px; height: auto; margin-top: 70px; filter: drop-shadow(0 0 26px rgba(255,46,143,.45)) drop-shadow(0 0 60px rgba(255,107,53,.25)); }
+      #o-pildora { position: relative; margin-top: 80px; padding: 30px 64px; border-radius: 999px; background: var(--grad); color: var(--on-hot); font-size: 70px; font-weight: 700; letter-spacing: -.01em; box-shadow: 0 0 60px rgba(255,46,143,.55); }
+      #dedo-2 { position: absolute; left: 0; top: 0; width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+      #dedo-2-punto { position: absolute; inset: 0; border-radius: 50%; background: rgba(255,255,255,.92); box-shadow: 0 0 0 6px rgba(255,255,255,.28), 0 10px 30px rgba(0,0,0,.45); }
+      #dedo-2-onda { position: absolute; inset: 0; border-radius: 50%; border: 4px solid #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1080" data-height="1920">
+      <audio id="musica" src="assets/musica.wav" data-start="0" data-duration="20" data-track-index="9" data-volume="1"></audio>
+
+      <div id="fondo" class="clip" data-start="0" data-duration="20" data-track-index="0" data-layout-allow-overflow>
+        <div id="luz-a" class="luz"></div>
+        <div id="luz-b" class="luz"></div>
+        <div id="luz-c" class="luz"></div>
+        <div id="led-1" class="led"></div>
+        <div id="led-2" class="led"></div>
+        <div id="led-3" class="led"></div>
+        <div id="rayo"></div>
+        <div id="grano"></div>
+      </div>
+
+      <section id="s1" class="clip" data-start="0" data-duration="2.5" data-track-index="1">
+        <div id="g-grupo" class="centro">
+          <div id="g-a" class="anton">Cuando dejas de</div>
+          <div id="g-b" class="anton neon">Inventar excusas</div>
+        </div>
+      </section>
+
+      <section id="s2" class="clip" data-start="2.5" data-duration="2.5" data-track-index="1">
+        <div id="r-grupo" class="centro">
+          <div id="r-a" class="anton">Tu clase</div>
+          <div id="r-caja"><div id="r-caja-fondo"></div><div id="r-b" class="anton">Te espera</div></div>
+          <div id="r-sub">Resérvala en <b>un minuto</b></div>
+        </div>
+      </section>
+
+      <section id="s3" class="clip" data-start="5" data-duration="11.75" data-track-index="2" data-layout-allow-overflow>
+        <div id="rotulo" class="centro">
+          <div id="rot-fila">
+            <div id="rot-num" data-layout-allow-overlap>
+              <div id="n1" class="num" data-layout-allow-overlap>1</div>
+              <div id="n2" class="num" data-layout-allow-overlap>2</div>
+              <div id="n3" class="num" data-layout-allow-overlap>3</div>
+            </div>
+            <div id="rot-palabras" data-layout-allow-overlap>
+              <div id="p1" class="pal anton neon" data-layout-allow-overlap>Reserva</div>
+              <div id="p2" class="pal anton neon" data-layout-allow-overlap>Paga</div>
+              <div id="p3" class="pal anton neon" data-layout-allow-overlap>Listo</div>
+            </div>
+          </div>
+          <div id="rot-subs" data-layout-allow-overlap>
+            <div id="sub1" class="sub" data-layout-allow-overlap>Escoge el día y la hora</div>
+            <div id="sub2" class="sub" data-layout-allow-overlap>Con QR o llave Bre-B</div>
+            <div id="sub3" class="sub" data-layout-allow-overlap>Tu cupo queda apartado</div>
+          </div>
+        </div>
+        <div id="telefono" data-layout-allow-overflow>
+          <div id="pantalla">
+            <div id="c1" class="capa"><img src="assets/ui-1-home.png" alt="" /><div id="toque-1"></div></div>
+            <div id="c2" class="capa"><img src="assets/ui-2-horario.png" alt="" /></div>
+            <div id="c2b" class="capa"><img src="assets/ui-2b-horario-elegida.png" alt="" /><div id="toque-2"></div></div>
+            <div id="c4" class="capa"><img src="assets/ui-4-pago.png" alt="" /><div id="escaneo"></div></div>
+            <div id="c5" class="capa"><img src="assets/ui-5-listo.png" alt="" /><div id="brillo-codigo"></div><div id="chispas"></div></div>
+            <div id="dedo"><div id="dedo-onda"></div><div id="dedo-punto"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="s6" class="clip" data-start="16.25" data-duration="3.75" data-track-index="1">
+        <div id="o-grupo" class="centro">
+          <div id="o-pre">No te quedes sin tu cupo</div>
+          <div id="o-hoy" class="anton neon">Reserva hoy</div>
+          <img id="o-logo" src="assets/logo.png" alt="Tumbao, baila pa' sanar" />
+          <div id="o-pildora">tumbaobaila.com</div>
+        </div>
+        <div id="dedo-2"><div id="dedo-2-onda"></div><div id="dedo-2-punto"></div></div>
+      </section>
+    </div>
+
+    <script>
+      // Chispas con posiciones fijas (generador con semilla: el mismo video en cada render).
+      (function () {
+        let s = 20261012;
+        const azar = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+        const cont = document.getElementById('chispas');
+        for (let i = 0; i < 14; i++) {
+          const d = document.createElement('div');
+          d.className = 'chispa';
+          d.id = 'chispa-' + i;
+          d.style.left = '350px';
+          d.style.top = '547px';
+          d.dataset.ang = String((i / 14) * Math.PI * 2 + azar() * 0.4);
+          d.dataset.dist = String(150 + azar() * 140);
+          d.dataset.esc = String(0.6 + azar() * 0.9);
+          cont.appendChild(d);
+        }
+      })();
+
+      const tl = gsap.timeline({ paused: true });
+      const T = 0.625; // un tiempo a 96 BPM
+
+      // ── fondo ──
+      tl.fromTo('#luz-a', { scale: 1, x: 0 }, { scale: 1.14, x: 60, duration: 10, ease: 'sine.inOut', yoyo: true, repeat: 1 }, 0);
+      tl.fromTo('#luz-b', { scale: 0.9, y: 0 }, { scale: 1.1, y: -160, duration: 20, ease: 'sine.inOut' }, 0);
+      tl.fromTo('#luz-c', { scale: 1, x: 0 }, { scale: 1.2, x: 120, duration: 20, ease: 'sine.inOut' }, 0);
+      tl.fromTo('#led-1', { rotation: -11, x: -120 }, { rotation: -11, x: 120, duration: 20, ease: 'none' }, 0);
+      tl.fromTo('#led-2', { rotation: 8, x: 100 }, { rotation: 8, x: -100, duration: 20, ease: 'none' }, 0);
+      tl.fromTo('#led-3', { rotation: -5, x: -60 }, { rotation: -5, x: 60, duration: 20, ease: 'none' }, 0);
+      // Las tiras se prenden como un neón al empezar.
+      tl.set(['#led-1', '#led-2', '#led-3'], { opacity: 0 }, 0);
+      [[0.10, 1], [0.16, 0.15], [0.22, 1], [0.28, 0.3], [0.38, 1], [0.44, 0.2], [0.52, 1]].forEach(([t, o], i) => {
+        tl.set('#led-1', { opacity: o }, t);
+        tl.set('#led-2', { opacity: o * 0.8 }, t + 0.04);
+        tl.set('#led-3', { opacity: o * 0.7 }, t + 0.08);
+      });
+      // Un barrido de luz en cada corte.
+      tl.set('#rayo', { opacity: 0 }, 0);
+      [2.5, 5.0, 10.0, 13.75, 16.25].forEach((t) => {
+        tl.fromTo('#rayo', { x: -900, rotation: -12 }, { x: 900, rotation: -12, duration: 0.55, ease: 'power2.inOut', immediateRender: false }, t - 0.3);
+        tl.to('#rayo', { opacity: 1, duration: 0.2, ease: 'power1.out' }, t - 0.3);
+        tl.to('#rayo', { opacity: 0, duration: 0.25, ease: 'power1.in' }, t);
+      });
+
+      // ── 1 · gancho (0–2,5) ──
+      tl.fromTo('#g-a', { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 0.04);
+      tl.set('#g-b', { opacity: 0 }, 0);
+      [[0.10, 1], [0.16, 0.1], [0.22, 1], [0.28, 0.35], [0.38, 1], [0.44, 0.15], [0.52, 1]].forEach(([t, o]) => tl.set('#g-b', { opacity: o }, t));
+      tl.fromTo('#g-grupo', { scale: 1 }, { scale: 1.05, duration: 1.8, ease: 'none' }, 0.45);
+      tl.to('#g-grupo', { scale: 1.32, opacity: 0, duration: 0.25, ease: 'power2.in' }, 2.25);
+
+      // ── 2 · revelación (2,5–5) ──
+      tl.fromTo('#r-a', { opacity: 0, scale: 1.6 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'power4.out' }, 2.5);
+      tl.fromTo('#r-caja-fondo', { scaleX: 0 }, { scaleX: 1, duration: 0.32, ease: 'power3.out' }, 2.58);
+      tl.fromTo('#r-b', { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 2.68);
+      tl.fromTo('#r-sub', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 3.15);
+      tl.fromTo('#r-grupo', { y: 0 }, { y: -20, duration: 1.7, ease: 'none' }, 3.0);
+      tl.to('#r-grupo', { opacity: 0, y: -110, duration: 0.25, ease: 'power2.in' }, 4.75);
+
+      // ── 3-5 · el celular (5–16,75) ──
+      tl.fromTo('#telefono', { y: 1000, rotation: 5 }, { y: 0, rotation: 0, duration: 0.8, ease: 'power3.out' }, 5.0);
+      tl.fromTo('#rot-num', { scale: 0, rotation: -20 }, { scale: 1, rotation: 0, duration: 0.45, ease: 'back.out(1.8)' }, 5.15);
+      tl.set(['#n2', '#n3'], { yPercent: 100, opacity: 0 }, 0);
+      tl.set(['#p2', '#p3', '#sub2', '#sub3'], { opacity: 0 }, 0);
+      tl.fromTo('#p1', { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 5.25);
+      tl.fromTo('#sub1', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 5.4);
+      // cambio de paso: el número sube, la palabra y la línea se reemplazan
+      const cambio = (t, sale, entra) => {
+        tl.to('#n' + sale, { yPercent: -100, duration: 0.35, ease: 'power3.inOut' }, t);
+        tl.set('#n' + sale, { opacity: 0 }, t + 0.36);
+        tl.set('#n' + entra, { opacity: 1 }, t);
+        tl.fromTo('#n' + entra, { yPercent: 100 }, { yPercent: 0, duration: 0.35, ease: 'power3.inOut', immediateRender: false }, t);
+        tl.to(['#p' + sale, '#sub' + sale], { opacity: 0, y: -50, duration: 0.25, ease: 'power2.in' }, t);
+        tl.fromTo('#p' + entra, { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t + 0.15);
+        tl.fromTo('#sub' + entra, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, t + 0.25);
+        tl.fromTo('#rot-num', { scale: 1 }, { scale: 1.12, duration: 0.12, ease: 'power2.out', yoyo: true, repeat: 1, immediateRender: false }, t + 0.3);
+      };
+      cambio(10.05, 1, 2);
+      cambio(13.8, 2, 3);
+      tl.to('#rotulo', { opacity: 0, y: -90, duration: 0.3, ease: 'power2.in' }, 15.95);
+      tl.to('#telefono', { y: 1150, rotation: -4, duration: 0.4, ease: 'power2.in' }, 15.95);
+      tl.to('#telefono', { opacity: 0, duration: 0.2, ease: 'power1.in' }, 16.12);
+
+      // pantallas: empuje como al navegar
+      tl.set(['#c2', '#c4', '#c5'], { x: 700 }, 0);
+      tl.set(['#c2b', '#toque-1', '#toque-2', '#escaneo', '#brillo-codigo'], { opacity: 0 }, 0);
+      const empuje = (t, sale, entra) => {
+        tl.to(sale, { x: -240, duration: 0.45, ease: 'power3.inOut' }, t);
+        tl.fromTo(entra, { x: 700 }, { x: 0, duration: 0.45, ease: 'power3.inOut' }, t);
+      };
+      // dedo: entra, toca «Clase suelta»
+      tl.set('#dedo', { opacity: 0, x: 560, y: 1380, scale: 1 }, 0);
+      tl.set('#dedo-onda', { opacity: 0, scale: 1 }, 0);
+      tl.to('#dedo', { opacity: 1, duration: 0.2 }, 5.75);
+      tl.to('#dedo', { x: 350, y: 1085, duration: 0.42, ease: 'power2.inOut' }, 5.8);
+      const toque = (t, sel, marco) => {
+        tl.to(sel, { scale: 0.82, duration: 0.08, ease: 'power2.out' }, t - 0.04);
+        tl.to(sel, { scale: 1, duration: 0.18, ease: 'power2.out' }, t + 0.06);
+        tl.fromTo(sel + '-onda', { opacity: 0.9, scale: 1 }, { opacity: 0, scale: 2.6, duration: 0.5, ease: 'power2.out' }, t);
+        if (marco) tl.fromTo(marco, { opacity: 0 }, { opacity: 1, duration: 0.1 }, t);
+      };
+      toque(6.25, '#dedo', '#toque-1');
+      empuje(6.55, '#c1', '#c2');
+      tl.to('#dedo', { x: 600, y: 1300, opacity: 0, duration: 0.3, ease: 'power2.in' }, 6.5);
+      // dedo: toca «5:00 pm · Rumba básica»
+      tl.to('#dedo', { opacity: 1, x: 350, y: 1013, duration: 0.45, ease: 'power2.out' }, 8.2);
+      toque(8.75, '#dedo', null);
+      tl.fromTo('#c2b', { opacity: 0 }, { opacity: 1, duration: 0.12 }, 8.75);
+      tl.fromTo('#toque-2', { opacity: 0 }, { opacity: 1, duration: 0.12 }, 8.75);
+      tl.to('#dedo', { opacity: 0, duration: 0.25 }, 9.25);
+      // pago: baja hasta el QR y lo «escanea»
+      empuje(10.0, ['#c2', '#c2b'], '#c4');
+      tl.to('#c4', { y: -300, duration: 0.6, ease: 'power2.inOut' }, 10.85);
+      tl.set('#escaneo', { y: 955 }, 11.5);
+      tl.to('#escaneo', { opacity: 1, duration: 0.15 }, 11.5);
+      tl.to('#escaneo', { y: 1390, duration: 0.95, ease: 'sine.inOut' }, 11.6);
+      tl.to('#escaneo', { y: 955, duration: 0.95, ease: 'sine.inOut' }, 12.55);
+      tl.to('#escaneo', { opacity: 0, duration: 0.2 }, 13.4);
+      // listo: el código en neón y las chispas
+      empuje(13.75, '#c4', '#c5');
+      document.querySelectorAll('.chispa').forEach((d, i) => {
+        const a = +d.dataset.ang, r = +d.dataset.dist, e = +d.dataset.esc;
+        tl.fromTo(d, { x: 0, y: 0, scale: 0, opacity: 1, rotation: 0 },
+          { x: Math.cos(a) * r, y: Math.sin(a) * r, scale: e, rotation: 90, duration: 0.7, ease: 'power3.out' }, 13.98 + (i % 3) * 0.03);
+        tl.to(d, { opacity: 0, scale: 0, duration: 0.45, ease: 'power2.in' }, 14.65 + (i % 3) * 0.03);
+      });
+      tl.fromTo('#brillo-codigo', { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' }, 14.1);
+      tl.to('#brillo-codigo', { opacity: 0.45, duration: 0.6, ease: 'sine.inOut', yoyo: true, repeat: 2 }, 14.45);
+
+      // ── 6 · cierre (16,25–20) ──
+      tl.set('#o-logo', { opacity: 0 }, 0);
+      [[16.32, 1], [16.38, 0.15], [16.44, 1], [16.5, 0.4], [16.58, 1]].forEach(([t, o]) => tl.set('#o-logo', { opacity: o }, t));
+      tl.fromTo('#o-logo', { scale: 0.9 }, { scale: 1, duration: 0.6, ease: 'power3.out' }, 16.3);
+      tl.fromTo('#o-pre', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, 16.45);
+      tl.fromTo('#o-hoy', { opacity: 0, scale: 1.5 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'power4.out' }, 16.55);
+      tl.fromTo('#o-pildora', { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45, ease: 'back.out(1.6)' }, 17.0);
+      tl.fromTo('#o-grupo', { scale: 1 }, { scale: 1.035, duration: 3.2, ease: 'none' }, 16.8);
+      tl.set('#dedo-2', { opacity: 0, x: 900, y: 1720 }, 0);
+      tl.set('#dedo-2-onda', { opacity: 0, scale: 1 }, 0);
+      tl.to('#dedo-2', { opacity: 1, x: 740, y: 1225, duration: 0.45, ease: 'power2.out' }, 17.6);
+      toque(18.1, '#dedo-2', null);
+      tl.fromTo('#o-pildora', { scale: 1 }, { scale: 0.95, duration: 0.08, ease: 'power2.out', yoyo: true, repeat: 1, immediateRender: false }, 18.06);
+      tl.to('#dedo-2', { opacity: 0, duration: 0.3 }, 18.7);
+
+      window.__timelines['main'] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

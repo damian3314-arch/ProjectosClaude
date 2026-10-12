@@ -6,3 +6,7 @@
 node_modules/
 .hyperframes/
 renders/
+# …salvo las imágenes que usa una composición para renderizar (sin ellas no se puede volver a sacar el video).
+!*/composition/assets/*.png
+# Cuadros de revisión (se regeneran con `hyperframes snapshot`).
+*/work/snaps*/
