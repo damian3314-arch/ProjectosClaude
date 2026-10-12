@@ -2,7 +2,8 @@
  * Freno automático de las ventas por WhatsApp y latido del reloj de Cloudflare (0163).
  *
  * Damián (9 oct): «que yo no tenga que dar tanto permiso, que sea automático». Esta prueba protege que:
- *   1. el freno use los límites que ya tenía la rutina diaria (calidad ≠ GREEN, bajas > 8 %, fallos > 25 %, error 131042)
+ *   1. el freno use los límites que ya tenía la rutina diaria (calidad ≠ GREEN —«UNKNOWN» no cuenta desde 0173—, bajas > 8 %,
+ *      fallos > 25 %, error 131042)
  *      y solo APAGUE: nunca enciende nada ni borra;
  *   2. corra por dos caminos: el centinela (cada hora, pg_cron) y el cron del Worker (cada 10 minutos);
  *   3. el cron del Worker deje un latido para saber si Cloudflare ya dispara los cron en esta cuenta;
@@ -19,12 +20,19 @@ const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.lengt
 const w = readFileSync(new URL('../../tumbao-caja/src/index.js', import.meta.url), 'utf8');
 const cfg = readFileSync(new URL('../../tumbao-caja/wrangler.jsonc', import.meta.url), 'utf8');
 const m = readFileSync(new URL('../supabase/migrations/0163_freno_automatico_de_ventas_y_latido_de_cron.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+const m173 = readFileSync(new URL('../supabase/migrations/0173_freno_ignora_calidad_unknown.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
 
 titulo('1. La función de freno (SQL)');
 {
   ok('apaga solo si wa_ventas está encendido y solo escribe «apagado» (nunca «encendido»)',
      /<> 'encendido'/.test(m) && /set valor = 'apagado'/.test(m) && !/set valor = 'encendido'/.test(m));
   ok('calidad distinta de GREEN → apaga', /coalesce\(p_calidad, 'GREEN'\) <> 'GREEN'/.test(m));
+  ok('0173: «UNKNOWN» (Meta sin datos) ya no apaga; YELLOW, RED o cualquier otro valor sí',
+     /\$v\$if coalesce\(p_calidad, 'GREEN'\) <> 'GREEN' then\$v\$/.test(m173) &&
+     /\$v\$if upper\(coalesce\(p_calidad, 'GREEN'\)\) not in \('GREEN', 'UNKNOWN'\) then\$v\$/.test(m173) &&
+     /execute replace\(v_def, v_viejo, v_nuevo\)/.test(m173) && /raise exception/.test(m173));
+  ok('0173: si no encuentra la condición, falla en vez de dejar el freno a medias; si ya está, no hace nada',
+     /position\(v_viejo in v_def\) = 0 then\s+raise exception/.test(m173) && /position\(v_nuevo in v_def\) > 0 then[\s\S]{0,60}return/.test(m173));
   ok('error 131042 de Meta (pago pendiente) → apaga', /like '131042%'/.test(m));
   ok('bajas: más del 8 % de las aperturas del día, con al menos 10', /v_aperturas >= 10 and v_bajas \* 100\.0 \/ v_aperturas > 8/.test(m));
   ok('fallos: más del 25 % de las entregas, con al menos 20', /v_aperturas >= 20 and v_fallos \* 100\.0 \/ v_aperturas > 25/.test(m));
@@ -46,6 +54,7 @@ titulo('2. El Worker');
      /'cron_latido'[^\n]*\.catch\(/.test(w) && /frenoAutomatico\(env\)\.catch\(/.test(w));
   ok('lee la calidad del número a Meta y manda null si no puede (el freno no se dispara por un fallo de red)',
      /async function calidadDelNumero[\s\S]{0,400}fields=quality_rating/.test(w) && /calidadDelNumero\(env\)\.catch\(\(\) => null\)/.test(w));
+  ok('0173: la alerta horaria del centinela tampoco salta con «UNKNOWN»', /q !== 'GREEN' && q !== 'UNKNOWN'/.test(w));
   ok('cron cada 10 minutos agregado sin quitar los de siempre', /"crons": \["0 11-23 \* \* \*", "0 0-3 \* \* \*", "\*\/10 \* \* \* \*"\]/.test(cfg));
 }
 

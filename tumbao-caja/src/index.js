@@ -2339,7 +2339,8 @@ async function centinelaWA(env, origen) {
   try {
     const e = await estadoWA(env);
     const q = e && e.numero && e.numero.quality_rating;
-    if (q && q !== 'GREEN') {
+    // UNKNOWN no es una baja: es Meta sin datos suficientes (fin de semana con poco movimiento). 0173.
+    if (q && q !== 'GREEN' && q !== 'UNKNOWN') {
       alerta(`calidad:${hoy}:${q}`, '⚠️ Alerta: calidad del número',
         `Meta bajó la calidad del número de avisos a *${q}*. Las campañas programadas se frenan ` +
         `en su revisión previa; no mandes mensajes masivos hasta que vuelva a verde.`);
