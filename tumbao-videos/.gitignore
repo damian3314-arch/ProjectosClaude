@@ -1,0 +1,8 @@
+# Los renders y las capturas no van al repo (se regeneran con `npm run render`).
+*.mp4
+*.mov
+*.webm
+*.png
+node_modules/
+.hyperframes/
+renders/
