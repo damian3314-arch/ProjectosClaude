@@ -1,6 +1,8 @@
 # Brag · tumbaobaila.com
 
-**Formato:** vertical 1080×1920, 30 fps, 20 s (8 compases de 96 BPM: un compás = 2,5 s, un tiempo = 0,625 s).
+**Formato:** vertical 1080×1920, 30 fps, 22,5 s (12 compases de 128 BPM: un compás = 1,875 s, un tiempo = 0,46875 s).
+
+**v2 (12 oct):** Damián pidió música con más fuerza y más rápida, efectos en las transiciones y el copy de la campaña de constancia (la de la tiquetera) en vez de «tu clase te espera».
 **Tono:** `default` empujado hacia el Instagram de Tumbao: neón, titulares en letra condensada gruesa, cortes al ritmo.
 **Idioma:** español (Barrancabermeja).
 
@@ -11,7 +13,7 @@ La página donde reservas tu clase de baile en Tumbao en un minuto: escoges día
 - **Para quién:** gente de Barrancabermeja que quiere bailar (rumba, clases grupales) y las alumnas de Tumbao.
 - **Qué la hace distinta:** reservas sola, sin llamar ni esperar respuesta. Tres pasos: Reserva → Paga → Listo.
 - **La frase más fuerte (de la misma página):** «Reserva tu clase en un minuto».
-- **Gancho visual:** un letrero de neón que se prende: «CUANDO DEJAS DE INVENTAR EXCUSAS» (frase de un Reel de @tumbao.bca).
+- **Gancho:** el copy de la campaña de constancia: «Los objetivos no se cumplen con ganas» (palabra por palabra; «con ganas» se prende en neón y se tacha) → caída: «se cumplen con CONSTANCIA» → «Rétate a seguir».
 - **UI real que se muestra:** capturas de la página ya rediseñada (dark neón): ¿Cómo vienes? → toque en *Clase suelta* → ¿Cuándo quieres bailar? → toque en *5:00 pm Rumba básica* → *Paga tu clase* ($15.000 + QR) → *¡Tu cupo está apartado!* con el código.
 - **Texto para publicar:** ver `share-copy.txt`.
 
@@ -25,14 +27,13 @@ La página donde reservas tu clase de baile en Tumbao en un minuto: escoges día
 
 | # | Tiempo | Qué se ve | Texto que se lee | Sonido |
 |---|---|---|---|---|
-| 1 · Gancho | 0,0–2,5 | Pantalla oscura; un letrero de neón titila y se prende; dos tiras de luz cruzan en diagonal | CUANDO DEJAS DE / **INVENTAR EXCUSAS** | zumbido eléctrico del neón al prender; entra el beat |
-| 2 · Revelación | 2,5–5,0 | Golpe al compás: «TU CLASE» en blanco y «TE ESPERA» dentro de una caja fucsia (como «LOS 80s» del Instagram); debajo, la frase de la página | TU CLASE **TE ESPERA** · Resérvala en un minuto | golpe + barrido |
-| 3 · Reserva | 5,0–10,0 | Sube un celular con la página real. Toque en *Clase suelta* (6,25) → pasa a los horarios → toque en *5:00 pm Rumba básica* (8,75), que se ilumina | **1 · RESERVA** · Escoge el día y la hora | toques afinados en la tonalidad |
-| 4 · Paga | 10,0–13,75 | La pantalla pasa a *Paga tu clase*: $15.000 y el QR; una línea de neón «escanea» el QR | **2 · PAGA** · Con QR o llave Bre-B | barrido + escaneo suave |
-| 5 · Listo | 13,75–16,25 | *¡Tu cupo está apartado!* y el código en neón; destellos alrededor | **3 · LISTO** · Tu cupo queda apartado | campanita (la, do, mi) |
-| 6 · Cierre | 16,25–20,0 | El celular sale; el logo de Tumbao se prende en neón; píldora naranja→fucsia «tumbaobaila.com» con un toque; «RESERVA HOY» | RESERVA HOY · tumbaobaila.com | subida + golpe en el logo; el beat cierra en el compás 8 |
-
-Duraciones: 2,5 + 2,5 + 5 + 3,75 + 2,5 + 3,75 = **20 s**.
+| 1 · Gancho | 0–3,75 | Las tiras de neón se prenden; las palabras entran a corcheas; «con ganas» se prende en neón y a los 3,05 s se tacha con una raya de luz | LOS OBJETIVOS / NO SE CUMPLEN / ~~CON GANAS~~ | zumbido del neón, intro filtrada, subida con redoble que se acelera, chispazo al tachar |
+| 2 · Caída | 3,75–5,625 | Destello y golpe; el texto entra grande con sacudida; las tiras laten con el bombo | SE CUMPLEN CON **CONSTANCIA** | golpe + platillo; entra todo el ritmo |
+| 3 · Reto | 5,625–7,5 | «RÉTATE» y «A SEGUIR» en la caja fucsia | RÉTATE **A SEGUIR** · Reserva en un minuto | barrido |
+| 4 · Reserva | 7,5–11,25 | Sube el celular con la página real; toque en *Clase suelta* (8,906) → horarios → toque en *5:00 pm Rumba básica* (10,781) | **1 · RESERVA** · Escoge el día y la hora | barrido, «pop» del número, toques, barrido corto al cambiar de pantalla |
+| 5 · Paga | 11,25–14,06 | *Paga tu clase*: baja hasta el QR y una línea de neón lo escanea | **2 · PAGA** · Con QR o llave Bre-B | barrido corto, «pop», bip-bip |
+| 6 · Listo | 14,06–16,875 | *¡Tu cupo está apartado!*, código en neón y chispas | **3 · LISTO** · Tu cupo queda apartado | barrido corto, «pop», campanitas; segunda subida |
+| 7 · Cierre | 16,875–22,5 | Destello y golpe; la frase de la campaña entra a tiempos; el logo se prende en neón; «Reserva tu clase en» + píldora con toque | CUANDO NO TE DETIENES, **SIEMPRE LLEGAN COSAS BUENAS** · Reserva tu clase en tumbaobaila.com | golpe + platillo, ritmo completo con melodía, zumbido y destello del logo, toque, golpe final |
 
 ## Legibilidad
 Cada línea queda quieta al menos 0,3 s por palabra después de entrar completa. Los textos clave van arriba (zona 230–600 px) para no chocar con la interfaz de Reels abajo y a la derecha; el celular puede bajar hasta el borde porque es imagen, no texto.
@@ -41,4 +42,5 @@ Cada línea queda quieta al menos 0,3 s por palabra después de entrar completa.
 Nada real de clientes: el nombre «Camila Rojas» y el código «TB7K2Q» son de muestra. Los horarios, precio y QR son los públicos de la página.
 
 ## Música
-Beat de dembow sintetizado aquí mismo (sin pistas de terceros, sin licencias): 96 BPM, la menor (Am–F–C–G), bombo en cada tiempo, caja en el patrón 3-3-2, hi-hat, bajo 808 y un acorde pulsado. Los efectos (zumbido, toques, barridos, campanita, golpe) van en la misma tonalidad y por debajo de la música.
+
+Sintetizada aquí mismo (`work/musica.py`, sin pistas de terceros): guaracha / latin house a 128 BPM en la menor (Am–F–C–G). Bombo a negras, palmas en 2 y 4, platillo abierto a contratiempo, maracas, tambores, bajo a contratiempo, acordes cortados, melodía en las caídas y un bombeo con el bombo. Dos subidas con redoble y dos caídas (3,75 s y 16,875 s). Efectos en cada transición: barridos que cruzan de izquierda a derecha, golpes, «pops», toques, escaneo, campanitas y el destello del logo, en la misma tonalidad.
