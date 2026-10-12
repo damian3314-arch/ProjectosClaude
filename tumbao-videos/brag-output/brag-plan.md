@@ -3,6 +3,8 @@
 **Formato:** vertical 1080×1920, 30 fps, 22,5 s (12 compases de 128 BPM: un compás = 1,875 s, un tiempo = 0,46875 s).
 
 **v2 (12 oct):** Damián pidió música con más fuerza y más rápida, efectos en las transiciones y el copy de la campaña de constancia (la de la tiquetera) en vez de «tu clase te espera».
+
+**v3 (12 oct):** la música sintetizada no le gustó: el video lleva solo los efectos (`assets/efectos.wav`) y la música se pone al publicar. Letras más pequeñas; en el cierre el logo (vectorizado a `assets/logo.svg` para que no se pixele) es lo más grande: 960 px de ancho.
 **Tono:** `default` empujado hacia el Instagram de Tumbao: neón, titulares en letra condensada gruesa, cortes al ritmo.
 **Idioma:** español (Barrancabermeja).
 
@@ -41,6 +43,6 @@ Cada línea queda quieta al menos 0,3 s por palabra después de entrar completa.
 ## Datos
 Nada real de clientes: el nombre «Camila Rojas» y el código «TB7K2Q» son de muestra. Los horarios, precio y QR son los públicos de la página.
 
-## Música
+## Sonido
 
-Sintetizada aquí mismo (`work/musica.py`, sin pistas de terceros): guaracha / latin house a 128 BPM en la menor (Am–F–C–G). Bombo a negras, palmas en 2 y 4, platillo abierto a contratiempo, maracas, tambores, bajo a contratiempo, acordes cortados, melodía en las caídas y un bombeo con el bombo. Dos subidas con redoble y dos caídas (3,75 s y 16,875 s). Efectos en cada transición: barridos que cruzan de izquierda a derecha, golpes, «pops», toques, escaneo, campanitas y el destello del logo, en la misma tonalidad.
+Solo efectos, en cada transición (`work/musica.py --solo-efectos` → `composition/assets/efectos.wav`): zumbido del neón, subida y chispazo al tachar «con ganas», golpes con destello en «CONSTANCIA» y en el cierre, barridos que cruzan de izquierda a derecha, «pops» al cambiar de paso, toques, bip-bip del QR, campanitas y el destello del logo. La música va aparte: la biblioteca de Instagram al publicar, o una pista que escoja Damián (los cortes están a 128 BPM). `work/musica.py` sin la bandera todavía genera la pista sintetizada de la v2 por si se quiere comparar.

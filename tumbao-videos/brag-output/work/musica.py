@@ -1,4 +1,9 @@
-"""Música y efectos del brag de Tumbao, sintetizados aquí mismo (sin pistas de terceros).
+"""Música y efectos del brag de Tumbao.
+
+v3 (12 oct): a Damián no le gustó la música; el video lleva SOLO los efectos (`--solo-efectos` → efectos.wav) y la música
+se pone al publicar (biblioteca de Instagram) o con una pista que él escoja.
+
+(v1/v2), sintetizados aquí mismo (sin pistas de terceros).
 
 v2 (12 oct): Damián: «a la música le falta demasiada fuerza, está demasiado lenta; tiene que ser más emocionante y tener
 efectos de sonido en las transiciones». Pasa de dembow a 96 BPM a guaracha / latin house a 128 BPM: bombo a negras, palmas
@@ -28,6 +33,8 @@ rng = np.random.default_rng(11)
 # Dos buses: la música (bombea con el bombo) y lo que no bombea (bombo, efectos).
 M = np.zeros((N, 2))
 D = np.zeros((N, 2))
+E = np.zeros((N, 2))          # efectos de sonido (van solos con --solo-efectos)
+SOLO_EFECTOS = '--solo-efectos' in sys.argv
 
 
 def add(bus, sig, t, gain=1.0, pan=0.0):
@@ -268,8 +275,8 @@ def barrido_estereo(t, largo=0.55, gain=0.35, f0=400, f1=7000):
     j = min(N, i + n)
     gl = np.cos((pan + 1) * np.pi / 4)[: j - i]
     gr = np.sin((pan + 1) * np.pi / 4)[: j - i]
-    D[i:j, 0] += s[: j - i] * gl * gain
-    D[i:j, 1] += s[: j - i] * gr * gain
+    E[i:j, 0] += s[: j - i] * gl * gain
+    E[i:j, 1] += s[: j - i] * gr * gain
 
 
 def golpe():
@@ -356,49 +363,52 @@ def chispazo():
     return (0.7 * s + 0.5 * tono) * env(n, 0.001, 0.09)
 
 
+# Solos, los efectos chicos se suben para que cada transición se oiga junto a los golpes.
+R = 1.9 if SOLO_EFECTOS else 1.0
 # El letrero y las tiras se prenden: 0,10–0,16 · 0,22–0,28 · 0,38–0,44 · desde 0,52.
-add(D, zumbido(1.4, [(0.10, 0.16), (0.22, 0.28), (0.38, 0.44), (0.52, 1.4)]), 0, 0.16)
+add(E, zumbido(1.4, [(0.10, 0.16), (0.22, 0.28), (0.38, 0.44), (0.52, 1.4)]), 0, 0.16)
 # «CON GANAS» se tacha: chispazo.
-add(D, chispazo(), 3.05, 0.28)
+add(E, chispazo(), 3.05, 0.28 * R)
 # Subidas antes de las dos caídas.
-add(D, subida_ruido(BAR), BAR, 0.16)
-add(D, subida_ruido(BAR * 0.5), 8 * BAR + BAR * 0.5, 0.16)
+add(E, subida_ruido(BAR), BAR, 0.16)
+add(E, subida_ruido(BAR * 0.5), 8 * BAR + BAR * 0.5, 0.16)
 # Golpes y platillo en las caídas.
 for t in (2 * BAR, 9 * BAR):
-    add(D, golpe(), t, 0.75)
-    add(M, crash(), t, 0.22, 0.2)
-add(D, golpe(), t_fin, 0.55)
-add(M, crash(), t_fin, 0.2, -0.2)
+    add(E, golpe(), t, 0.75)
+    add(E, crash(), t, 0.22, 0.2)
+add(E, golpe(), t_fin, 0.55)
+add(E, crash(), t_fin, 0.2, -0.2)
 # Barridos en cada corte de escena y en cada cambio de pantalla.
 for t, g in ((3 * BAR, 0.34), (4 * BAR, 0.36), (16.6, 0.3)):
-    barrido_estereo(t, 0.6, g)
+    barrido_estereo(t, 0.6, g * R)
 for t in (9.2, 11.25, 14.0625):
-    barrido_estereo(t, 0.32, 0.26, 900, 9000)
+    barrido_estereo(t, 0.32, 0.26 * R, 900, 9000)
 # Toques del dedo.
 for t in (8.90625, 10.78125, 20.625):
-    add(D, toque(), t, 0.42, 0.1)
+    add(E, toque(), t, 0.42 * R, 0.1)
 # El número del paso cambia: un «pop».
 for t, f in ((7.65, nota('A4')), (11.4, nota('C5')), (14.2, nota('E5'))):
-    add(D, pop(f), t, 0.42)
+    add(E, pop(f), t, 0.42 * R)
 # Escaneo del QR: bip-bip.
 for i, t in enumerate((12.55, 12.7, 13.45)):
-    add(D, bip(nota('A6') if i < 2 else nota('E7')), t, 0.10, -0.2)
+    add(E, bip(nota('A6') if i < 2 else nota('E7')), t, 0.10 * R, -0.2)
 # ¡Listo!: campanitas.
 for i, nn in enumerate(('A5', 'C6', 'E6', 'A6')):
-    add(D, campana(nota(nn)), 14.3 + i * 0.07, 0.16, -0.3 + 0.2 * i)
+    add(E, campana(nota(nn)), 14.3 + i * 0.07, 0.16 * R, -0.3 + 0.2 * i)
 # El logo se prende: zumbido corto y destello.
-add(D, zumbido(0.9, [(0.0, 0.05), (0.1, 0.15), (0.2, 0.9)]), 19.15, 0.12)
-add(D, destello(1.0), 19.2, 0.10, 0.2)
+add(E, zumbido(0.9, [(0.0, 0.05), (0.1, 0.15), (0.2, 0.9)]), 19.15, 0.12)
+add(E, destello(1.0), 19.2, 0.10 * R, 0.2)
 
 # ── mezcla ────────────────────────────────────────────────────────────────
-st = M + D
+st = E.copy() if SOLO_EFECTOS else M + D + E
 st = np.tanh(st * 1.3) / np.tanh(1.3)
 st[: int(0.005 * SR)] *= np.linspace(0, 1, int(0.005 * SR))[:, None]
 fade = int(0.4 * SR)
 st[-fade:] *= np.linspace(1, 0, fade)[:, None]
 st *= 10 ** (-2.2 / 20) / np.max(np.abs(st))   # pico de muestra en -2,2 dBFS: el pico real queda por debajo de -1
 
-out = sys.argv[1] if len(sys.argv) > 1 else '../composition/assets/musica.wav'
+args = [x for x in sys.argv[1:] if not x.startswith('--')]
+out = args[0] if args else ('../composition/assets/efectos.wav' if SOLO_EFECTOS else '../composition/assets/musica.wav')
 with wave.open(out, 'wb') as w:
     w.setnchannels(2)
     w.setsampwidth(2)
