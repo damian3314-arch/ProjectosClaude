@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mensualidad · Tumbao</title>
 <meta name="description" content="Aparta tu mensualidad en Tumbao. Elige tu horario, mira si hay cupo y paga en un paso.">
-<meta name="theme-color" content="#0d0b0f">
+<meta name="theme-color" content="#0b0710">
 <link rel="preload" href="fonts/outfit-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <meta property="og:title" content="Mensualidad · Tumbao">
 <meta property="og:description" content="Elige tu horario, mira si hay cupo y aparta tu mensualidad.">
@@ -551,6 +551,137 @@ const CONFIG = {
     .skel{animation:none}
     .opcion,.clase,.tarjeta,.btn{transition:none}
   }
+  /* ═══════════════════════════════════════════════════════════════
+     CAPA TUMBAO NEÓN (12 oct) - la misma en index.html y mensualidad.html
+
+     Damián: «la página dista mucho de los colores de Tumbao; quiero el
+     estilo dark de Tumbao» (el de Instagram: el salón oscuro con las
+     luces de neón moradas y fucsia) «y ese lila en todos lados no me
+     gusta» (el del anuncio).
+     La fusión:
+     - Fondo casi negro con un tinte morado, como el salón con las
+       luces apagadas. Sin superficies lilas: el morado solo es LUZ
+       (resplandores de fondo y una tira de neón detrás del logo).
+     - Dos acentos de marca: el naranja del logo y el fucsia del «Baila
+       pa' sanar». Naranja = horas y precios; fucsia = lo elegido, las
+       cejas y los enlaces; el botón principal lleva los dos.
+     - Texto oscuro sobre el botón (5,4:1 en la punta fucsia; el blanco
+       no pasa AA).
+     Va al final a propósito: quitarla entera devuelve la capa del 26 sep.
+     ═══════════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#0b0710; --bg-2:#160f1e; --bg-3:#201629;
+    --surface:#160f1e; --surface-2:#201629;
+    --line:#2e2139; --line-2:#433152;
+    --tx:#f7f2f8; --tx-2:#bdb3c5; --tx-3:#8f8598;
+    --neon:#ff2e8f; --neon-2:#ff6fb1; --violeta:#8f3dff;
+    --grad-marca:linear-gradient(100deg,var(--hot) 0%,#ff4d62 55%,var(--neon) 100%);
+  }
+  body{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(56rem 32rem at 50% -13rem,rgba(143,61,255,.40),transparent 64%),
+      radial-gradient(34rem 24rem at 112% 22rem,rgba(255,46,143,.20),transparent 62%),
+      radial-gradient(38rem 26rem at -14% 108%,rgba(255,107,53,.11),transparent 62%);
+    background-attachment:fixed;
+  }
+
+  /* La tira de neón del techo del salón, detrás del logo. */
+  header{position:relative;isolation:isolate}
+  header::before,header::after{
+    content:'';position:absolute;left:0;right:0;height:2px;z-index:-1;pointer-events:none;
+    border-radius:2px;
+  }
+  header::before{
+    top:1.5rem;transform:rotate(-7deg);
+    background:linear-gradient(90deg,transparent,rgba(170,90,255,.9) 22%,var(--neon) 62%,transparent);
+    box-shadow:0 0 14px 2px rgba(170,90,255,.55),0 0 34px 6px rgba(255,46,143,.22);
+    opacity:.75;
+  }
+  header::after{
+    top:5.4rem;transform:rotate(5deg);left:18%;right:-4%;
+    background:linear-gradient(90deg,transparent,rgba(255,46,143,.85) 40%,rgba(255,107,53,.8) 80%,transparent);
+    box-shadow:0 0 12px 2px rgba(255,46,143,.45);
+    opacity:.45;
+  }
+  @media (min-width:34rem){header::before{transform:rotate(-3deg)} header::after{transform:rotate(2.5deg)}}
+  .marca img{filter:drop-shadow(0 0 18px rgba(255,46,143,.30)) drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+  .tagline{color:var(--tx)}
+
+  /* ---------- pasos ---------- */
+  .pasos li[aria-current]{background:rgba(255,46,143,.12);color:var(--tx)}
+  .pasos li[aria-current] .n{background:var(--grad-marca);border-color:transparent;color:var(--on-hot)}
+
+  /* ---------- tarjetas: superficie oscura y borde de neón al tocar ---------- */
+  .opcion,.clase,.dia,.tarjeta,.monto,.datos-pago,.aviso.info,.check,.previa,.codigo,.grupo,.cuantos-caja{
+    background:var(--surface);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .opcion,.clase,.tarjeta{transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease}
+  .opcion:hover,.clase:hover:not(:disabled),.tarjeta:hover,.tarjeta:focus-visible{
+    background:var(--surface-2);
+    box-shadow:0 0 0 1px rgba(255,46,143,.45),0 10px 30px -14px rgba(255,46,143,.55);
+  }
+  .opcion .ico{background:rgba(255,46,143,.13);color:var(--neon-2)}
+  .tarjeta .icono{color:var(--neon-2)}
+  .tarjeta .destacado{background:var(--grad-marca);color:var(--on-hot)}
+  .tarjeta .clave{background:rgba(255,46,143,.08)}
+  .tarjeta .clave svg.ico-i{color:var(--neon-2)}
+
+  /* ---------- horarios ---------- */
+  .dia[aria-pressed="true"]{
+    background:var(--grad-marca);color:var(--on-hot);
+    box-shadow:0 8px 24px -8px rgba(255,46,143,.7);
+  }
+  .dia:hover{background:var(--surface-2)}
+
+  /* ---------- cajas con raya de marca ---------- */
+  .resumen,.plan,.franja-promo,.nueva-clase,.ok-grupo{box-shadow:inset 3px 0 0 var(--neon)}
+  .franja-promo{background:linear-gradient(135deg,rgba(255,46,143,.13),rgba(255,107,53,.06) 70%),var(--surface)}
+  .franja-promo:hover{background:linear-gradient(135deg,rgba(255,46,143,.18),rgba(255,107,53,.09) 70%),var(--surface-2)}
+  .franja-promo svg.ico{color:var(--neon-2)}
+  .oferta-tiq,.oferta-espera{
+    background:linear-gradient(135deg,rgba(255,107,53,.15),rgba(255,46,143,.14));
+    box-shadow:inset 3px 0 0 var(--neon);
+  }
+  .nueva-clase .ceja,.oferta-tiq .oferta-ceja{color:var(--neon-2)}
+  .grupo-total,.pago-solo,.cuantos-caja .grupo-total{background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(255,46,143,.10))}
+  #acompanantes{border-left-color:rgba(255,46,143,.5)}
+  .franja{border-color:rgba(255,46,143,.45)}
+  .franja-ceja,.franja-boton{color:var(--neon-2)}
+
+  /* ---------- botones ---------- */
+  .btn{
+    background:var(--grad-marca);color:var(--on-hot);
+    box-shadow:0 10px 28px -12px rgba(255,46,143,.8);
+    transition:filter .16s ease,transform .1s ease,box-shadow .16s ease;
+  }
+  .btn:hover:not(:disabled){background:var(--grad-marca);filter:brightness(1.07);box-shadow:0 12px 32px -10px rgba(255,46,143,.9)}
+  .btn:disabled{background:var(--surface-2);color:var(--tx-3);box-shadow:none;filter:none}
+  .btn-ghost{border-color:rgba(255,46,143,.35)}
+  .btn-ghost:hover{border-color:var(--neon);background:rgba(255,46,143,.07)}
+  #burbuja{background:var(--grad-marca);color:var(--on-hot);box-shadow:0 8px 26px -6px rgba(255,46,143,.75)}
+  #promo{background:rgba(6,3,9,.8)}
+  #promo svg.ico{color:var(--neon-2)}
+
+  /* ---------- enlaces, foco y campos ---------- */
+  a{color:var(--neon-2)}
+  footer a{color:var(--tx-2)}
+  footer a:hover{color:var(--neon-2)}
+  input:focus-visible,button:focus-visible,.clase:focus-visible,.dia:focus-visible,.opcion:focus-visible,.tarjeta:focus-visible{outline-color:var(--neon-2)}
+  input:focus,.comprobante input:focus{border-color:var(--neon)}
+  .comprobante input:focus{outline-color:var(--neon)}
+  .check input,.check-otro input{accent-color:var(--neon)}
+  .req,.comprobante .req,.mas-correo summary::before{color:var(--neon-2)}
+  .soltar:hover,.soltar.encima{border-color:var(--neon)}
+  .soltar .ico{color:var(--neon-2)}
+
+  /* ---------- espera y resultado ---------- */
+  .anillo{border-top-color:var(--neon)}
+  .barra i{background:var(--grad-marca)}
+  .codigo{border-color:rgba(255,46,143,.4)}
+  .codigo b{color:var(--neon-2);text-shadow:0 0 18px rgba(255,46,143,.45)}
+  @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
 </style>
 </head>
 <body>

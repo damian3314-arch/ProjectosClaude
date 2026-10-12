@@ -403,6 +403,8 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
   // Con el reloj real: horarios dentro de 3 y 4 días (nunca hoy), para que la prueba no dependa de la fecha de ejecución.
   const iso = (n) => hoyBogota(Date.now() + n * 86400000).fecha;
   const d3 = iso(3), d4 = iso(4), hoyIso = iso(0);
+  // El día de la semana sale de la fecha (antes decía «Martes» fijo y fallaba los días en que hoy+3 no es martes).
+  const DIA3 = textoDeFecha(d3).split(' ')[0].replace(/^./, (c) => c.toUpperCase());
   const HOR = [
     { n: 1, clase_id: '11111111-1111-4111-8111-111111111111', clase: 'Clase 7:00 am', fecha_texto: textoDeFecha(d3), hora_texto: '7:00 am', precio_cop: 15000, libres: 17 },
     { n: 2, clase_id: '22222222-2222-4222-8222-222222222222', clase: 'Rumba básica', fecha_texto: textoDeFecha(d3), hora_texto: '5:00 pm', precio_cop: 15000, libres: 34 },
@@ -412,7 +414,7 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
 
   // «Quiero una clase» → un solo mensaje: presentación + horario fijo + qué falta. Sin botones.
   let t = await correr({ msg: { texto: 'Quiero una clase' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Soy el asistente virtual de Tumbao 💃 ¡Con gusto te ayudo!', accion: 'mostrar_horarios', resumen: 'Quiere una clase' } });
-  ok('«quiero una clase»: UN mensaje de texto con la presentación, el horario fijo y la pregunta (día, hora y nombre); sin botones ni listas', t.enviados.length === 1 && sinBotones(t) && /^Soy el asistente virtual de Tumbao/.test(t.enviados[0]) && /\*Martes\*/.test(t.enviados[0]) && /a nombre de quién\* la reservo/.test(t.enviados[0]));
+  ok('«quiero una clase»: UN mensaje de texto con la presentación, el horario fijo y la pregunta (día, hora y nombre); sin botones ni listas', t.enviados.length === 1 && sinBotones(t) && /^Soy el asistente virtual de Tumbao/.test(t.enviados[0]) && t.enviados[0].includes(`*${DIA3}*`) && /a nombre de quién\* la reservo/.test(t.enviados[0]));
   ok('el horario sale de la base (7:00 am, 5:00 pm con su nombre y 6:00 pm), no del modelo', /🕖 7:00 am\n🕔 5:00 pm · _Rumba básica_/.test(t.enviados[0]) && /🕕 6:00 pm/.test(t.enviados[0]));
   ok('no reserva ni propone nada, y la conversación sigue abierta', t.usos('asistente_proponer').length === 0 && t.usos('asistente_reservar').length === 0 && t.usos('asistente_turno')[0].b.p_cerrar === false);
   const e = t.entrada();
@@ -424,7 +426,7 @@ titulo('6b. Los horarios: el código sabe qué día es y los dice como una perso
 
   // el modelo escribió el párrafo largo de horarios → sale el bloque
   t = await correr({ msg: { texto: 'qué horarios hay' }, ctx: { horarios: HOR }, modelo: { respuesta: `Martes 13: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm; miércoles 14: 7:00 am · 6:00 pm · 7:00 pm; jueves 15: 7:00 am · 5:00 pm · 6:00 pm · 7:00 pm. ¿Cuál quieres?`, accion: 'ninguna' } });
-  ok('si el modelo escribe el párrafo apretado de horarios, NO sale así: sale el bloque ordenado', t.enviados.length === 1 && /\*Martes\*\n🕖 7:00 am/.test(t.enviados[0]) && !/ · 6:00 pm/.test(t.enviados[0]) && sinBotones(t));
+  ok('si el modelo escribe el párrafo apretado de horarios, NO sale así: sale el bloque ordenado', t.enviados.length === 1 && t.enviados[0].includes(`*${DIA3}*\n🕖 7:00 am`) && !/ · 6:00 pm/.test(t.enviados[0]) && sinBotones(t));
   t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: '', accion: 'mostrar_horarios' } });
   ok('aunque el modelo no escriba frase, el horario sale (no cae en el mensaje seguro)', /^Estos son nuestros horarios/.test(t.enviados[0]) && !/wa\.me/.test(t.enviados[0]));
   t = await correr({ msg: { texto: 'horarios' }, ctx: { horarios: HOR }, modelo: { respuesta: 'Te escribimos con los horarios', accion: 'mostrar_horarios' } });
