@@ -43,9 +43,16 @@ titulo('3. Para quién es cada tiquetera y la franja de reservas');
 {
   ok('la de 8: dos veces por semana o parte del mes; la de 4: empezar o una vez por semana',
      /clases >= 8\s*\? 'Ideal si vienes dos veces por semana o solo una parte del mes\.'\s*: 'Ideal para empezar o para venir una vez por semana\.'/.test(men));
-  ok('la franja de reservas pone la cuenta real de los paquetes del sistema (precio por clase y ahorro)',
-     /async function pintarFranjaPromo/.test(idx) && /tiquetera\/paquetes/.test(idx) && /cada clase te sale a <b>\$\{pesos\(porClase\)\}<\/b>/.test(idx));
-  ok('si los paquetes no cargan, se queda el texto de siempre (el catch no cambia nada)', /catch\(_\)\{ \/\* se queda el texto de siempre \*\/ \}/.test(idx)
+  // 13 oct: la franja dice primero los cupos REALES de mensualidad (lo que más cayó en octubre) y la tiquetera queda de
+  // segunda opción; sin cupos, la cuenta de la tiquetera como antes.
+  ok('la franja de reservas pone primero los cupos reales de mensualidad (los dos horarios con menos cupos) y el precio del mes',
+     /async function pintarFranjaPromo/.test(idx) && /await cuposMensualidad\(\)/.test(idx) &&
+     /sort\(\(a, b\) => a\.libres - b\.libres\)\.slice\(0, 2\)/.test(idx) &&
+     /`Mensualidad: quedan \$\{horas\.join\(' y '\)\}\. Todo el mes por <b>\$\{pesos\(m\.valor\)\}<\/b>\.`/.test(idx));
+  ok('sin cupos, la cuenta real de los paquetes del sistema (precio por clase y ahorro)',
+     /tiquetera\/paquetes/.test(idx) && /cada clase te sale a <b>\$\{pesos\(porClaseTiq\)\}<\/b>/.test(idx) && /\(ahorras \$\{pesos\(ahorro\)\}\)/.test(idx));
+  ok('si nada carga, se queda el texto de siempre (sin datos no se escribe nada)',
+     /if \(!mejor\) return;/.test(idx) && /cuposMensualidad\(\)\.catch\(\(\) => null\)/.test(idx)
      && /¿Vienes seguido\? Con la <b>tiquetera<\/b> compras varias clases de una/.test(idx));
   ok('se llama DESPUÉS de declarar paquetesTiq (let): antes daría «aún no definida»',
      idx.indexOf('let paquetesTiq') > 0 && idx.indexOf('\n  pintarFranjaPromo();') > idx.indexOf('let paquetesTiq'));
