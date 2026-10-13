@@ -2404,23 +2404,38 @@ const CONFIG = {
   let paquetesTiq = null;
   /* La franja de arriba, con la cuenta real y no con un «ahorras» a secas: «cada clase te sale a $12.000». Los números salen
      de los paquetes del sistema (los mismos de la página de mensualidad). Si no cargan, queda el texto de siempre. */
+  /* La franja de arriba. 13 oct: lo que más cayó en octubre son las mensualidades (15 del 1 al 12 contra 32 en
+     septiembre), así que la franja dice primero cuántos cupos de mensualidad quedan DE VERDAD por horario (los mismos
+     números de la página de mensualidad) y deja la tiquetera como la otra opción. Si los cupos no cargan o no hay,
+     vuelve al texto de la tiquetera; si nada carga, se queda el texto de siempre. */
   async function pintarFranjaPromo(){
+    let mejor = null;
+    const ref = 15000;
     try{
       const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
       const d = await r.json();
-      const ref = 15000;
       const paquetes = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
       if (!paquetesTiq) paquetesTiq = paquetes;
-      const mejor = paquetes
+      mejor = paquetes
         .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0 && Number(p.precio_cop) / Number(p.clases) < ref)
-        .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
-      if (!mejor) return;
-      const porClase = Math.round(mejor.precio_cop / mejor.clases);
-      const ahorro = mejor.clases * ref - mejor.precio_cop;
+        .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0] || null;
+    }catch(_){ /* sin tiquetera por ahora */ }
+    const m = await cuposMensualidad().catch(() => null);
+    const porClaseTiq = mejor ? Math.round(mejor.precio_cop / mejor.clases) : 0;
+    if (m){
+      // Primero los horarios con menos cupos: ahí está la urgencia de verdad.
+      const horas = m.horas.slice().sort((a, b) => a.libres - b.libres).slice(0, 2)
+        .map(h => `<b>${h.libres} ${h.libres === 1 ? 'cupo' : 'cupos'} a las ${esc(h.etiqueta)}</b>`);
       $('#franja-promo-tx').innerHTML =
-        `¿Vienes seguido? Con la <b>tiquetera de ${mejor.clases}</b> cada clase te sale a <b>${pesos(porClase)}</b> ` +
-        `(ahorras ${pesos(ahorro)}). O aparta tu <b>mensualidad</b> con horario fijo.`;
-    }catch(_){ /* se queda el texto de siempre */ }
+        `Mensualidad: quedan ${horas.join(' y ')}. Todo el mes por <b>${pesos(m.valor)}</b>.` +
+        (mejor ? ` O tiquetera desde <b>${pesos(porClaseTiq)}</b> la clase.` : '');
+      return;
+    }
+    if (!mejor) return;
+    const ahorro = mejor.clases * ref - mejor.precio_cop;
+    $('#franja-promo-tx').innerHTML =
+      `¿Vienes seguido? Con la <b>tiquetera de ${mejor.clases}</b> cada clase te sale a <b>${pesos(porClaseTiq)}</b> ` +
+      `(ahorras ${pesos(ahorro)}). O aparta tu <b>mensualidad</b> con horario fijo.`;
   }
 
   /* Los cupos de mensualidad que de verdad se pueden vender hoy, por horario, con los mismos números de la página de
