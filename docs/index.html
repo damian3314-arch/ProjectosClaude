@@ -1323,12 +1323,13 @@ const CONFIG = {
         <button class="btn-ghost" type="button" id="ok-opina-ir">Contarnos en una frase</button>
       </div>
 
-      <!-- 13 oct (Damián): cuando la reserva se valida sola, la pantalla solo da el código y «nos vemos en la pista».
-           Esta tarjeta sale únicamente a los clientes FRECUENTES (2 o más clases sueltas en 30 días, contando esta;
-           lo dice el Worker en /tumbao/estado → frecuente) y los lleva a la página donde compran la mensualidad o
-           la tiquetera. Los precios salen del sistema; si no cargan, queda el texto general y el botón. -->
+      <!-- 13 oct (Damián): cuando la reserva se valida sola, la pantalla solo da el código y «nos vemos en la pista»,
+           y a TODO el que compró una clase suelta, esta invitación a la página donde compra la mensualidad o la
+           tiquetera («mejor a todo mundo, no solo frecuente»). Al cliente frecuente (2 o más clases sueltas en 30
+           días; lo dice el Worker en /tumbao/estado → frecuente) solo le cambia la frase de arriba. Los precios salen
+           del sistema; si no cargan, queda el texto general y el botón. -->
       <div class="oferta-tiq" id="oferta-tiq" hidden>
-        <span class="oferta-ceja">Para ti que vienes seguido</span>
+        <span class="oferta-ceja" id="oferta-tiq-ceja">Para tu próxima clase</span>
         <b id="oferta-tiq-tit">Baila más pagando menos</b>
         <p id="oferta-tiq-txt">Con la mensualidad o la tiquetera cada clase te sale más barata.</p>
         <a class="btn" id="oferta-tiq-ir" href="mensualidad.html">Ver mensualidad y tiquetera</a>
@@ -2437,10 +2438,11 @@ const CONFIG = {
     }catch(_){ return null; }
   }
 
-  async function ofrecerPlanes(mostrar){
+  async function ofrecerPlanes(mostrar, frecuente){
     const caja = $('#oferta-tiq');
     caja.hidden = !mostrar;
     if (!mostrar) return;
+    $('#oferta-tiq-ceja').textContent = frecuente ? 'Para ti que vienes seguido' : 'Para tu próxima clase';
     // Primero se ve con el texto general; si los precios cargan, la línea dice cuánto sale cada clase.
     try{
       const ref = (elegida && elegida.precio_cop) || 15000;
@@ -2544,11 +2546,11 @@ const CONFIG = {
       : `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
 
     // 13 oct (Damián): si la reserva se validó sola, la pantalla SOLO da el código y «nos vemos en la pista»: ni
-    // WhatsApp (tampoco el del pie de página) ni la invitación a opinar. Al cliente frecuente, además, la invitación a
-    // la mensualidad o la tiquetera. WhatsApp vuelve a salir solo cuando la validación automática no se completa.
+    // WhatsApp (tampoco el del pie de página) ni la invitación a opinar. A todo el que compró una suelta, además, la
+    // invitación a la mensualidad o la tiquetera. WhatsApp vuelve a salir solo cuando la validación no se completa.
     ofrecerOpinar(false);
     $('#f-wa-caja').hidden = confirmada;
-    ofrecerPlanes(confirmada && tipo === 'suelta' && d.frecuente === true);
+    ofrecerPlanes(confirmada && tipo === 'suelta', d.frecuente === true);
     irA(5);
   }
 

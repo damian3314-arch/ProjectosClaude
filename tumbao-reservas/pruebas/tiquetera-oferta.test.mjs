@@ -3,9 +3,9 @@
  *
  * Damián (3 oct): «ya tenemos 3 tiqueteras vendidas, ¿qué podría ser lindo y
  * lograr convertir en la página?». Se ofrece en dos pantallas:
- *   · docs/index.html, al CONFIRMARSE una clase suelta. Desde el 13 oct (Damián) SOLO al cliente frecuente (el Worker
- *     lo dice en /tumbao/estado → frecuente, 0174): una invitación con un botón a la página de mensualidad y
- *     tiquetera, con lo que sale cada clase en cada plan contra los $15.000 de la suelta. Al cliente nuevo, nada.
+ *   · docs/index.html, al CONFIRMARSE una clase suelta, a TODOS (Damián, 13 oct: «mejor a todo mundo»): una invitación
+ *     con un botón a la página de mensualidad y tiquetera, con lo que sale cada clase en cada plan contra los $15.000 de
+ *     la suelta. Al cliente frecuente (el Worker lo dice en /tumbao/estado → frecuente, 0174) solo le cambia la frase.
  *   · docs/mensualidad.html, al quedar en la LISTA DE ESPERA: «mientras te
  *     avisamos, baila desde ya», con un botón que abre la compra de esa tiquetera.
  * Y las tarjetas de tiquetera muestran el precio POR CLASE.
@@ -106,12 +106,13 @@ titulo('1. Cliente frecuente: la invitación a la mensualidad y la tiquetera');
   await ctx.close();
 }
 
-titulo('2. Cliente nuevo: nada más que el código');
+titulo('2. Cliente nuevo: la misma invitación, con otra frase');
 {
   const { p, ctx, errores } = await reservarConfirmada(PAQUETES, CON_CUPOS, false);
-  await p.waitForTimeout(800);
-  ok('la invitación sigue escondida', await p.locator('#oferta-tiq').isHidden());
-  ok('y la confirmación se ve normal', await p.locator('#s5.on').isVisible());
+  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
+  ok('también ve la invitación', await p.locator('#oferta-tiq').isVisible());
+  ok('con la frase para cualquiera', (await p.locator('#oferta-tiq-ceja').innerText()).trim().toLowerCase() === 'para tu próxima clase');
+  ok('y el botón a la página de mensualidad y tiquetera', (await boton(p)).href === 'mensualidad.html');
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }

@@ -24,8 +24,8 @@
  * del correo del banco. Dos corridas, porque el desenlace lo decide el
  * servidor y no la página:
  *
- *   RETARDO_BANCO=1              el pago cruza  → no se ofrece escribir
- *   RETARDO_BANCO=1 FRECUENTE=1  y es cliente frecuente → además, la invitación a la mensualidad y la tiquetera
+ *   RETARDO_BANCO=1              el pago cruza  → no se ofrece escribir; sí la invitación a la mensualidad y la tiquetera
+ *   RETARDO_BANCO=1 FRECUENTE=1  y es cliente frecuente → la misma invitación, con la frase «para ti que vienes seguido»
  *   NUNCA_LLEGA=1 MINUTOS_ESPERA el pago no cruza → se pide el soporte
  *
  * La prueba levanta y baja el espejo ella misma, así que corre sola:
@@ -132,8 +132,11 @@ await conEspejo({ RETARDO_BANCO: '1' }, async () => {
      Nada más: ni la invitación a opinar ni el WhatsApp del pie de página. */
   ok('sin la invitación a opinar', !(await p.locator('#ok-opina').isVisible()));
   ok('sin el WhatsApp del pie de página', !(await p.locator('#f-wa').isVisible()));
-  ok('cliente nuevo: sin invitación a la mensualidad ni a la tiquetera',
-     !(await p.locator('#oferta-tiq').isVisible()));
+  /* «Mejor a todo mundo, no solo frecuente» (Damián, 13 oct): todo el que compra una suelta ve la invitación. */
+  ok('cliente nuevo: también ve la invitación a la mensualidad y la tiquetera',
+     await p.locator('#oferta-tiq').isVisible());
+  ok('con la frase para cualquiera («para tu próxima clase»)',
+     /para tu próxima clase/i.test(await p.locator('#oferta-tiq-ceja').innerText()));
 
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
@@ -147,6 +150,7 @@ await conEspejo({ RETARDO_BANCO: '1', FRECUENTE: '1' }, async () => {
 
   ok('dice "nos vemos en la pista"', /nos vemos en la pista/i.test(await p.locator('#t5').innerText()));
   ok('lo invita a la página de mensualidad y tiquetera', await p.locator('#oferta-tiq').isVisible());
+  ok('y le habla al que viene seguido', /vienes seguido/i.test(await p.locator('#oferta-tiq-ceja').innerText()));
   ok('con un botón que lleva a mensualidad.html',
      (await p.locator('#oferta-tiq-ir').getAttribute('href')) === 'mensualidad.html' &&
      /mensualidad y tiquetera/i.test(await p.locator('#oferta-tiq-ir').innerText()),
