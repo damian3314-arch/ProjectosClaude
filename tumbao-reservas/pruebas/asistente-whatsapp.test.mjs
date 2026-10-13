@@ -205,6 +205,23 @@ titulo('5. Recepción: con enlace, sin promesas');
   ok('cierra con resultado «recepcion» y no avisa a nadie más (la persona escribe directo)', t.usos('asistente_turno')[0].b.p_resultado === 'recepcion' && t.usos('asistente_turno')[0].b.p_cerrar === true && !t.llamadas.some(l => l.fn === 'nota_recepcion'));
 }
 {
+  // 13 oct: quien compró una tiquetera, tocó «ya pagué» y no quedó activa recibe el aviso a los 15 min; si responde «ya pagué»,
+  // el asistente SABE que hay una compra pendiente y la pasa a recepción (en primera persona), sin decir que ya está activa.
+  const PEND = { clases: 8, precio_cop: 96000, reporto_pago: true };
+  const t = await correr({ msg: { texto: 'Hola, ya pagué la tiquetera pero no me llegó nada' }, ctx: { perfil: { ...PERFIL, tiquetera_pendiente: PEND } },
+    modelo: { respuesta: 'Tu compra quedó anotada, en recepción te la activan 🙌', accion: 'recepcion', motivo: 'Pagué mi tiquetera de 8 clases y no me aparece activa' } });
+  const e = t.entrada();
+  ok('el modelo recibe la tiquetera pendiente (clases, valor y si dijo que pagó)',
+     e && e.perfil && e.perfil.tiquetera_pendiente && e.perfil.tiquetera_pendiente.clases === 8 && e.perfil.tiquetera_pendiente.reporto_pago === true, JSON.stringify(e && e.perfil && e.perfil.tiquetera_pendiente));
+  ok('la pasa a recepción con el motivo en primera persona ya escrito en el enlace',
+     /https:\/\/wa\.me\/573017833550\?text=/.test(t.enviados[0]) && /Pagué mi tiquetera de 8 clases y no me aparece activa/.test(decodeURIComponent(t.enviados[0])), decodeURIComponent(t.enviados[0]).slice(0, 220));
+  ok('y no dice que la tiquetera ya está activa', !/ya (est[aá]|qued[oó]) activa/i.test(t.enviados[0]));
+  const t2 = await correr({ msg: { texto: 'hola' } });
+  ok('sin compra pendiente, el modelo recibe tiquetera_pendiente en null', (t2.entrada().perfil || {}).tiquetera_pendiente === null);
+  ok('el guion le explica al modelo qué hacer con una tiquetera pendiente (recepción, nunca «ya está activa»)',
+     /perfil\.tiquetera_pendiente/.test(INSTRUCCIONES_ASISTENTE) && /NUNCA digas que ya está activa/.test(INSTRUCCIONES_ASISTENTE));
+}
+{
   const t = await correr({ chat: { turnos: MAX_TURNOS_ASISTENTE } });
   ok('pasado el tope de turnos, pasa a recepción con el enlace', /wa\.me\/573017833550/.test(t.enviados[0]) && t.modelo() === 0);
 }

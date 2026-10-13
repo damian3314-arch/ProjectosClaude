@@ -1259,6 +1259,25 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0176 (13 oct): a quien empezó a comprar una tiquetera y a los 15 minutos sigue sin activarse (dijo «ya pagué» y no cruzó
+    // con el banco, o dejó la compra a medias). Habla solo de SU compra (utilidad). Si responde, el asistente la pasa a
+    // recepción para que la activen. Se envía cuando Meta la aprueba (wa_recordar_tiquetera_activar).
+    name: 'tiquetera_pago_ayuda',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, vimos que empezaste a comprar {{2}} en Tumbao y todavía no aparece activa ⏳\n\n' +
+          '¿Pudiste hacer el pago? Si tuviste algún inconveniente, respóndeme por aquí y te ayudo a terminar. ' +
+          'Si ya pagaste, no hagas nada: en cuanto lo validemos te avisamos por este chat.',
+        example: { body_text: [['Laura', 'tu tiquetera de 8 clases']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
     name: 'reserva_confirmada',
     language: 'es',
     category: 'UTILITY',
@@ -1744,6 +1763,25 @@ async function campanaTiquetera(env) {
     enviados += d.enviados;
   }
   return { ok: true, estado, candidatos: c.candidatos || 0, encolados: c.encolados || 0, enviados };
+}
+
+/* 0176 · El aviso a quien compró una tiquetera y a los 15 minutos sigue sin activarse (la base lo encola cada 2 minutos con
+ * tiquetera_recordar_pago). Nace en «esperando_plantilla»: cada 10 minutos, el cron del Worker mira si Meta ya aprobó
+ * tiquetera_pago_ayuda y, si sí, la base lo pasa a «encendido». Con «apagado» (decisión de Damián) no se toca. La nota a
+ * Damián, en cambio, no depende de Meta y sale desde el primer día. */
+async function activarRecordatorioTiquetera(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
+  const e = await rpc(env, 'wa_recordar_tiquetera_activar', { p_aprobada: false });
+  if (!e || e.estado !== 'esperando_plantilla') return { ok: true, estado: (e && e.estado) || null };
+  const lista = await (await fetch(
+    `${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates?fields=name,status,category,language&limit=200`,
+    { headers: cabecerasWA(env) })).json().catch(() => ({}));
+  if (!lista || lista.error) return { ok: false, error: 'META' };
+  const t = (lista.data || []).find((x) => x.name === 'tiquetera_pago_ayuda' && x.language === 'es');
+  if (!t || t.status !== 'APPROVED') return { ok: true, estado: 'esperando_plantilla', plantilla: t ? t.status : 'NO_EXISTE' };
+  const r = await rpc(env, 'wa_recordar_tiquetera_activar', { p_aprobada: true });
+  console.log('recordatorio de tiquetera encendido', t.category);
+  return { ok: true, estado: (r && r.estado) || null, categoria: t.category };
 }
 
 let ultimoDespacho = 0;
@@ -3209,6 +3247,7 @@ async function asistenteWA(request, env, origen) {
       reservas: Array.isArray(ctx.reservas) ? ctx.reservas : [],
       perfil: {
         plan_vigente: perfil.plan_vigente || null, tiquetera_vigente: perfil.tiquetera_vigente || null,
+        tiquetera_pendiente: perfil.tiquetera_pendiente || null,
         valor_mensualidad: perfil.valor_mensualidad, mensualidad_por_clase: perfil.mensualidad_por_clase,
         cupos_mensualidad: perfil.cupos_mensualidad, paquetes_tiquetera: perfil.paquetes_tiquetera, precio_suelta: perfil.precio_suelta,
       },
@@ -3660,6 +3699,10 @@ export default {
     if (ruta === '/wa/campana-tiquetera' && (request.method === 'POST' || request.method === 'GET')) {
       try { return json(await campanaTiquetera(env), 200, origen); }
       catch (e) { console.log('campana tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
+    }
+    if (ruta === '/wa/recordar-tiquetera' && (request.method === 'POST' || request.method === 'GET')) {
+      try { return json(await activarRecordatorioTiquetera(env), 200, origen); }
+      catch (e) { console.log('recordar tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
     }
     if (ruta === '/wa/plantillas' && request.method === 'GET') {
       try { return json(await asegurarPlantillas(env), 200, origen); }
@@ -4380,6 +4423,7 @@ export default {
       // sin abrir el panel si el reloj del Worker ya funciona en esta cuenta. Y el freno automático de las ventas.
       await rpc(env, 'cron_latido', { p_cron: evento && evento.cron }).catch((e) => console.log('latido', e && e.message));
       await frenoAutomatico(env).catch((e) => console.log('freno', e && e.message));
+      await activarRecordatorioTiquetera(env).catch((e) => console.log('recordar_tiquetera', e && e.message));
       try {
         const r = await rpc(env, 'liberar_cupos_expirados', {});
         // PostgREST devuelve el entero pelado o envuelto según el caso.
