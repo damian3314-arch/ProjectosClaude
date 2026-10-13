@@ -25,6 +25,7 @@
  * servidor y no la página:
  *
  *   RETARDO_BANCO=1              el pago cruza  → no se ofrece escribir
+ *   RETARDO_BANCO=1 FRECUENTE=1  y es cliente frecuente → además, la invitación a la mensualidad y la tiquetera
  *   NUNCA_LLEGA=1 MINUTOS_ESPERA el pago no cruza → se pide el soporte
  *
  * La prueba levanta y baja el espejo ella misma, así que corre sola:
@@ -126,10 +127,32 @@ await conEspejo({ RETARDO_BANCO: '1' }, async () => {
   ok('y conserva el código', /^[A-Z0-9]{4,8}$/.test(
      (await p.locator('#ok-codigo').innerText()).trim()));
 
-  /* Que no se ofrezca WhatsApp no puede llevarse por delante la
-     invitación a opinar, que es de otra cosa y sí va en este caso. */
-  ok('la invitación a contarnos sigue en pie',
-     await p.locator('#ok-opina').isVisible());
+  /* 13 oct (Damián): «cuando pasa todo el proceso de validación, solo debe
+     compartir el código de reserva y decir que nos vemos en la pista».
+     Nada más: ni la invitación a opinar ni el WhatsApp del pie de página. */
+  ok('sin la invitación a opinar', !(await p.locator('#ok-opina').isVisible()));
+  ok('sin el WhatsApp del pie de página', !(await p.locator('#f-wa').isVisible()));
+  ok('cliente nuevo: sin invitación a la mensualidad ni a la tiquetera',
+     !(await p.locator('#oferta-tiq').isVisible()));
+
+  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  await ctx.close();
+});
+
+/* ═══════ 1b · cliente frecuente: además, la invitación a sus planes ═══════ */
+
+titulo('1b. Cliente frecuente');
+await conEspejo({ RETARDO_BANCO: '1', FRECUENTE: '1' }, async () => {
+  const { p, ctx, errores } = await hastaElFinal();
+
+  ok('dice "nos vemos en la pista"', /nos vemos en la pista/i.test(await p.locator('#t5').innerText()));
+  ok('lo invita a la página de mensualidad y tiquetera', await p.locator('#oferta-tiq').isVisible());
+  ok('con un botón que lleva a mensualidad.html',
+     (await p.locator('#oferta-tiq-ir').getAttribute('href')) === 'mensualidad.html' &&
+     /mensualidad y tiquetera/i.test(await p.locator('#oferta-tiq-ir').innerText()),
+     (await p.locator('#oferta-tiq-ir').innerText()).trim());
+  ok('y tampoco le ofrece WhatsApp (ni el botón ni el pie de página)',
+     !(await p.locator('#ok-wa').isVisible()) && !(await p.locator('#f-wa').isVisible()));
 
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
@@ -156,6 +179,8 @@ await conEspejo({ NUNCA_LLEGA: '1', MINUTOS_ESPERA: '0.15' }, async () => {
   const cuerpo = await p.locator('#s5').innerText();
   ok('sin dejarla creyendo que perdió el cupo',
      /cupo sigue apartado/i.test(cuerpo));
+  ok('el WhatsApp del pie de página sigue a la mano', await p.locator('#f-wa').isVisible());
+  ok('aquí no se le ofrecen planes: primero se resuelve el pago', !(await p.locator('#oferta-tiq').isVisible()));
 
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();

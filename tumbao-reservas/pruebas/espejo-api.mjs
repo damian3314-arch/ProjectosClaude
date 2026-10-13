@@ -24,6 +24,8 @@ const NUNCA_LLEGA = process.env.NUNCA_LLEGA === '1';
 // Permite acortar los 5 minutos de espera para poder probar en segundos
 // el camino de validación humana sin esperar de verdad.
 const MINUTOS_ESPERA = process.env.MINUTOS_ESPERA;
+// Si es true, /estado dice que la reserva confirmada es de un cliente frecuente (0174).
+const FRECUENTE = process.env.FRECUENTE === '1';
 
 // Las horas se anclan a Bogotá (UTC-5, sin horario de verano). Si se
 // usara la hora local del proceso, en un servidor en UTC las 7:00 am
@@ -1031,7 +1033,8 @@ createServer(async (req, res) => {
       pendiente_validacion: 'Recibimos tu comprobante. Alguien del equipo lo valida y te escribimos por WhatsApp.',
     };
     return json(res, 200, { ok: true, estado: r.estado, codigo: r.codigo,
-      clase: r.clase, fecha: r.fecha, hora: r.hora, mensaje: mensajes[r.estado] || '' });
+      clase: r.clase, fecha: r.fecha, hora: r.hora, frecuente: r.estado === 'confirmada' && FRECUENTE,
+      mensaje: mensajes[r.estado] || '' });
   }
 
   if (url.pathname === '/_prueba/ultimo-comprobante') {

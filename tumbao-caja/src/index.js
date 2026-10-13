@@ -1004,8 +1004,15 @@ async function pagina(request, env, ruta, origen, ctx) {
         rechazada: 'No pudimos validar el pago. Escribenos por WhatsApp.',
         expirada: 'Se solto el cupo por falta de pago.',
       };
+      // 0174 · Cliente frecuente (2 o más clases sueltas en 30 días, contando esta): la pantalla final lo invita a la
+      // página de mensualidad y tiquetera. Solo se mira si ya quedó confirmada; si la consulta falla, no se invita.
+      let frecuente = false;
+      if (r.estado === 'confirmada') {
+        frecuente = (await rpc(env, 'reserva_es_de_cliente_frecuente', { p_codigo: r.codigo || codigo })
+          .catch(() => false)) === true;
+      }
       return json({ ok: true, estado: r.estado, codigo: r.codigo,
-        clase: r.clase, metodo: r.metodo || null,
+        clase: r.clase, metodo: r.metodo || null, frecuente,
         mensaje: mensajes[r.estado] || '' }, 200, origen);
     }
 

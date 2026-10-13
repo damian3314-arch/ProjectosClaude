@@ -1323,14 +1323,15 @@ const CONFIG = {
         <button class="btn-ghost" type="button" id="ok-opina-ir">Contarnos en una frase</button>
       </div>
 
-      <!-- La tiquetera se ofrece AQUÍ, cuando la persona ya reservó y está
-           contenta (2 oct): en el pago estorbaría y se perdería la compra
-           de hoy. Muestra la cuenta de verdad, con los precios del sistema. -->
+      <!-- 13 oct (Damián): cuando la reserva se valida sola, la pantalla solo da el código y «nos vemos en la pista».
+           Esta tarjeta sale únicamente a los clientes FRECUENTES (2 o más clases sueltas en 30 días, contando esta;
+           lo dice el Worker en /tumbao/estado → frecuente) y los lleva a la página donde compran la mensualidad o
+           la tiquetera. Los precios salen del sistema; si no cargan, queda el texto general y el botón. -->
       <div class="oferta-tiq" id="oferta-tiq" hidden>
-        <span class="oferta-ceja">Para tu próxima clase</span>
-        <b id="oferta-tiq-tit"></b>
-        <p id="oferta-tiq-txt"></p>
-        <a class="btn" id="oferta-tiq-ir" href="mensualidad.html">Ver la tiquetera</a>
+        <span class="oferta-ceja">Para ti que vienes seguido</span>
+        <b id="oferta-tiq-tit">Baila más pagando menos</b>
+        <p id="oferta-tiq-txt">Con la mensualidad o la tiquetera cada clase te sale más barata.</p>
+        <a class="btn" id="oferta-tiq-ir" href="mensualidad.html">Ver mensualidad y tiquetera</a>
       </div>
 
       <a class="btn-ghost" id="ok-wa" href="#" style="margin-bottom:.6rem">Escribirnos por WhatsApp</a>
@@ -1339,7 +1340,7 @@ const CONFIG = {
   </section>
 
   <footer>
-    <p><a id="f-ig" href="#" target="_blank" rel="noopener">Instagram</a> · <a id="f-wa" href="#" target="_blank" rel="noopener">WhatsApp</a> · <a href="privacidad.html">Privacidad</a></p>
+    <p><a id="f-ig" href="#" target="_blank" rel="noopener">Instagram</a><span id="f-wa-caja"> · <a id="f-wa" href="#" target="_blank" rel="noopener">WhatsApp</a></span> · <a href="privacidad.html">Privacidad</a></p>
     <p style="margin-top:.4rem;opacity:.6">Tumbao · Colombia</p>
   </footer>
 </div>
@@ -2436,12 +2437,13 @@ const CONFIG = {
     }catch(_){ return null; }
   }
 
-  async function ofrecerTiquetera(mostrar){
+  async function ofrecerPlanes(mostrar){
     const caja = $('#oferta-tiq');
-    caja.hidden = true;
+    caja.hidden = !mostrar;
     if (!mostrar) return;
+    // Primero se ve con el texto general; si los precios cargan, la línea dice cuánto sale cada clase.
     try{
-      // Cada oferta carga por su lado: si los paquetes de tiquetera no cargan, la mensualidad se ofrece igual (y al revés).
+      const ref = (elegida && elegida.precio_cop) || 15000;
       try{
         if (!paquetesTiq){
           const r = await fetch(`${CONFIG.CAJA_BASE}/tumbao/tiquetera/paquetes`, { headers:{ Accept:'application/json' } });
@@ -2449,39 +2451,17 @@ const CONFIG = {
           paquetesTiq = (d && d.ok && Array.isArray(d.paquetes)) ? d.paquetes : [];
         }
       }catch(_){ /* sin tiquetera por ahora */ }
-      const ref = (elegida && elegida.precio_cop) || 15000;
       const mejor = (paquetesTiq || [])
         .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0 && Number(p.precio_cop) / Number(p.clases) < ref)
         .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
-      const porClaseTiq = mejor ? Math.round(mejor.precio_cop / mejor.clases) : 0;
-
-      // 10 oct: quien acaba de reservar una suelta está en el mejor momento para la mensualidad ($5.000 la clase frente a
-      // $15.000), pero la tarjeta solo le hablaba de la tiquetera. Con cupo real, la mensualidad va primero y la tiquetera
-      // queda como la forma suave de empezar.
-      const m = await cuposMensualidad();
-      if (m){
-        const porClase = Math.round(m.valor / CONFIG.CLASES_MES_REF / 100) * 100;
-        const cupos = m.horas.map(h => `${h.libres} ${h.libres === 1 ? 'cupo' : 'cupos'} a las ${h.etiqueta}`);
-        const lista = cupos.length > 1 ? cupos.slice(0, -1).join(', ') + ' y ' + cupos[cupos.length - 1] : cupos[0];
-        $('#oferta-tiq-tit').textContent = `Todo el mes por ${pesos(m.valor)}: ${pesos(porClase)} la clase`;
-        $('#oferta-tiq-txt').textContent =
-          `Tu horario fijo de lunes a sábado, en vez de ${pesos(ref)} cada vez. Quedan ${lista}.` +
-          (mejor ? ` ¿Prefieres empezar más suave? La tiquetera de ${mejor.clases} clases te sale a ${pesos(porClaseTiq)} cada una.` : '');
-        $('#oferta-tiq-ir').textContent = 'Apartar mi mensualidad';
-        caja.hidden = false;
-        return;
+      const m = await cuposMensualidad().catch(() => null);
+      const partes = [];
+      if (m) partes.push(`a ${pesos(Math.round(m.valor / CONFIG.CLASES_MES_REF / 100) * 100)} con la mensualidad`);
+      if (mejor) partes.push(`a ${pesos(Math.round(mejor.precio_cop / mejor.clases))} con la tiquetera`);
+      if (partes.length){
+        $('#oferta-tiq-txt').textContent = `Cada clase te sale ${partes.join(' y ')}, en vez de ${pesos(ref)}.`;
       }
-
-      if (!mejor) return;
-      const porClase = porClaseTiq;
-      const ahorro = mejor.clases * ref - mejor.precio_cop;
-      $('#oferta-tiq-tit').textContent = `Baila a ${pesos(porClase)} la clase`;
-      $('#oferta-tiq-txt').textContent =
-        `Con la tiquetera de ${mejor.clases} clases (${pesos(mejor.precio_cop)}) ahorras ${pesos(ahorro)} ` +
-        `y la usas cuando quieras durante ${mejor.vigencia_dias} días.`;
-      $('#oferta-tiq-ir').textContent = 'Ver la tiquetera';
-      caja.hidden = false;
-    }catch(_){ /* sin oferta antes que una oferta rota */ }
+    }catch(_){ /* queda el texto general */ }
   }
 
   pintarFranjaPromo();   // después de declarar paquetesTiq (let): antes habría un error de «aún no definida»
@@ -2563,14 +2543,17 @@ const CONFIG = {
         `Mi código es ${d.codigo || ''} (${clase}${hora ? ' · ' + hora : ''}).`
       : `Hola, soy ${$('#nombre').value.trim()}. Mi código es ${d.codigo || ''} (${clase}).`);
 
-    // Solo cuando salió bien. A quien tiene el pago sin confirmar hay
-    // que dejarlo resolver eso; pedirle la opinión encima es sordo.
-    ofrecerOpinar(confirmada);
-    ofrecerTiquetera(confirmada && tipo === 'suelta');
+    // 13 oct (Damián): si la reserva se validó sola, la pantalla SOLO da el código y «nos vemos en la pista»: ni
+    // WhatsApp (tampoco el del pie de página) ni la invitación a opinar. Al cliente frecuente, además, la invitación a
+    // la mensualidad o la tiquetera. WhatsApp vuelve a salir solo cuando la validación automática no se completa.
+    ofrecerOpinar(false);
+    $('#f-wa-caja').hidden = confirmada;
+    ofrecerPlanes(confirmada && tipo === 'suelta' && d.frecuente === true);
     irA(5);
   }
 
   $('#otra').addEventListener('click', () => {
+    $('#f-wa-caja').hidden = false;
     detenerEspera();
     detenerCupo();
     $('#form').reset();

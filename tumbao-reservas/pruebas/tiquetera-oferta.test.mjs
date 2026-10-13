@@ -3,8 +3,9 @@
  *
  * Damián (3 oct): «ya tenemos 3 tiqueteras vendidas, ¿qué podría ser lindo y
  * lograr convertir en la página?». Se ofrece en dos pantallas:
- *   · docs/index.html, al CONFIRMARSE una clase suelta: «baila a $12.000 la clase»
- *     con la cuenta real contra los $15.000 de la suelta.
+ *   · docs/index.html, al CONFIRMARSE una clase suelta. Desde el 13 oct (Damián) SOLO al cliente frecuente (el Worker
+ *     lo dice en /tumbao/estado → frecuente, 0174): una invitación con un botón a la página de mensualidad y
+ *     tiquetera, con lo que sale cada clase en cada plan contra los $15.000 de la suelta. Al cliente nuevo, nada.
  *   · docs/mensualidad.html, al quedar en la LISTA DE ESPERA: «mientras te
  *     avisamos, baila desde ya», con un botón que abre la compra de esa tiquetera.
  * Y las tarjetas de tiquetera muestran el precio POR CLASE.
@@ -54,7 +55,7 @@ const CON_CUPOS = { ok: true, tope: 25, valor_cop: 125000, horas: [
   { hora: '19:00', etiqueta: '7:00 pm', ocupadas: 23, tope: 23, libres: 0 },
 ] };
 
-async function reservarConfirmada(paquetes, cupos = SIN_CUPOS) {
+async function reservarConfirmada(paquetes, cupos = SIN_CUPOS, frecuente = true) {
   const ctx = await nav.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-CO' });
   const p = await ctx.newPage();
   const errores = [];
@@ -66,7 +67,7 @@ async function reservarConfirmada(paquetes, cupos = SIN_CUPOS) {
   await p.route('**/tumbao/estado**', async (ruta) => {
     const r = await ruta.fetch();
     const d = await r.json();
-    await ruta.fulfill({ response: r, json: { ...d, ok: true, estado: 'confirmada' } });
+    await ruta.fulfill({ response: r, json: { ...d, ok: true, estado: 'confirmada', frecuente } });
   });
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.locator('.opcion[data-tipo="suelta"]').click();
@@ -85,66 +86,60 @@ async function reservarConfirmada(paquetes, cupos = SIN_CUPOS) {
   return { p, ctx, errores, pago };
 }
 
-titulo('1. Reserva confirmada: se ofrece la tiquetera con la cuenta real');
+const texto = async (p) => (await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ').trim();
+const boton = async (p) => ({ txt: (await p.locator('#oferta-tiq-ir').innerText()).trim(),
+  href: await p.locator('#oferta-tiq-ir').getAttribute('href') });
+
+titulo('1. Cliente frecuente: la invitación a la mensualidad y la tiquetera');
 {
-  const { p, ctx, errores, pago } = await reservarConfirmada(PAQUETES);
-  ok('en la pantalla de pago NO se ofrece nada', !/tiquetera/i.test(pago));
+  const { p, ctx, errores, pago } = await reservarConfirmada(PAQUETES, CON_CUPOS);
+  ok('en la pantalla de pago NO se ofrece nada', !/tiquetera|mensualidad/i.test(pago));
   await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
-  const t = await p.locator('#oferta-tiq').innerText();
-  ok('baila a $12.000 la clase (el paquete más barato por clase)', /\$12\.000 la clase/.test(t), t.replace(/\n/g, ' '));
-  ok('dice cuánto ahorra: 8 × $15.000 − $96.000 = $24.000', /ahorras \$24\.000/.test(t));
-  ok('y la vigencia', /30 días/.test(t));
-  ok('el botón lleva a la página de la tiquetera',
-     (await p.locator('#oferta-tiq-ir').getAttribute('href')) === 'mensualidad.html');
+  await p.waitForFunction(() => /\$/.test(document.querySelector('#oferta-tiq-txt').textContent), null, { timeout: 5000 });
+  ok('le habla al que viene seguido', /vienes seguido/i.test(await p.locator('#oferta-tiq').innerText()));
+  const t = await texto(p);
+  ok('con la cuenta real de los dos planes contra los $15.000 de la suelta',
+     t === 'Cada clase te sale a $5.000 con la mensualidad y a $12.000 con la tiquetera, en vez de $15.000.', t);
+  const b = await boton(p);
+  ok('un botón a la página de mensualidad y tiquetera', b.txt === 'Ver mensualidad y tiquetera' && b.href === 'mensualidad.html', JSON.stringify(b));
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }
 
-titulo('2. Sin paquetes del servidor no se muestra nada');
+titulo('2. Cliente nuevo: nada más que el código');
 {
-  const { p, ctx, errores } = await reservarConfirmada(null);
+  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, CON_CUPOS, false);
   await p.waitForTimeout(800);
-  ok('la oferta sigue escondida', await p.locator('#oferta-tiq').isHidden());
+  ok('la invitación sigue escondida', await p.locator('#oferta-tiq').isHidden());
   ok('y la confirmación se ve normal', await p.locator('#s5.on').isVisible());
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }
 
-titulo('2b. Con cupos de mensualidad, la mensualidad va primero');
+titulo('3. Frecuente, aunque el servidor no conteste los precios');
 {
-  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, CON_CUPOS);
+  const { p, ctx, errores } = await reservarConfirmada(null, null);
   await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
-  const tit = (await p.locator('#oferta-tiq-tit').innerText()).trim();
-  const txt = (await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ');
-  ok('el título dice el mes por $125.000 y $5.000 la clase', /\$125\.000/.test(tit) && /\$5\.000 la clase/.test(tit), tit);
-  ok('dice cuánto cuesta cada vez que no es mensualidad ($15.000)', /\$15\.000/.test(txt), txt);
-  ok('lista los cupos REALES por horario y calla el horario lleno', /8 cupos a las 7:00 am/.test(txt) && /3 cupos a las 6:00 pm/.test(txt) && !/7:00 pm/.test(txt), txt);
-  ok('deja la tiquetera como la forma suave de empezar, con la cuenta real', /tiquetera de 8 clases/.test(txt) && /\$12\.000 cada una/.test(txt), txt);
-  ok('el botón es de la mensualidad y lleva a su página', (await p.locator('#oferta-tiq-ir').innerText()).trim() === 'Apartar mi mensualidad'
-     && (await p.locator('#oferta-tiq-ir').getAttribute('href')) === 'mensualidad.html');
+  await p.waitForTimeout(600);
+  const t = await texto(p);
+  ok('igual se invita, con el texto general (sin inventar precios)',
+     t === 'Con la mensualidad o la tiquetera cada clase te sale más barata.', t);
+  ok('y el botón de siempre', (await boton(p)).href === 'mensualidad.html');
   ok('sin errores de JS', errores.length === 0, errores.join(' | '));
   await ctx.close();
 }
 {
-  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, { ...CON_CUPOS, horas: [{ hora: '18:00', etiqueta: '6:00 pm', ocupadas: 22, tope: 23, libres: 1 }] });
-  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
-  ok('con un solo cupo dice «1 cupo» (no «1 cupos»)', /Quedan 1 cupo a las 6:00 pm\./.test((await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ')));
-  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
-  await ctx.close();
-}
-{
-  const { p, ctx, errores } = await reservarConfirmada(PAQUETES, null);
-  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
-  ok('si los cupos no cargan, queda la tiquetera de siempre (no se promete un cupo que no se conoce)',
-     /Baila a \$12\.000 la clase/.test(await p.locator('#oferta-tiq-tit').innerText()) && (await p.locator('#oferta-tiq-ir').innerText()).trim() === 'Ver la tiquetera');
-  ok('sin errores de JS', errores.length === 0, errores.join(' | '));
+  const { p, ctx } = await reservarConfirmada(PAQUETES, null);
+  await p.waitForFunction(() => /\$/.test(document.querySelector('#oferta-tiq-txt').textContent), null, { timeout: 5000 });
+  const t = await texto(p);
+  ok('si solo cargan los paquetes, solo habla de la tiquetera', t === 'Cada clase te sale a $12.000 con la tiquetera, en vez de $15.000.', t);
   await ctx.close();
 }
 {
   const { p, ctx } = await reservarConfirmada(null, CON_CUPOS);
-  await p.waitForSelector('#oferta-tiq:not([hidden])', { timeout: 5000 });
-  const txt = (await p.locator('#oferta-tiq-txt').innerText()).replace(/\s+/g, ' ');
-  ok('sin tiquetera pero con cupos, igual ofrece la mensualidad (y no menciona una tiquetera que no existe)', /Quedan 8 cupos/.test(txt) && !/tiquetera/i.test(txt), txt);
+  await p.waitForFunction(() => /\$/.test(document.querySelector('#oferta-tiq-txt').textContent), null, { timeout: 5000 });
+  const t = await texto(p);
+  ok('si solo cargan los cupos, solo habla de la mensualidad', t === 'Cada clase te sale a $5.000 con la mensualidad, en vez de $15.000.', t);
   await ctx.close();
 }
 
