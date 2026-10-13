@@ -177,10 +177,14 @@ titulo('6. El Worker y la base: todo cableado y apagado');
   ok('0156: la prueba A/B solo se activa cuando ventas_plantilla_b tiene valor (vacía de entrada)', /'ventas_plantilla_b', ''/.test(m156) && /<> '' and c\.id % 2 = 1/.test(m156));
   ok('0156: sin DROP ni DELETE', !/\bdrop\b/i.test(m156) && !/\bdelete\b/i.test(m156));
     const m157 = readFileSync(new URL('../supabase/migrations/0157_encuesta_regreso_ronda.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+const m175 = readFileSync(new URL('../supabase/migrations/0175_ventas_tiquetera_al_final.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
   ok('encuesta: el bot sabe contestar «Horario», «Precio», «Tiempo» y «Otra razón» sin descuentos',
      /«Horario», «Precio», «Tiempo» u «Otra razón»/.test(INSTRUCCIONES_VENTAS) && /SIN descuentos/.test(INSTRUCCIONES_VENTAS));
   ok('0157: sale solo el día fijado (16 oct), en horario, sin domingos ni festivos, 10 por corrida con tope',
      /'encuesta_regreso_fecha', '2026-10-16'/.test(m157) && /v_fecha is distinct from hoy/.test(m157) && /from festivos/.test(m157) && /time '10:00'/.test(m157) && /limit least\(10, v_total - v_hechas\)/.test(m157));
+  ok('0175: la tiquetera pasa al final de la fila (prioridad 7) sin tocar ningún filtro; falla si no encuentra la línea',
+     /case when c\.objetivo = 'tiquetera' then 7 else c\.prioridad end prioridad/.test(m175) &&
+     /execute replace\(v_def, v_viejo, v_nuevo\)/.test(m175) && /raise exception/.test(m175) && !/where/.test(m175.split('$v$')[1] || ''));
   ok('0157: abre la conversación ANTES de enviar y solo a quien pasa los filtros de siempre (ventas_seleccion, reactivar)',
      /insert into ventas_chats[\s\S]*insert into wa_avisos/.test(m157) && /from ventas_seleccion\(500\)/.test(m157) && /objetivo = 'reactivar'/.test(m157));
   ok('0157: una sola vez por persona y día, y sin DROP ni DELETE', /'encuesta:' \|\| c\.telefono/.test(m157) && /on conflict \(clave\) do nothing/.test(m157) && !/\bdrop\b/i.test(m157) && !/\bdelete\b/i.test(m157));
