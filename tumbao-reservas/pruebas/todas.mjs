@@ -56,6 +56,7 @@ const SUITES = [
   'fidelidad-pausada',
   'campana-14-oct',
   'tope-25',
+  'objetivo-7pm',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
