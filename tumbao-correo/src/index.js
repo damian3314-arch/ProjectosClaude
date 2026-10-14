@@ -67,9 +67,12 @@ import { parsearCorreoBancolombia } from '../../tumbao-reservas/n8n/parser-banco
 const DIAS_QUE_SE_GUARDA = 7;
 
 // De dónde salen de verdad las alertas. Bancolombia usa las dos según
-// el tipo de aviso; con una sola se perdería la mitad.
+// el tipo de aviso; con una sola se perdería la mitad. Desde el 13 oct 2026
+// (~08:55 am) también manda desde @ayn.: sin esa dirección dejaron de entrar
+// todos los pagos recibidos (13 en dos días, $1.142.000).
 const REMITENTES_DEL_BANCO = [
   'alertasynotificaciones@an.notificacionesbancolombia.com',
+  'alertasynotificaciones@ayn.notificacionesbancolombia.com',
   'alertasynotificaciones@bancolombia.com.co',
 ];
 

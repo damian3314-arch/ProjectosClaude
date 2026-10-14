@@ -14,7 +14,7 @@ const correoBanco = trigger({
       simple: false,
       maxResults: 25,
       filters: {
-        q: 'from:(alertasynotificaciones@an.notificacionesbancolombia.com OR alertasynotificaciones@bancolombia.com.co) newer_than:1d',
+        q: 'from:(alertasynotificaciones@an.notificacionesbancolombia.com OR alertasynotificaciones@ayn.notificacionesbancolombia.com OR alertasynotificaciones@bancolombia.com.co) newer_than:1d',
         readStatus: 'both',
       },
       options: {},

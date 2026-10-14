@@ -109,6 +109,16 @@ const alerta = (extra) => [
 ok('una alerta del banco con spf=pass se cree',
    remitenteDeFiar(alerta([]), 'x@y.com').se_puede_creer === true);
 
+// 13 oct 2026: el banco empezó a mandar desde @ayn. y los pagos dejaron de entrar.
+for (const dir of ['an', 'ayn']) {
+  ok(`una alerta desde @${dir}.notificacionesbancolombia.com con spf=pass se cree`,
+     remitenteDeFiar(alerta([]).replace('alertasynotificaciones@bancolombia.com.co',
+       `alertasynotificaciones@${dir}.notificacionesbancolombia.com`), 'x@y.com').se_puede_creer === true);
+}
+ok('un subdominio inventado del banco NO se cree',
+   remitenteDeFiar(alerta([]).replace('alertasynotificaciones@bancolombia.com.co',
+     'alertasynotificaciones@xx.notificacionesbancolombia.com'), 'x@y.com').se_puede_creer === false);
+
 ok('el mismo texto desde otro remitente NO se cree',
    remitenteDeFiar(
      alerta([]).replace('alertasynotificaciones@bancolombia.com.co', 'atacante@ejemplo.com'),
