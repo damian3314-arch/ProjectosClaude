@@ -1,0 +1,22 @@
+name = "tumbao-importar-afiliados"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Cloudflare corre los cron en UTC. Bogota es UTC-5 todo el ano (sin horario de verano):
+#   21:30 Bogota -> 02:30 UTC
+#   08:00 Bogota -> 13:00 UTC
+[triggers]
+crons = ["30 2 * * *", "0 13 * * *"]
+
+[observability]
+enabled = true
+
+[vars]
+SUPABASE_URL = "https://fobpccreihcylpsullhu.supabase.co"
+# Carpeta raiz 'Miembros Activos' en Drive (la misma que usaba n8n)
+DRIVE_ROOT_FOLDER_ID = "1AV37nWzy2-UbQAvZTAMbYzTq1NM6tsHM"
+
+# Secretos (no van aqui, ver README):
+#   GOOGLE_SERVICE_ACCOUNT   JSON completo de la cuenta de servicio
+#   SUPABASE_SERVICE_KEY     service_role key del proyecto Supabase de Tumbao
+#   RUN_TOKEN                (opcional) habilita GET /run?dry=1 para pruebas en seco
