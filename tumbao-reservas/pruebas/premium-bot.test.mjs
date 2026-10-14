@@ -56,8 +56,8 @@ titulo('1. Cumplir los requisitos ES la aprobación');
 
 titulo('2. Conoce el negocio');
 {
-  ok('tope de 23 en 6 pm y 7 pm, y 7 am abierto',
-     /máximo 23 personas cada uno/.test(t) && /6:00 pm y 7:00 pm/.test(t) && /7:00 am entran todos los que lleguen/.test(t));
+  ok('tope de 25 en 6 pm y 7 pm (14 oct, antes 23), y 7 am abierto',
+     /máximo 25 personas cada uno/.test(t) && /6:00 pm y 7:00 pm/.test(t) && /7:00 am entran todos los que lleguen/.test(t));
   ok('la fecha es el 30 de diciembre de 2026', /30 de diciembre de 2026/.test(t));
   ok('los dos requisitos (plan 4 meses seguidos, o 90 días en clase suelta)',
      /3 meses seguidos/.test(t) && !/4 meses seguidos/.test(t) && /más de 90 días/.test(t) && /8 visitas/.test(t));

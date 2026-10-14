@@ -55,6 +55,7 @@ const SUITES = [
   'tiquetera-cierre',
   'fidelidad-pausada',
   'campana-14-oct',
+  'tope-25',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
