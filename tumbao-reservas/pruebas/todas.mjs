@@ -54,6 +54,7 @@ const SUITES = [
   'pausa-renovaciones',
   'tiquetera-cierre',
   'fidelidad-pausada',
+  'campana-14-oct',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
