@@ -57,6 +57,7 @@ const SUITES = [
   'campana-14-oct',
   'tope-25',
   'objetivo-7pm',
+  'incidente-profe-7am',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
