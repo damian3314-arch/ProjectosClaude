@@ -91,3 +91,10 @@ Al cargar este archivo en una sesión nueva, Claude Code simplemente:
 1. Lee este índice + el sub-archivo relevante a la tarea pedida.
 2. Verifica estado actual del repo (qué existe, qué no).
 3. Empieza a ejecutar lo que esté en verde/amarillo. No pide confirmación de haber "entendido el framework" — eso no aporta nada, solo ejecuta.
+
+---
+
+## 8. Glosario de Tumbao
+
+- **Timba** (nombre puesto por Damián el 13 oct 2026): el bot de WhatsApp de Tumbao que Damián sí controla. Es todo lo que sale del Worker `tumbao-caja` por la WhatsApp Cloud API: avisos y notificaciones (renovación, recordatorios de clase), campañas masivas, el bot de ventas (`ventas.js`, abre conversaciones y cierra ventas), el rescate de pagos pendientes (tiqueteras sin validar) y las respuestas automáticas a quien le escribe (`asistente.js`). Cuando Damián dice «Timba», es esto.
+- **La IA de Meta en el número de recepción** (301 783 3550): es otro agente, de Meta, que contesta las preguntas que llegan a recepción. No está en este repo ni Damián lo maneja desde aquí. No es Timba y no se llama de ninguna manera en el código.
