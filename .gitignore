@@ -7,3 +7,6 @@ node_modules/
 
 # Ruido del sistema.
 .DS_Store
+
+# Caché local de la CLI de Cloudflare (ID y correo de la cuenta)
+.cloudflare/
