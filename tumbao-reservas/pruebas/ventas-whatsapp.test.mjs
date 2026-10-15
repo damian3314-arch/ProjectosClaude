@@ -155,7 +155,7 @@ titulo('6. El Worker y la base: todo cableado y apagado');
                 textoSeguimientoVentas({ nombre: 'Laura', hora: '19:00' }), textoSeguimientoVentas({ nombre: 'Laura', hora: '18:00' }), textoSeguimientoVentas({})];
   ok('seguimiento: ningún texto trae cifras, promociones ni enlaces ajenos (pasan la baranda)', segs.every(t => guardarRespuestaVentas(t, perfil).ok));
   ok('seguimiento: el de lista de espera nombra el horario correcto', /7 pm/.test(segs[2]) && !/6 pm/.test(segs[2]) && /6 pm/.test(segs[3]));
-  ok('seguimiento: no es largo (WhatsApp)', segs.every(t => t.length < 260));
+  ok('seguimiento: no es largo (WhatsApp): el dato de valor + la pregunta caben en un mensaje corto', segs.every(t => t.length < 520));
   ok('0155: una sola vez por conversación, dentro de la ventana de 24 h y solo si la última palabra fue nuestra',
      /seguimiento_at/.test(m155) && /interval '22 hours'/.test(m155) && /interval '20 hours' and ahora - interval '3 hours'/.test(m155) && /m\.direccion from wa_mensajes[^]{0,160}\) = 'saliente'/.test(m155));
   ok('0155: no a quien ya compró o está pagando, ni a bajas ni dueños',

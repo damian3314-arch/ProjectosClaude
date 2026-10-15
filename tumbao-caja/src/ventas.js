@@ -38,22 +38,53 @@ export function conEnlaceDeChat(texto, chatId) {
 }
 
 /**
+ * Datos curiosos y útiles sobre moverse, para motivar y romper el hielo (Damián, 15 oct).
+ *
+ * Son FIJOS y revisados a mano, no inventados por el modelo: nada de cifras de estudios ni promesas de salud. Dicen lo que
+ * es de conocimiento general y con prudencia («suele», «ayuda»). Si se agrega uno, que sea igual de modesto: sin curar,
+ * adelgazar ni prevenir nada, sin porcentajes y sin nombrar estudios.
+ */
+export const DATOS_DE_VALOR = [
+  'Dato curioso: cuando bailas, tu cuerpo libera endorfinas, unas sustancias que ayudan a sentirte de mejor ánimo y con menos estrés. Por eso uno sale de clase con otra energía.',
+  'Para recordar: 30 minutos moviéndote valen mucho más que no hacer nada. No hace falta el día perfecto ni una hora completa para que tu cuerpo lo note.',
+  'La OMS recomienda a los adultos al menos 150 minutos de actividad física moderada a la semana. Con unas pocas clases de baile por semana te vas acercando a esa meta.',
+  'Bailar mezcla música, memoria y coordinación: aprenderte los pasos también es ejercicio para la mente, no solo para el cuerpo.',
+  'Moverte durante el día suele ayudarte a dormir mejor en la noche. Una clase es una buena forma de aprovechar tu día.',
+  'Lo que más cuenta no es la intensidad sino la constancia: ir seguido, aunque sea poquito, pesa más que ir mucho un solo día.',
+  'Después de un día pesado, un rato de música y movimiento ayuda a soltar la tensión y a cambiar el ánimo.',
+  'Hacer ejercicio en grupo suele ser más fácil de mantener: moverte con otras personas, al mismo ritmo, motiva a seguir viniendo.',
+];
+
+/** El dato que le toca a esta conversación: el mismo número siempre da el mismo dato (así no cambia entre mensajes). */
+export function datoDeValor(chat) {
+  const n = Math.abs(Math.trunc(Number(chat)));
+  return DATOS_DE_VALOR[Number.isFinite(n) ? n % DATOS_DE_VALOR.length : 0];
+}
+
+/**
  * Seguimiento dentro de las 24 h (gratis: la persona escribió hace menos de un día). A quien mostró interés,
  * se le contestó y se quedó callada, unas horas después se le pregunta, sin cifras ni promesas, si pudo
  * ver el enlace. Texto fijo, no del modelo: no hay nada que la baranda tenga que revisar.
  */
 export function textoSeguimientoVentas({ nombre, objetivo, hora, visito, chat } = {}) {
   const hola = nombre ? `Hola ${nombre} 😊` : 'Hola 😊';
+  // 15 oct (Damián): el seguimiento debe sentirse como una persona que aporta valor, no como un cobro. Primero un dato
+  // útil o curioso sobre moverse; la pregunta de siempre va después, suave.
+  const dato = datoDeValor(chat);
+  return `${hola}\n\n${dato}\n\n${cierreDeSeguimiento({ objetivo, hora, visito, chat })}`;
+}
+
+function cierreDeSeguimiento({ objetivo, hora, visito, chat }) {
   // Si abrió la página pero no terminó, la pregunta es otra: no «¿lo viste?», sino «¿qué te frenó?».
   if (visito) {
-    return `${hola} ¿Te quedó alguna duda para terminar tu inscripción? Si algo no te cuadra (el horario, el pago, lo que incluye), cuéntame y lo resolvemos.`;
+    return '¿Te quedó alguna duda para terminar tu inscripción? Si algo no te cuadra (el horario, el pago, lo que incluye), cuéntame y lo resolvemos.';
   }
   const h = hora === '19:00' ? '7 pm' : hora === '18:00' ? '6 pm' : null;
-  if (h) return `${hola} ¿Pudiste inscribirte en el cupo de las ${h}? Lo haces en ${conEnlaceDeChat(ENLACE_PAGINA, chat)}. Si te quedó alguna duda, dime y te ayudo.`;
+  if (h) return `¿Pudiste inscribirte en el cupo de las ${h}? Lo haces en ${conEnlaceDeChat(ENLACE_PAGINA, chat)}. Si te quedó alguna duda, dime y te ayudo.`;
   if (objetivo === 'mensualidad_7am' || objetivo === 'mensualidad_6pm' || objetivo === 'mensualidad_7pm') {
-    return `${hola} ¿Pudiste ver el enlace para tu mensualidad? Si tienes dudas del horario o del pago, dime y te ayudo.`;
+    return '¿Pudiste ver el enlace para tu mensualidad? Si tienes dudas del horario o del pago, dime y te ayudo.';
   }
-  return `${hola} ¿Pudiste ver el enlace? Si quieres, te ayudo a escoger: cuéntame en qué horario te queda mejor y te digo qué hay disponible.`;
+  return '¿Pudiste ver el enlace? Si quieres, te ayudo a escoger: cuéntame en qué horario te queda mejor y te digo qué hay disponible.';
 }
 
 /**
@@ -96,6 +127,9 @@ QUÉ OFRECES (según perfil.objetivo; los datos están en "perfil" y SOLO usas e
 - mensualidad_7am: la mensualidad ($ en perfil.valor_mensualidad) en el horario de 7 am, mientras perfil.cupos_mensualidad["07:00"] sea mayor que 0. Se inscribe en ${ENLACE_PAGINA}.
 - La mensualidad incluye las clases de su horario de lunes a sábado, sin domingos ni festivos (entre 23 y 26 al mes). Si perfil.mensualidad_por_clase existe, la cuenta que convence es esa: «alrededor de $X por clase» contra la suelta (perfil.precio_suelta). Dilo como cuenta, nunca como descuento, y siempre con «alrededor de» porque el número de clases cambia de un mes a otro.
 - HORARIOS DE CLASE (los únicos que existen, los dio Damián el 14 de octubre): de lunes a viernes a las 7:00 am, 6:00 pm y 7:00 pm. Martes y jueves, Rumba básica a las 5:00 pm. Sábados, Rumba terapia a las 8:00 am y a las 9:00 am. Úsalos cuando pregunten qué días u horas hay (por ejemplo, «los martes en la mañana» = la clase de las 7:00 am). NO existe clase de 7 am, 6 pm ni 7 pm los sábados, ni clase en otro horario que no esté en esta lista. De la Rumba básica y la Rumba terapia solo sabes el día y la hora: si preguntan su precio, su nivel, el profesor, o si la mensualidad o la tiquetera las cubre, pasa a recepción (pasar_a_recepcion=true) y no lo inventes.
+- APORTA VALOR, NO SOLO VENDAS (Damián, 15 de octubre): suena como una persona que se interesa por ella, no como alguien cobrando. Cuando la persona duda, dice que no tiene tiempo o ganas, está desanimada, o la charla es cálida y no pregunta nada concreto, puedes compartir UN dato de la lista de abajo, dicho con tus palabras, corto y natural, y solo después avanzar un paso. Un dato por conversación, no uno en cada mensaje. Si dice que no tiene tiempo, el de los 30 minutos es el indicado. Datos permitidos (SOLO estos):
+${DATOS_DE_VALOR.map((d) => `  · ${d}`).join('\n')}
+  Nunca inventes cifras, estudios ni beneficios; no prometas resultados de salud (no digas que cura, adelgaza ni previene nada) y no des consejos médicos. Si menciona una lesión, una enfermedad o un embarazo, dile con cariño que lo consulte con su médico antes de empezar y, si tiene dudas de la clase, pasa a recepción.
 - Si lo único que escribe es «Horario», «Precio», «Tiempo» u «Otra razón», está contestando la encuesta «¿Qué te ha impedido volver?». Agradécele con calidez (sin culpa) y responde según lo que tocó, SIN descuentos: Horario → pregúntale qué horario le serviría y dile qué cupos hay (perfil.opciones_hoy); Precio → la cuenta real (la mensualidad alrededor de $X por clase si perfil.mensualidad_por_clase existe; la tiquetera contra la suelta); Tiempo → que la tiquetera y la clase suelta se usan cuando ella pueda, sin horario fijo; Otra razón → pregúntale cuál, escucha y no insistas. Un solo paso a la vez.
 - Si lo único que escribe es un horario («7:00 am», «6:00 pm» o «7:00 pm»), es su respuesta a «¿En qué horario te queda mejor?»: contéstale con lo que hay en ESE horario. 7 am: la mensualidad si perfil.opciones_hoy.mensualidad_7am es true; 6 pm: la mensualidad si opciones_hoy.mensualidad_6pm es true; 7 pm: la mensualidad si opciones_hoy.mensualidad_7pm es true. Si el horario no tiene cupo: lista de espera (apuntarse es gratis en el enlace) y, mientras tanto, la tiquetera o una clase suelta. Un solo paso a la vez.
 - mensualidad_6pm: hay un cupo de mensualidad a las 6 pm para ella (perfil.cupos_mensualidad["18:00"] > 0). Se inscribe y paga en ${ENLACE_PAGINA}.
