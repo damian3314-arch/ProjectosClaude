@@ -26,6 +26,14 @@ titulo('1. Horarios reales');
      /NO existe clase de 7 am, 6 pm ni 7 pm los sábados/.test(INSTRUCCIONES_VENTAS) && /pasa a recepción \(pasar_a_recepcion=true\) y no lo inventes/.test(INSTRUCCIONES_VENTAS));
   ok('sigue diciendo lo que dijo Damián de la mensualidad (lunes a sábado, sin domingos ni festivos)',
      /lunes a sábado, sin domingos ni festivos/.test(INSTRUCCIONES_VENTAS));
+  ok('Timba sabe que la mensualidad incluye la Rumba terapia de los sábados (8 o 9 am, reservando) y lo dice si preguntan',
+     /su horario fijo de lunes a viernes[^.]*y, además, la Rumba terapia de los sábados, de 8:00 am o de 9:00 am, a la que entra reservando/.test(INSTRUCCIONES_VENTAS) &&
+     /Si alguien pregunta por los sábados, díselo: están incluidos/.test(INSTRUCCIONES_VENTAS));
+  ok('la Rumba básica de martes y jueves y la tiquetera siguen yendo a recepción (Damián solo confirmó los sábados)',
+     /si la mensualidad incluye la Rumba básica de martes y jueves, o si la tiquetera las cubre, pasa a recepción/.test(INSTRUCCIONES_VENTAS));
+  ok('el asistente general también sabe que los sábados están incluidos (0186)',
+     /mensualidad incluye las clases de lunes a sábado, también la Rumba terapia de los sábados/.test(
+       readFileSync(new URL('../supabase/migrations/0186_la_mensualidad_incluye_los_sabados.sql', import.meta.url), 'utf8')));
   ok('el asistente general también recibe los horarios (ajustes.asistente_info, una sola vez)',
      /valor \|\| ' Horarios de clase: de lunes a viernes a las 7:00 am, 6:00 pm y 7:00 pm\./.test(m185) &&
      /Sábados, Rumba terapia a las 8:00 am y a las 9:00 am/.test(m185) && /valor not like '%Rumba terapia%'/.test(m185));
