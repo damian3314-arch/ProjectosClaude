@@ -244,6 +244,103 @@ async function registrarSalida(env, analisis, idMensaje, textoLimpio) {
   try { return JSON.parse(texto); } catch (_) { return {}; }
 }
 
+/**
+ * ¿Este correo es una alerta del banco que NADIE va a ver registrada?
+ *
+ * POR QUÉ EXISTE
+ * El 13 de octubre de 2026 Bancolombia empezó a mandar las alertas desde
+ * otra dirección (@ayn.) y este Worker las descartó en silencio: 13 pagos,
+ * $1.142.000, y la cajera con clientes mostrando soportes sin ver nada en
+ * el sistema. Duró día y medio. Descartar sin avisar fue el fallo; esto
+ * hace que la próxima vez se note en minutos.
+ *
+ * Devuelve null si todo va bien, o { tipo, clave, titulo, recepcion, damian }:
+ *   · sin_remitente — parece una alerta del banco (alertasynotificaciones@…
+ *     bancolombia…) pero el remitente no está en la lista, o no pasó spf.
+ *   · sin_formato   — es del banco, dice «recibiste», y el parser no la entendió.
+ *   · sin_registro  — se entendió pero Supabase no la dejó registrar.
+ *
+ * Las marcas de publicidad del banco (info@mercadeo…, solicitudes…) no
+ * cuentan: solo la dirección de alertas.
+ */
+export function alertaSinAtender({ from, procedencia, analisis, texto, registro, fecha }) {
+  const de = String(from || '').toLowerCase();
+  const pareceAlerta = /^alertasynotificaciones@[a-z0-9.-]*bancolombia[a-z0-9.-]*$/.test(de);
+  const dia = fecha || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const sobre = 'Así nadie pierde un pago: si un cliente dice que pagó y no lo ves, no esperes.';
+
+  if (pareceAlerta && procedencia && !procedencia.se_puede_creer) {
+    const nueva = !procedencia.del_banco;
+    return {
+      tipo: 'sin_remitente',
+      clave: `banco-sin-atender:${dia}:remitente:${de}`,
+      titulo: '⚠️ Alerta del banco sin procesar',
+      recepcion: 'Llegó una alerta de Bancolombia que el sistema NO procesó' +
+        (nueva ? ' (viene de una dirección nueva)' : ' (no pasó la verificación)') +
+        '. Puede haber pagos que no se ven en el sistema. ' + sobre +
+        ' Revisa el correo de Tumbao y avísale a Damián.',
+      damian: `Alerta de Bancolombia sin procesar: remitente ${de}` +
+        (nueva ? ' (no está en REMITENTES_DEL_BANCO de tumbao-correo)' : ' (spf/dkim no pasó)') +
+        `. procedencia: ${procedencia.por_que || 'sin detalle'}.`,
+    };
+  }
+
+  const creible = Boolean(procedencia && procedencia.se_puede_creer);
+  if (creible && analisis && !analisis.es_ingreso && !analisis.es_salida &&
+      /recibiste/i.test(String(texto || ''))) {
+    return {
+      tipo: 'sin_formato',
+      clave: `banco-sin-atender:${dia}:formato:${de}`,
+      titulo: '⚠️ Alerta del banco que no se entendió',
+      recepcion: 'Llegó una alerta de Bancolombia de dinero recibido que el sistema no supo leer. ' +
+        'Ese pago NO está registrado. ' + sobre + ' Revisa el correo de Tumbao y avísale a Damián.',
+      damian: 'Alerta de Bancolombia con «recibiste» que el parser no reconoció ' +
+        `(${analisis.motivo || 'sin motivo'}). El banco pudo cambiar el formato del texto.`,
+    };
+  }
+
+  const fallo = registro && registro.registrado && registro.registrado.error;
+  if (creible && fallo) {
+    return {
+      tipo: 'sin_registro',
+      clave: `banco-sin-atender:${dia}:registro`,
+      titulo: '⚠️ Pago del banco sin registrar',
+      recepcion: 'Entró un pago del banco pero el sistema no pudo registrarlo. ' +
+        sobre + ' Avísale a Damián.',
+      damian: `El pago llegó y se entendió pero registrar_pago_y_conciliar falló: ${String(fallo).slice(0, 200)}`,
+    };
+  }
+  return null;
+}
+
+/** Avisa a recepción y a Damián. Nunca lanza: un fallo aquí no puede perder el correo. */
+async function avisarAlertaSinAtender(env, alerta) {
+  const llamar = (funcion, cuerpo) => fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${funcion}`, {
+    method: 'POST',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(cuerpo),
+  });
+  const salida = {};
+  for (const [quien, funcion, texto] of [
+    ['recepcion', 'nota_recepcion', alerta.recepcion],
+    ['damian', 'nota_asistente', alerta.damian],
+  ]) {
+    try {
+      const r = await llamar(funcion, {
+        p_titulo: alerta.titulo, p_texto: texto, p_clave: `${alerta.clave}:${quien}`,
+      });
+      salida[quien] = r.ok ? 'avisado' : `falla ${r.status}`;
+    } catch (e) {
+      salida[quien] = String(e && e.message ? e.message : e).slice(0, 120);
+    }
+  }
+  return salida;
+}
+
 function json(datos, estado = 200) {
   return new Response(JSON.stringify(datos, null, 2), {
     status: estado,
@@ -375,6 +472,26 @@ export default {
       await env.BUZON.put(
         clave, JSON.stringify(registro),
         { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
+    }
+
+    // Por último: si era una alerta del banco que nadie va a ver registrada,
+    // se avisa a recepción y a Damián. Va al final y dentro de su try para
+    // que un fallo del aviso no pueda tocar el correo ni los pagos. Una nota
+    // por tipo, remitente y día (la clave lo asegura), no una por correo.
+    if (env.REGISTRAR === '1') {
+      try {
+        const alerta = alertaSinAtender({
+          from: procedencia && procedencia.from, procedencia, analisis, texto, registro,
+        });
+        if (alerta) {
+          registro.alerta = { tipo: alerta.tipo, ...(await avisarAlertaSinAtender(env, alerta)) };
+          await env.BUZON.put(
+            clave, JSON.stringify(registro),
+            { expirationTtl: 60 * 60 * 24 * DIAS_QUE_SE_GUARDA });
+        }
+      } catch (e) {
+        console.log('alerta sin atender FALLÓ:', e && e.message);
+      }
     }
   },
 

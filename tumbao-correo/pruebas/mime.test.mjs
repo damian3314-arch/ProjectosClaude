@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { textoDelCorreo, remitenteReal, cabecera, bloqueDeCabeceras } from '../src/mime.js';
-import { remitenteDeFiar } from '../src/index.js';
+import { remitenteDeFiar, alertaSinAtender } from '../src/index.js';
 
 const require = createRequire(import.meta.url);
 const { parsearCorreoBancolombia } =
@@ -157,6 +157,45 @@ ok('las cabeceras se leen solo de arriba de la primera línea en blanco',
 ok('un reenvío a mano no se cree, aunque venga de una cuenta de confianza',
    remitenteDeFiar(CRUDO, 'x@y.com').se_puede_creer === false,
    remitenteDeFiar(CRUDO, 'x@y.com').por_que);
+
+// ── LA ALERTA PARA RECEPCIÓN (15 oct 2026) ───────────────────────
+// Descartar en silencio fue el fallo del 13 oct. Esto avisa.
+const crudoDe = (dir, spf = 'pass') => [
+  `From: Alertas y Notificaciones <${dir}>`,
+  `Authentication-Results: mx.cloudflare.net; spf=${spf}; dkim=pass`,
+  'Content-Type: text/plain; charset="UTF-8"', '', 'x',
+].join('\n');
+const ent = { es_ingreso: true, es_salida: false };
+
+const nuevaDir = remitenteDeFiar(crudoDe('alertasynotificaciones@zz.notificacionesbancolombia.com'), 'x@y.com');
+ok('una alerta de una dirección NUEVA del banco avisa',
+   alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir })?.tipo === 'sin_remitente');
+ok('la nota de recepción dice qué hacer y no promete nada raro',
+   /NO procesó/.test(alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir }).recepcion) &&
+   /avísale a Damián/.test(alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir }).recepcion));
+ok('una por remitente y día (la clave lo asegura)',
+   alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir, fecha: '2026-10-15' }).clave ===
+   alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir, fecha: '2026-10-15' }).clave &&
+   alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir, fecha: '2026-10-16' }).clave !==
+   alertaSinAtender({ from: nuevaDir.from, procedencia: nuevaDir, fecha: '2026-10-15' }).clave);
+
+const sinSpf = remitenteDeFiar(crudoDe('alertasynotificaciones@ayn.notificacionesbancolombia.com', 'fail'), 'x@y.com');
+ok('el banco conocido pero SIN spf también avisa', alertaSinAtender({ from: sinSpf.from, procedencia: sinSpf })?.tipo === 'sin_remitente');
+
+const bien = remitenteDeFiar(crudoDe('alertasynotificaciones@ayn.notificacionesbancolombia.com'), 'x@y.com');
+ok('un pago normal NO avisa', alertaSinAtender({ from: bien.from, procedencia: bien, analisis: ent, texto: 'recibiste', registro: { registrado: { resultado: {} } } }) === null);
+ok('una compra con tarjeta (salida) NO avisa',
+   alertaSinAtender({ from: bien.from, procedencia: bien, analisis: { es_ingreso: false, es_salida: true }, texto: 'Compraste' }) === null);
+ok('un correo del banco que no es alerta (publicidad) NO avisa',
+   alertaSinAtender({ from: 'info@mercadeo.correobancolombia.com', procedencia: { se_puede_creer: false, del_banco: false } }) === null &&
+   alertaSinAtender({ from: 'informacion@solicitudesgrupobancolombia.com.co', procedencia: { se_puede_creer: false, del_banco: false } }) === null);
+ok('un correo cualquiera NO avisa',
+   alertaSinAtender({ from: 'close_friend_updates@facebookmail.com', procedencia: { se_puede_creer: false, del_banco: false } }) === null);
+ok('«recibiste» que el parser no entendió avisa',
+   alertaSinAtender({ from: bien.from, procedencia: bien, analisis: { es_ingreso: false, motivo: 'estructura_no_reconocida' }, texto: 'LUZ, recibiste algo raro' })?.tipo === 'sin_formato');
+ok('un pago entendido pero que Supabase no dejó registrar avisa',
+   alertaSinAtender({ from: bien.from, procedencia: bien, analisis: ent, texto: 'recibiste', registro: { registrado: { error: 'x 500' } } })?.tipo === 'sin_registro');
+
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTODO EN VERDE');
 process.exit(fallos ? 1 : 0);
