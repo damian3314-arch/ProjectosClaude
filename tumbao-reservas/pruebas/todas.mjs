@@ -58,6 +58,7 @@ const SUITES = [
   'tope-25',
   'objetivo-7pm',
   'incidente-profe-7am',
+  'timba-horarios-y-mensajes',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',

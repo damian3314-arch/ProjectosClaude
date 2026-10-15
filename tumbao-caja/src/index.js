@@ -36,7 +36,7 @@ import { invitacionTiquetera, invitacionPlanes, debeInvitarATiquetera } from './
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
-import { INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
+import { esRespuestaAutomatica, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
 import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
@@ -2639,6 +2639,8 @@ async function ventasSeguimientoWA(env, origen) {
 /* 0141 · /wa/ventas: la conversación de ventas. La base lo despierta (pg_net) cuando alguien
  * con una apertura viva escribe. Conversa dentro de la ventana de 24 h, con la baranda de
  * ventas.js: precios, cupos y enlaces solo de la base y de la página. */
+const ESPERA_MENSAJES_SEGUIDOS_MS = 3500;
+
 async function ventasWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -2658,6 +2660,23 @@ async function ventasWA(request, env, origen) {
         p_resultado: 'no_interesado', p_interes: 'ninguno', p_resumen: 'Pidió no recibir más mensajes' }).catch(() => {});
       return json({ ok: true, salir: true }, 200, origen);
     }
+
+    // 14 oct: el saludo automático de otro negocio no es un cliente. No se contesta ni gasta un turno, y la conversación
+    // sigue abierta por si la persona de verdad escribe después.
+    if (m.texto && esRespuestaAutomatica(m.texto)) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' }).catch(() => {});
+      return json({ ok: true, automatica: true }, 200, origen);
+    }
+
+    // 14 oct: quien escribe varios mensajes seguidos despertaba a Timba una vez por mensaje y recibía tres respuestas. Se
+    // espera unos segundos y contesta solo el último; el historial que lee ya trae los anteriores.
+    await new Promise((r) => setTimeout(r, ESPERA_MENSAJES_SEGUIDOS_MS));
+    const hayMasNuevo = await rpc(env, 'wa_hay_mensaje_mas_nuevo', { p_id: m.id }).catch(() => false);
+    if (hayMasNuevo === true || (hayMasNuevo && hayMasNuevo.wa_hay_mensaje_mas_nuevo === true)) {
+      await rpc(env, 'wa_cerrar_mensaje', { p_id: m.id, p_estado: 'ignorado' }).catch(() => {});
+      return json({ ok: true, agrupado: true }, 200, origen);
+    }
+
     let texto = /^\[imagen:/.test(m.texto || '') ? null : m.texto;
     let transcrito = null;
     const au = /^\[audio:([^\]]+)\]$/.exec(texto || '');
