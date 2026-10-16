@@ -36,7 +36,7 @@ import { invitacionTiquetera, invitacionPlanes, debeInvitarATiquetera } from './
 import { INSTRUCCIONES_PREMIUM } from './premium.js';
 import { prepararTablero, cifrasSospechosas, REGLAS_DE_CIFRAS, REGLAS_DE_CIFRAS_AGENTE, esConteoDeMensualidades, textoMensualidades, totalesNoCuadran } from './cifras.js';
 import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUCCIONES_INFORME_TRANQUI } from './informes.js';
-import { esRespuestaAutomatica, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
+import { esRespuestaAutomatica, esImagenDeChat, RESPUESTA_IMAGEN_VENTAS, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
 import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
@@ -2668,6 +2668,16 @@ async function ventasWA(request, env, origen) {
       return json({ ok: true, automatica: true }, 200, origen);
     }
 
+    // 15 oct: una imagen (casi siempre un comprobante) no se ignora: Timba dice que la recibió y recepción se entera. Va ANTES
+    // de esperar los mensajes seguidos: quien manda la imagen y un texto en el mismo segundo no puede perder el aviso.
+    if (esImagenDeChat(m.texto)) {
+      await responderYGuardar(env, m.telefono, RESPUESTA_IMAGEN_VENTAS);
+      await rpc(env, 'ventas_turno', { p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: '(imagen)', p_cerrar: false,
+        p_resultado: null, p_interes: null, p_resumen: null }).catch(() => {});
+      await avisarRecepcionImagen(env, chat, perfil, m.telefono, String(m.texto).replace(/^\[imagen:[^\]]*\]\s*/, ''));
+      return json({ ok: true, imagen: true }, 200, origen);
+    }
+
     // 14 oct: quien escribe varios mensajes seguidos despertaba a Timba una vez por mensaje y recibía tres respuestas. Se
     // espera unos segundos y contesta solo el último; el historial que lee ya trae los anteriores.
     await new Promise((r) => setTimeout(r, ESPERA_MENSAJES_SEGUIDOS_MS));
@@ -2767,6 +2777,19 @@ async function avisarRecepcionVenta(env, chat, perfil, telefono, motivo) {
              `respondió a nuestra oferta (${String(chat.objetivo || '').replace('_', ' ')}).\n\n` +
              `${motivo}\n\nAcción: le di el enlace para que escriba a recepción; si no lo hace en un rato, escríbele tú desde el 301 783 3550.`,
     p_clave: 'venta-recepcion:' + chat.id,
+  }).catch(() => {});
+}
+
+// 15 oct: la persona mandó una imagen (probable comprobante). Timba no la lee ni confirma pagos: recepción la revisa.
+// Una nota por conversación y día, aunque mande varias.
+async function avisarRecepcionImagen(env, chat, perfil, telefono, leyenda) {
+  const dia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  await rpc(env, 'nota_recepcion', {
+    p_titulo: '📎 Mandó una imagen a Timba (¿comprobante?)',
+    p_texto: `${chat.nombre || perfil.nombre || 'Una persona'} (cel. ${String(telefono || '').replace(/^57/, '')}) le mandó una imagen a Timba` +
+             `${leyenda ? ` con este texto: «${String(leyenda).slice(0, 160)}»` : ''}. Interés: ${String(chat.objetivo || '').replace('_', ' ')}.\n\n` +
+             'Timba NO lee comprobantes ni confirma pagos. Confirma que el dinero llegó al banco y, si no aparece, pídele que te muestre el comprobante o lo reenvíe al 301 783 3550.',
+    p_clave: `venta-imagen:${chat.id}:${dia}`,
   }).catch(() => {});
 }
 

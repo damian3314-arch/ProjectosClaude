@@ -38,6 +38,21 @@ export function conEnlaceDeChat(texto, chatId) {
 }
 
 /**
+ * Cuando la persona manda una IMAGEN a Timba (casi siempre el comprobante de un pago).
+ *
+ * 15 oct: una persona con la mensualidad de 6 pm mandó su comprobante y Timba lo ignoró en silencio: ni respondió ni avisó, y
+ * después le dijo «te esperamos mañana a las 6 pm» sin que hubiera un pago. Timba no lee comprobantes ni confirma pagos
+ * (eso es de la base y de recepción), pero sí tiene que decir que la recibió y avisar a recepción.
+ */
+export const RESPUESTA_IMAGEN_VENTAS =
+  'Recibí tu imagen 🙌 Si es un comprobante de pago, ya quedó anotado para que recepción lo revise. ' +
+  `Si necesitas algo más, escríbeles aquí 👉 ${ENLACE_RECEPCION}`;
+
+export function esImagenDeChat(texto) {
+  return /^\[imagen:/.test(String(texto || ''));
+}
+
+/**
  * Datos curiosos y útiles sobre moverse, para motivar y romper el hielo (Damián, 15 oct).
  *
  * Son FIJOS y revisados a mano, no inventados por el modelo: nada de cifras de estudios ni promesas de salud. Dicen lo que
@@ -99,8 +114,9 @@ export function esRespuestaAutomatica(texto) {
   const t = String(texto || '');
   if (!t.trim()) return false;
   return [
-    /gracias por comunicarte con/i,
-    /bienvenid[oa@]s?\s+a\s+(mi|nuestro|nuestra)\b/i,
+    /gracias por (comunicarte|contactarnos|contactar a|escribirnos)\b/i,
+    /bienvenid@/i, // «¡Bienvenid@ a TravelLovers!»: lo escribe un negocio, una persona no pone la arroba
+    /bienvenid[oa]s?\s+a\s+(mi|nuestro|nuestra)\b/i,
     /(mensaje|respuesta)\s+autom[aá]tic/i,
     /(este|el)\s+n[uú]mero\s+no\s+(revisa|recibe|atiende)/i,
     /(estamos|estoy)\s+en\s+consulta/i,
