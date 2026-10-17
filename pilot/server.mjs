@@ -10,11 +10,14 @@ const SECRET = process.env.KAPSO_WEBHOOK_SECRET;
 const AUTO_REPLY = process.env.AUTO_REPLY === "true"; // apagado por defecto
 if (!API_KEY || !SECRET) throw new Error("Faltan KAPSO_API_KEY o KAPSO_WEBHOOK_SECRET");
 
+// `to` puede ser un teléfono o un identificador de usuario de WhatsApp (ej. "CO.1845..."),
+// que Meta entrega en `from_user_id` cuando el contacto oculta su número.
 async function sendText(to, body) {
+  const isUserId = /^[A-Z]{2}\./.test(to);
   const r = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${PHONE_NUMBER_ID}/messages`, {
     method: "POST",
     headers: { "X-API-Key": API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
+    body: JSON.stringify({ messaging_product: "whatsapp", ...(isUserId ? { recipient: to } : { to }), type: "text", text: { body } }),
   });
   console.log("send:", r.status);
 }
@@ -42,7 +45,7 @@ createServer(async (req, res) => {
 
   if (event === "whatsapp.message.received" && AUTO_REPLY) {
     const m = p.message || p.data?.message || {};
-    const from = m.from || p.conversation?.phone_number || p.data?.conversation?.phone_number;
+    const from = m.from || m.from_user_id || p.conversation?.phone_number || p.data?.conversation?.phone_number;
     const text = m.text?.body || m.body || "";
     if (from) await sendText(from, `Recibido: "${text}". Piloto Kapso funcionando.`);
   }
