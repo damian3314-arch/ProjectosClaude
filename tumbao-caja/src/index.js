@@ -39,6 +39,7 @@ import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUC
 import { esRespuestaAutomatica, esImagenDeChat, RESPUESTA_IMAGEN_VENTAS, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
+import { esRedes, INSTRUCCIONES_REDES, PLAN_CONTENIDO, guardarRespuestaRedes, RESPUESTA_REDES_SEGURA } from './redes.js';
 import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, esProblemaDePago, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
@@ -3177,6 +3178,25 @@ async function asistenteWA(request, env, origen) {
     if (!texto) {
       await hablar('No alcancé a escuchar bien tu nota de voz 🙈 ¿Me lo escribes?', { entrante });
       return json({ ok: true, sin_voz: true }, 200, origen);
+    }
+
+    // ── modo Redes: la persona de las redes pide datos e ideas de contenido (sin ventas, dinero ni datos de clientes) ──
+    if (esRedes(tel)) {
+      const conversacionR = (Array.isArray(m.historial) ? m.historial : [])
+        .map((h) => `${h.direccion === 'saliente' ? 'Timba' : 'Redes'}: ${h.texto}`)
+        .concat(`Redes: ${texto}`).join('\n');
+      const salidaR = await redactar(env, INSTRUCCIONES_REDES, JSON.stringify({
+        hoy: { fecha: hoy.fecha, dia: hoy.dia, texto: hoy.texto, hora: hoy.hora },
+        horarios: horarios.map((h) => ({ clase: h.clase, fecha_texto: h.fecha_texto, hora_texto: h.hora_texto, precio_cop: h.precio_cop, libres: h.libres })),
+        precios: { mensualidad: (ctx.perfil || {}).valor_mensualidad, mensualidad_por_clase: (ctx.perfil || {}).mensualidad_por_clase, clase_suelta: (ctx.perfil || {}).precio_suelta, tiquetera: (ctx.perfil || {}).paquetes_tiquetera },
+        info: ctx.info || '',
+        plan_de_contenido: PLAN_CONTENIDO,
+        conversacion: conversacionR,
+      }), 'low');
+      const gR = guardarRespuestaRedes((leerJSON(salidaR) || {}).respuesta);
+      await hablar(gR.ok ? gR.texto : RESPUESTA_REDES_SEGURA, { entrante: texto.slice(0, 200) });
+      if (!gR.ok) console.log('redes baranda', gR.motivo);
+      return json({ ok: true, redes: true }, 200, origen);
     }
 
     // ── hay un resumen esperando: confirmar lo decide la PERSONA, tocando un botón; no el modelo ───────────────────
