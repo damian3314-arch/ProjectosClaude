@@ -1222,6 +1222,31 @@ const GRAPH = 'https://graph.facebook.com/v21.0';
 
 const PLANTILLAS_WA = [
   {
+    // 22 oct: invitación a las clases de Halloween del jueves 29 de octubre. Sin descuento, regalo ni sorpresa: solo la
+    // fecha y que ya hay cupos. SOLO se crea en Meta (gratis). Enviarla cuesta (marketing) y la autoriza Damián.
+    name: 'halloween_29_clases',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🎃\n\n' +
+          'El *jueves 29 de octubre* son las clases de Halloween en Tumbao. ' +
+          'Ya hay cupos en 7:00 am, 6:00 pm y 7:00 pm. Aparta el tuyo desde hoy 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 9 oct (0165): a quien reservó una clase suelta y no ha pagado se le recuerda, a los ~8 minutos y UNA sola vez, que
     // su cupo sigue guardado. Es sobre SU reserva (utilidad), sin oferta ni descuento.
     name: 'reserva_pendiente_pago',
