@@ -682,7 +682,133 @@ const CONFIG = {
   .codigo{border-color:rgba(255,46,143,.4)}
   .codigo b{color:var(--neon-2);text-shadow:0 0 18px rgba(255,46,143,.45)}
   @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
+
+  /* ═══════════════════════════════════════════════════════════════
+     HALLOWEEN · del 22 al 31 de octubre de 2026 (Damián, 22 oct)
+     Capa encima del tema oscuro de siempre. Se enciende sola con la
+     fecha (script de <head>, hora de Bogotá) y vuelve sola al tema
+     normal. ?halloween=1 la fuerza, ?halloween=0 la quita. Quitar
+     este bloque entero devuelve la página de antes.
+
+     Movimiento: solo transform y opacidad, curvas fuertes, nada que
+     el cliente tenga que esperar para usar la página. Lo ambiental
+     (murciélagos, niebla, parpadeo) es lento y se apaga con
+     prefers-reduced-motion.
+     ═══════════════════════════════════════════════════════════════ */
+  html.halloween{
+    --h-ease:cubic-bezier(0.23,1,0.32,1);
+    --bg:#08050c; --bg-2:#120a17; --bg-3:#1b1022;
+    --surface:#120a17; --surface-2:#1b1022;
+    --line:#2f1a38; --line-2:#4b2a58;
+    --hot:#ff7a1f; --hot-2:#ffa14f; --gold:#ffbd6b;
+    --neon:#b58cff; --neon-2:#d9c6ff; --violeta:#7a3cff;
+    --slime:#a6ff4d;
+    --grad-marca:linear-gradient(100deg,#ff7a1f 0%,#ff4d1a 55%,#b58cff 100%);
+  }
+  html.halloween body{
+    background:
+      radial-gradient(120% 50% at 50% -10%, rgba(122,60,255,.22), transparent 70%),
+      radial-gradient(80% 40% at 100% 105%, rgba(255,122,31,.10), transparent 70%),
+      var(--bg);
+  }
+  /* viñeta: los bordes se oscurecen y la atención se va al centro */
+  html.halloween body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(130% 90% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  /* las tarjetas de opciones: borde de brasa al tocar */
+  html.halloween .opcion{transition:border-color 160ms ease,transform 160ms var(--h-ease),box-shadow 160ms ease}
+  html.halloween .opcion:active{transform:scale(.985)}
+  @media (hover:hover) and (pointer:fine){
+    html.halloween .opcion:hover{border-color:var(--hot);box-shadow:0 0 0 1px rgba(255,122,31,.35),0 12px 30px -14px rgba(255,122,31,.55)}
+  }
+
+  /* ── la franja: la escena ─────────────────────────────────────── */
+  .fr-escena,.fr-cuenta{display:none}
+  .fr-pie{display:contents}
+  html.halloween .franja{
+    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
+    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,122,31,.55); border-radius:18px;
+    background-image:linear-gradient(165deg,#1a0b24 0%,#0c0612 62%,#07040b 100%)!important;
+    box-shadow:0 18px 40px -18px rgba(255,122,31,.5), inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
+    opacity:0; transform:translateY(10px) scale(.985);
+    animation:h-entra 520ms var(--h-ease) 80ms forwards;
+  }
+  @keyframes h-entra{to{opacity:1;transform:none}}
+  html.halloween .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
+  /* luna llena con su resplandor */
+  .fr-luna{
+    position:absolute; top:-2.2rem; right:-1.6rem; width:9.4rem; height:9.4rem; border-radius:50%;
+    background:
+      radial-gradient(circle at 34% 36%, rgba(0,0,0,.16) 0 9%, transparent 10%),
+      radial-gradient(circle at 62% 58%, rgba(0,0,0,.12) 0 12%, transparent 13%),
+      radial-gradient(circle at 48% 24%, rgba(0,0,0,.10) 0 6%, transparent 7%),
+      radial-gradient(circle at 40% 38%, #fff3d6 0%, #ffd9a0 58%, #ffb467 100%);
+    box-shadow:0 0 0 .6rem rgba(255,180,103,.08), 0 0 4.5rem 1.2rem rgba(255,150,60,.38);
+    opacity:.95;
+  }
+  .fr-niebla{
+    position:absolute; left:-20%; right:-20%; bottom:-1.4rem; height:6rem;
+    background:radial-gradient(60% 100% at 30% 100%, rgba(181,140,255,.34), transparent 70%),
+               radial-gradient(50% 100% at 78% 100%, rgba(255,122,31,.22), transparent 70%);
+    filter:blur(10px); animation:h-niebla 14s ease-in-out infinite alternate;
+  }
+  @keyframes h-niebla{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
+  /* murciélagos: cruzan despacio por delante de la luna */
+  .fr-m{position:absolute;width:1.7rem;height:.85rem;color:#05030a;fill:currentColor;will-change:transform;animation:h-vuelo linear infinite}
+  .fr-m1{top:1.6rem;left:-3rem;animation-duration:15s}
+  .fr-m2{top:3.1rem;left:-3rem;width:1.15rem;height:.6rem;animation-duration:21s;animation-delay:-8s}
+  .fr-m3{top:.9rem;left:-3rem;width:.95rem;height:.5rem;animation-duration:18s;animation-delay:-13s}
+  @keyframes h-vuelo{
+    0%{transform:translate(0,0) rotate(-4deg)} 25%{transform:translate(9rem,.7rem) rotate(3deg)}
+    50%{transform:translate(18rem,-.5rem) rotate(-3deg)} 75%{transform:translate(27rem,.8rem) rotate(4deg)}
+    100%{transform:translate(36rem,0) rotate(-2deg)}
+  }
+  html.halloween .franja-ceja{color:var(--slime);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(166,255,77,.45)}
+  html.halloween .franja-titulo{
+    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:11ch;
+    background:linear-gradient(180deg,#fff 0%,#ffd9b0 55%,#ff9a4a 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 16px rgba(255,122,31,.45));
+    animation:h-parpadeo 7s steps(1,end) infinite;
+  }
+  @keyframes h-parpadeo{0%,92%,100%{opacity:1}93%{opacity:.55}94%{opacity:1}96%{opacity:.7}97%{opacity:1}}
+  html.halloween .franja-linea{color:rgba(255,246,236,.82);max-width:24rem;margin-top:.45rem}
+  html.halloween .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
+  /* el botón de verdad: pastilla de brasa con luz propia */
+  html.halloween .franja-boton{
+    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; letter-spacing:.01em;
+    color:#1c0b03; background:linear-gradient(180deg,#ffb35e 0%,#ff7a1f 100%);
+    box-shadow:0 8px 22px -6px rgba(255,122,31,.75), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform 160ms var(--h-ease), box-shadow 160ms ease;
+  }
+  html.halloween .franja:active .franja-boton{transform:scale(.97)}
+  @media (hover:hover) and (pointer:fine){
+    html.halloween .franja:hover .franja-boton{transform:translateY(-1px);box-shadow:0 12px 26px -6px rgba(255,122,31,.9), inset 0 1px 0 rgba(255,255,255,.5)}
+  }
+  html.halloween .fr-cuenta{
+    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px;
+    font-size:.78rem; font-weight:700; letter-spacing:.02em; color:var(--slime);
+    border:1px solid rgba(166,255,77,.4); background:rgba(166,255,77,.07);
+  }
+  .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:h-latido 2.4s ease-in-out infinite}
+  @keyframes h-latido{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+  @media (max-width:380px){html.halloween .franja-titulo{font-size:1.7rem}.fr-luna{width:8rem;height:8rem}}
+  @media (prefers-reduced-motion:reduce){
+    html.halloween .franja{animation:none;opacity:1;transform:none}
+    .fr-m,.fr-niebla,.fr-cuenta::before,html.halloween .franja-titulo{animation:none}
+    .fr-m{display:none}
+  }
 </style>
+<script>
+/* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
+(function(){try{
+  var q=(location.search.match(/[?&]halloween=(\d)/)||[])[1];
+  var d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota'}).format(new Date());
+  if(q==='1'||(q!=='0'&&d>='2026-10-22'&&d<='2026-10-31'))document.documentElement.classList.add('halloween');
+}catch(e){}})();
+</script>
 </head>
 <body>
 <!-- Íconos: Phosphor Icons (regular), MIT, https://phosphoricons.com.
