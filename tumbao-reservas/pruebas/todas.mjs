@@ -62,6 +62,7 @@ const SUITES = [
   'timba-datos-de-valor',
   'timba-imagenes-y-automaticos',
   'timba-modo-redes',
+  'timba-sin-repetir',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',

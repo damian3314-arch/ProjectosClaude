@@ -40,7 +40,7 @@ import { esRespuestaAutomatica, esImagenDeChat, RESPUESTA_IMAGEN_VENTAS, INSTRUC
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
 import { esRedes, INSTRUCCIONES_REDES, PLAN_CONTENIDO, guardarRespuestaRedes, RESPUESTA_REDES_SEGURA } from './redes.js';
-import { INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
+import { repiteMensaje, INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, esProblemaDePago, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
 
 const PERMITIDOS = new Set([
@@ -3333,6 +3333,15 @@ async function asistenteWA(request, env, origen) {
     // El horario fijo lo arma el código (bloque corto, horas de la base). Un párrafo largo de horarios escrito por el modelo se cambia por el bloque.
     let lead = g.texto;
     if (accion === 'ninguna' && traeListaDeHoras(g.texto)) { accion = 'mostrar_horarios'; lead = null; }
+
+    // Nunca el mismo mensaje dos veces seguidas: si el modelo repite la última respuesta, se pasa a recepción con el enlace.
+    const ultimaSaliente = [...(Array.isArray(m.historial) ? m.historial : [])].reverse().find((h) => h.direccion === 'saliente');
+    if (g.texto && ultimaSaliente && repiteMensaje(g.texto, ultimaSaliente.texto) && !['proponer_reserva', 'mostrar_horarios'].includes(accion)) {
+      console.log('asistente repite mensaje');
+      await hablar(conRecepcion('Quiero asegurarme de ayudarte bien con esto 🙏', { nombre, motivo: resumen || 'seguir una conversación del chat' }),
+        { entrante, cerrar: true, resultado: 'recepcion', resumen: resumen || 'Pasó a recepción: respuesta repetida' });
+      return json({ ok: true, repetido: true }, 200, origen);
+    }
 
     if (accion === 'mostrar_horarios') {
       const textoH = textoHorarios(horarios, lead);
