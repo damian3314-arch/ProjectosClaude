@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Damián · Ingeniería + IA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Encuentro el cuello de botella de tu empresa y lo resuelvo con IA, automatización y procesos bien diseñados. Cuéntame tu problema por texto o nota de voz.">
+<meta property="og:title" content="Cuéntame qué te frena. Yo lo automatizo.">
+<meta property="og:description" content="Automatización con IA, agentes, nómina, facturación, software contable, páginas web y gestión de proyectos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una sola columna cinematográfica — un orbe vivo detrás del cajón de conversación, y debajo bandas sobrias que explican el método. */
+:root{
+  --ink:#07080c;          /* fondo, azul-grafito profundo */
+  --ink-2:#0e1118;        /* superficies */
+  --line:#1d2230;         /* bordes */
+  --fog:#8b93a7;          /* texto secundario */
+  --paper:#eef0f5;        /* texto principal */
+  --ember:#ff7a45;        /* acento cálido */
+  --ice:#8fe3ff;          /* acento frío del orbe */
+  --ok:#5fe0a5; --warn:#ffc65c; --hot:#ff5d5d;
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Geist","Helvetica Neue","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:18px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{width:100%;max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.02em}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--fog)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ice);outline-offset:3px;border-radius:8px}
+
+/* NAV */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--ink) 70%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:18px}
+.brand i{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--ice),transparent 60%),radial-gradient(circle at 70% 70%,var(--ember),transparent 65%),var(--ink-2);box-shadow:0 0 18px color-mix(in srgb,var(--ember) 40%,transparent)}
+.navlinks{display:flex;gap:26px;font-size:14px;color:var(--fog)}
+.navlinks a{text-decoration:none}.navlinks a:hover{color:var(--paper)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:500 14px var(--f-body);border-radius:999px;padding:10px 18px;text-decoration:none;transition:transform .15s,background .2s,box-shadow .2s}
+.btn-solid{background:var(--paper);color:var(--ink)}
+.btn-solid:hover{transform:translateY(-1px);box-shadow:0 8px 30px color-mix(in srgb,var(--ember) 35%,transparent)}
+.btn-ghost{background:transparent;color:var(--paper);border:1px solid var(--line)}
+@media (max-width:760px){.navlinks{display:none}}
+
+/* HERO */
+.hero{position:relative;padding-block:72px 40px;isolation:isolate}
+#orb{position:absolute;left:50%;top:44%;width:min(880px,140vw);aspect-ratio:1;max-width:none;transform:translate(-50%,-50%);z-index:-1;pointer-events:none}
+.hero-grid{position:absolute;inset:0;z-index:-2;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 40%,#000 0%,transparent 70%);opacity:.35}
+.hero-head{text-align:center;display:grid;gap:20px;justify-items:center}
+.hero h1{font-size:clamp(42px,8.2vw,108px);line-height:.95;font-weight:700;max-width:13ch}
+.hero h1 em{font-style:normal;background:linear-gradient(100deg,var(--ice),var(--paper) 45%,var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{max-width:58ch;color:var(--fog);font-size:clamp(16px,2vw,19px)}
+.live{display:inline-flex;align-items:center;gap:8px}
+.live b{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+
+/* COMPOSER / CONVERSACIÓN */
+.stage{margin:44px auto 0;max-width:760px}
+.panel{background:color-mix(in srgb,var(--ink-2) 78%,transparent);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:26px;box-shadow:0 30px 120px -30px color-mix(in srgb,var(--ember) 30%,transparent),inset 0 1px 0 color-mix(in srgb,var(--paper) 6%,transparent);overflow:hidden}
+.composer textarea{display:block;width:100%;min-height:118px;resize:vertical;border:0;background:transparent;color:var(--paper);font:400 18px/1.5 var(--f-body);padding:22px 22px 8px;outline:none}
+.composer textarea::placeholder{color:color-mix(in srgb,var(--fog) 75%,transparent)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 12px 14px;flex-wrap:wrap}
+.tools{display:flex;align-items:center;gap:8px}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--paper);display:grid;place-items:center;cursor:pointer;transition:all .2s;position:relative}
+.icon-btn:hover{border-color:var(--fog)}
+.icon-btn svg{width:20px;height:20px}
+.mic.rec{background:var(--ember);border-color:var(--ember);color:var(--ink);box-shadow:0 0 0 6px color-mix(in srgb,var(--ember) 25%,transparent)}
+.rec-meta{font-family:var(--f-mono);font-size:12px;color:var(--fog);display:flex;align-items:center;gap:8px}
+.rec-meta.on{color:var(--ember)}
+.send{background:linear-gradient(100deg,var(--ember),color-mix(in srgb,var(--ember) 60%,var(--ice)));color:var(--ink);font-weight:600;padding:12px 20px}
+.send:disabled{opacity:.4;cursor:not-allowed}
+.audio-chip{display:flex;align-items:center;gap:10px;margin:0 14px 4px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--fog)}
+.audio-chip audio{height:32px;max-width:100%;flex:1;min-width:0}
+.audio-chip button{background:none;border:0;color:var(--fog);cursor:pointer;font-size:13px}
+.prompts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.chip{border:1px solid var(--line);background:color-mix(in srgb,var(--ink-2) 60%,transparent);color:var(--paper);border-radius:999px;padding:8px 14px;font:400 14px var(--f-body);cursor:pointer;transition:all .18s}
+.chip:hover{border-color:var(--fog);transform:translateY(-1px)}
+.chip[aria-pressed="true"]{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+
+.chat{display:flex;flex-direction:column;gap:14px;padding:22px;max-height:min(68vh,640px);overflow-y:auto;scroll-behavior:smooth}
+.msg{max-width:88%;padding:12px 16px;border-radius:18px;font-size:15.5px;animation:rise .35s ease both}
+.msg.bot{background:var(--ink);border:1px solid var(--line);border-top-left-radius:6px;align-self:flex-start}
+.msg.me{background:var(--paper);color:var(--ink);border-top-right-radius:6px;align-self:flex-end}
+.msg .who{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-bottom:4px}
+.msg.me .who{color:color-mix(in srgb,var(--ink) 55%,transparent)}
+@keyframes rise{from{opacity:.0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.typing{display:inline-flex;gap:4px;padding:14px 16px}.typing i{width:6px;height:6px;border-radius:50%;background:var(--fog);animation:blink 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{50%{opacity:.25}}
+.options{display:flex;flex-wrap:wrap;gap:8px;align-self:stretch;animation:rise .35s ease both}
+.opt{flex:1 1 200px;text-align:left;border:1px solid var(--line);background:var(--ink);color:var(--paper);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;transition:all .18s;min-width:0}
+.opt:hover{border-color:var(--ember)}
+.opt strong{display:block;font-family:var(--f-display);font-size:17px;font-weight:600}
+.opt small{color:var(--fog);font-size:13px}
+.opt[aria-pressed="true"]{border-color:var(--ember);background:color-mix(in srgb,var(--ember) 12%,var(--ink))}
+.next-row{display:flex;justify-content:flex-end;width:100%}
+.contact{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-self:stretch;animation:rise .35s ease both}
+.contact label{display:grid;gap:4px;font-size:12px;color:var(--fog);font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
+.contact input{background:var(--ink);border:1px solid var(--line);border-radius:12px;color:var(--paper);font:400 16px var(--f-body);padding:12px 14px;outline:none;width:100%}
+.contact input:focus{border-color:var(--ice)}
+.contact .full{grid-column:1/-1}
+.contact .err{color:var(--hot);font-size:13px;grid-column:1/-1;font-family:var(--f-body);text-transform:none;letter-spacing:0}
+.consent{grid-column:1/-1;display:flex!important;grid-template-columns:none;align-items:flex-start;gap:10px;text-transform:none!important;letter-spacing:0!important;font-family:var(--f-body)!important;font-size:13px!important}
+.consent input{width:auto;margin-top:3px;accent-color:var(--ember)}
+@media (max-width:560px){.contact{grid-template-columns:1fr}.msg{max-width:94%}}
+.summary{align-self:stretch;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px;background:var(--ink);animation:rise .35s ease both}
+.summary dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:14px}
+.summary dt{color:var(--fog);font-family:var(--f-mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+.summary dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.chat-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12px;color:var(--fog)}
+.progress{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden;max-width:240px}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ice),var(--ember));transition:width .5s}
+
+/* TICKER */
+.ticker{border-block:1px solid var(--line);overflow:hidden;padding-block:18px;margin-top:64px}
+.ticker-track{display:flex;gap:56px;width:max-content;animation:slide 38s linear infinite;font-family:var(--f-mono);font-size:14px;color:var(--fog);white-space:nowrap}
+.ticker-track span::before{content:"◇ ";color:var(--ember)}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+/* SECCIONES */
+section.band{padding-block:110px 0}
+.sec-head{display:grid;gap:14px;max-width:720px;margin-bottom:48px}
+.sec-head h2{font-size:clamp(32px,5vw,58px);line-height:1;font-weight:650}
+.sec-head p{color:var(--fog);font-size:18px;max-width:60ch}
+
+.services{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.svc{background:var(--ink);padding:26px 22px 24px;display:grid;gap:10px;align-content:start;min-height:220px;position:relative;transition:background .3s}
+.svc:hover{background:var(--ink-2)}
+.svc .tag{font-family:var(--f-mono);font-size:11px;color:var(--ember);letter-spacing:.12em;text-transform:uppercase}
+.svc h3{font-size:22px;font-weight:600;line-height:1.1}
+.svc p{color:var(--fog);font-size:14.5px}
+.svc .ex{margin-top:auto;font-size:13px;color:var(--paper);opacity:.75;border-top:1px dashed var(--line);padding-top:10px}
+@media (max-width:980px){.services{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.services{grid-template-columns:1fr}.svc{min-height:0}}
+
+/* CUELLO DE BOTELLA */
+.flow{border:1px solid var(--line);border-radius:var(--r);padding:28px;background:linear-gradient(180deg,var(--ink-2),var(--ink))}
+.flow-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:end}
+.station{display:grid;gap:10px;min-width:0}
+.station .cap{height:140px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.station .cap i{display:block;width:100%;border-radius:10px 10px 0 0;background:color-mix(in srgb,var(--ice) 35%,var(--ink-2));transition:height 1s cubic-bezier(.2,.8,.2,1)}
+.station.neck .cap i{background:linear-gradient(180deg,var(--hot),color-mix(in srgb,var(--ember) 60%,var(--ink)))}
+.station b{font-family:var(--f-display);font-size:18px;font-weight:600}
+.station span{font-family:var(--f-mono);font-size:13px;color:var(--fog);font-variant-numeric:tabular-nums}
+.station.neck span{color:var(--hot)}
+.flow-note{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;margin-top:22px;padding-top:18px;border-top:1px dashed var(--line);font-size:15px;color:var(--fog)}
+.flow-note strong{color:var(--paper)}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px}
+.toggle button{border:0;background:transparent;color:var(--fog);padding:7px 14px;border-radius:999px;cursor:pointer;font:500 13px var(--f-body)}
+.toggle button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+@media (max-width:620px){.flow-row{grid-template-columns:repeat(2,1fr)}.flow{padding:18px}}
+
+/* MÉTODO */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s}
+.step{border-top:1px solid var(--paper);padding-top:18px;display:grid;gap:8px;align-content:start}
+.step::before{counter-increment:s;content:"0" counter(s);font-family:var(--f-mono);font-size:12px;color:var(--ember)}
+.step h3{font-size:22px;font-weight:600}
+.step p{color:var(--fog);font-size:15px}
+.step .out{font-family:var(--f-mono);font-size:12px;color:var(--paper);opacity:.7}
+@media (max-width:860px){.steps{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+
+/* CTA FINAL */
+.final{padding-block:120px 80px;text-align:center;display:grid;gap:22px;justify-items:center}
+.final h2{font-size:clamp(36px,6.5vw,84px);line-height:.98;font-weight:700;max-width:16ch}
+.final p{color:var(--fog);max-width:52ch}
+footer{border-top:1px solid var(--line)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding-block:26px;font-size:13px;color:var(--fog);font-family:var(--f-mono)}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><i aria-hidden="true"></i>Damián</a>
+    <div class="navlinks">
+      <a href="#servicios">Servicios</a>
+      <a href="#cuello">Cuello de botella</a>
+      <a href="#metodo">Método</a>
+    </div>
+    <a class="btn btn-solid" href="#top" data-focus-composer>Hablemos</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <canvas id="orb" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="hero-head">
+      <span class="eyebrow live"><b aria-hidden="true"></b>Ingeniería de procesos × IA · Colombia</span>
+      <h1>Cuéntame qué te frena. <em>Yo lo automatizo.</em></h1>
+      <p class="lede">Soy ingeniero de producción. Encuentro el cuello de botella de tu empresa y lo resuelvo con agentes de IA, flujos automáticos y procesos que no dependen de que alguien se acuerde.</p>
+    </div>
+
+    <div class="stage" id="stage">
+      <!-- Paso 0: escribir o hablar -->
+      <div class="panel composer" id="composer">
+        <label for="problem" class="sr">Describe tu problema</label>
+        <textarea id="problem" placeholder="Ej: Cada cierre de mes perdemos 3 días cuadrando caja y facturas en Excel…"></textarea>
+        <div class="audio-chip" id="audioChip" hidden>
+          <span>Nota de voz</span>
+          <audio id="audioPreview" controls></audio>
+          <button type="button" id="audioRemove">Quitar</button>
+        </div>
+        <div class="bar">
+          <div class="tools">
+            <button type="button" class="icon-btn mic" id="micBtn" aria-label="Grabar nota de voz" title="Grabar nota de voz">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            </button>
+            <label class="icon-btn" for="audioFile" title="Subir un audio (WhatsApp, grabadora)" aria-label="Subir un audio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+            </label>
+            <input type="file" id="audioFile" accept="audio/*" class="sr">
+            <span class="rec-meta" id="recMeta">Escribe o graba hasta 2 min</span>
+          </div>
+          <button type="button" class="btn send" id="startBtn" disabled>Empezar diagnóstico →</button>
+        </div>
+      </div>
+      <div class="prompts" id="prompts" aria-label="Ejemplos">
+        <button type="button" class="chip" data-p="La nómina y la PILA me quitan dos días cada quincena.">Nómina y PILA</button>
+        <button type="button" class="chip" data-p="Facturo a mano y se me pierden pagos de clientes.">Facturo a mano</button>
+        <button type="button" class="chip" data-p="Respondo WhatsApp todo el día y no alcanzo a vender.">WhatsApp me ahoga</button>
+        <button type="button" class="chip" data-p="Necesito una página web que traiga clientes, no solo que se vea bonita.">Web que venda</button>
+        <button type="button" class="chip" data-p="Tengo un proyecto grande y nadie lo está coordinando.">Proyecto sin dueño</button>
+      </div>
+
+      <!-- Conversación -->
+      <div class="panel" id="chatPanel" hidden>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <div class="chat-foot"><span id="stepLabel">Paso 1 de 5</span><div class="progress"><span id="progressBar"></span></div></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="ticker" aria-label="Herramientas con las que trabajo">
+  <div class="ticker-track">
+    <span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
+    <span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
+  </div>
+</div>
+
+<section class="band" id="servicios">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Servicios</span>
+      <h2>Una sola persona que entiende el proceso, la plata y la tecnología.</h2>
+      <p>No vendo herramientas. Diseño el sistema completo y lo dejo funcionando con tu equipo.</p>
+    </div>
+    <div class="services">
+      <article class="svc"><span class="tag">IA</span><h3>Automatización con IA</h3><p>Flujos en n8n que leen, clasifican y responden por ti.</p><span class="ex">Ej: facturas de proveedores que llegan al correo y se registran solas.</span></article>
+      <article class="svc"><span class="tag">Agentes</span><h3>Agentes de IA</h3><p>Asistentes en WhatsApp o voz que atienden, agendan y filtran clientes.</p><span class="ex">Ej: un bot que responde precios y reserva citas a las 11 p.m.</span></article>
+      <article class="svc"><span class="tag">Procesos</span><h3>Optimización de procesos</h3><p>Mapeo, mido tiempos y ataco el cuello de botella real.</p><span class="ex">Ej: de 3 días a 4 horas para cerrar caja del mes.</span></article>
+      <article class="svc"><span class="tag">Web</span><h3>Diseño de páginas web</h3><p>Páginas como esta: rápidas, claras y conectadas a tu CRM.</p><span class="ex">Ej: landing que califica leads antes de que los llames.</span></article>
+      <article class="svc"><span class="tag">Nómina</span><h3>Nómina y PILA</h3><p>Liquidación, novedades y seguridad social sin hojas sueltas.</p><span class="ex">Ej: horas extra del taller calculadas desde el registro diario.</span></article>
+      <article class="svc"><span class="tag">Contable</span><h3>Software contable</h3><p>Selección, configuración y migración al sistema correcto.</p><span class="ex">Ej: pasar de Excel a un software con inventario real.</span></article>
+      <article class="svc"><span class="tag">DIAN</span><h3>Facturación electrónica</h3><p>Implementación y conexión con tus ventas y tu contador.</p><span class="ex">Ej: cada venta del POS genera su factura sin redigitar.</span></article>
+      <article class="svc"><span class="tag">PM</span><h3>Project Manager</h3><p>Formulo, planeo y llevo el proyecto hasta que se usa.</p><span class="ex">Ej: implementación de ERP con cronograma y responsables.</span></article>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="cuello">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Pensamiento ingenieril</span>
+      <h2>Tu empresa avanza a la velocidad de su paso más lento.</h2>
+      <p>Un proceso con cuatro estaciones. Tres van rápido. Una frena todo. Automatizar lo que no es cuello de botella es gastar plata en el lugar equivocado.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-row" id="flowRow">
+        <div class="station"><div class="cap"><i data-cap="40"></i></div><b>Pedido</b><span>40 pedidos/h</span></div>
+        <div class="station neck" data-neck><div class="cap"><i data-cap="12" data-fixed="36"></i></div><b>Facturación</b><span data-label>12 pedidos/h · cuello</span></div>
+        <div class="station"><div class="cap"><i data-cap="35"></i></div><b>Alistamiento</b><span>35 pedidos/h</span></div>
+        <div class="station"><div class="cap"><i data-cap="38"></i></div><b>Despacho</b><span>38 pedidos/h</span></div>
+      </div>
+      <div class="flow-note">
+        <span>Capacidad del sistema: <strong id="sysCap">12 pedidos/h</strong> · ejemplo ilustrativo</span>
+        <div class="toggle" role="group" aria-label="Escenario">
+          <button type="button" aria-pressed="true" data-scn="hoy">Hoy</button>
+          <button type="button" aria-pressed="false" data-scn="auto">Con facturación automática</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="metodo">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Método</span>
+      <h2>Del problema al sistema funcionando.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Diagnóstico</h3><p>Entrevisto a quien hace el trabajo y mido tiempos reales.</p><span class="out">Sale: mapa del proceso + cuello de botella</span></div>
+      <div class="step"><h3>Diseño</h3><p>Defino qué se automatiza, con qué herramienta y cuánto cuesta.</p><span class="out">Sale: propuesta con alcance y precio fijo</span></div>
+      <div class="step"><h3>Implementación</h3><p>Construyo, pruebo con datos de ejemplo y luego con los reales.</p><span class="out">Sale: sistema en uso + capacitación</span></div>
+      <div class="step"><h3>Medición</h3><p>Comparo antes y después. Si no mejora, se ajusta.</p><span class="out">Sale: horas recuperadas por mes</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="final wrap">
+  <span class="eyebrow">Tu turno</span>
+  <h2>El primer paso es contarme el problema.</h2>
+  <p>Toma dos minutos. Por texto o nota de voz. Mi asistente revisa tu caso y te escribe por WhatsApp.</p>
+  <a class="btn btn-solid" href="#top" data-focus-composer>Contar mi problema</a>
+</section>
+
+<footer><div class="wrap"><span>© 2026 Damián · Ingeniería de procesos + IA</span><span>Bogotá, Colombia</span></div></footer>
+
+<script>
+/* ===== CONFIGURACIÓN — edita esto ===== */
+const CONFIG = {
+  // URL del Webhook de n8n (nodo Webhook, método POST). Vacío = modo demo, no envía nada.
+  webhookUrl: "",
+  // Tu número de WhatsApp en formato internacional sin "+" (ej: 573001234567). Se usa como respaldo.
+  whatsapp: "",
+  maxRecordSeconds: 120
+};
+
+/* ===== ORBE (canvas) ===== */
+const orb = document.getElementById('orb'), ctx = orb.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let level = 0, targetLevel = 0, t = 0;
+function sizeOrb(){ const r = orb.getBoundingClientRect(), d = Math.min(devicePixelRatio||1, 2); orb.width = r.width*d; orb.height = r.height*d; }
+sizeOrb(); addEventListener('resize', sizeOrb);
+function drawOrb(){
+  const w = orb.width, h = orb.height, cx = w/2, cy = h/2, base = Math.min(w,h)*0.2;
+  level += (targetLevel - level)*0.12;
+  ctx.clearRect(0,0,w,h);
+  ctx.globalCompositeOperation = 'lighter';
+  const blobs = [
+    {c:'255,122,69', a:.55, k:1.00, s:.7},
+    {c:'143,227,255', a:.45, k:.86, s:-.5},
+    {c:'255,93,93', a:.25, k:.7, s:1.1}
+  ];
+  for (const b of blobs){
+    const R = base*(b.k + level*0.9);
+    const ox = Math.cos(t*b.s)*base*.25, oy = Math.sin(t*b.s*1.3)*base*.2;
+    ctx.beginPath();
+    for (let i=0;i<=64;i++){
+      const a = i/64*Math.PI*2;
+      const n = Math.sin(a*3 + t*b.s*2)*.08 + Math.sin(a*5 - t*1.7)*.05*(1+level*3);
+      const r = R*(1+n);
+      const x = cx+ox+Math.cos(a)*r, y = cy+oy+Math.sin(a)*r;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    }
+    const g = ctx.createRadialGradient(cx+ox,cy+oy,0,cx+ox,cy+oy,R*1.4);
+    g.addColorStop(0,`rgba(${b.c},${b.a})`); g.addColorStop(1,`rgba(${b.c},0)`);
+    ctx.fillStyle = g; ctx.filter = `blur(${base*.18}px)`; ctx.fill();
+  }
+  ctx.filter = 'none'; ctx.globalCompositeOperation = 'source-over';
+  t += reduce ? 0 : 0.008 + level*0.03;
+  if (!reduce || level > .01) requestAnimationFrame(drawOrb);
+}
+drawOrb();
+
+/* ===== COMPOSER: texto + voz ===== */
+const $ = s => document.querySelector(s);
+const problem = $('#problem'), startBtn = $('#startBtn'), micBtn = $('#micBtn'), recMeta = $('#recMeta');
+const audioChip = $('#audioChip'), audioPreview = $('#audioPreview');
+let audioBlob = null, mediaRec = null, chunks = [], recTimer = null, recStart = 0, analyser = null, stream = null, speech = null;
+
+function refreshStart(){ startBtn.disabled = !(problem.value.trim().length > 8 || audioBlob); }
+problem.addEventListener('input', () => { refreshStart(); targetLevel = Math.min(problem.value.length/400, .25); });
+document.querySelectorAll('#prompts .chip').forEach(c => c.addEventListener('click', () => { problem.value = c.dataset.p; problem.focus(); refreshStart(); }));
+document.querySelectorAll('[data-focus-composer]').forEach(a => a.addEventListener('click', () => setTimeout(() => problem.focus({preventScroll:true}), 400)));
+
+function setAudio(blob){
+  audioBlob = blob;
+  if (blob){ audioPreview.src = URL.createObjectURL(blob); audioChip.hidden = false; } else { audioChip.hidden = true; audioPreview.removeAttribute('src'); }
+  refreshStart();
+}
+$('#audioRemove').addEventListener('click', () => setAudio(null));
+$('#audioFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) setAudio(f); });
+
+async function startRec(){
+  try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch { recMeta.textContent = 'Sin acceso al micrófono. Sube un audio con la flecha.'; return; }
+  chunks = []; mediaRec = new MediaRecorder(stream);
+  mediaRec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  mediaRec.onstop = () => { setAudio(new Blob(chunks, {type: mediaRec.mimeType || 'audio/webm'})); stream.getTracks().forEach(t => t.stop()); };
+  mediaRec.start();
+  // nivel de voz → orbe
+  const ac = new (window.AudioContext||window.webkitAudioContext)(); analyser = ac.createAnalyser(); analyser.fftSize = 256;
+  ac.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  (function meter(){ if (!mediaRec || mediaRec.state !== 'recording') { targetLevel = 0; ac.close(); return; }
+    analyser.getByteFrequencyData(buf); targetLevel = Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/90, 1); if (reduce) drawOrb(); requestAnimationFrame(meter); })();
+  // transcripción en vivo (Chrome/Edge/Safari), opcional
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR){ speech = new SR(); speech.lang = 'es-CO'; speech.continuous = true; speech.interimResults = true;
+    const prior = problem.value ? problem.value.trim()+' ' : '';
+    speech.onresult = e => { problem.value = prior + Array.from(e.results).map(r => r[0].transcript).join(' '); refreshStart(); };
+    try { speech.start(); } catch {} }
+  micBtn.classList.add('rec'); micBtn.setAttribute('aria-label','Detener grabación'); recMeta.classList.add('on');
+  recStart = Date.now();
+  recTimer = setInterval(() => { const s = Math.floor((Date.now()-recStart)/1000);
+    recMeta.textContent = `● Grabando ${String(Math.floor(s/60)).padStart(1,'0')}:${String(s%60).padStart(2,'0')}`;
+    if (s >= CONFIG.maxRecordSeconds) stopRec(); }, 250);
+}
+function stopRec(){
+  clearInterval(recTimer); if (speech) try { speech.stop(); } catch {}
+  if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
+  micBtn.classList.remove('rec'); micBtn.setAttribute('aria-label','Grabar nota de voz'); recMeta.classList.remove('on');
+  recMeta.textContent = 'Nota lista. Puedes escuchar o volver a grabar.';
+}
+micBtn.addEventListener('click', () => (mediaRec && mediaRec.state === 'recording') ? stopRec() : startRec());
+
+/* ===== CONVERSACIÓN DE CALIFICACIÓN ===== */
+const SERVICES = [
+  {id:'ia', label:'Automatización con IA', kw:/autom|excel|manual|repet|correo|a mano/i},
+  {id:'agentes', label:'Agentes de IA', kw:/whatsapp|bot|agente|respond|atender|cliente/i},
+  {id:'procesos', label:'Optimización de procesos', kw:/proceso|demora|lento|tiempo|cuello|días/i},
+  {id:'web', label:'Página web', kw:/web|página|landing|tienda|online/i},
+  {id:'nomina', label:'Nómina y PILA', kw:/nómina|nomina|pila|empleado|quincena|liquid/i},
+  {id:'contable', label:'Software contable', kw:/contab|caja|inventario|cuadr|cierre/i},
+  {id:'factura', label:'Facturación electrónica', kw:/factur|dian|pago/i},
+  {id:'pm', label:'Project Manager', kw:/proyecto|coordin|cronograma|implementa/i}
+];
+const BUDGETS = [
+  {id:'b1', t:'Arranque', r:'$1,5 M – $4 M COP', d:'Un flujo o automatización puntual', score:1},
+  {id:'b2', t:'Sistema', r:'$4 M – $12 M COP', d:'Varios procesos conectados', score:2},
+  {id:'b3', t:'Transformación', r:'Más de $12 M COP', d:'Implementación completa + acompañamiento', score:3}
+];
+const TIMING = [
+  {id:'now', t:'Ya, esta semana', d:'Me está costando plata hoy', score:3},
+  {id:'month', t:'Este mes', d:'Quiero arrancar pronto', score:2},
+  {id:'quarter', t:'En 1 a 3 meses', d:'Estoy planeando', score:1},
+  {id:'explore', t:'Solo explorando', d:'Quiero entender opciones', score:0}
+];
+const DECIDER = [
+  {id:'solo', t:'Decido yo', d:'Soy dueño o tengo la firma', score:3},
+  {id:'partner', t:'Con mi socio o socia', d:'Lo hablamos entre dos', score:2},
+  {id:'board', t:'Con junta o gerencia', d:'Necesito presentarlo', score:1},
+  {id:'advisor', t:'Lo propongo a alguien', d:'Yo recomiendo, otro decide', score:0}
+];
+
+const lead = { problem:'', services:[], budget:null, timing:null, decider:null, contact:{} };
+const chat = $('#chat'), TOTAL = 5;
+const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+function progress(n){ $('#stepLabel').textContent = n > TOTAL ? 'Listo' : `Paso ${n} de ${TOTAL}`; $('#progressBar').style.width = `${Math.min(n-1,TOTAL)/TOTAL*100}%`; }
+function scroll(){ chat.scrollTop = chat.scrollHeight; }
+function el(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function bot(text){
+  const ty = el('div','msg bot typing','<i></i><i></i><i></i>'); chat.append(ty); scroll();
+  targetLevel = .35; await wait(650 + Math.min(text.length*8, 900)); targetLevel = 0;
+  ty.remove(); chat.append(el('div','msg bot',`<span class="who">Asistente</span>${text}`)); scroll();
+}
+function me(text){ chat.append(el('div','msg me',`<span class="who">Tú</span>${esc(text)}`)); scroll(); }
+
+function choose(items, {multi=false, preset=[]} = {}){
+  return new Promise(resolve => {
+    const box = el('div','options'); const picked = new Set(preset);
+    items.forEach(it => {
+      const b = el('button','opt', `<strong>${it.t || it.label}</strong>${it.r ? `<small>${it.r}</small><br>` : ''}${it.d ? `<small>${it.d}</small>` : ''}`);
+      b.type = 'button'; b.setAttribute('aria-pressed', picked.has(it.id));
+      b.onclick = () => {
+        if (!multi){ box.remove(); resolve(it); return; }
+        picked.has(it.id) ? picked.delete(it.id) : picked.add(it.id); b.setAttribute('aria-pressed', picked.has(it.id)); go.disabled = !picked.size;
+      };
+      box.append(b);
+    });
+    let go;
+    if (multi){ const row = el('div','next-row'); go = el('button','btn send','Continuar →'); go.type='button'; go.disabled = !picked.size;
+      go.onclick = () => { box.remove(); resolve(items.filter(i => picked.has(i.id))); }; row.append(go); box.append(row); }
+    chat.append(box); scroll(); box.querySelector('button').focus({preventScroll:true});
+  });
+}
+
+function contactForm(){
+  return new Promise(resolve => {
+    const f = el('form','contact');
+    f.innerHTML = `
+      <label>Nombre<input id="c-name" autocomplete="name" required></label>
+      <label>Empresa<input id="c-company" autocomplete="organization"></label>
+      <label>WhatsApp<input id="c-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="300 123 4567" required></label>
+      <label>Correo (opcional)<input id="c-email" type="email" autocomplete="email"></label>
+      <label class="consent"><input type="checkbox" id="c-ok" required> Acepto que me contacten por WhatsApp sobre mi caso y el tratamiento de mis datos (Ley 1581 de 2012).</label>
+      <span class="err" id="c-err" hidden></span>
+      <div class="next-row full"><button class="btn send" type="submit">Enviar mi caso →</button></div>`;
+    f.addEventListener('submit', e => {
+      e.preventDefault();
+      const v = id => f.querySelector('#'+id).value.trim();
+      const phone = v('c-phone').replace(/[^\d+]/g,'');
+      const err = f.querySelector('#c-err');
+      if (!v('c-name')) { err.textContent = 'Escribe tu nombre para saber cómo saludarte.'; err.hidden = false; return; }
+      if (phone.replace(/\D/g,'').length < 10) { err.textContent = 'El WhatsApp debe tener al menos 10 dígitos. Ej: 300 123 4567.'; err.hidden = false; return; }
+      if (!f.querySelector('#c-ok').checked) { err.textContent = 'Necesito tu autorización para escribirte.'; err.hidden = false; return; }
+      f.remove(); resolve({ name:v('c-name'), company:v('c-company'), phone, email:v('c-email') });
+    });
+    chat.append(f); scroll(); f.querySelector('input').focus({preventScroll:true});
+  });
+}
+
+/* Prioridad: define a quién contacta primero el agente */
+function scoreLead(l){
+  const pts = l.budget.score*3 + l.timing.score*3 + l.decider.score*2; // máx 24
+  const tier = pts >= 17 ? 'A' : pts >= 10 ? 'B' : 'C';
+  const sla = { A:'en menos de 2 horas hábiles', B:'hoy mismo', C:'en las próximas 48 horas' }[tier];
+  return { points:pts, tier, sla };
+}
+
+async function run(){
+  $('#composer').hidden = true; $('#prompts').hidden = true; $('#chatPanel').hidden = false;
+  lead.problem = problem.value.trim();
+  me(lead.problem || '🎙 Nota de voz enviada');
+  progress(1);
+  await bot('Gracias. Ya quedó registrado tu caso. Te hago 4 preguntas rápidas para saber cómo ayudarte mejor.');
+  const guess = SERVICES.filter(s => s.kw.test(lead.problem)).map(s => s.id);
+  await bot(guess.length ? 'Por lo que cuentas, creo que esto es lo que necesitas. Ajusta si no es así:' : '¿Qué tipo de ayuda buscas? Puedes elegir varias.');
+  lead.services = await choose(SERVICES, {multi:true, preset:guess});
+  me(lead.services.map(s => s.label).join(', '));
+  progress(2);
+  await bot('¿Cuánto estás dispuesto a invertir para resolverlo?');
+  lead.budget = await choose(BUDGETS); me(`${lead.budget.t} · ${lead.budget.r}`);
+  progress(3);
+  await bot('¿Cuándo te gustaría arrancar?');
+  lead.timing = await choose(TIMING); me(lead.timing.t);
+  progress(4);
+  await bot('¿La decisión la tomas solo o con alguien más?');
+  lead.decider = await choose(DECIDER); me(lead.decider.t);
+  if (lead.decider.score < 3) await bot('Perfecto. Te preparo un resumen corto para que lo compartas con quien decide contigo.');
+  progress(5);
+  await bot('Último paso. ¿A dónde te escribo?');
+  lead.contact = await contactForm(); me(`${lead.contact.name} · ${lead.contact.phone}`);
+  progress(6);
+  const prio = scoreLead(lead);
+  const sent = await submit(lead, prio);
+  await bot(`Listo, ${esc(lead.contact.name.split(' ')[0])}. Mi asistente te escribe por WhatsApp <strong>${prio.sla}</strong> con los siguientes pasos.`);
+  const s = el('div','summary');
+  s.innerHTML = `<span class="eyebrow">Resumen de tu caso</span><dl>
+    <dt>Problema</dt><dd>${esc(lead.problem || 'Nota de voz')}</dd>
+    <dt>Servicios</dt><dd>${esc(lead.services.map(x=>x.label).join(', '))}</dd>
+    <dt>Inversión</dt><dd>${esc(lead.budget.r)}</dd>
+    <dt>Arranque</dt><dd>${esc(lead.timing.t)}</dd>
+    <dt>Decide</dt><dd>${esc(lead.decider.t)}</dd></dl>
+    ${sent ? '' : `<small style="color:var(--fog)">Modo demo: este caso no se envió a ningún sistema.</small>`}`;
+  chat.append(s); scroll();
+}
+
+async function submit(l, prio){
+  const payload = {
+    createdAt: new Date().toISOString(), source: 'landing', page: location.href,
+    utm: Object.fromEntries(new URLSearchParams(location.search)),
+    problem: l.problem, services: l.services.map(s => s.id),
+    budget: { id:l.budget.id, range:l.budget.r }, timing: l.timing.id, decider: l.decider.id,
+    contact: l.contact, priority: prio
+  };
+  if (!CONFIG.webhookUrl){ console.info('[demo] payload', payload); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('lead', JSON.stringify(payload));
+    if (audioBlob) fd.append('audio', audioBlob, 'nota-de-voz.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm'));
+    const r = await fetch(CONFIG.webhookUrl, { method:'POST', body:fd });
+    return r.ok;
+  } catch { return false; }
+}
+
+startBtn.addEventListener('click', () => { if (mediaRec && mediaRec.state === 'recording') stopRec(); setTimeout(run, 150); });
+problem.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !startBtn.disabled) startBtn.click(); });
+
+/* ===== CUELLO DE BOTELLA interactivo ===== */
+const MAXCAP = 45;
+function paintFlow(scn){
+  document.querySelectorAll('#flowRow .cap i').forEach(i => {
+    const v = (scn === 'auto' && i.dataset.fixed) ? +i.dataset.fixed : +i.dataset.cap;
+    i.style.height = (v/MAXCAP*100) + '%';
+  });
+  const neck = document.querySelector('[data-neck]');
+  neck.classList.toggle('neck', scn !== 'auto');
+  neck.querySelector('[data-label]').textContent = scn === 'auto' ? '36 pedidos/h' : '12 pedidos/h · cuello';
+  $('#sysCap').textContent = scn === 'auto' ? '35 pedidos/h (ahora limita Alistamiento)' : '12 pedidos/h';
+  document.querySelectorAll('[data-scn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.scn === scn));
+}
+document.querySelectorAll('[data-scn]').forEach(b => b.addEventListener('click', () => paintFlow(b.dataset.scn)));
+paintFlow('hoy');
+</script>
+</body>
+</html>
