@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Damián Barragán · Operaciones</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Ordeno la operación de restaurantes, talleres y comercios para que no dependan de que el dueño esté ahí. Arma tu orden de diagnóstico en 2 minutos.">
+<meta name="description" content="Ingeniero de producción con 15 años en caja, inventario, contabilidad y facturación electrónica. Ordeno la operación de restaurantes, talleres y comercios. Arma tu orden de diagnóstico en 2 minutos.">
 <meta property="og:title" content="Tu negocio no debería depender de que tú estés ahí.">
 <meta property="og:description" content="Arma tu orden de diagnóstico en 2 minutos. Casos reales: Tumbao, Joyería Tanya Santiago y negocios con Loggro.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -194,6 +194,12 @@ dl{margin:0;display:grid;gap:6px}
 .me-text p{font-size:18px;color:var(--steel);max-width:58ch}
 .me-text p strong{color:var(--ink)}
 .creds{display:flex;flex-wrap:wrap;gap:8px}
+.timeline{list-style:none;margin:6px 0 4px;padding:0;display:grid;border-top:2px solid var(--ink)}
+.timeline li{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:15.5px;color:var(--steel)}
+.timeline li span{font-family:var(--f-mono);font-weight:600;color:var(--ink);padding-top:1px}
+.timeline li b{display:block;color:var(--ink);font-weight:600}
+.timeline li:last-child{border-bottom:0}
+.timeline li:last-child span{background:var(--signal);padding:0 6px;justify-self:start;height:fit-content}
 @media (max-width:760px){.me{grid-template-columns:1fr;gap:28px}.photo{max-width:200px}}
 
 /* FAQ */
@@ -243,7 +249,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
       </div>
       <div class="who">
         <img src="damian-avatar.jpg" alt="Damián Barragán" width="56" height="56">
-        <div><b>Damián Barragán</b><span>El diagnóstico lo haces conmigo, no con un vendedor.</span></div>
+        <div><b>Damián Barragán · Ingeniero de producción</b><span>15 años del lado de la caja, el inventario y la factura. El diagnóstico lo haces conmigo.</span></div>
       </div>
       <div class="promise"><span>Diagnóstico sin costo</span><span>Precio fijo antes de empezar</span><span>Implementador Loggro</span></div>
     </div>
@@ -330,10 +336,18 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
     <div class="photo"><img src="damian.jpg" alt="Damián Barragán, ingeniero de producción e implementador Loggro" width="900" height="900"></div>
     <div class="me-text">
       <span class="tag">Quién te va a ayudar</span>
-      <h2>Soy Damián Barragán. Ingeniero de producción.</h2>
-      <p>Llevo la forma de pensar de una planta de producción a negocios como el tuyo: <strong>medir, encontrar dónde se frena el trabajo y arreglar eso primero.</strong> Después pongo el sistema y, solo cuando todo está en orden, la automatización.</p>
-      <p>No te dejo un software instalado y me voy. Me quedo hasta que tu equipo lo usa sin mí.</p>
-      <div class="creds"><span class="chip">Ingeniería de producción</span><span class="chip">Gerencia y formulación de proyectos</span><span class="chip">IA aplicada a empresas · U. de La Sabana</span><span class="chip">Implementador Loggro</span></div>
+      <h2>Cuadré caja antes de enseñar a cuadrarla.</h2>
+      <p>Soy Damián Barragán, ingeniero de producción. Antes de asesorar negocios fui cajero de banco, llevé la contabilidad de una oficina, administré una tienda y respondí por la caja de una cooperativa. <strong>Conozco tu operación porque la he hecho con mis manos.</strong></p>
+      <p>Hoy coordino operaciones de facturación electrónica DIAN e implemento Loggro. No te dejo un software instalado y me voy: me quedo hasta que tu equipo lo usa sin mí.</p>
+      <ol class="timeline">
+        <li><span>2010</span><div><b>Asistente administrativo y contable</b>Contabilidad según la norma vigente y organización documental.</div></li>
+        <li><span>2011</span><div><b>Cajero · Banco de Bogotá</b>Operación diaria de caja en banca.</div></li>
+        <li><span>2012</span><div><b>Administrador de tienda · Inext</b>Inventario, metas de venta, equipo de 3 asesores y apertura de tiendas en Barrancabermeja, Bucaramanga y Santa Marta.</div></li>
+        <li><span>2016</span><div><b>Oficina y caja · Cooprofesores</b>Casi 5 años administrando oficina y respondiendo por la unidad de caja.</div></li>
+        <li><span>2022</span><div><b>Experiencia de cliente y CRM</b>Salesforce, indicadores de servicio y 100% del presupuesto de ventas.</div></li>
+        <li><span>2025</span><div><b>Gestor de operaciones · facturación electrónica DIAN</b>Acompaño a emprendedores, contadores y empresas a cumplir con la DIAN sin estrés.</div></li>
+      </ol>
+      <div class="creds"><span class="chip">Ingeniero de producción · UNIPAZ</span><span class="chip">Esp. Gerencia y Formulación de Proyectos · U. EAN</span><span class="chip">IA aplicada a empresas · U. de La Sabana</span><span class="chip">Gestor administrativo · SENA</span><span class="chip">Implementador Loggro</span></div>
       <a class="btn ghost btn-sm" href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener" style="justify-self:start">Ver mi perfil en LinkedIn →</a>
     </div>
   </div>
@@ -343,7 +357,9 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
   <div class="wrap" style="max-width:860px">
     <div class="sec-head"><span class="tag">Antes de empezar</span><h2>Lo que me preguntan.</h2></div>
     <div class="faq">
+      <details open><summary>¿Por qué tú y no un vendedor de software?</summary><p>Porque no empiezo por el software. Fui cajero, administré una tienda y llevé contabilidad: primero entiendo cómo trabaja tu gente y dónde se frena, y solo después te digo si necesitas un sistema. Muchas veces el arreglo es de proceso y no cuesta licencias.</p></details>
       <details><summary>¿Cuánto cuesta?</summary><p>Desde $1,5 millones para un arreglo puntual hasta más de $10 millones para una implementación completa. El diagnóstico no tiene costo y siempre sabes el precio antes de empezar.</p></details>
+      <details><summary>¿Me ayudas con la facturación electrónica DIAN?</summary><p>Sí. Es lo que hago todos los días: habilitación, emisión, notas crédito y errores de rechazo. Te dejo facturando bien y sin depender de nadie.</p></details>
       <details><summary>No sé nada de tecnología</summary><p>No hace falta. Te explico todo en palabras simples y capacito a tu equipo hasta que lo use solo.</p></details>
       <details><summary>Ya tengo un software</summary><p>No siempre hay que cambiarlo. Primero reviso si el problema es el software o cómo se está usando.</p></details>
       <details><summary>¿Tengo que parar el negocio?</summary><p>No. Trabajo por etapas, en paralelo a tu operación, y pruebo todo antes de usarlo con datos reales.</p></details>
@@ -388,7 +404,7 @@ const STEPS = [
     {id:'depende', t:'Si no estoy, todo el mundo me llama.'},
     {id:'utilidad', t:'Vendo, pero no sé cuánto me gano.'},
     {id:'excel', t:'Inventario y ventas en Excel o cuaderno.'},
-    {id:'factura', t:'Facturar y liquidar nómina me quita días.'},
+    {id:'factura', t:'La facturación electrónica y la nómina me quitan días.'},
     {id:'whatsapp', t:'Paso el día respondiendo WhatsApp.'} ]},
   { key:'story', type:'voice', label:'Tu caso', title:'Cuéntamelo con tu voz.', hint:'Como si me mandaras un audio por WhatsApp. Máximo 2 minutos.' },
   { key:'budget', type:'single', one:true, label:'Inversión', title:'¿Cuánto estarías dispuesto a invertir?', options:[
