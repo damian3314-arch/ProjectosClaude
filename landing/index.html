@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Damián · Ingeniería + IA</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Encuentro el cuello de botella de tu empresa y lo resuelvo con IA, automatización y procesos bien diseñados. Cuéntame tu problema por texto o nota de voz.">
-<meta property="og:title" content="Cuéntame qué te frena. Yo lo automatizo.">
-<meta property="og:description" content="Automatización con IA, agentes, nómina, facturación, software contable, páginas web y gestión de proyectos.">
+<meta name="description" content="Ingeniero de producción. Ordeno tu operación, la llevo a software Loggro y la automatizo con IA. Cuéntame tu problema por texto o nota de voz.">
+<meta property="og:title" content="Tu operación pierde horas. Yo las encuentro.">
+<meta property="og:description" content="Eficiencia operativa, implementación de Loggro y automatizaciones con agentes de IA. En ese orden.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -132,15 +132,19 @@ section.band{padding-block:110px 0}
 .sec-head h2{font-size:clamp(32px,5vw,58px);line-height:1;font-weight:650}
 .sec-head p{color:var(--fog);font-size:18px;max-width:60ch}
 
-.services{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.svc{background:var(--ink);padding:26px 22px 24px;display:grid;gap:10px;align-content:start;min-height:220px;position:relative;transition:background .3s}
-.svc:hover{background:var(--ink-2)}
-.svc .tag{font-family:var(--f-mono);font-size:11px;color:var(--ember);letter-spacing:.12em;text-transform:uppercase}
-.svc h3{font-size:22px;font-weight:600;line-height:1.1}
-.svc p{color:var(--fog);font-size:14.5px}
-.svc .ex{margin-top:auto;font-size:13px;color:var(--paper);opacity:.75;border-top:1px dashed var(--line);padding-top:10px}
-@media (max-width:980px){.services{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:520px){.services{grid-template-columns:1fr}.svc{min-height:0}}
+.pillars{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.pillar{background:var(--ink);padding:30px 26px;display:flex;flex-direction:column;gap:12px;min-width:0;transition:background .3s}
+.pillar:hover{background:var(--ink-2)}
+.pillar.lead{background:radial-gradient(120% 80% at 0% 0%,color-mix(in srgb,var(--ember) 16%,transparent),transparent 60%),var(--ink-2)}
+.pillar .tag{font-family:var(--f-mono);font-size:11px;color:var(--ember);letter-spacing:.12em;text-transform:uppercase}
+.pillar h3{font-size:clamp(24px,2.6vw,32px);font-weight:650;line-height:1.05}
+.pillar.lead h3{font-size:clamp(30px,3.6vw,44px)}
+.pillar p{color:var(--fog);font-size:15px}
+.pillar ul{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:8px;font-size:14.5px}
+.pillar li{display:flex;gap:10px}
+.pillar li::before{content:"";flex:none;width:6px;height:6px;margin-top:9px;border-radius:50%;background:var(--ice)}
+.pillar .ex{margin-top:auto;padding-top:12px;font-size:13px;color:var(--paper);opacity:.75;border-top:1px dashed var(--line)}
+@media (max-width:900px){.pillars{grid-template-columns:1fr}}
 
 /* CUELLO DE BOTELLA */
 .flow{border:1px solid var(--line);border-radius:var(--r);padding:28px;background:linear-gradient(180deg,var(--ink-2),var(--ink))}
@@ -199,9 +203,9 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
   <canvas id="orb" aria-hidden="true"></canvas>
   <div class="wrap">
     <div class="hero-head">
-      <span class="eyebrow live"><b aria-hidden="true"></b>Ingeniería de procesos × IA · Colombia</span>
-      <h1>Cuéntame qué te frena. <em>Yo lo automatizo.</em></h1>
-      <p class="lede">Soy ingeniero de producción. Encuentro el cuello de botella de tu empresa y lo resuelvo con agentes de IA, flujos automáticos y procesos que no dependen de que alguien se acuerde.</p>
+      <span class="eyebrow live"><b aria-hidden="true"></b>Eficiencia operativa · Loggro · IA</span>
+      <h1>Tu operación pierde horas. <em>Yo las encuentro.</em></h1>
+      <p class="lede">Soy ingeniero de producción. Primero ordeno tu operación, luego la llevo a software y al final la automatizo con IA. En ese orden, para que no pagues por automatizar el desorden.</p>
     </div>
 
     <div class="stage" id="stage">
@@ -229,11 +233,11 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
         </div>
       </div>
       <div class="prompts" id="prompts" aria-label="Ejemplos">
-        <button type="button" class="chip" data-p="La nómina y la PILA me quitan dos días cada quincena.">Nómina y PILA</button>
-        <button type="button" class="chip" data-p="Facturo a mano y se me pierden pagos de clientes.">Facturo a mano</button>
+        <button type="button" class="chip" data-p="El cierre de caja nos toma días y nunca cuadra a la primera.">La caja no cuadra</button>
+        <button type="button" class="chip" data-p="Todo depende de mí: si no estoy, la operación se frena.">Todo depende de mí</button>
+        <button type="button" class="chip" data-p="Llevo inventario, ventas y facturación en Excel y ya no da más.">Vivo en Excel</button>
+        <button type="button" class="chip" data-p="Facturo y liquido nómina a mano y se me van los días.">Facturo a mano</button>
         <button type="button" class="chip" data-p="Respondo WhatsApp todo el día y no alcanzo a vender.">WhatsApp me ahoga</button>
-        <button type="button" class="chip" data-p="Necesito una página web que traiga clientes, no solo que se vea bonita.">Web que venda</button>
-        <button type="button" class="chip" data-p="Tengo un proyecto grande y nadie lo está coordinando.">Proyecto sin dueño</button>
       </div>
 
       <!-- Conversación -->
@@ -247,8 +251,8 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
 
 <div class="ticker" aria-label="Herramientas con las que trabajo">
   <div class="ticker-track">
-    <span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
-    <span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
+    <span>Loggro</span><span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
+    <span>Loggro</span><span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
   </div>
 </div>
 
@@ -256,18 +260,31 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">Servicios</span>
-      <h2>Una sola persona que entiende el proceso, la plata y la tecnología.</h2>
-      <p>No vendo herramientas. Diseño el sistema completo y lo dejo funcionando con tu equipo.</p>
+      <h2>Ordenar, sistematizar, automatizar. En ese orden.</h2>
+      <p>Automatizar un proceso desordenado solo produce errores más rápido. Por eso trabajo en tres capas, y la mayoría de empresas empieza por la primera.</p>
     </div>
-    <div class="services">
-      <article class="svc"><span class="tag">IA</span><h3>Automatización con IA</h3><p>Flujos en n8n que leen, clasifican y responden por ti.</p><span class="ex">Ej: facturas de proveedores que llegan al correo y se registran solas.</span></article>
-      <article class="svc"><span class="tag">Agentes</span><h3>Agentes de IA</h3><p>Asistentes en WhatsApp o voz que atienden, agendan y filtran clientes.</p><span class="ex">Ej: un bot que responde precios y reserva citas a las 11 p.m.</span></article>
-      <article class="svc"><span class="tag">Procesos</span><h3>Optimización de procesos</h3><p>Mapeo, mido tiempos y ataco el cuello de botella real.</p><span class="ex">Ej: de 3 días a 4 horas para cerrar caja del mes.</span></article>
-      <article class="svc"><span class="tag">Web</span><h3>Diseño de páginas web</h3><p>Páginas como esta: rápidas, claras y conectadas a tu CRM.</p><span class="ex">Ej: landing que califica leads antes de que los llames.</span></article>
-      <article class="svc"><span class="tag">Nómina</span><h3>Nómina y PILA</h3><p>Liquidación, novedades y seguridad social sin hojas sueltas.</p><span class="ex">Ej: horas extra del taller calculadas desde el registro diario.</span></article>
-      <article class="svc"><span class="tag">Contable</span><h3>Software contable</h3><p>Selección, configuración y migración al sistema correcto.</p><span class="ex">Ej: pasar de Excel a un software con inventario real.</span></article>
-      <article class="svc"><span class="tag">DIAN</span><h3>Facturación electrónica</h3><p>Implementación y conexión con tus ventas y tu contador.</p><span class="ex">Ej: cada venta del POS genera su factura sin redigitar.</span></article>
-      <article class="svc"><span class="tag">PM</span><h3>Project Manager</h3><p>Formulo, planeo y llevo el proyecto hasta que se usa.</p><span class="ex">Ej: implementación de ERP con cronograma y responsables.</span></article>
+    <div class="pillars">
+      <article class="pillar lead">
+        <span class="tag">01 · El punto de partida</span>
+        <h3>Eficiencia operativa</h3>
+        <p>Mapeo cómo se hace el trabajo hoy, mido tiempos y ataco el cuello de botella real.</p>
+        <ul><li>Diagnóstico de procesos y tiempos</li><li>Estandarización y roles claros</li><li>Indicadores que sí se miran</li><li>Gestión del proyecto de mejora (PM)</li></ul>
+        <span class="ex">Ej: cierre de caja mensual de 3 días a 4 horas.</span>
+      </article>
+      <article class="pillar">
+        <span class="tag">02 · Ordena y centraliza</span>
+        <h3>Software Loggro</h3>
+        <p>Implemento Loggro para que la operación viva en un sistema y no en hojas sueltas.</p>
+        <ul><li>POS, inventario y contabilidad</li><li>Facturación electrónica DIAN</li><li>Nómina electrónica</li><li>Migración desde Excel y capacitación</li></ul>
+        <span class="ex">Ej: cada venta genera su factura sin redigitar.</span>
+      </article>
+      <article class="pillar">
+        <span class="tag">03 · Escala sin contratar</span>
+        <h3>Automatizaciones y agentes</h3>
+        <p>Cuando el proceso está ordenado, lo conecto y le pongo IA encima.</p>
+        <ul><li>Flujos automáticos con n8n</li><li>Agentes en WhatsApp y voz</li><li>Páginas web que califican clientes</li><li>Reportes que llegan solos</li></ul>
+        <span class="ex">Ej: un bot que responde precios y agenda a las 11 p.m.</span>
+      </article>
     </div>
   </div>
 </section>
@@ -319,7 +336,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
   <a class="btn btn-solid" href="#top" data-focus-composer>Contar mi problema</a>
 </section>
 
-<footer><div class="wrap"><span>© 2026 Damián · Ingeniería de procesos + IA</span><span>Bogotá, Colombia</span></div></footer>
+<footer><div class="wrap"><span>© 2026 Damián · Eficiencia operativa + IA</span><span>Bogotá, Colombia</span></div></footer>
 
 <script>
 /* ===== CONFIGURACIÓN — edita esto ===== */
@@ -422,14 +439,10 @@ micBtn.addEventListener('click', () => (mediaRec && mediaRec.state === 'recordin
 
 /* ===== CONVERSACIÓN DE CALIFICACIÓN ===== */
 const SERVICES = [
-  {id:'ia', label:'Automatización con IA', kw:/autom|excel|manual|repet|correo|a mano/i},
-  {id:'agentes', label:'Agentes de IA', kw:/whatsapp|bot|agente|respond|atender|cliente/i},
-  {id:'procesos', label:'Optimización de procesos', kw:/proceso|demora|lento|tiempo|cuello|días/i},
-  {id:'web', label:'Página web', kw:/web|página|landing|tienda|online/i},
-  {id:'nomina', label:'Nómina y PILA', kw:/nómina|nomina|pila|empleado|quincena|liquid/i},
-  {id:'contable', label:'Software contable', kw:/contab|caja|inventario|cuadr|cierre/i},
-  {id:'factura', label:'Facturación electrónica', kw:/factur|dian|pago/i},
-  {id:'pm', label:'Project Manager', kw:/proyecto|coordin|cronograma|implementa/i}
+  {id:'operativa', label:'Eficiencia operativa', d:'Procesos lentos, desorden, todo depende de una persona', kw:/proceso|demora|lento|tiempo|cuello|días|depende|desorden|caja|cuadr|cierre|proyecto|coordin/i},
+  {id:'loggro', label:'Software Loggro', d:'POS, inventario, contabilidad, facturación y nómina', kw:/excel|inventario|contab|factur|dian|nómina|nomina|pila|software|pos/i},
+  {id:'auto', label:'Automatizaciones y agentes', d:'IA, WhatsApp, flujos automáticos, página web', kw:/autom|whatsapp|bot|agente|respond|ia\b|web|página|correo|repet/i},
+  {id:'nose', label:'No sé, ayúdame a elegir', d:'Lo definimos en el diagnóstico', kw:/$^/}
 ];
 const BUDGETS = [
   {id:'b1', t:'Arranque', r:'$1,5 M – $4 M COP', d:'Un flujo o automatización puntual', score:1},
