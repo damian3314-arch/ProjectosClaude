@@ -3,184 +3,209 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Damián · Ingeniería + IA</title>
+<title>Damián · Eficiencia operativa</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Ingeniero de producción. Ordeno tu operación, la llevo a software Loggro y la automatizo con IA. Cuéntame tu problema por texto o nota de voz.">
-<meta property="og:title" content="Tu operación pierde horas. Yo las encuentro.">
-<meta property="og:description" content="Eficiencia operativa, implementación de Loggro y automatizaciones con agentes de IA. En ese orden.">
+<meta name="description" content="Ordeno la operación de tu negocio para que la caja cuadre, el equipo sepa qué hacer y tú recuperes tu tiempo. Cuéntame tu caso en una nota de voz.">
+<meta property="og:title" content="¿Tu negocio solo funciona si tú estás ahí?">
+<meta property="og:description" content="Cuéntame tu caso en una nota de voz de 2 minutos. La primera conversación no tiene costo.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Geist:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: una sola columna cinematográfica — un orbe vivo detrás del cajón de conversación, y debajo bandas sobrias que explican el método. */
+/* Layout: una página, un trabajo — que el dueño me cuente su problema. Hero con el cajón de voz, y cada banda abajo responde una duda antes de volver al mismo botón. */
 :root{
-  --ink:#07080c;          /* fondo, azul-grafito profundo */
-  --ink-2:#0e1118;        /* superficies */
-  --line:#1d2230;         /* bordes */
-  --fog:#8b93a7;          /* texto secundario */
-  --paper:#eef0f5;        /* texto principal */
-  --ember:#ff7a45;        /* acento cálido */
-  --ice:#8fe3ff;          /* acento frío del orbe */
-  --ok:#5fe0a5; --warn:#ffc65c; --hot:#ff5d5d;
+  --ink:#08090d; --ink-2:#10131b; --ink-3:#171b26;
+  --line:#222838; --fog:#949cb0; --paper:#f1f2f6;
+  --ember:#ff7a45; --ice:#8fe3ff; --ok:#5fe0a5; --hot:#ff6b6b;
   --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
   --f-body:"Geist","Helvetica Neue","Segoe UI",system-ui,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
-  --r:18px;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:20px;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-.wrap{width:100%;max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{width:100%;max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.narrow{max-width:760px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.02em}
 p{margin:0}
-.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--fog)}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--ice);outline-offset:3px;border-radius:8px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
+.muted{color:var(--fog)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* NAV */
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--ink) 70%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
-nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--ink) 75%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:18px}
-.brand i{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--ice),transparent 60%),radial-gradient(circle at 70% 70%,var(--ember),transparent 65%),var(--ink-2);box-shadow:0 0 18px color-mix(in srgb,var(--ember) 40%,transparent)}
-.navlinks{display:flex;gap:26px;font-size:14px;color:var(--fog)}
-.navlinks a{text-decoration:none}.navlinks a:hover{color:var(--paper)}
-.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:500 14px var(--f-body);border-radius:999px;padding:10px 18px;text-decoration:none;transition:transform .15s,background .2s,box-shadow .2s}
+.brand small{font:400 13px var(--f-body);color:var(--fog)}
+@media (max-width:520px){.brand small{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;font:600 15px var(--f-body);border-radius:999px;padding:12px 20px;text-decoration:none;transition:transform .15s,box-shadow .2s,background .2s}
 .btn-solid{background:var(--paper);color:var(--ink)}
-.btn-solid:hover{transform:translateY(-1px);box-shadow:0 8px 30px color-mix(in srgb,var(--ember) 35%,transparent)}
-.btn-ghost{background:transparent;color:var(--paper);border:1px solid var(--line)}
-@media (max-width:760px){.navlinks{display:none}}
+.btn-hot{background:var(--ember);color:var(--ink)}
+.btn-hot:hover,.btn-solid:hover{transform:translateY(-1px);box-shadow:0 10px 30px -8px color-mix(in srgb,var(--ember) 60%,transparent)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-sm{padding:9px 16px;font-size:14px}
 
 /* HERO */
-.hero{position:relative;padding-block:72px 40px;isolation:isolate}
-#orb{position:absolute;left:50%;top:44%;width:min(880px,140vw);aspect-ratio:1;max-width:none;transform:translate(-50%,-50%);z-index:-1;pointer-events:none}
-.hero-grid{position:absolute;inset:0;z-index:-2;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 40%,#000 0%,transparent 70%);opacity:.35}
-.hero-head{text-align:center;display:grid;gap:20px;justify-items:center}
-.hero h1{font-size:clamp(42px,8.2vw,108px);line-height:.95;font-weight:700;max-width:13ch}
-.hero h1 em{font-style:normal;background:linear-gradient(100deg,var(--ice),var(--paper) 45%,var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero .lede{max-width:58ch;color:var(--fog);font-size:clamp(16px,2vw,19px)}
-.live{display:inline-flex;align-items:center;gap:8px}
-.live b{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
+.hero{position:relative;padding-block:64px 72px;isolation:isolate}
+#orb{position:absolute;left:50%;top:62%;width:min(760px,130vw);aspect-ratio:1;max-width:none;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;opacity:.8}
+.hero-head{text-align:center;display:grid;gap:18px;justify-items:center}
+.hero h1{font-size:clamp(40px,7vw,86px);line-height:.98;font-weight:700;max-width:14ch}
+.hero .lede{max-width:54ch;color:var(--fog);font-size:clamp(17px,2vw,20px)}
+.hero .lede strong{color:var(--paper);font-weight:500}
 
-/* COMPOSER / CONVERSACIÓN */
-.stage{margin:44px auto 0;max-width:760px}
-.panel{background:color-mix(in srgb,var(--ink-2) 78%,transparent);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:26px;box-shadow:0 30px 120px -30px color-mix(in srgb,var(--ember) 30%,transparent),inset 0 1px 0 color-mix(in srgb,var(--paper) 6%,transparent);overflow:hidden}
-.composer textarea{display:block;width:100%;min-height:118px;resize:vertical;border:0;background:transparent;color:var(--paper);font:400 18px/1.5 var(--f-body);padding:22px 22px 8px;outline:none}
-.composer textarea::placeholder{color:color-mix(in srgb,var(--fog) 75%,transparent)}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 12px 14px;flex-wrap:wrap}
-.tools{display:flex;align-items:center;gap:8px}
-.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--paper);display:grid;place-items:center;cursor:pointer;transition:all .2s;position:relative}
-.icon-btn:hover{border-color:var(--fog)}
-.icon-btn svg{width:20px;height:20px}
-.mic.rec{background:var(--ember);border-color:var(--ember);color:var(--ink);box-shadow:0 0 0 6px color-mix(in srgb,var(--ember) 25%,transparent)}
-.rec-meta{font-family:var(--f-mono);font-size:12px;color:var(--fog);display:flex;align-items:center;gap:8px}
+.stage{margin:36px auto 0;max-width:680px}
+.panel{background:color-mix(in srgb,var(--ink-2) 82%,transparent);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:26px;box-shadow:0 30px 100px -40px color-mix(in srgb,var(--ember) 45%,transparent);overflow:hidden}
+.composer{padding:22px;display:grid;gap:16px}
+.composer-q{font-family:var(--f-display);font-size:20px;font-weight:600;text-align:center}
+.voice{display:flex;flex-direction:column;align-items:center;gap:10px}
+.mic{width:88px;height:88px;border-radius:50%;border:0;cursor:pointer;background:var(--ember);color:var(--ink);display:grid;place-items:center;transition:transform .2s,box-shadow .2s;box-shadow:0 0 0 10px color-mix(in srgb,var(--ember) 14%,transparent)}
+.mic:hover{transform:scale(1.04)}
+.mic svg{width:34px;height:34px}
+.mic.rec{animation:ring 1.4s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ember) 55%,transparent)}100%{box-shadow:0 0 0 26px transparent}}
+.rec-meta{font-family:var(--f-mono);font-size:13px;color:var(--fog);min-height:1.4em;text-align:center}
 .rec-meta.on{color:var(--ember)}
-.send{background:linear-gradient(100deg,var(--ember),color-mix(in srgb,var(--ember) 60%,var(--ice)));color:var(--ink);font-weight:600;padding:12px 20px}
-.send:disabled{opacity:.4;cursor:not-allowed}
-.audio-chip{display:flex;align-items:center;gap:10px;margin:0 14px 4px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--fog)}
-.audio-chip audio{height:32px;max-width:100%;flex:1;min-width:0}
-.audio-chip button{background:none;border:0;color:var(--fog);cursor:pointer;font-size:13px}
-.prompts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
-.chip{border:1px solid var(--line);background:color-mix(in srgb,var(--ink-2) 60%,transparent);color:var(--paper);border-radius:999px;padding:8px 14px;font:400 14px var(--f-body);cursor:pointer;transition:all .18s}
-.chip:hover{border-color:var(--fog);transform:translateY(-1px)}
-.chip[aria-pressed="true"]{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.or{display:flex;align-items:center;gap:12px;color:var(--fog);font-size:13px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.composer textarea{width:100%;min-height:84px;resize:vertical;border:1px solid var(--line);border-radius:16px;background:var(--ink);color:var(--paper);font:400 16px/1.5 var(--f-body);padding:14px 16px;outline:none}
+.composer textarea:focus{border-color:var(--ice)}
+.composer textarea::placeholder{color:color-mix(in srgb,var(--fog) 80%,transparent)}
+.audio-chip{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px dashed var(--line);border-radius:12px;font-size:13px;color:var(--fog);flex-wrap:wrap}
+.audio-chip audio{height:34px;flex:1;min-width:0;max-width:100%}
+.linkish{background:none;border:0;color:var(--fog);cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:3px;padding:0}
+.composer-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.upload{font-size:13px;color:var(--fog);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;margin-top:18px;font-size:14px;color:var(--fog)}
+.trust span::before{content:"✓ ";color:var(--ok)}
 
-.chat{display:flex;flex-direction:column;gap:14px;padding:22px;max-height:min(68vh,640px);overflow-y:auto;scroll-behavior:smooth}
-.msg{max-width:88%;padding:12px 16px;border-radius:18px;font-size:15.5px;animation:rise .35s ease both}
+/* CHAT */
+.chat{display:flex;flex-direction:column;gap:14px;padding:22px;max-height:min(70vh,640px);overflow-y:auto}
+.msg{max-width:88%;padding:12px 16px;border-radius:18px;font-size:16px;animation:rise .35s ease both}
 .msg.bot{background:var(--ink);border:1px solid var(--line);border-top-left-radius:6px;align-self:flex-start}
 .msg.me{background:var(--paper);color:var(--ink);border-top-right-radius:6px;align-self:flex-end}
-.msg .who{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-bottom:4px}
+.msg .who{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-bottom:3px}
 .msg.me .who{color:color-mix(in srgb,var(--ink) 55%,transparent)}
-@keyframes rise{from{opacity:.0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .typing{display:inline-flex;gap:4px;padding:14px 16px}.typing i{width:6px;height:6px;border-radius:50%;background:var(--fog);animation:blink 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
 @keyframes blink{50%{opacity:.25}}
-.options{display:flex;flex-wrap:wrap;gap:8px;align-self:stretch;animation:rise .35s ease both}
-.opt{flex:1 1 200px;text-align:left;border:1px solid var(--line);background:var(--ink);color:var(--paper);border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;transition:all .18s;min-width:0}
+.options{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;align-self:stretch;animation:rise .35s ease both}
+.opt{text-align:left;border:1px solid var(--line);background:var(--ink);color:var(--paper);border-radius:14px;padding:13px 15px;cursor:pointer;font:inherit;transition:border-color .18s,background .18s;min-width:0}
 .opt:hover{border-color:var(--ember)}
 .opt strong{display:block;font-family:var(--f-display);font-size:17px;font-weight:600}
-.opt small{color:var(--fog);font-size:13px}
-.opt[aria-pressed="true"]{border-color:var(--ember);background:color-mix(in srgb,var(--ember) 12%,var(--ink))}
-.next-row{display:flex;justify-content:flex-end;width:100%}
+.opt small{display:block;color:var(--fog);font-size:13.5px;line-height:1.35}
 .contact{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-self:stretch;animation:rise .35s ease both}
 .contact label{display:grid;gap:4px;font-size:12px;color:var(--fog);font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
 .contact input{background:var(--ink);border:1px solid var(--line);border-radius:12px;color:var(--paper);font:400 16px var(--f-body);padding:12px 14px;outline:none;width:100%}
 .contact input:focus{border-color:var(--ice)}
-.contact .full{grid-column:1/-1}
-.contact .err{color:var(--hot);font-size:13px;grid-column:1/-1;font-family:var(--f-body);text-transform:none;letter-spacing:0}
-.consent{grid-column:1/-1;display:flex!important;grid-template-columns:none;align-items:flex-start;gap:10px;text-transform:none!important;letter-spacing:0!important;font-family:var(--f-body)!important;font-size:13px!important}
-.consent input{width:auto;margin-top:3px;accent-color:var(--ember)}
+.contact .consent{grid-column:1/-1;display:flex;align-items:flex-start;gap:10px;text-transform:none;letter-spacing:0;font:400 13px var(--f-body)}
+.contact .consent input{width:auto;margin-top:3px;accent-color:var(--ember)}
+.contact .err{grid-column:1/-1;color:var(--hot);font-size:14px}
+.contact .row{grid-column:1/-1;display:flex;justify-content:flex-end}
 @media (max-width:560px){.contact{grid-template-columns:1fr}.msg{max-width:94%}}
-.summary{align-self:stretch;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px;background:var(--ink);animation:rise .35s ease both}
-.summary dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0;font-size:14px}
-.summary dt{color:var(--fog);font-family:var(--f-mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
-.summary dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.done{align-self:stretch;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px;background:var(--ink);animation:rise .35s ease both}
+.done ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:15px}
 .chat-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12px;color:var(--fog)}
-.progress{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden;max-width:240px}
+.progress{flex:1;height:3px;background:var(--line);border-radius:3px;overflow:hidden;max-width:220px}
 .progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ice),var(--ember));transition:width .5s}
 
-/* TICKER */
-.ticker{border-block:1px solid var(--line);overflow:hidden;padding-block:18px;margin-top:64px}
-.ticker-track{display:flex;gap:56px;width:max-content;animation:slide 38s linear infinite;font-family:var(--f-mono);font-size:14px;color:var(--fog);white-space:nowrap}
-.ticker-track span::before{content:"◇ ";color:var(--ember)}
-@keyframes slide{to{transform:translateX(-50%)}}
+/* BANDAS */
+section.band{padding-block:96px}
+section.band + section.band{padding-top:0}
+.sec-head{display:grid;gap:12px;margin-bottom:36px}
+.sec-head h2{font-size:clamp(30px,4.6vw,52px);line-height:1.02;font-weight:650}
+.sec-head p{color:var(--fog);font-size:18px;max-width:58ch}
+.cta-line{margin-top:32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 
-/* SECCIONES */
-section.band{padding-block:110px 0}
-.sec-head{display:grid;gap:14px;max-width:720px;margin-bottom:48px}
-.sec-head h2{font-size:clamp(32px,5vw,58px);line-height:1;font-weight:650}
-.sec-head p{color:var(--fog);font-size:18px;max-width:60ch}
+/* Síntomas */
+.symptoms{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sym{display:flex;gap:14px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--ink-2);color:var(--paper);border-radius:16px;padding:16px 18px;cursor:pointer;font:inherit;font-size:16.5px;transition:border-color .18s,background .18s}
+.sym:hover{border-color:var(--fog)}
+.sym .box{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--fog);display:grid;place-items:center;margin-top:1px;transition:all .18s}
+.sym .box svg{width:14px;height:14px;opacity:0}
+.sym[aria-pressed="true"]{border-color:var(--ember);background:color-mix(in srgb,var(--ember) 10%,var(--ink-2))}
+.sym[aria-pressed="true"] .box{background:var(--ember);border-color:var(--ember);color:var(--ink)}
+.sym[aria-pressed="true"] .box svg{opacity:1}
+.verdict{margin-top:20px;padding:18px 20px;border-radius:16px;border:1px dashed var(--line);font-size:18px;color:var(--fog);transition:all .3s}
+.verdict.on{border-style:solid;border-color:var(--ember);color:var(--paper)}
+.verdict strong{color:var(--ember)}
+@media (max-width:640px){.symptoms{grid-template-columns:1fr}}
 
-.pillars{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.pillar{background:var(--ink);padding:30px 26px;display:flex;flex-direction:column;gap:12px;min-width:0;transition:background .3s}
-.pillar:hover{background:var(--ink-2)}
-.pillar.lead{background:radial-gradient(120% 80% at 0% 0%,color-mix(in srgb,var(--ember) 16%,transparent),transparent 60%),var(--ink-2)}
-.pillar .tag{font-family:var(--f-mono);font-size:11px;color:var(--ember);letter-spacing:.12em;text-transform:uppercase}
-.pillar h3{font-size:clamp(24px,2.6vw,32px);font-weight:650;line-height:1.05}
-.pillar.lead h3{font-size:clamp(30px,3.6vw,44px)}
-.pillar p{color:var(--fog);font-size:15px}
-.pillar ul{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:8px;font-size:14.5px}
-.pillar li{display:flex;gap:10px}
-.pillar li::before{content:"";flex:none;width:6px;height:6px;margin-top:9px;border-radius:50%;background:var(--ice)}
-.pillar .ex{margin-top:auto;padding-top:12px;font-size:13px;color:var(--paper);opacity:.75;border-top:1px dashed var(--line)}
-@media (max-width:900px){.pillars{grid-template-columns:1fr}}
+/* Calculadora */
+.calc{display:grid;grid-template-columns:1.1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.calc > div{background:var(--ink-2);padding:28px;display:grid;gap:22px;align-content:start;min-width:0}
+.field{display:grid;gap:10px}
+.field label{display:flex;justify-content:space-between;gap:12px;font-size:15px}
+.field output{font-family:var(--f-mono);color:var(--paper);font-variant-numeric:tabular-nums}
+.field input[type=range]{width:100%;accent-color:var(--ember)}
+.field small{color:var(--fog);font-size:13px}
+.result{background:radial-gradient(100% 90% at 100% 0%,color-mix(in srgb,var(--ember) 18%,transparent),transparent 65%),var(--ink-3)!important}
+.big{font-family:var(--f-display);font-size:clamp(40px,6vw,64px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.result .row{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:12px;font-size:15px;color:var(--fog)}
+.result .row b{color:var(--paper);font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+@media (max-width:760px){.calc{grid-template-columns:1fr}.calc > div{padding:20px}}
 
-/* CUELLO DE BOTELLA */
-.flow{border:1px solid var(--line);border-radius:var(--r);padding:28px;background:linear-gradient(180deg,var(--ink-2),var(--ink))}
-.flow-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:end}
-.station{display:grid;gap:10px;min-width:0}
-.station .cap{height:140px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
-.station .cap i{display:block;width:100%;border-radius:10px 10px 0 0;background:color-mix(in srgb,var(--ice) 35%,var(--ink-2));transition:height 1s cubic-bezier(.2,.8,.2,1)}
-.station.neck .cap i{background:linear-gradient(180deg,var(--hot),color-mix(in srgb,var(--ember) 60%,var(--ink)))}
-.station b{font-family:var(--f-display);font-size:18px;font-weight:600}
-.station span{font-family:var(--f-mono);font-size:13px;color:var(--fog);font-variant-numeric:tabular-nums}
-.station.neck span{color:var(--hot)}
-.flow-note{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;margin-top:22px;padding-top:18px;border-top:1px dashed var(--line);font-size:15px;color:var(--fog)}
-.flow-note strong{color:var(--paper)}
-.toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px}
-.toggle button{border:0;background:transparent;color:var(--fog);padding:7px 14px;border-radius:999px;cursor:pointer;font:500 13px var(--f-body)}
-.toggle button[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
-@media (max-width:620px){.flow-row{grid-template-columns:repeat(2,1fr)}.flow{padding:18px}}
+/* Antes / después */
+.ba{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ba-row{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.ba-row:first-child{border-top:0}
+.ba-row > div{padding:16px 20px;min-width:0;font-size:16px}
+.ba-row > div:first-child{color:var(--fog);border-right:1px solid var(--line)}
+.ba-head > div{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding-block:12px}
+.ba-head > div:last-child{color:var(--ok)}
+@media (max-width:560px){.ba-row{grid-template-columns:1fr}.ba-row > div:first-child{border-right:0;padding-bottom:4px;text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--hot) 70%,transparent)}.ba-row > div:last-child{padding-top:4px}.ba-head{display:none}}
 
-/* MÉTODO */
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s}
-.step{border-top:1px solid var(--paper);padding-top:18px;display:grid;gap:8px;align-content:start}
-.step::before{counter-increment:s;content:"0" counter(s);font-family:var(--f-mono);font-size:12px;color:var(--ember)}
+/* Proceso */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{border:1px solid var(--line);border-radius:var(--r);padding:24px;display:grid;gap:10px;align-content:start;background:var(--ink-2)}
+.step .n{font-family:var(--f-mono);font-size:13px;color:var(--ember)}
 .step h3{font-size:22px;font-weight:600}
-.step p{color:var(--fog);font-size:15px}
-.step .out{font-family:var(--f-mono);font-size:12px;color:var(--paper);opacity:.7}
-@media (max-width:860px){.steps{grid-template-columns:1fr 1fr}}
-@media (max-width:480px){.steps{grid-template-columns:1fr}}
+.step p{color:var(--fog);font-size:15.5px}
+.step .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pill{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--paper)}
+.pill.free{border-color:color-mix(in srgb,var(--ok) 60%,transparent);color:var(--ok)}
+.tools{margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:15px;color:var(--fog)}
+.tools div{border-top:1px solid var(--line);padding-top:12px}
+.tools b{display:block;color:var(--paper);font-weight:600;margin-bottom:2px}
+@media (max-width:820px){.steps,.tools{grid-template-columns:1fr}}
 
-/* CTA FINAL */
-.final{padding-block:120px 80px;text-align:center;display:grid;gap:22px;justify-items:center}
-.final h2{font-size:clamp(36px,6.5vw,84px);line-height:.98;font-weight:700;max-width:16ch}
-.final p{color:var(--fog);max-width:52ch}
+/* Sobre mí */
+.me{display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start}
+.photo{width:100%;max-width:220px;aspect-ratio:4/5;border-radius:var(--r);background:linear-gradient(160deg,var(--ink-3),var(--ink-2));border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;font-family:var(--f-display);font-size:72px;font-weight:700;color:var(--fog)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.me-text{display:grid;gap:16px;min-width:0}
+.me-text h2{font-size:clamp(28px,4vw,44px);line-height:1.05;font-weight:650}
+.me-text p{color:var(--fog);font-size:17px;max-width:60ch}
+.me-text p strong{color:var(--paper);font-weight:500}
+.creds{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:680px){.me{grid-template-columns:1fr;gap:22px}.photo{max-width:160px}}
+
+/* FAQ */
+.faq{display:grid;gap:10px}
+.faq details{border:1px solid var(--line);border-radius:16px;background:var(--ink-2);padding:0 20px}
+.faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px;padding-block:18px;font-family:var(--f-display);font-size:19px;font-weight:600}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--ember);font-family:var(--f-mono);font-weight:400}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding-bottom:18px;color:var(--fog);max-width:62ch}
+
+/* Cierre */
+.final{padding-block:40px 110px;text-align:center;display:grid;gap:20px;justify-items:center}
+.final h2{font-size:clamp(34px,6vw,72px);line-height:1;font-weight:700;max-width:15ch}
+.final p{color:var(--fog);max-width:46ch}
 footer{border-top:1px solid var(--line)}
-footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding-block:26px;font-size:13px;color:var(--fog);font-family:var(--f-mono)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding-block:24px;font-size:13px;color:var(--fog);font-family:var(--f-mono)}
 
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* Barra fija móvil */
+.mbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--ink) 88%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--line);transform:translateY(110%);transition:transform .3s}
+.mbar.show{transform:none}
+.mbar .btn{width:100%}
+@media (min-width:761px){.mbar{display:none}}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -188,236 +213,253 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#top"><i aria-hidden="true"></i>Damián</a>
-    <div class="navlinks">
-      <a href="#servicios">Servicios</a>
-      <a href="#cuello">Cuello de botella</a>
-      <a href="#metodo">Método</a>
-    </div>
-    <a class="btn btn-solid" href="#top" data-focus-composer>Hablemos</a>
+    <a class="brand" href="#top">Damián <small>· Ingeniero de producción</small></a>
+    <a class="btn btn-solid btn-sm" href="#top" data-go>Contarme tu caso</a>
   </div>
 </nav>
 
 <header class="hero" id="top">
-  <div class="hero-grid" aria-hidden="true"></div>
   <canvas id="orb" aria-hidden="true"></canvas>
   <div class="wrap">
     <div class="hero-head">
-      <span class="eyebrow live"><b aria-hidden="true"></b>Eficiencia operativa · Loggro · IA</span>
-      <h1>Tu operación pierde horas. <em>Yo las encuentro.</em></h1>
-      <p class="lede">Soy ingeniero de producción. Primero ordeno tu operación, luego la llevo a software y al final la automatizo con IA. En ese orden, para que no pagues por automatizar el desorden.</p>
+      <span class="eyebrow">Para dueños de restaurantes, talleres y comercios</span>
+      <h1>¿Tu negocio solo funciona si tú estás ahí?</h1>
+      <p class="lede">Ordeno la operación de tu negocio para que <strong>la caja cuadre, tu equipo sepa qué hacer y tú recuperes tus días.</strong> Sin cambiar todo de golpe y sin venderte software que no necesitas.</p>
     </div>
 
     <div class="stage" id="stage">
-      <!-- Paso 0: escribir o hablar -->
       <div class="panel composer" id="composer">
-        <label for="problem" class="sr">Describe tu problema</label>
-        <textarea id="problem" placeholder="Ej: Cada cierre de mes perdemos 3 días cuadrando caja y facturas en Excel…"></textarea>
+        <p class="composer-q">Cuéntame qué es lo que más te desgasta de tu negocio.</p>
+        <div class="voice">
+          <button type="button" class="mic" id="micBtn" aria-label="Grabar nota de voz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          </button>
+          <span class="rec-meta" id="recMeta">Toca y háblame, como en WhatsApp. Máximo 2 minutos.</span>
+        </div>
         <div class="audio-chip" id="audioChip" hidden>
-          <span>Nota de voz</span>
+          <span>Tu nota de voz</span>
           <audio id="audioPreview" controls></audio>
-          <button type="button" id="audioRemove">Quitar</button>
+          <button type="button" class="linkish" id="audioRemove">Borrar</button>
         </div>
-        <div class="bar">
-          <div class="tools">
-            <button type="button" class="icon-btn mic" id="micBtn" aria-label="Grabar nota de voz" title="Grabar nota de voz">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-            </button>
-            <label class="icon-btn" for="audioFile" title="Subir un audio (WhatsApp, grabadora)" aria-label="Subir un audio">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
-            </label>
-            <input type="file" id="audioFile" accept="audio/*" class="sr">
-            <span class="rec-meta" id="recMeta">Escribe o graba hasta 2 min</span>
-          </div>
-          <button type="button" class="btn send" id="startBtn" disabled>Empezar diagnóstico →</button>
+        <div class="or">o escríbelo</div>
+        <label for="problem" class="sr">Describe tu problema</label>
+        <textarea id="problem" placeholder="Ej: Tengo un restaurante con 8 empleados. Cada noche me quedo cuadrando caja y nunca da. No sé cuánto me gano de verdad."></textarea>
+        <div class="composer-foot">
+          <label class="upload" for="audioFile">Subir un audio que ya tengas</label>
+          <input type="file" id="audioFile" accept="audio/*" class="sr">
+          <button type="button" class="btn btn-hot" id="startBtn" disabled>Enviar mi caso →</button>
         </div>
-      </div>
-      <div class="prompts" id="prompts" aria-label="Ejemplos">
-        <button type="button" class="chip" data-p="El cierre de caja nos toma días y nunca cuadra a la primera.">La caja no cuadra</button>
-        <button type="button" class="chip" data-p="Todo depende de mí: si no estoy, la operación se frena.">Todo depende de mí</button>
-        <button type="button" class="chip" data-p="Llevo inventario, ventas y facturación en Excel y ya no da más.">Vivo en Excel</button>
-        <button type="button" class="chip" data-p="Facturo y liquido nómina a mano y se me van los días.">Facturo a mano</button>
-        <button type="button" class="chip" data-p="Respondo WhatsApp todo el día y no alcanzo a vender.">WhatsApp me ahoga</button>
       </div>
 
-      <!-- Conversación -->
       <div class="panel" id="chatPanel" hidden>
         <div class="chat" id="chat" aria-live="polite"></div>
-        <div class="chat-foot"><span id="stepLabel">Paso 1 de 5</span><div class="progress"><span id="progressBar"></span></div></div>
+        <div class="chat-foot"><span id="stepLabel">Pregunta 1 de 5</span><div class="progress"><span id="progressBar"></span></div></div>
+      </div>
+
+      <div class="trust" id="trust">
+        <span>Te respondo yo, no un call center</span>
+        <span>Respuesta en menos de 24 horas</span>
+        <span>Primera conversación sin costo</span>
       </div>
     </div>
   </div>
 </header>
 
-<div class="ticker" aria-label="Herramientas con las que trabajo">
-  <div class="ticker-track">
-    <span>Loggro</span><span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
-    <span>Loggro</span><span>n8n</span><span>WhatsApp Cloud API</span><span>Claude</span><span>Supabase</span><span>Google Sheets</span><span>Dataico · facturación electrónica DIAN</span><span>Notion</span><span>Next.js</span><span>Agentes de voz</span><span>PILA</span>
+<section class="band" id="sintomas">
+  <div class="wrap narrow">
+    <div class="sec-head">
+      <span class="eyebrow">¿Te suena?</span>
+      <h2>Marca lo que te pasa hoy.</h2>
+    </div>
+    <div class="symptoms" id="symptoms">
+      <button type="button" class="sym" aria-pressed="false" data-t="La caja no me cuadra"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Cierro la caja en la noche y casi nunca cuadra.</button>
+      <button type="button" class="sym" aria-pressed="false" data-t="Si no estoy, el negocio se frena"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Si me ausento un día, todos me llaman a preguntar.</button>
+      <button type="button" class="sym" aria-pressed="false" data-t="No sé cuánto me gano de verdad"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Vendo bien, pero no sé cuánto me queda de verdad.</button>
+      <button type="button" class="sym" aria-pressed="false" data-t="Inventario y ventas en Excel o cuaderno"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Llevo inventario y ventas en Excel o en un cuaderno.</button>
+      <button type="button" class="sym" aria-pressed="false" data-t="Facturación y nómina me quitan días"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>La facturación y la nómina me quitan días cada mes.</button>
+      <button type="button" class="sym" aria-pressed="false" data-t="Paso el día respondiendo WhatsApp"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></span>Paso el día respondiendo WhatsApp en vez de vender.</button>
+    </div>
+    <p class="verdict" id="verdict">Si marcas dos o más, el problema no es tu gente. Es cómo está montado el proceso.</p>
+    <div class="cta-line"><a class="btn btn-hot" href="#top" data-go data-carry>Contarte esto en una nota de voz</a></div>
   </div>
-</div>
+</section>
 
-<section class="band" id="servicios">
+<section class="band" id="costo">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">Servicios</span>
-      <h2>Ordenar, sistematizar, automatizar. En ese orden.</h2>
-      <p>Automatizar un proceso desordenado solo produce errores más rápido. Por eso trabajo en tres capas, y la mayoría de empresas empieza por la primera.</p>
+      <span class="eyebrow">Hagamos la cuenta</span>
+      <h2>Lo que te cuesta el desorden cada mes.</h2>
+      <p>Suma las horas que tú y tu equipo gastan en tareas repetidas: cuadrar caja, redigitar facturas, buscar datos, responder lo mismo.</p>
     </div>
-    <div class="pillars">
-      <article class="pillar lead">
-        <span class="tag">01 · El punto de partida</span>
-        <h3>Eficiencia operativa</h3>
-        <p>Mapeo cómo se hace el trabajo hoy, mido tiempos y ataco el cuello de botella real.</p>
-        <ul><li>Diagnóstico de procesos y tiempos</li><li>Estandarización y roles claros</li><li>Indicadores que sí se miran</li><li>Gestión del proyecto de mejora (PM)</li></ul>
-        <span class="ex">Ej: cierre de caja mensual de 3 días a 4 horas.</span>
-      </article>
-      <article class="pillar">
-        <span class="tag">02 · Ordena y centraliza</span>
-        <h3>Software Loggro</h3>
-        <p>Implemento Loggro para que la operación viva en un sistema y no en hojas sueltas.</p>
-        <ul><li>POS, inventario y contabilidad</li><li>Facturación electrónica DIAN</li><li>Nómina electrónica</li><li>Migración desde Excel y capacitación</li></ul>
-        <span class="ex">Ej: cada venta genera su factura sin redigitar.</span>
-      </article>
-      <article class="pillar">
-        <span class="tag">03 · Escala sin contratar</span>
-        <h3>Automatizaciones y agentes</h3>
-        <p>Cuando el proceso está ordenado, lo conecto y le pongo IA encima.</p>
-        <ul><li>Flujos automáticos con n8n</li><li>Agentes en WhatsApp y voz</li><li>Páginas web que califican clientes</li><li>Reportes que llegan solos</li></ul>
-        <span class="ex">Ej: un bot que responde precios y agenda a las 11 p.m.</span>
-      </article>
+    <div class="calc">
+      <div>
+        <div class="field">
+          <label for="hrs">Horas perdidas por semana <output id="hrsOut">10 h</output></label>
+          <input type="range" id="hrs" min="1" max="60" value="10">
+          <small>Cuenta las tuyas también. El tiempo del dueño es el más caro.</small>
+        </div>
+        <div class="field">
+          <label for="rate">Costo de una hora de trabajo <output id="rateOut">$25.000</output></label>
+          <input type="range" id="rate" min="8000" max="120000" step="1000" value="25000">
+          <small>Un salario de $2,5 M al mes cuesta alrededor de $20.000 la hora con prestaciones.</small>
+        </div>
+      </div>
+      <div class="result" aria-live="polite">
+        <span class="eyebrow">Te cuesta al mes</span>
+        <div class="big" id="perMonth">$1.083.333</div>
+        <div class="row"><span>Al año</span><b id="perYear">$13.000.000</b></div>
+        <div class="row"><span>Días de trabajo al mes</span><b id="days">5,4 días</b></div>
+        <a class="btn btn-solid" href="#top" data-go>Quiero recuperar ese tiempo</a>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="band" id="cuello">
+<section class="band" id="cambio">
+  <div class="wrap narrow">
+    <div class="sec-head">
+      <span class="eyebrow">Lo que cambia</span>
+      <h2>Tu negocio, antes y después de ordenarlo.</h2>
+    </div>
+    <div class="ba">
+      <div class="ba-row ba-head"><div>Hoy</div><div>Después</div></div>
+      <div class="ba-row"><div>Cuadras la caja a mano en la noche.</div><div>La caja sale del cierre del sistema y tú solo la revisas.</div></div>
+      <div class="ba-row"><div>Todo el mundo te pregunta todo.</div><div>Cada persona sabe qué hacer, con un paso a paso claro.</div></div>
+      <div class="ba-row"><div>Sabes cuánto vendes, no cuánto ganas.</div><div>Ves ventas, costos y utilidad del día en el celular.</div></div>
+      <div class="ba-row"><div>Inventario en un cuaderno o en Excel.</div><div>El inventario se descuenta solo con cada venta.</div></div>
+      <div class="ba-row"><div>Facturas y nómina te quitan días.</div><div>Facturación y nómina electrónica DIAN salen desde el mismo sistema.</div></div>
+      <div class="ba-row"><div>Respondes lo mismo por WhatsApp todo el día.</div><div>Un asistente responde lo básico y te pasa solo lo importante.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="como">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">Pensamiento ingenieril</span>
-      <h2>Tu empresa avanza a la velocidad de su paso más lento.</h2>
-      <p>Un proceso con cuatro estaciones. Tres van rápido. Una frena todo. Automatizar lo que no es cuello de botella es gastar plata en el lugar equivocado.</p>
+      <span class="eyebrow">Cómo trabajamos</span>
+      <h2>Tres pasos. Sabes el precio antes de empezar.</h2>
     </div>
-    <div class="flow">
-      <div class="flow-row" id="flowRow">
-        <div class="station"><div class="cap"><i data-cap="40"></i></div><b>Pedido</b><span>40 pedidos/h</span></div>
-        <div class="station neck" data-neck><div class="cap"><i data-cap="12" data-fixed="36"></i></div><b>Facturación</b><span data-label>12 pedidos/h · cuello</span></div>
-        <div class="station"><div class="cap"><i data-cap="35"></i></div><b>Alistamiento</b><span>35 pedidos/h</span></div>
-        <div class="station"><div class="cap"><i data-cap="38"></i></div><b>Despacho</b><span>38 pedidos/h</span></div>
-      </div>
-      <div class="flow-note">
-        <span>Capacidad del sistema: <strong id="sysCap">12 pedidos/h</strong> · ejemplo ilustrativo</span>
-        <div class="toggle" role="group" aria-label="Escenario">
-          <button type="button" aria-pressed="true" data-scn="hoy">Hoy</button>
-          <button type="button" aria-pressed="false" data-scn="auto">Con facturación automática</button>
+    <div class="steps">
+      <div class="step"><span class="n">Paso 1</span><h3>Me cuentas tu caso</h3><p>Una nota de voz o un mensaje. Te escribo por WhatsApp para entender mejor.</p><div class="meta"><span class="pill">2 minutos</span><span class="pill free">Sin costo</span></div></div>
+      <div class="step"><span class="n">Paso 2</span><h3>Diagnóstico</h3><p>Reviso cómo trabajas hoy, dónde se te van las horas y la plata, y qué arreglar primero.</p><div class="meta"><span class="pill">45 minutos</span><span class="pill free">Sin costo</span></div></div>
+      <div class="step"><span class="n">Paso 3</span><h3>Plan y arranque</h3><p>Te entrego un plan con alcance, tiempos y precio fijo. Si te sirve, lo implementamos juntos.</p><div class="meta"><span class="pill">Precio fijo</span><span class="pill">Acompañamiento</span></div></div>
+    </div>
+    <div class="tools">
+      <div><b>Primero, el proceso</b>Ordeno roles, pasos e indicadores. Es lo que más resultados da.</div>
+      <div><b>Luego, el sistema</b>Implemento Loggro: POS, inventario, contabilidad, facturación y nómina.</div>
+      <div><b>Al final, la automatización</b>Cuando todo está ordenado, conecto flujos y asistentes con IA.</div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="yo">
+  <div class="wrap">
+    <div class="me">
+      <div class="photo" id="photo">D</div>
+      <div class="me-text">
+        <span class="eyebrow">Quién te va a ayudar</span>
+        <h2>Soy Damián. Mi trabajo es que tu negocio funcione sin que tengas que estar en todo.</h2>
+        <p>Soy <strong>ingeniero de producción</strong>, especializado en gerencia y formulación de proyectos. Llevo la forma de pensar de una planta de producción a negocios pequeños: medir, encontrar dónde se frena el trabajo y arreglar eso primero.</p>
+        <p>Hoy acompaño a <strong>un restaurante y a un taller de joyería</strong> en su operación, su contabilidad y sus automatizaciones.</p>
+        <div class="creds">
+          <span class="pill">Ingeniería de producción</span>
+          <span class="pill">Gerencia de proyectos</span>
+          <span class="pill">IA aplicada a empresas · U. de La Sabana</span>
+          <span class="pill">Implementación Loggro</span>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="band" id="metodo">
-  <div class="wrap">
+<section class="band" id="preguntas">
+  <div class="wrap narrow">
     <div class="sec-head">
-      <span class="eyebrow">Método</span>
-      <h2>Del problema al sistema funcionando.</h2>
+      <span class="eyebrow">Preguntas frecuentes</span>
+      <h2>Lo que me preguntan antes de empezar.</h2>
     </div>
-    <div class="steps">
-      <div class="step"><h3>Diagnóstico</h3><p>Entrevisto a quien hace el trabajo y mido tiempos reales.</p><span class="out">Sale: mapa del proceso + cuello de botella</span></div>
-      <div class="step"><h3>Diseño</h3><p>Defino qué se automatiza, con qué herramienta y cuánto cuesta.</p><span class="out">Sale: propuesta con alcance y precio fijo</span></div>
-      <div class="step"><h3>Implementación</h3><p>Construyo, pruebo con datos de ejemplo y luego con los reales.</p><span class="out">Sale: sistema en uso + capacitación</span></div>
-      <div class="step"><h3>Medición</h3><p>Comparo antes y después. Si no mejora, se ajusta.</p><span class="out">Sale: horas recuperadas por mes</span></div>
+    <div class="faq">
+      <details><summary>¿Cuánto cuesta?</summary><p>Depende del tamaño del problema. Los proyectos van desde $1,5 millones para un arreglo puntual hasta más de $10 millones para una implementación completa. El diagnóstico no tiene costo y siempre sabes el precio antes de empezar.</p></details>
+      <details><summary>No sé nada de tecnología. ¿Igual me sirve?</summary><p>Sí. Ese es mi trabajo. Te explico todo en palabras simples y capacito a tu equipo hasta que lo use sin mí.</p></details>
+      <details><summary>Ya tengo un software. ¿Tengo que cambiarlo?</summary><p>No necesariamente. Primero reviso si el problema es el software o cómo se está usando. Muchas veces basta con ordenar el proceso.</p></details>
+      <details><summary>¿Cuánto se demora?</summary><p>Un arreglo puntual toma de 2 a 4 semanas. Una implementación de sistema, de 1 a 3 meses. Lo defino contigo en el plan.</p></details>
+      <details><summary>¿Tengo que parar el negocio?</summary><p>No. Trabajo por etapas y en paralelo a tu operación. Los cambios se prueban antes de usarlos con datos reales.</p></details>
     </div>
   </div>
 </section>
 
 <section class="final wrap">
-  <span class="eyebrow">Tu turno</span>
-  <h2>El primer paso es contarme el problema.</h2>
-  <p>Toma dos minutos. Por texto o nota de voz. Mi asistente revisa tu caso y te escribe por WhatsApp.</p>
-  <a class="btn btn-solid" href="#top" data-focus-composer>Contar mi problema</a>
+  <h2>Tu negocio te debería dar libertad, no quitártela.</h2>
+  <p>Cuéntame tu caso en 2 minutos. Te respondo yo, por WhatsApp, en menos de 24 horas.</p>
+  <a class="btn btn-hot" href="#top" data-go>Enviar mi nota de voz</a>
 </section>
 
-<footer><div class="wrap"><span>© 2026 Damián · Eficiencia operativa + IA</span><span>Bogotá, Colombia</span></div></footer>
+<footer><div class="wrap"><span>© 2026 Damián · Eficiencia operativa</span><span>Colombia</span></div></footer>
+
+<div class="mbar" id="mbar"><a class="btn btn-hot" href="#top" data-go>Contarme tu caso en 2 minutos</a></div>
 
 <script>
 /* ===== CONFIGURACIÓN — edita esto ===== */
 const CONFIG = {
-  // URL del Webhook de n8n (nodo Webhook, método POST). Vacío = modo demo, no envía nada.
-  webhookUrl: "",
-  // Tu número de WhatsApp en formato internacional sin "+" (ej: 573001234567). Se usa como respaldo.
-  whatsapp: "",
+  webhookUrl: "",        // URL del Webhook de n8n (POST). Vacío = modo demo, no envía nada.
+  photo: "",             // URL o ruta de tu foto (ej: "foto.jpg"). Vacío = muestra tu inicial.
   maxRecordSeconds: 120
 };
 
-/* ===== ORBE (canvas) ===== */
-const orb = document.getElementById('orb'), ctx = orb.getContext('2d');
+const $ = s => document.querySelector(s);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let level = 0, targetLevel = 0, t = 0;
-function sizeOrb(){ const r = orb.getBoundingClientRect(), d = Math.min(devicePixelRatio||1, 2); orb.width = r.width*d; orb.height = r.height*d; }
+if (CONFIG.photo) $('#photo').innerHTML = `<img src="${CONFIG.photo}" alt="Foto de Damián">`;
+
+/* ===== ORBE: reacciona a la voz ===== */
+const orb = $('#orb'), ctx = orb.getContext('2d');
+let level = 0, targetLevel = 0, t = 0, orbRunning = false;
+function sizeOrb(){ const r = orb.getBoundingClientRect(), d = Math.min(devicePixelRatio||1,2); orb.width = r.width*d; orb.height = r.height*d; }
 sizeOrb(); addEventListener('resize', sizeOrb);
 function drawOrb(){
-  const w = orb.width, h = orb.height, cx = w/2, cy = h/2, base = Math.min(w,h)*0.2;
-  level += (targetLevel - level)*0.12;
-  ctx.clearRect(0,0,w,h);
-  ctx.globalCompositeOperation = 'lighter';
-  const blobs = [
-    {c:'255,122,69', a:.55, k:1.00, s:.7},
-    {c:'143,227,255', a:.45, k:.86, s:-.5},
-    {c:'255,93,93', a:.25, k:.7, s:1.1}
-  ];
-  for (const b of blobs){
-    const R = base*(b.k + level*0.9);
-    const ox = Math.cos(t*b.s)*base*.25, oy = Math.sin(t*b.s*1.3)*base*.2;
+  const w = orb.width, h = orb.height, cx = w/2, cy = h/2, base = Math.min(w,h)*.19;
+  level += (targetLevel-level)*.12;
+  ctx.clearRect(0,0,w,h); ctx.globalCompositeOperation = 'lighter';
+  for (const b of [{c:'255,122,69',a:.5,k:1,s:.6},{c:'143,227,255',a:.32,k:.82,s:-.45}]){
+    const R = base*(b.k+level*.9), ox = Math.cos(t*b.s)*base*.22, oy = Math.sin(t*b.s*1.3)*base*.18;
     ctx.beginPath();
-    for (let i=0;i<=64;i++){
-      const a = i/64*Math.PI*2;
-      const n = Math.sin(a*3 + t*b.s*2)*.08 + Math.sin(a*5 - t*1.7)*.05*(1+level*3);
-      const r = R*(1+n);
-      const x = cx+ox+Math.cos(a)*r, y = cy+oy+Math.sin(a)*r;
-      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
-    }
-    const g = ctx.createRadialGradient(cx+ox,cy+oy,0,cx+ox,cy+oy,R*1.4);
-    g.addColorStop(0,`rgba(${b.c},${b.a})`); g.addColorStop(1,`rgba(${b.c},0)`);
-    ctx.fillStyle = g; ctx.filter = `blur(${base*.18}px)`; ctx.fill();
+    for (let i=0;i<=64;i++){ const a = i/64*Math.PI*2, n = Math.sin(a*3+t*b.s*2)*.08+Math.sin(a*5-t*1.7)*.05*(1+level*3), r = R*(1+n);
+      i ? ctx.lineTo(cx+ox+Math.cos(a)*r, cy+oy+Math.sin(a)*r) : ctx.moveTo(cx+ox+Math.cos(a)*r, cy+oy+Math.sin(a)*r); }
+    const g = ctx.createRadialGradient(cx+ox,cy+oy,0,cx+ox,cy+oy,R*1.4); g.addColorStop(0,`rgba(${b.c},${b.a})`); g.addColorStop(1,`rgba(${b.c},0)`);
+    ctx.fillStyle = g; ctx.filter = `blur(${base*.2}px)`; ctx.fill();
   }
   ctx.filter = 'none'; ctx.globalCompositeOperation = 'source-over';
-  t += reduce ? 0 : 0.008 + level*0.03;
-  if (!reduce || level > .01) requestAnimationFrame(drawOrb);
+  t += reduce ? 0 : .007 + level*.03;
+  orbRunning = !reduce || level > .01 || targetLevel > 0;
+  if (orbRunning) requestAnimationFrame(drawOrb);
 }
 drawOrb();
+const wakeOrb = () => { if (!orbRunning) drawOrb(); };
 
-/* ===== COMPOSER: texto + voz ===== */
-const $ = s => document.querySelector(s);
+/* ===== CAJÓN: voz + texto ===== */
 const problem = $('#problem'), startBtn = $('#startBtn'), micBtn = $('#micBtn'), recMeta = $('#recMeta');
-const audioChip = $('#audioChip'), audioPreview = $('#audioPreview');
-let audioBlob = null, mediaRec = null, chunks = [], recTimer = null, recStart = 0, analyser = null, stream = null, speech = null;
-
+let audioBlob = null, mediaRec = null, chunks = [], recTimer = null, recStart = 0, stream = null, speech = null;
 function refreshStart(){ startBtn.disabled = !(problem.value.trim().length > 8 || audioBlob); }
-problem.addEventListener('input', () => { refreshStart(); targetLevel = Math.min(problem.value.length/400, .25); });
-document.querySelectorAll('#prompts .chip').forEach(c => c.addEventListener('click', () => { problem.value = c.dataset.p; problem.focus(); refreshStart(); }));
-document.querySelectorAll('[data-focus-composer]').forEach(a => a.addEventListener('click', () => setTimeout(() => problem.focus({preventScroll:true}), 400)));
-
+problem.addEventListener('input', refreshStart);
 function setAudio(blob){
   audioBlob = blob;
-  if (blob){ audioPreview.src = URL.createObjectURL(blob); audioChip.hidden = false; } else { audioChip.hidden = true; audioPreview.removeAttribute('src'); }
+  if (blob){ $('#audioPreview').src = URL.createObjectURL(blob); $('#audioChip').hidden = false; }
+  else { $('#audioChip').hidden = true; $('#audioPreview').removeAttribute('src'); recMeta.textContent = 'Toca y háblame, como en WhatsApp. Máximo 2 minutos.'; }
   refreshStart();
 }
 $('#audioRemove').addEventListener('click', () => setAudio(null));
-$('#audioFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) setAudio(f); });
+$('#audioFile').addEventListener('change', e => { const f = e.target.files[0]; if (f){ setAudio(f); recMeta.textContent = 'Audio cargado. Ya puedes enviar tu caso.'; } });
 
 async function startRec(){
   try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch { recMeta.textContent = 'Sin acceso al micrófono. Sube un audio con la flecha.'; return; }
+  catch { recMeta.textContent = 'No tengo acceso al micrófono. Escríbelo abajo o sube un audio.'; return; }
   chunks = []; mediaRec = new MediaRecorder(stream);
   mediaRec.ondataavailable = e => e.data.size && chunks.push(e.data);
-  mediaRec.onstop = () => { setAudio(new Blob(chunks, {type: mediaRec.mimeType || 'audio/webm'})); stream.getTracks().forEach(t => t.stop()); };
+  mediaRec.onstop = () => { setAudio(new Blob(chunks,{type:mediaRec.mimeType||'audio/webm'})); stream.getTracks().forEach(x => x.stop()); recMeta.textContent = 'Listo. Escúchala o envía tu caso.'; };
   mediaRec.start();
-  // nivel de voz → orbe
-  const ac = new (window.AudioContext||window.webkitAudioContext)(); analyser = ac.createAnalyser(); analyser.fftSize = 256;
-  ac.createMediaStreamSource(stream).connect(analyser);
-  const buf = new Uint8Array(analyser.frequencyBinCount);
-  (function meter(){ if (!mediaRec || mediaRec.state !== 'recording') { targetLevel = 0; ac.close(); return; }
-    analyser.getByteFrequencyData(buf); targetLevel = Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/90, 1); if (reduce) drawOrb(); requestAnimationFrame(meter); })();
-  // transcripción en vivo (Chrome/Edge/Safari), opcional
+  const ac = new (window.AudioContext||window.webkitAudioContext)(), an = ac.createAnalyser(); an.fftSize = 256;
+  ac.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount);
+  (function meter(){ if (!mediaRec || mediaRec.state !== 'recording'){ targetLevel = 0; ac.close(); return; }
+    an.getByteFrequencyData(buf); targetLevel = Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/90,1); wakeOrb(); requestAnimationFrame(meter); })();
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR){ speech = new SR(); speech.lang = 'es-CO'; speech.continuous = true; speech.interimResults = true;
     const prior = problem.value ? problem.value.trim()+' ' : '';
@@ -426,183 +468,163 @@ async function startRec(){
   micBtn.classList.add('rec'); micBtn.setAttribute('aria-label','Detener grabación'); recMeta.classList.add('on');
   recStart = Date.now();
   recTimer = setInterval(() => { const s = Math.floor((Date.now()-recStart)/1000);
-    recMeta.textContent = `● Grabando ${String(Math.floor(s/60)).padStart(1,'0')}:${String(s%60).padStart(2,'0')}`;
+    recMeta.textContent = `● Grabando ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · toca para terminar`;
     if (s >= CONFIG.maxRecordSeconds) stopRec(); }, 250);
 }
 function stopRec(){
   clearInterval(recTimer); if (speech) try { speech.stop(); } catch {}
   if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
   micBtn.classList.remove('rec'); micBtn.setAttribute('aria-label','Grabar nota de voz'); recMeta.classList.remove('on');
-  recMeta.textContent = 'Nota lista. Puedes escuchar o volver a grabar.';
 }
 micBtn.addEventListener('click', () => (mediaRec && mediaRec.state === 'recording') ? stopRec() : startRec());
 
-/* ===== CONVERSACIÓN DE CALIFICACIÓN ===== */
-const SERVICES = [
-  {id:'operativa', label:'Eficiencia operativa', d:'Procesos lentos, desorden, todo depende de una persona', kw:/proceso|demora|lento|tiempo|cuello|días|depende|desorden|caja|cuadr|cierre|proyecto|coordin/i},
-  {id:'loggro', label:'Software Loggro', d:'POS, inventario, contabilidad, facturación y nómina', kw:/excel|inventario|contab|factur|dian|nómina|nomina|pila|software|pos/i},
-  {id:'auto', label:'Automatizaciones y agentes', d:'IA, WhatsApp, flujos automáticos, página web', kw:/autom|whatsapp|bot|agente|respond|ia\b|web|página|correo|repet/i},
-  {id:'nose', label:'No sé, ayúdame a elegir', d:'Lo definimos en el diagnóstico', kw:/$^/}
+/* ===== SÍNTOMAS → alimentan el cajón ===== */
+const picked = new Set();
+document.querySelectorAll('.sym').forEach(b => b.addEventListener('click', () => {
+  const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on);
+  on ? picked.add(b.dataset.t) : picked.delete(b.dataset.t);
+  const v = $('#verdict'), n = picked.size;
+  v.classList.toggle('on', n >= 2);
+  v.innerHTML = n >= 2 ? `Marcaste <strong>${n}</strong>. El problema no es tu gente. Es cómo está montado el proceso, y eso tiene arreglo.`
+    : 'Si marcas dos o más, el problema no es tu gente. Es cómo está montado el proceso.';
+}));
+document.querySelectorAll('[data-go]').forEach(a => a.addEventListener('click', () => {
+  if (a.hasAttribute('data-carry') && picked.size && !problem.value.trim()){ problem.value = 'Me pasa esto: ' + [...picked].join('; ') + '.'; refreshStart(); }
+  setTimeout(() => { if (!$('#composer').hidden) micBtn.focus({preventScroll:true}); }, 450);
+}));
+
+/* ===== CALCULADORA ===== */
+const cop = n => '$' + Math.round(n).toLocaleString('es-CO');
+function calc(){
+  const h = +$('#hrs').value, r = +$('#rate').value, month = h*r*52/12;
+  $('#hrsOut').textContent = h + ' h'; $('#rateOut').textContent = cop(r);
+  $('#perMonth').textContent = cop(month); $('#perYear').textContent = cop(month*12);
+  $('#days').textContent = (h*52/12/8).toLocaleString('es-CO',{maximumFractionDigits:1}) + ' días';
+}
+$('#hrs').addEventListener('input', calc); $('#rate').addEventListener('input', calc); calc();
+
+/* ===== BARRA MÓVIL ===== */
+const mbar = $('#mbar');
+new IntersectionObserver(([e]) => mbar.classList.toggle('show', !e.isIntersecting), {threshold:0}).observe($('#stage'));
+
+/* ===== CONVERSACIÓN ===== */
+const BUSINESS = [
+  {id:'restaurante', t:'Restaurante o bar', d:'Cocina, meseros, domicilios'},
+  {id:'comercio', t:'Tienda o comercio', d:'Inventario y ventas de mostrador'},
+  {id:'taller', t:'Taller o producción', d:'Fabrico o transformo productos'},
+  {id:'servicios', t:'Servicios', d:'Academia, salud, consultoría, otros'}
 ];
 const BUDGETS = [
-  {id:'b1', t:'Arranque', r:'$1,5 M – $4 M COP', d:'Un flujo o automatización puntual', score:1},
-  {id:'b2', t:'Sistema', r:'$4 M – $12 M COP', d:'Varios procesos conectados', score:2},
-  {id:'b3', t:'Transformación', r:'Más de $12 M COP', d:'Implementación completa + acompañamiento', score:3}
+  {id:'b1', t:'$1,5 M – $4 M', d:'Arreglar un proceso puntual', score:1},
+  {id:'b2', t:'$4 M – $10 M', d:'Ordenar la operación y montar el sistema', score:2},
+  {id:'b3', t:'Más de $10 M', d:'Implementación completa con acompañamiento', score:3}
 ];
 const TIMING = [
-  {id:'now', t:'Ya, esta semana', d:'Me está costando plata hoy', score:3},
+  {id:'now', t:'Ya mismo', d:'Esto me está costando plata hoy', score:3},
   {id:'month', t:'Este mes', d:'Quiero arrancar pronto', score:2},
-  {id:'quarter', t:'En 1 a 3 meses', d:'Estoy planeando', score:1},
-  {id:'explore', t:'Solo explorando', d:'Quiero entender opciones', score:0}
+  {id:'quarter', t:'En 1 a 3 meses', d:'Lo estoy planeando', score:1},
+  {id:'explore', t:'Solo estoy mirando', d:'Quiero entender opciones', score:0}
 ];
 const DECIDER = [
-  {id:'solo', t:'Decido yo', d:'Soy dueño o tengo la firma', score:3},
-  {id:'partner', t:'Con mi socio o socia', d:'Lo hablamos entre dos', score:2},
-  {id:'board', t:'Con junta o gerencia', d:'Necesito presentarlo', score:1},
-  {id:'advisor', t:'Lo propongo a alguien', d:'Yo recomiendo, otro decide', score:0}
+  {id:'solo', t:'Decido yo', d:'Soy el dueño o tengo la firma', score:3},
+  {id:'partner', t:'Con mi socio o socia', d:'Lo hablamos entre los dos', score:2},
+  {id:'family', t:'Con mi familia o junta', d:'Lo tengo que presentar', score:1},
+  {id:'advisor', t:'Lo propongo yo, decide otro', d:'Trabajo en la empresa', score:0}
 ];
-
-const lead = { problem:'', services:[], budget:null, timing:null, decider:null, contact:{} };
+const lead = { problem:'', business:null, budget:null, timing:null, decider:null, contact:{} };
 const chat = $('#chat'), TOTAL = 5;
 const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
-function progress(n){ $('#stepLabel').textContent = n > TOTAL ? 'Listo' : `Paso ${n} de ${TOTAL}`; $('#progressBar').style.width = `${Math.min(n-1,TOTAL)/TOTAL*100}%`; }
-function scroll(){ chat.scrollTop = chat.scrollHeight; }
-function el(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
+function el(tag, cls, html){ const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+function progress(n){ $('#stepLabel').textContent = n > TOTAL ? 'Listo' : `Pregunta ${n} de ${TOTAL}`; $('#progressBar').style.width = `${Math.min(n-1,TOTAL)/TOTAL*100}%`; }
+const scroll = () => { chat.scrollTop = chat.scrollHeight; };
 async function bot(text){
   const ty = el('div','msg bot typing','<i></i><i></i><i></i>'); chat.append(ty); scroll();
-  targetLevel = .35; await wait(650 + Math.min(text.length*8, 900)); targetLevel = 0;
-  ty.remove(); chat.append(el('div','msg bot',`<span class="who">Asistente</span>${text}`)); scroll();
+  targetLevel = .3; wakeOrb(); await wait(600 + Math.min(text.length*7, 900)); targetLevel = 0;
+  ty.remove(); chat.append(el('div','msg bot',`<span class="who">Damián</span>${text}`)); scroll();
 }
 function me(text){ chat.append(el('div','msg me',`<span class="who">Tú</span>${esc(text)}`)); scroll(); }
-
-function choose(items, {multi=false, preset=[]} = {}){
+function choose(items){
   return new Promise(resolve => {
-    const box = el('div','options'); const picked = new Set(preset);
-    items.forEach(it => {
-      const b = el('button','opt', `<strong>${it.t || it.label}</strong>${it.r ? `<small>${it.r}</small><br>` : ''}${it.d ? `<small>${it.d}</small>` : ''}`);
-      b.type = 'button'; b.setAttribute('aria-pressed', picked.has(it.id));
-      b.onclick = () => {
-        if (!multi){ box.remove(); resolve(it); return; }
-        picked.has(it.id) ? picked.delete(it.id) : picked.add(it.id); b.setAttribute('aria-pressed', picked.has(it.id)); go.disabled = !picked.size;
-      };
-      box.append(b);
-    });
-    let go;
-    if (multi){ const row = el('div','next-row'); go = el('button','btn send','Continuar →'); go.type='button'; go.disabled = !picked.size;
-      go.onclick = () => { box.remove(); resolve(items.filter(i => picked.has(i.id))); }; row.append(go); box.append(row); }
+    const box = el('div','options');
+    items.forEach(it => { const b = el('button','opt',`<strong>${it.t}</strong><small>${it.d}</small>`); b.type = 'button';
+      b.onclick = () => { box.remove(); resolve(it); }; box.append(b); });
     chat.append(box); scroll(); box.querySelector('button').focus({preventScroll:true});
   });
 }
-
 function contactForm(){
   return new Promise(resolve => {
     const f = el('form','contact');
-    f.innerHTML = `
-      <label>Nombre<input id="c-name" autocomplete="name" required></label>
-      <label>Empresa<input id="c-company" autocomplete="organization"></label>
+    f.innerHTML = `<label>Tu nombre<input id="c-name" autocomplete="given-name" required></label>
       <label>WhatsApp<input id="c-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="300 123 4567" required></label>
-      <label>Correo (opcional)<input id="c-email" type="email" autocomplete="email"></label>
-      <label class="consent"><input type="checkbox" id="c-ok" required> Acepto que me contacten por WhatsApp sobre mi caso y el tratamiento de mis datos (Ley 1581 de 2012).</label>
+      <label>Nombre del negocio<input id="c-company" autocomplete="organization"></label>
+      <label>Ciudad<input id="c-city" autocomplete="address-level2"></label>
+      <label class="consent"><input type="checkbox" id="c-ok"> Acepto que me escriban por WhatsApp sobre mi caso y el tratamiento de mis datos según la Ley 1581 de 2012.</label>
       <span class="err" id="c-err" hidden></span>
-      <div class="next-row full"><button class="btn send" type="submit">Enviar mi caso →</button></div>`;
+      <div class="row"><button class="btn btn-hot" type="submit">Enviar →</button></div>`;
     f.addEventListener('submit', e => {
       e.preventDefault();
-      const v = id => f.querySelector('#'+id).value.trim();
-      const phone = v('c-phone').replace(/[^\d+]/g,'');
-      const err = f.querySelector('#c-err');
-      if (!v('c-name')) { err.textContent = 'Escribe tu nombre para saber cómo saludarte.'; err.hidden = false; return; }
-      if (phone.replace(/\D/g,'').length < 10) { err.textContent = 'El WhatsApp debe tener al menos 10 dígitos. Ej: 300 123 4567.'; err.hidden = false; return; }
-      if (!f.querySelector('#c-ok').checked) { err.textContent = 'Necesito tu autorización para escribirte.'; err.hidden = false; return; }
-      f.remove(); resolve({ name:v('c-name'), company:v('c-company'), phone, email:v('c-email') });
+      const v = id => f.querySelector('#'+id).value.trim(), err = f.querySelector('#c-err'), phone = v('c-phone').replace(/[^\d+]/g,'');
+      const fail = m => { err.textContent = m; err.hidden = false; };
+      if (!v('c-name')) return fail('Escribe tu nombre para saber cómo saludarte.');
+      if (phone.replace(/\D/g,'').length < 10) return fail('El WhatsApp debe tener 10 dígitos. Ej: 300 123 4567.');
+      if (!f.querySelector('#c-ok').checked) return fail('Necesito tu autorización para escribirte por WhatsApp.');
+      f.remove(); resolve({ name:v('c-name'), phone, company:v('c-company'), city:v('c-city') });
     });
     chat.append(f); scroll(); f.querySelector('input').focus({preventScroll:true});
   });
 }
-
-/* Prioridad: define a quién contacta primero el agente */
+/* Prioridad A/B/C para el agente: a quién contactar primero */
 function scoreLead(l){
-  const pts = l.budget.score*3 + l.timing.score*3 + l.decider.score*2; // máx 24
+  const pts = l.budget.score*3 + l.timing.score*3 + l.decider.score*2;  // máx 24
   const tier = pts >= 17 ? 'A' : pts >= 10 ? 'B' : 'C';
-  const sla = { A:'en menos de 2 horas hábiles', B:'hoy mismo', C:'en las próximas 48 horas' }[tier];
-  return { points:pts, tier, sla };
+  return { points:pts, tier, sla:{A:'en las próximas 2 horas hábiles', B:'hoy mismo', C:'en menos de 24 horas'}[tier] };
 }
-
 async function run(){
-  $('#composer').hidden = true; $('#prompts').hidden = true; $('#chatPanel').hidden = false;
+  $('#composer').hidden = true; $('#trust').hidden = true; $('#chatPanel').hidden = false;
   lead.problem = problem.value.trim();
-  me(lead.problem || '🎙 Nota de voz enviada');
+  me(lead.problem || 'Nota de voz enviada');
   progress(1);
-  await bot('Gracias. Ya quedó registrado tu caso. Te hago 4 preguntas rápidas para saber cómo ayudarte mejor.');
-  const guess = SERVICES.filter(s => s.kw.test(lead.problem)).map(s => s.id);
-  await bot(guess.length ? 'Por lo que cuentas, creo que esto es lo que necesitas. Ajusta si no es así:' : '¿Qué tipo de ayuda buscas? Puedes elegir varias.');
-  lead.services = await choose(SERVICES, {multi:true, preset:guess});
-  me(lead.services.map(s => s.label).join(', '));
+  await bot('Gracias por contármelo. Eso le pasa a muchos negocios cuando empiezan a crecer, y tiene arreglo.');
+  await bot('Te hago 5 preguntas rápidas para llegar preparado a nuestra conversación. ¿Qué tipo de negocio tienes?');
+  lead.business = await choose(BUSINESS); me(lead.business.t);
   progress(2);
-  await bot('¿Cuánto estás dispuesto a invertir para resolverlo?');
-  lead.budget = await choose(BUDGETS); me(`${lead.budget.t} · ${lead.budget.r}`);
+  await bot('¿Cuánto estarías dispuesto a invertir para resolver esto?');
+  lead.budget = await choose(BUDGETS); me(`${lead.budget.t} · ${lead.budget.d}`);
   progress(3);
-  await bot('¿Cuándo te gustaría arrancar?');
+  await bot('¿Cuándo te gustaría empezar?');
   lead.timing = await choose(TIMING); me(lead.timing.t);
   progress(4);
-  await bot('¿La decisión la tomas solo o con alguien más?');
+  await bot('¿Esta decisión la tomas solo o con alguien más?');
   lead.decider = await choose(DECIDER); me(lead.decider.t);
-  if (lead.decider.score < 3) await bot('Perfecto. Te preparo un resumen corto para que lo compartas con quien decide contigo.');
+  if (lead.decider.score < 3) await bot('Perfecto. Si quieres, invita a esa persona a nuestra llamada. Así nadie tiene que repetir la historia.');
   progress(5);
-  await bot('Último paso. ¿A dónde te escribo?');
+  await bot('Último paso: ¿a qué WhatsApp te escribo?');
   lead.contact = await contactForm(); me(`${lead.contact.name} · ${lead.contact.phone}`);
   progress(6);
-  const prio = scoreLead(lead);
-  const sent = await submit(lead, prio);
-  await bot(`Listo, ${esc(lead.contact.name.split(' ')[0])}. Mi asistente te escribe por WhatsApp <strong>${prio.sla}</strong> con los siguientes pasos.`);
-  const s = el('div','summary');
-  s.innerHTML = `<span class="eyebrow">Resumen de tu caso</span><dl>
-    <dt>Problema</dt><dd>${esc(lead.problem || 'Nota de voz')}</dd>
-    <dt>Servicios</dt><dd>${esc(lead.services.map(x=>x.label).join(', '))}</dd>
-    <dt>Inversión</dt><dd>${esc(lead.budget.r)}</dd>
-    <dt>Arranque</dt><dd>${esc(lead.timing.t)}</dd>
-    <dt>Decide</dt><dd>${esc(lead.decider.t)}</dd></dl>
-    ${sent ? '' : `<small style="color:var(--fog)">Modo demo: este caso no se envió a ningún sistema.</small>`}`;
-  chat.append(s); scroll();
+  const prio = scoreLead(lead), sent = await submit(lead, prio);
+  await bot(`Listo, ${esc(lead.contact.name.split(' ')[0])}. Te escribo por WhatsApp <strong>${prio.sla}</strong>.`);
+  const d = el('div','done');
+  d.innerHTML = `<span class="eyebrow">Lo que sigue</span><ol>
+    <li>Te escribo por WhatsApp para confirmar tu caso.</li>
+    <li>Agendamos el diagnóstico de 45 minutos, sin costo.</li>
+    <li>Te entrego un plan con precio fijo. Tú decides si seguimos.</li></ol>
+    ${sent ? '' : '<small class="muted">Modo demo: este caso no se envió a ningún sistema.</small>'}`;
+  chat.append(d); scroll();
 }
-
 async function submit(l, prio){
-  const payload = {
-    createdAt: new Date().toISOString(), source: 'landing', page: location.href,
-    utm: Object.fromEntries(new URLSearchParams(location.search)),
-    problem: l.problem, services: l.services.map(s => s.id),
-    budget: { id:l.budget.id, range:l.budget.r }, timing: l.timing.id, decider: l.decider.id,
-    contact: l.contact, priority: prio
-  };
+  const payload = { createdAt:new Date().toISOString(), source:'landing', page:location.href,
+    utm:Object.fromEntries(new URLSearchParams(location.search)), symptoms:[...picked],
+    problem:l.problem, business:l.business.id, budget:{id:l.budget.id, range:l.budget.t},
+    timing:l.timing.id, decider:l.decider.id, contact:l.contact, priority:prio };
   if (!CONFIG.webhookUrl){ console.info('[demo] payload', payload); return false; }
   try {
-    const fd = new FormData();
-    fd.append('lead', JSON.stringify(payload));
+    const fd = new FormData(); fd.append('lead', JSON.stringify(payload));
     if (audioBlob) fd.append('audio', audioBlob, 'nota-de-voz.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm'));
-    const r = await fetch(CONFIG.webhookUrl, { method:'POST', body:fd });
-    return r.ok;
+    return (await fetch(CONFIG.webhookUrl, {method:'POST', body:fd})).ok;
   } catch { return false; }
 }
-
-startBtn.addEventListener('click', () => { if (mediaRec && mediaRec.state === 'recording') stopRec(); setTimeout(run, 150); });
-problem.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !startBtn.disabled) startBtn.click(); });
-
-/* ===== CUELLO DE BOTELLA interactivo ===== */
-const MAXCAP = 45;
-function paintFlow(scn){
-  document.querySelectorAll('#flowRow .cap i').forEach(i => {
-    const v = (scn === 'auto' && i.dataset.fixed) ? +i.dataset.fixed : +i.dataset.cap;
-    i.style.height = (v/MAXCAP*100) + '%';
-  });
-  const neck = document.querySelector('[data-neck]');
-  neck.classList.toggle('neck', scn !== 'auto');
-  neck.querySelector('[data-label]').textContent = scn === 'auto' ? '36 pedidos/h' : '12 pedidos/h · cuello';
-  $('#sysCap').textContent = scn === 'auto' ? '35 pedidos/h (ahora limita Alistamiento)' : '12 pedidos/h';
-  document.querySelectorAll('[data-scn]').forEach(b => b.setAttribute('aria-pressed', b.dataset.scn === scn));
-}
-document.querySelectorAll('[data-scn]').forEach(b => b.addEventListener('click', () => paintFlow(b.dataset.scn)));
-paintFlow('hoy');
+startBtn.addEventListener('click', () => { if (mediaRec && mediaRec.state === 'recording') stopRec(); setTimeout(run, 200); });
 </script>
 </body>
 </html>
