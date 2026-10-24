@@ -134,13 +134,14 @@ body[data-intent] .aura{opacity:.38}
 html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 
 /* Tarjeta de sugerencias que rota */
-.invite{display:flex;gap:8px;align-items:flex-end;padding:14px 14px 4px}
-.invite img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none}
-.sugg{position:relative;flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:18px;border-bottom-left-radius:6px;padding:10px 14px;font:inherit;cursor:pointer;min-height:76px;display:grid;align-content:center;gap:2px;transition:border-color .2s}
+.box{display:flex;flex-direction:column}
+.thread{order:0}.rec-line{order:1}.composer{order:2}.invite{order:3}.hint{order:4}
+.invite{display:flex;padding:0 14px 4px}
+.sugg{position:relative;flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:12px;border-style:dashed;background:transparent;padding:8px 12px;font:inherit;cursor:pointer;min-height:0;display:grid;align-content:center;gap:2px;transition:border-color .2s}
 .sugg:hover{border-color:var(--sg,var(--fg))}
 .sugg small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .sugg small i{width:7px;height:7px;border-radius:50%;background:var(--sg,var(--muted));transition:background .3s}
-.sugg .txt{font-size:15.5px;line-height:1.35;transition:opacity .35s,transform .35s}
+.sugg .txt{font-size:14px;line-height:1.35;transition:opacity .35s,transform .35s}
 .sugg .txt.out{opacity:0;transform:translateY(6px)}
 .sugg .tdots{display:inline-flex;gap:4px;padding:6px 0}
 .sugg .tdots i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
@@ -180,7 +181,8 @@ html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 .book{margin-left:34px;justify-self:start;animation:rise .3s ease both}
 .cta.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 
-.composer{display:flex;align-items:flex-end;gap:8px;padding:10px}
+.composer{display:flex;align-items:flex-end;gap:8px;margin:14px 14px 10px;padding:6px 6px 6px 10px;border:1.5px solid color-mix(in srgb,var(--accent-t) 45%,var(--line));border-radius:18px;background:var(--bg)}
+.composer:focus-within{border-color:var(--accent-t)}
 .composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 17px/1.45 var(--f-body);padding:12px 8px;outline:none;max-height:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .composer textarea.typed{white-space:pre-wrap;overflow:auto}
 .composer textarea::placeholder{color:var(--muted)}
@@ -296,7 +298,6 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
       <div class="progress" id="progress" aria-hidden="true"><span></span></div>
       <noscript><p class="ns">Para escribirme aquí necesitas activar JavaScript. Mientras tanto, mira abajo lo que resuelvo, o escríbeme por <a href="https://www.linkedin.com/in/soydamianbarragan" rel="noopener">LinkedIn</a>.</p></noscript>
       <div class="invite" id="invite">
-        <img src="damian-avatar.jpg" alt="" width="26" height="26">
         <button type="button" class="sugg" id="sugg">
           <small><i></i><span id="suggTag">Por ejemplo</span></small>
           <span class="txt" id="suggTxt"><span class="tdots"><i></i><i></i><i></i></span></span>
