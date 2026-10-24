@@ -100,6 +100,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;max-width:1080px}
 .me-chip{display:flex;align-items:center;gap:10px;text-decoration:none;min-height:44px}
 .me-chip img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.me-chip b,.me-chip span{white-space:nowrap}
 .me-chip b{display:block;font-weight:600;font-size:15px;line-height:1.15}
 .me-chip span{display:block;font-size:12px;color:var(--muted);line-height:1.2}
 .brand-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:0 16px;font:600 14px var(--f-body);text-decoration:none;letter-spacing:-.01em}
@@ -146,7 +147,7 @@ html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 .sugg .tdots i:nth-child(2){animation-delay:.15s}.sugg .tdots i:nth-child(3){animation-delay:.3s}
 .sugg .use{justify-self:end;font-size:12px;color:var(--muted)}
 
-.thread{display:flex;flex-direction:column;gap:12px;padding:18px 14px 6px;max-height:min(58vh,520px);max-height:min(62dvh,520px);overflow-y:auto;overscroll-behavior:contain}
+.thread{display:flex;flex-direction:column;gap:12px;padding:18px 14px 14px;max-height:min(58vh,520px);max-height:min(62dvh,520px);overflow-y:auto;overscroll-behavior:contain}
 .thread:empty{display:none}
 .row{display:flex;gap:8px;align-items:flex-end;animation:rise .3s ease both}
 .row.me{justify-content:flex-end}
@@ -168,6 +169,7 @@ html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 .sol-card ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:grid;gap:2px}
 .linkbtn{background:none;border:0;padding:0;min-height:44px;color:var(--accent-t);font:600 14.5px var(--f-body);cursor:pointer;justify-self:start;text-decoration:underline;text-underline-offset:3px}
 .cform{margin-left:34px;display:grid;gap:6px;animation:rise .3s ease both}
+.cform input{scroll-margin-top:84px;scroll-margin-bottom:16px}
 .cform label.f{font-size:13px;color:var(--muted);margin-top:4px}
 .cform input[type=text],.cform input[type=tel]{width:100%;min-height:48px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:12px 14px;font:16px var(--f-body);outline:none}
 .cform input[type=text]:focus-visible,.cform input[type=tel]:focus-visible{border-color:var(--accent-t);outline:2px solid var(--accent-t);outline-offset:1px}
@@ -208,6 +210,7 @@ html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 .sol-head p{color:var(--muted);font-size:16.5px}
 .tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:16px}
 .tabs::-webkit-scrollbar{display:none}
+@media (min-width:640px){.tabs{flex-wrap:wrap;overflow:visible}}
 .tab{flex:none;display:flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:0 16px;font:500 14.5px var(--f-body);cursor:pointer}
 .tab i{width:8px;height:8px;border-radius:50%}
 .tab[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -238,6 +241,7 @@ html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 .bio h2{font-size:clamp(26px,5.4vw,38px);line-height:1.1}
 .bio h2 em{color:var(--accent-t)}
 .bio p{color:var(--muted);margin-top:10px;font-size:16px}
+@media (max-width:380px){.brand-pill .dots{display:none}.brand-pill{padding:0 14px}}
 @media (max-width:460px){.bio{grid-template-columns:1fr}.bio img{width:96px;height:96px}.cform{margin-left:0}}
 .logos-h{margin-top:26px}
 .logos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -284,7 +288,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
     <div class="greet">
       <span class="hi"><img src="damian-avatar.jpg" alt="" width="44" height="44">Hola, soy Damián</span>
       <h1>Cuéntame qué te está <em>quitando tiempo</em>.</h1>
-      <p class="sub">Llevo 15 años en ventas y operación de empresas de servicio. Te ayudo con nómina, sistema de ventas e inventario, WhatsApp con IA y procesos.</p>
+      <p class="sub">15 años en ventas y operación de empresas de servicio. Te ayudo con nómina, ventas e inventario, WhatsApp con IA y procesos.</p>
       <p class="ref">¿Te pasaron mi link? Cuéntame lo mismo que le contaste a esa persona.</p>
     </div>
 
@@ -303,7 +307,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
       <div class="rec-line" id="recLine" role="status">● Grabando 0:00 · toca el micrófono para terminar</div>
       <div class="composer" id="composer">
         <label for="msg" class="sr">Cuéntame tu problema</label>
-        <textarea id="msg" rows="1" placeholder="Escribe tu problema aquí…" enterkeyhint="send"></textarea>
+        <textarea id="msg" rows="1" placeholder="Cuéntame aquí…" enterkeyhint="send"></textarea>
         <button type="button" class="ibtn" id="mic" aria-label="Contar mi problema con un audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <button type="button" class="ibtn send" id="send" disabled>Enviar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
@@ -602,6 +606,7 @@ async function say(html, plain){
   await wait(500 + Math.min(html.length*6, 900)); t.remove();
   const r = botRow('<div class="bub"></div>'); const b = r.querySelector('.bub');
   plain ? b.textContent = html : b.innerHTML = html;
+  scroll();
 }
 function me(text){ const r = document.createElement('div'); r.className = 'row me'; r.innerHTML = `<div class="bub">${esc(text)}</div>`; thread.append(r); scroll(); }
 function choose(opts){
@@ -707,7 +712,7 @@ function contactForm(){
       <span class="err" id="cErr" role="alert" hidden></span>
       <button type="submit" class="cta" style="justify-self:start">Enviar mis datos</button>`;
     const nameI = f.querySelector('#cName'), phoneI = f.querySelector('#cPhone'), okI = f.querySelector('#cOk'), err = f.querySelector('#cErr');
-    [nameI, phoneI].forEach(i => i.addEventListener('focus', () => setTimeout(() => { try { i.scrollIntoView({block:'center', behavior: reduce ? 'auto' : 'smooth'}); } catch {} }, 300)));
+    [nameI, phoneI].forEach(i => i.addEventListener('focus', () => setTimeout(() => { try { i.scrollIntoView({block:'nearest', behavior: reduce ? 'auto' : 'smooth'}); } catch {} }, 300)));
     f.onsubmit = e => {
       e.preventDefault();
       const name = nameI.value.trim(), ph = normPhone(phoneI.value);
