@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "damian-web",
+  "name": "landing-personal",
   "account_id": "bf3b8e522cb09f86017e2ac7c0d16ea8",
   "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
@@ -9,7 +9,7 @@
     {
       "binding": "DB",
       "database_name": "damian-web",
-      "database_id": "REEMPLAZAR_CON_EL_ID_DE_D1",
+      "database_id": "62ecc723-7c3d-4d31-8b90-a1b422966cdb",
       "migrations_dir": "migrations"
     }
   ],
