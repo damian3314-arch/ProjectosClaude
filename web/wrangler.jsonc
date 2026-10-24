@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "landing-personal",
+  "name": "projectosclaude",
   "account_id": "bf3b8e522cb09f86017e2ac7c0d16ea8",
   "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
