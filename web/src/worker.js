@@ -6,9 +6,14 @@
  *   POST /api/transcribe  → nota de voz → texto (OpenAI)
  *   POST /api/lead        → guarda el lead en D1, calcula prioridad, avisa a Damián por WhatsApp (Kapso)
  *   GET  /api/leads       → lista de leads (requiere ADMIN_TOKEN)
+ *   POST /api/agent       → el agente conversa con el lead y agenda la reunión (n8n → Google/Outlook)
+ *   GET  /api/resume      → retomar la conversación desde el link de un seguimiento (?r=<lead>)
+ *   cron (cada 30 min)    → seguimiento a leads A/B, confirmaciones y recordatorios (solo si AUTO_CONTACT_LEADS = "true")
  *
  * Todo lo demás lo sirve la carpeta /public (la página).
  */
+
+import { runAgent, label as whenLabel } from './agent.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -36,16 +41,21 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     try {
-      if (url.pathname === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID) });
+      if (url.pathname === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID), agenda: agentReady(env) });
       if (request.method === 'POST' && url.pathname === '/api/chat') return await chat(request, env);
       if (request.method === 'POST' && url.pathname === '/api/transcribe') return await transcribe(request, env);
       if (request.method === 'POST' && url.pathname === '/api/lead') return await createLead(request, env, ctx);
       if (request.method === 'GET' && url.pathname === '/api/leads') return await listLeads(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/agent') return await agent(request, env, ctx);
+      if (request.method === 'GET' && url.pathname === '/api/resume') return await resume(request, env);
       return json({ error: 'No encontrado' }, 404);
     } catch (err) {
       console.error(err);
       return json({ error: 'Error interno' }, 500);
     }
+  },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(proactive(env).catch(err => console.error('proactive', err)));
   },
 };
 
@@ -154,7 +164,7 @@ async function createLead(request, env, ctx) {
   ctx.waitUntil(notifyOwner(env, lead));
   if (env.AUTO_CONTACT_LEADS === 'true' && action === 'contact') ctx.waitUntil(contactLead(env, lead));
 
-  return json({ id, tier, action, bookingUrl });
+  return json({ id, tier, action, bookingUrl, agent: action === 'contact' && agentReady(env) });
 }
 
 /* ---------- /api/leads (solo Damián) ---------- */
@@ -163,6 +173,129 @@ async function listLeads(request, env) {
   if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: 'No autorizado' }, 401);
   const { results } = await env.DB.prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT 200').all();
   return json({ leads: results });
+}
+
+/* ---------- Agente que agenda ---------- */
+function agentReady(env) {
+  return !!(env.OPENAI_API_KEY && env.N8N_BASE_URL && env.N8N_SECRET);
+}
+
+async function loadLead(env, id) {
+  const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(id).first();
+  if (lead) lead.intentName = INTENT_NAMES[lead.intent] || null;
+  return lead;
+}
+
+async function agent(request, env, ctx) {
+  if (!sameOrigin(request)) return json({ error: 'Origen no permitido' }, 403);
+  if (!agentReady(env)) return json({ error: 'Agenda no configurada' }, 503);
+  const b = await request.json().catch(() => null);
+  const message = clean(b?.message, 1000);
+  const leadId = clean(b?.leadId, 64);
+  const sessionId = clean(b?.sessionId, 64);
+  if (!message || !leadId) return json({ error: 'Falta el mensaje' }, 400);
+
+  const lead = await loadLead(env, leadId);
+  if (!lead || lead.tier === 'C') return json({ error: 'No encontrado' }, 404);
+  // Dueño de la conversación: la sesión que creó el lead, o quien llega por el link del seguimiento (UUID imposible de adivinar).
+  if (lead.session_id !== sessionId && b.resume !== true) return json({ error: 'No autorizado' }, 403);
+
+  const ipHash = await hashIp(request, env);
+  if (await overLimit(env, ipHash)) return json({ error: 'Demasiados mensajes. Intenta en unos minutos.' }, 429);
+
+  const thread = `lead:${lead.id}`;
+  const { results } = await env.DB.prepare('SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY id DESC LIMIT 16').bind(thread).all();
+  const history = results.reverse();
+  await env.DB.prepare('INSERT INTO chat_messages (session_id, ip_hash, role, content, intent) VALUES (?, ?, ?, ?, ?)')
+    .bind(thread, ipHash, 'user', message, 'agent').run();
+
+  const deps = {
+    saveBooking: async ({ startMs, endMs, eventId }) => {
+      const soon = startMs - Date.now() < 26 * 3600e3 ? 1 : 0; // si la cita es en menos de ~1 día, no hace falta el recordatorio de 24 h
+      await env.DB.prepare("UPDATE leads SET meeting_start = ?, meeting_end = ?, meeting_event_id = ?, status = 'agendado', reminded_24 = ? WHERE id = ?")
+        .bind(new Date(startMs).toISOString(), new Date(endMs).toISOString(), eventId, soon, lead.id).run();
+      ctx.waitUntil(announceBooking(env, lead, startMs));
+    },
+    notify: async reason => {
+      await env.DB.prepare('UPDATE leads SET owner_note = ? WHERE id = ?').bind(reason, lead.id).run();
+      ctx.waitUntil(ownerMessage(env, `🙋 Te necesitan: ${lead.name} +${lead.phone} (${INTENT_NAMES[lead.intent] || 'sin tema'})\n${reason}`));
+    },
+  };
+
+  let out;
+  try { out = await runAgent({ env, lead, history, message, deps }); }
+  catch (err) { console.error('agent', err); return json({ error: 'Agente no disponible' }, 502); }
+  const reply = clean(out.reply, 900) || 'Déjame confirmarlo con Damián y te escribo.';
+  await env.DB.prepare('INSERT INTO chat_messages (session_id, ip_hash, role, content, intent) VALUES (?, ?, ?, ?, ?)')
+    .bind(thread, ipHash, 'assistant', reply, 'agent').run();
+  return json({ reply, booked: out.booked ? { label: out.booked.label } : null });
+}
+
+// Retomar desde el link del seguimiento: https://holadami.com/?r=<leadId>
+async function resume(request, env) {
+  if (!agentReady(env)) return json({ error: 'Agenda no configurada' }, 503);
+  const id = clean(new URL(request.url).searchParams.get('lead'), 64);
+  const lead = id && await loadLead(env, id);
+  if (!lead || lead.tier === 'C') return json({ error: 'No encontrado' }, 404);
+  return json({
+    leadId: lead.id, firstName: lead.name.split(' ')[0],
+    meeting: lead.meeting_start ? whenLabel(Date.parse(lead.meeting_start)) : null,
+  });
+}
+
+async function announceBooking(env, lead, startMs) {
+  const when = whenLabel(startMs);
+  await ownerMessage(env, `📅 Cita agendada: ${lead.name} +${lead.phone}\n${when} · ${lead.calendar === 'loggro' ? 'calendario Loggro' : 'calendario personal'}\nTema: ${INTENT_NAMES[lead.intent] || 'Sin clasificar'}`);
+  if (env.AUTO_CONTACT_LEADS === 'true' && env.KAPSO_CONFIRM_TEMPLATE) {
+    await sendWhatsApp(env, template(lead.phone, env.KAPSO_CONFIRM_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [lead.name.split(' ')[0], when]));
+  }
+}
+
+async function ownerMessage(env, text) {
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.OWNER_WHATSAPP) return;
+  await sendWhatsApp(env, env.KAPSO_NOTIFY_TEMPLATE
+    ? template(env.OWNER_WHATSAPP, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text])
+    : { messaging_product: 'whatsapp', to: env.OWNER_WHATSAPP, type: 'text', text: { body: text } });
+}
+
+/* ---------- Proactividad (cron cada 30 min) ----------
+ * Escribe a clientes reales, así que solo corre con AUTO_CONTACT_LEADS = "true" y plantillas aprobadas en Meta:
+ *   KAPSO_FOLLOWUP_TEMPLATE → {{1}} nombre · {{2}} tema · {{3}} link para retomar
+ *   KAPSO_REMIND_TEMPLATE   → {{1}} nombre · {{2}} cuándo
+ */
+async function proactive(env) {
+  if (env.AUTO_CONTACT_LEADS !== 'true' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return;
+  const lang = env.KAPSO_TEMPLATE_LANG;
+  const now = Date.now();
+
+  // 1. Recordatorios de cita: 24 h y 1 h antes
+  if (env.KAPSO_REMIND_TEMPLATE) {
+    const { results } = await env.DB.prepare("SELECT * FROM leads WHERE status = 'agendado' AND meeting_start IS NOT NULL AND (reminded_24 = 0 OR reminded_1 = 0)").all();
+    for (const m of results) {
+      const ms = Date.parse(m.meeting_start), delta = ms - now;
+      if (!Number.isFinite(ms) || delta < 0) continue;
+      const col = delta <= 75 * 60e3 ? (m.reminded_1 ? null : 'reminded_1') : delta <= 24 * 3600e3 ? (m.reminded_24 ? null : 'reminded_24') : null;
+      if (!col) continue;
+      const ok = await sendWhatsApp(env, template(m.phone, env.KAPSO_REMIND_TEMPLATE, lang, [m.name.split(' ')[0], whenLabel(ms)]));
+      if (ok) await env.DB.prepare(`UPDATE leads SET ${col} = 1${col === 'reminded_1' ? ', reminded_24 = 1' : ''} WHERE id = ?`).bind(m.id).run();
+    }
+  }
+
+  // 2. Seguimiento a leads A/B que no agendaron: a las 3 h y a las 24 h, máximo 2, solo de 8 am a 8 pm
+  const hourBogota = new Date(now - 5 * 3600e3).getUTCHours();
+  if (env.KAPSO_FOLLOWUP_TEMPLATE && agentReady(env) && hourBogota >= 8 && hourBogota < 20) {
+    const origin = env.PUBLIC_URL || 'https://holadami.com';
+    const { results } = await env.DB.prepare(`SELECT * FROM leads
+      WHERE tier IN ('A', 'B') AND status = 'nuevo' AND consent = 1 AND meeting_start IS NULL AND followups < 2
+        AND created_at <= datetime('now', CASE followups WHEN 0 THEN '-3 hours' ELSE '-24 hours' END)
+        AND (last_followup_at IS NULL OR last_followup_at <= datetime('now', '-24 hours'))
+      LIMIT 10`).all();
+    for (const l of results) {
+      const ok = await sendWhatsApp(env, template(l.phone, env.KAPSO_FOLLOWUP_TEMPLATE, lang,
+        [l.name.split(' ')[0], INTENT_NAMES[l.intent] || 'tu negocio', `${origin}/?r=${l.id}`]));
+      if (ok) await env.DB.prepare("UPDATE leads SET followups = followups + 1, last_followup_at = datetime('now') WHERE id = ?").bind(l.id).run();
+    }
+  }
 }
 
 /* ---------- WhatsApp vía Kapso ---------- */

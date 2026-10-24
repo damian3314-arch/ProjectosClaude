@@ -378,7 +378,7 @@ if (CONFIG.company) $('#brandName').textContent = CONFIG.company;
 /* ===== BACKEND (Cloudflare Worker). Si no responde, la página funciona sola en modo demo. ===== */
 const API = { online:false };
 const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
-(async () => { try { const r = await fetch('/api/health', {signal: AbortSignal.timeout(2500)}); API.online = r.ok; } catch {} })();
+const healthReady = (async () => { try { const r = await fetch('/api/health', {signal: AbortSignal.timeout(2500)}); API.online = r.ok; API.agenda = !!(await r.json()).agenda; } catch {} })();
 async function api(path, body, isForm){
   if (!API.online) return null;
   try {
@@ -435,7 +435,7 @@ msg.addEventListener('blur', () => { if (!msg.value && !suggStopped) suggTimer =
 
 /* ===== CHAT ===== */
 const lead = { problem:'', intent:null, budget:null, timing:null, decider:null, contact:null };
-let audioBlob = null, started = false;
+let audioBlob = null, started = false, agentLead = null, agentBusy = false;
 const TOTAL = 5;
 function prog(n){ $('#progress').classList.add('on'); $('#progress span').style.width = (n/TOTAL*100) + '%'; }
 const scroll = () => { thread.scrollTop = thread.scrollHeight; };
@@ -456,11 +456,12 @@ function choose(opts){
   });
 }
 function autosize(){ msg.classList.toggle('typed', !!msg.value); msg.style.height = 'auto'; msg.style.height = Math.min(msg.scrollHeight, 140) + 'px'; }
-msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < 3 && !audioBlob; });
+msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < (agentLead ? 1 : 3) && !audioBlob; });
 msg.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } });
 $('#backToChat').onclick = () => setTimeout(() => { if (!started) msg.focus({preventScroll:true}); }, 500);
 
 sendBtn.onclick = () => {
+  if (agentLead) return agentSend();
   if (started) return;
   const wasRecording = rec && rec.state === 'recording';
   stopRec();
@@ -550,6 +551,10 @@ async function finish(){
     name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href,
     utm:Object.fromEntries(new URLSearchParams(location.search)) }) || localScore();
   const first = esc(lead.contact.name.split(' ')[0]), topic = lead.intent ? SOL[lead.intent].name.toLowerCase() : 'tu negocio';
+  if (res.agent && res.id){
+    await say(`Gracias, ${first}. Ahora sí, agendemos: ¿cuándo te queda bien una llamada de 30 minutos? Escríbeme o mándame un audio, por ejemplo <i>“mañana después de las 7”</i>.`);
+    openAgent(res.id, false); return;
+  }
   if (res.tier === 'A') await say(`Gracias, ${first}. Mi asistente te escribe <b>hoy mismo</b> por WhatsApp.`);
   else if (res.tier === 'B') await say(`Gracias, ${first}. Mi asistente te escribe por WhatsApp <b>en menos de 24 horas</b>.`);
   else await say(`Gracias, ${first}. Te voy a enviar por WhatsApp ideas prácticas sobre ${topic}. Cuando estés listo, lo resolvemos.`);
@@ -560,6 +565,59 @@ async function finish(){
   }
   if (res.demo) await say('<small>(Modo demo: este mensaje no se envió a ningún sistema.)</small>');
 }
+
+/* ===== AGENTE QUE AGENDA ===== */
+function openAgent(id, resume){
+  agentLead = { id, resume };
+  $('#invite').hidden = true; $('#composer').hidden = false;
+  msg.placeholder = 'Ej: el jueves después de las 7'; msg.value = ''; autosize(); sendBtn.disabled = true;
+  audioBlob = null; msg.focus({preventScroll:true});
+}
+async function agentSend(){
+  if (agentBusy) return;
+  agentBusy = true;
+  const wasRecording = rec && rec.state === 'recording';
+  stopRec();
+  if (wasRecording) await wait(400);
+  let text = msg.value.trim();
+  if (audioBlob && API.online){
+    const fd = new FormData(); fd.append('audio', audioBlob, 'nota.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm')); fd.append('sessionId', sessionId);
+    audioBlob = null;
+    const tr = await api('/api/transcribe', fd, true);
+    if (tr && tr.text) text = tr.text;
+  }
+  audioBlob = null;
+  if (!text){ agentBusy = false; return; }
+  msg.value = ''; autosize(); sendBtn.disabled = true;
+  me(text);
+  const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
+  const r = await api('/api/agent', {leadId:agentLead.id, sessionId, message:text, resume:agentLead.resume});
+  t.remove();
+  if (r && r.reply) await say(r.reply, true);
+  else await say('Se me cruzó la señal. Intenta de nuevo en un momento; si no, Damián te escribe por WhatsApp.');
+  if (r && r.booked){
+    botRow(`<div class="bub"><small>📅 Agendado</small><br><b>${esc(r.booked.label)}</b></div>`);
+    msg.placeholder = '¿Algo más que quieras contarme antes de la llamada?';
+  }
+  agentBusy = false; msg.focus({preventScroll:true});
+}
+// Link del seguimiento por WhatsApp: holadami.com/?r=<id>
+(async () => {
+  const id = new URLSearchParams(location.search).get('r');
+  if (!id) return;
+  await healthReady;
+  if (!API.online || !API.agenda) return;
+  try {
+    const r = await fetch('/api/resume?lead=' + encodeURIComponent(id));
+    if (!r.ok) return;
+    const d = await r.json();
+    started = true; stopSugg();
+    me('Quiero agendar');
+    if (d.meeting) await say(`Hola de nuevo, ${esc(d.firstName)}. Ya tienes una llamada agendada: <b>${esc(d.meeting)}</b>. Si necesitas cambiarla, dime.`);
+    else await say(`Hola de nuevo, ${esc(d.firstName)}. ¿Cuándo te queda bien una llamada de 30 minutos? Por ejemplo <i>“mañana después de las 7”</i>.`);
+    openAgent(d.leadId, true);
+  } catch {}
+})();
 
 /* ===== VOZ ===== */
 let rec = null, chunks = [], stream = null, speech = null, timer = null, ac = null;
