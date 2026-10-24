@@ -14,12 +14,12 @@
     }
   ],
   "observability": { "enabled": true },
-  "triggers": { "crons": ["*/30 * * * *"] },
+  "triggers": { "crons": ["0 * * * *"] },
   "routes": [
     { "pattern": "holadami.com", "custom_domain": true },
     { "pattern": "www.holadami.com", "custom_domain": true }
   ],
-  // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT, N8N_SECRET) van con `wrangler secret put`.
+  // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) van con `wrangler secret put`.
   "vars": {
     "OPENAI_MODEL": "gpt-4o-mini",
     "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
@@ -29,10 +29,6 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
-    "N8N_BASE_URL": "",
-    "KAPSO_FOLLOWUP_TEMPLATE": "",
-    "KAPSO_CONFIRM_TEMPLATE": "",
-    "KAPSO_REMIND_TEMPLATE": "",
     "PUBLIC_URL": "https://holadami.com",
     "BOOKING_URL_LOGGRO": "",
     "BOOKING_URL_PERSONAL": ""
