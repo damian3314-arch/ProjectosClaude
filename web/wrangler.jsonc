@@ -4,7 +4,7 @@
   "account_id": "bf3b8e522cb09f86017e2ac7c0d16ea8",
   "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true }, // true: las cabeceras de seguridad se aplican también a la página
   "d1_databases": [
     {
       "binding": "DB",
@@ -14,6 +14,11 @@
     }
   ],
   "observability": { "enabled": true },
+  "triggers": { "crons": ["0 * * * *"] },
+  "routes": [
+    { "pattern": "holadami.com", "custom_domain": true },
+    { "pattern": "www.holadami.com", "custom_domain": true }
+  ],
   // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) van con `wrangler secret put`.
   "vars": {
     "OPENAI_MODEL": "gpt-4o-mini",
