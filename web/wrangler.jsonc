@@ -9,7 +9,7 @@
     {
       "binding": "DB",
       "database_name": "damian-web",
-      "database_id": "REEMPLAZAR_CON_EL_ID_DE_D1",
+      "database_id": "62ecc723-7c3d-4d31-8b90-a1b422966cdb",
       "migrations_dir": "migrations"
     }
   ],
