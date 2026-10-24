@@ -222,8 +222,9 @@ async function createLead(request, env, ctx) {
 
   // Si llegan muchos leads de golpe (¿alguien automatizando?) se guardan igual, pero sin gastar IA ni avisar uno por uno:
   // el resumen de las 7 am y el panel los muestran.
+  // Los leads para nutrir (tier C) tampoco avisan ni gastan IA: quedan en la base para campañas futuras.
   const burst = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE created_at > datetime('now', '-1 hour')").first();
-  if ((burst?.n || 0) > LEADS_BURST) {
+  if (action !== 'contact' || (burst?.n || 0) > LEADS_BURST) {
     ctx.waitUntil(env.DB.prepare('UPDATE leads SET brief = ?, brief_at = datetime(\'now\') WHERE id = ?').bind(JSON.stringify(fallbackBrief(lead)), lead.id).run().catch(() => {}));
   } else {
     ctx.waitUntil(prepareAndNotify(env, lead).catch(err => console.error('prepareAndNotify', err?.message || 'desconocido')));
