@@ -19,12 +19,11 @@
     { "pattern": "holadami.com", "custom_domain": true },
     { "pattern": "www.holadami.com", "custom_domain": true }
   ],
-  // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) van con `wrangler secret put`.
+  // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) y OWNER_WHATSAPP (tu número personal, el repo es público) van como secretos.
   "vars": {
     "OPENAI_MODEL": "gpt-4o-mini",
     "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
-    "KAPSO_PHONE_NUMBER_ID": "",
-    "OWNER_WHATSAPP": "",
+    "KAPSO_PHONE_NUMBER_ID": "1317463928126036",
     "KAPSO_NOTIFY_TEMPLATE": "",
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
