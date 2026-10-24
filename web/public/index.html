@@ -1,24 +1,54 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-CO">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Damián Barragán</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Cuéntame qué quieres resolver en tu negocio: nómina, software, automatización con IA, procesos o campañas con tus datos.">
-<meta property="og:title" content="¿Qué quieres resolver en tu negocio?">
-<meta property="og:description" content="Escríbeme o háblame. Nómina, software, bots de WhatsApp, procesos y campañas con tus datos.">
-<meta property="og:image" content="damian.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Damián Barragán · Consultor para tu negocio en Colombia</title>
+<meta name="description" content="Cuéntale tu problema a Damián Barragán: nómina, software de ventas e inventario, WhatsApp con IA y procesos para negocios en Colombia. Te responde él mismo.">
+<meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0c12" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://holadami.com/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1220'/%3E%3Ccircle cx='18' cy='22' r='6' fill='%23e0407a'/%3E%3Ccircle cx='46' cy='22' r='6' fill='%232f5bff'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%237c5cff'/%3E%3Ccircle cx='18' cy='44' r='6' fill='%230fa874'/%3E%3Ccircle cx='46' cy='44' r='6' fill='%23e89a00'/%3E%3C/svg%3E">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Damián Barragán">
+<meta property="og:locale" content="es_CO">
+<meta property="og:url" content="https://holadami.com/">
+<meta property="og:title" content="Cuéntame qué te está quitando tiempo en tu negocio">
+<meta property="og:description" content="Soy Damián. Nómina, software, WhatsApp con IA y procesos para negocios en Colombia. Escríbeme tu problema y te respondo yo.">
+<meta property="og:image" content="https://holadami.com/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Damián Barragán: cuéntame qué te está quitando tiempo en tu negocio">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cuéntame qué te está quitando tiempo en tu negocio">
+<meta name="twitter:description" content="Soy Damián. Nómina, software, WhatsApp con IA y procesos para negocios en Colombia. Escríbeme tu problema y te respondo yo.">
+<meta name="twitter:image" content="https://holadami.com/og.jpg">
+<meta name="twitter:image:alt" content="Damián Barragán: cuéntame qué te está quitando tiempo en tu negocio">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"Person","@id":"https://holadami.com/#damian","name":"Damián Barragán","jobTitle":"Consultor independiente","url":"https://holadami.com/","image":"https://holadami.com/damian.jpg","sameAs":["https://www.linkedin.com/in/soydamianbarragan"],"knowsAbout":["Nómina","Software de ventas e inventario","Facturación electrónica","Automatización con IA y WhatsApp","Procesos","Campañas con datos de clientes"],"workLocation":{"@type":"Country","name":"Colombia"}},
+ {"@type":"ProfessionalService","@id":"https://holadami.com/#servicio","name":"Damián Barragán · Consultoría para negocios","url":"https://holadami.com/","image":"https://holadami.com/og.jpg","founder":{"@id":"https://holadami.com/#damian"},"areaServed":{"@type":"Country","name":"Colombia"},"availableLanguage":"es","description":"Nómina, software de ventas e inventario, WhatsApp con IA, procesos y campañas con datos para negocios de servicio en Colombia."}
+]}
+</script>
+
+<script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400..700&family=Instrument+Serif:ital@1&display=swap">
 <style>
-/* Layout: tres pantallas en el celular. 1) Un chat limpio con aura de color. 2) La solución, que se adapta a lo que la persona contó. 3) Quién soy y contacto.
-   Identidad: cinco colores = cinco formas de resolver. El aura y el acento de la página toman el color del problema detectado. */
+/* Layout: tres pantallas en el celular. 1) Un chat limpio con aura de color. 2) La solución, que se adapta a lo que la persona contó. 3) Quién soy, dudas frecuentes y contacto.
+   Identidad: cinco colores = cinco formas de resolver. El aura y el acento de la página toman el color del problema detectado.
+   Contraste: --f-* (relleno de botones, texto blanco) y --t-* (texto de color sobre fondo) cumplen AA; --c-* son los colores vivos solo para puntos y aura. */
 :root{
   --bg:#f7f8fa; --surface:#ffffff; --fg:#0d1220; --muted:#5f6779; --line:#e3e6ec;
   --c-nomina:#e0407a; --c-software:#2f5bff; --c-ia:#0fa874; --c-procesos:#e89a00; --c-datos:#7c5cff;
-  --accent:#0d1220; --accent-ink:#ffffff;
+  --f-nomina:#c42a63; --f-software:#2f5bff; --f-ia:#087a56; --f-procesos:#e89a00; --f-datos:#6544e6;
+  --t-nomina:#c42a63; --t-software:#2f5bff; --t-ia:#087a56; --t-procesos:#8a5a00; --t-datos:#6544e6;
+  --i-nomina:#fff; --i-software:#fff; --i-ia:#fff; --i-procesos:#1a1200; --i-datos:#fff;
+  --accent:#0d1220; --accent-ink:#ffffff; --accent-t:#0d1220;
   --f-body:"Onest","Segoe UI",system-ui,-apple-system,sans-serif;
   --f-serif:"Instrument Serif","Iowan Old Style",Georgia,serif;
   --r:22px; --lvl:0;
@@ -26,29 +56,37 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0a0c12; --surface:#121621; --fg:#eef1f7; --muted:#9aa2b5; --line:#232838;
   --c-nomina:#ff6b9b; --c-software:#6e8cff; --c-ia:#2fd39a; --c-procesos:#ffbb3a; --c-datos:#a48fff;
-  --accent:#eef1f7; --accent-ink:#0a0c12; color-scheme:dark }}
+  --f-nomina:#ff6b9b; --f-software:#6e8cff; --f-ia:#2fd39a; --f-procesos:#ffbb3a; --f-datos:#a48fff;
+  --t-nomina:#ff6b9b; --t-software:#6e8cff; --t-ia:#2fd39a; --t-procesos:#ffbb3a; --t-datos:#a48fff;
+  --i-nomina:#0a0c12; --i-software:#0a0c12; --i-ia:#0a0c12; --i-procesos:#0a0c12; --i-datos:#0a0c12;
+  --accent:#eef1f7; --accent-ink:#0a0c12; --accent-t:#eef1f7; color-scheme:dark }}
 :root[data-theme="dark"]{
   --bg:#0a0c12; --surface:#121621; --fg:#eef1f7; --muted:#9aa2b5; --line:#232838;
   --c-nomina:#ff6b9b; --c-software:#6e8cff; --c-ia:#2fd39a; --c-procesos:#ffbb3a; --c-datos:#a48fff;
-  --accent:#eef1f7; --accent-ink:#0a0c12; color-scheme:dark }
-body[data-intent="nomina"]{--accent:var(--c-nomina);--accent-ink:#fff}
-body[data-intent="software"]{--accent:var(--c-software);--accent-ink:#fff}
-body[data-intent="ia"]{--accent:var(--c-ia);--accent-ink:#fff}
-body[data-intent="procesos"]{--accent:var(--c-procesos);--accent-ink:#1a1200}
-body[data-intent="datos"]{--accent:var(--c-datos);--accent-ink:#fff}
+  --f-nomina:#ff6b9b; --f-software:#6e8cff; --f-ia:#2fd39a; --f-procesos:#ffbb3a; --f-datos:#a48fff;
+  --t-nomina:#ff6b9b; --t-software:#6e8cff; --t-ia:#2fd39a; --t-procesos:#ffbb3a; --t-datos:#a48fff;
+  --i-nomina:#0a0c12; --i-software:#0a0c12; --i-ia:#0a0c12; --i-procesos:#0a0c12; --i-datos:#0a0c12;
+  --accent:#eef1f7; --accent-ink:#0a0c12; --accent-t:#eef1f7; color-scheme:dark }
+body[data-intent="nomina"],.panel[data-k="nomina"]{--accent:var(--f-nomina);--accent-ink:var(--i-nomina);--accent-t:var(--t-nomina)}
+body[data-intent="software"],.panel[data-k="software"]{--accent:var(--f-software);--accent-ink:var(--i-software);--accent-t:var(--t-software)}
+body[data-intent="ia"],.panel[data-k="ia"]{--accent:var(--f-ia);--accent-ink:var(--i-ia);--accent-t:var(--t-ia)}
+body[data-intent="procesos"],.panel[data-k="procesos"]{--accent:var(--f-procesos);--accent-ink:var(--i-procesos);--accent-t:var(--t-procesos)}
+body[data-intent="datos"],.panel[data-k="datos"]{--accent:var(--f-datos);--accent-ink:var(--i-datos);--accent-t:var(--t-datos)}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .4s}
 .wrap{width:100%;max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1,h2,h3{margin:0;font-weight:500;letter-spacing:-.025em;text-wrap:balance}
 p{margin:0}
 a{color:inherit}
 em{font-family:var(--f-serif);font-style:italic;font-weight:400;letter-spacing:-.01em}
-:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:10px}
+:focus-visible{outline:2px solid var(--accent-t);outline-offset:3px;border-radius:10px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.skip{position:absolute;left:12px;top:-60px;z-index:20;background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:600}
+.skip:focus{top:8px}
 
 /* Marca: cinco puntos = cinco soluciones */
 .dots{display:inline-flex;gap:3px}
@@ -59,16 +97,15 @@ em{font-family:var(--f-serif);font-style:italic;font-weight:400;letter-spacing:-
 /* TOP */
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px)}
-.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;max-width:1080px}
-.me-chip{display:flex;align-items:center;gap:10px;text-decoration:none}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;max-width:1080px}
+.me-chip{display:flex;align-items:center;gap:10px;text-decoration:none;min-height:44px}
 .me-chip img{width:34px;height:34px;border-radius:50%;object-fit:cover}
-.me-chip b{display:block;font-weight:600;font-size:15px;line-height:1.1}
-.me-chip span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
-.me-chip span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c-ia)}
-.brand-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:9px 14px;font:600 14px var(--f-body);text-decoration:none;letter-spacing:-.01em}
+.me-chip b{display:block;font-weight:600;font-size:15px;line-height:1.15}
+.me-chip span{display:block;font-size:12px;color:var(--muted);line-height:1.2}
+.brand-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:0 16px;font:600 14px var(--f-body);text-decoration:none;letter-spacing:-.01em}
 
 /* HERO / CHAT */
-.hero{position:relative;isolation:isolate;padding-block:28px 48px;overflow:hidden}
+.hero{position:relative;isolation:isolate;padding-block:22px 40px;overflow:hidden}
 .aura{position:absolute;left:50%;top:46%;width:min(640px,150vw);aspect-ratio:1;transform:translate(-50%,-50%) scale(calc(1 + var(--lvl)*.25));z-index:-1;pointer-events:none;filter:blur(60px);opacity:.5;transition:transform .12s}
 .aura i{position:absolute;width:50%;height:50%;border-radius:50%;transition:background .8s;animation:drift 18s ease-in-out infinite}
 .aura i:nth-child(1){left:6%;top:8%;background:var(--c-nomina)}
@@ -79,19 +116,26 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 body[data-intent] .aura i{background:var(--accent)!important}
 body[data-intent] .aura{opacity:.38}
 @keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(8%,-6%)}66%{transform:translate(-6%,7%)}}
-.greet{text-align:center;display:grid;gap:14px;justify-items:center;padding-top:12px}
+.greet{text-align:center;display:grid;gap:12px;justify-items:center;padding-top:6px}
 .greet .hi{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
 .greet .hi img{width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px var(--surface)}
-.greet h1{font-size:clamp(38px,9vw,68px);line-height:1;max-width:12ch}
-.greet h1 em{color:var(--accent);transition:color .5s}
-.greet p{color:var(--muted);font-size:17px;max-width:34ch}
+.greet h1{font-size:clamp(34px,8.6vw,60px);line-height:1.02;max-width:15ch}
+.greet h1 em{color:var(--accent-t);transition:color .5s}
+.greet .sub{color:var(--fg);font-size:16.5px;max-width:40ch;line-height:1.45}
+.greet .ref{color:var(--muted);font-size:15px;max-width:38ch}
 
-.box{margin-top:24px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 20px 60px -30px color-mix(in srgb,var(--fg) 35%,transparent);overflow:hidden}
+.box{margin-top:20px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 20px 60px -30px color-mix(in srgb,var(--fg) 35%,transparent);overflow:hidden}
+.box:focus-within{border-color:color-mix(in srgb,var(--accent-t) 55%,var(--line))}
+.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin:14px 0 0;padding:0;list-style:none;font-size:13.5px;color:var(--muted)}
+.facts li{display:flex;align-items:center;gap:6px}
+.facts li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c-ia)}
+.ns{padding:18px;font-size:15px;color:var(--muted)}
+html:not(.js) .invite,html:not(.js) .composer,html:not(.js) .hint{display:none}
 
 /* Tarjeta de sugerencias que rota */
-.invite{display:flex;gap:8px;align-items:flex-end;padding:16px 16px 4px}
+.invite{display:flex;gap:8px;align-items:flex-end;padding:14px 14px 4px}
 .invite img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none}
-.sugg{position:relative;flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:18px;border-bottom-left-radius:6px;padding:10px 14px;font:inherit;cursor:pointer;min-height:64px;display:grid;align-content:center;gap:2px;transition:border-color .2s}
+.sugg{position:relative;flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:18px;border-bottom-left-radius:6px;padding:10px 14px;font:inherit;cursor:pointer;min-height:76px;display:grid;align-content:center;gap:2px;transition:border-color .2s}
 .sugg:hover{border-color:var(--sg,var(--fg))}
 .sugg small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .sugg small i{width:7px;height:7px;border-radius:50%;background:var(--sg,var(--muted));transition:background .3s}
@@ -102,7 +146,7 @@ body[data-intent] .aura{opacity:.38}
 .sugg .tdots i:nth-child(2){animation-delay:.15s}.sugg .tdots i:nth-child(3){animation-delay:.3s}
 .sugg .use{justify-self:end;font-size:12px;color:var(--muted)}
 
-.thread{display:flex;flex-direction:column;gap:12px;padding:18px 16px 6px;max-height:min(58vh,520px);overflow-y:auto}
+.thread{display:flex;flex-direction:column;gap:12px;padding:18px 14px 6px;max-height:min(58vh,520px);max-height:min(62dvh,520px);overflow-y:auto;overscroll-behavior:contain}
 .thread:empty{display:none}
 .row{display:flex;gap:8px;align-items:flex-end;animation:rise .3s ease both}
 .row.me{justify-content:flex-end}
@@ -116,127 +160,156 @@ body[data-intent] .aura{opacity:.38}
 @keyframes blink{50%{opacity:.25}}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .choices{display:flex;flex-wrap:wrap;gap:8px;padding-left:34px;animation:rise .3s ease both}
-.choice{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:14px;padding:10px 14px;font:inherit;font-size:15px;cursor:pointer;text-align:left;transition:border-color .15s,transform .15s}
-.choice:hover{border-color:var(--accent);transform:translateY(-1px)}
+.choice{min-height:48px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:14px;padding:10px 14px;font:inherit;font-size:15px;cursor:pointer;text-align:left;transition:border-color .15s,transform .15s}
+.choice:hover{border-color:var(--accent-t);transform:translateY(-1px)}
 .choice small{display:block;color:var(--muted);font-size:12.5px}
 .sol-card{margin-left:34px;border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--surface);display:grid;gap:8px;animation:rise .3s ease both;border-left:4px solid var(--accent)}
 .sol-card b{font-weight:600}
 .sol-card ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:grid;gap:2px}
-.linkbtn{background:none;border:0;padding:0;color:var(--accent);font:600 14.5px var(--f-body);cursor:pointer;justify-self:start}
-.cform{margin-left:34px;display:grid;gap:8px;animation:rise .3s ease both}
-.cform input[type=text],.cform input[type=tel]{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:12px 14px;font:16px var(--f-body);outline:none}
-.cform input:focus{border-color:var(--accent)}
-.cform .ok{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted)}
-.cform .ok input{margin-top:2px;accent-color:var(--accent)}
-.cform .err{color:var(--c-nomina);font-size:13.5px}
+.linkbtn{background:none;border:0;padding:0;min-height:44px;color:var(--accent-t);font:600 14.5px var(--f-body);cursor:pointer;justify-self:start;text-decoration:underline;text-underline-offset:3px}
+.cform{margin-left:34px;display:grid;gap:6px;animation:rise .3s ease both}
+.cform label.f{font-size:13px;color:var(--muted);margin-top:4px}
+.cform input[type=text],.cform input[type=tel]{width:100%;min-height:48px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:12px 14px;font:16px var(--f-body);outline:none}
+.cform input[type=text]:focus-visible,.cform input[type=tel]:focus-visible{border-color:var(--accent-t);outline:2px solid var(--accent-t);outline-offset:1px}
+.cform input[aria-invalid="true"]{border-color:var(--t-nomina)}
+.cform .ok{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);min-height:44px;padding-block:6px;margin-top:4px;cursor:pointer}
+.cform .ok input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
+.cform .err{color:var(--t-nomina);font-size:14px;font-weight:500}
 .book{margin-left:34px;justify-self:start;animation:rise .3s ease both}
+.cta.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
 
 .composer{display:flex;align-items:flex-end;gap:8px;padding:10px}
-.composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 17px/1.45 var(--f-body);padding:10px 8px;outline:none;max-height:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 17px/1.45 var(--f-body);padding:12px 8px;outline:none;max-height:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .composer textarea.typed{white-space:pre-wrap;overflow:auto}
 .composer textarea::placeholder{color:var(--muted)}
-.ibtn{width:46px;height:46px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:grid;place-items:center;cursor:pointer;transition:all .2s}
+.ibtn{width:48px;height:48px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:grid;place-items:center;cursor:pointer;transition:all .2s}
 .ibtn svg{width:20px;height:20px}
-.ibtn.send{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.ibtn.send:disabled{opacity:.3;cursor:not-allowed}
-.ibtn.rec{background:var(--c-nomina);color:#fff;border-color:transparent;animation:ring 1.3s infinite}
+.ibtn.send{width:auto;padding:0 16px 0 18px;display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);border-color:transparent;border-radius:999px;font:600 15px var(--f-body)}
+.ibtn.send:disabled{opacity:.35;cursor:not-allowed}
+.ibtn.rec{background:var(--t-nomina);color:#fff;border-color:transparent;animation:ring 1.3s infinite}
 @keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c-nomina) 50%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
-.rec-line{display:none;padding:0 18px 10px;font-size:13px;color:var(--c-nomina)}
+.rec-line{display:none;padding:0 18px 10px;font-size:13px;color:var(--t-nomina)}
 .rec-line.on{display:block}
+.rec-line.warn{color:var(--muted)}
+.hint{padding:0 18px 12px;font-size:13px;color:var(--muted)}
 .progress{height:3px;background:var(--line);display:none}
 .progress.on{display:block}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
-.scroll-hint{display:flex;justify-content:center;margin-top:20px;color:var(--muted);font-size:13px}
+.scroll-hint{display:flex;justify-content:center;align-items:center;min-height:44px;margin-top:10px;color:var(--muted);font-size:14px}
 
-.cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);cursor:pointer;text-decoration:none;transition:background .5s,transform .15s}
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:999px;padding:0 20px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);cursor:pointer;text-decoration:none;transition:background .5s,transform .15s}
 .cta:hover{transform:translateY(-1px)}
 
 /* SOLUCIONES */
-.sol{padding-block:56px;border-top:1px solid var(--line)}
+.sol{padding-block:52px;border-top:1px solid var(--line)}
 .sol-head{display:grid;gap:10px;margin-bottom:20px}
 .sol-head h2{font-size:clamp(30px,6.4vw,48px);line-height:1.04}
-.sol-head h2 em{color:var(--accent);transition:color .5s}
+.sol-head h2 em{color:var(--accent-t);transition:color .5s}
 .sol-head p{color:var(--muted);font-size:16.5px}
 .tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:16px}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:9px 14px;font:500 14.5px var(--f-body);cursor:pointer}
+.tab{flex:none;display:flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:0 16px;font:500 14.5px var(--f-body);cursor:pointer}
 .tab i{width:8px;height:8px;border-radius:50%}
 .tab[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.panel-top{padding:22px;display:grid;gap:10px;background:linear-gradient(160deg,color-mix(in srgb,var(--tone) 16%,transparent),transparent 60%)}
+.panel-top{padding:22px;display:grid;gap:10px;background:linear-gradient(160deg,color-mix(in srgb,var(--tone,var(--fg)) 16%,transparent),transparent 60%)}
 .panel-top h3{font-size:clamp(26px,5vw,34px);line-height:1.08}
-.panel-top h3 em{color:var(--tone)}
+.panel-top h3 em{color:var(--accent-t)}
 .panel-top p{color:var(--muted);font-size:16px}
 .incl{display:grid;gap:1px;background:var(--line);border-top:1px solid var(--line)}
 .incl div{background:var(--surface);padding:14px 22px;display:grid;grid-template-columns:18px 1fr;gap:10px;font-size:15.5px}
-.incl div::before{content:"";width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--tone)}
+.incl div::before{content:"";width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--tone,var(--fg))}
 .incl b{font-weight:600;display:block}
 .incl span{color:var(--muted);font-size:14.5px}
 .panel-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
 .proof{font-size:14px;color:var(--muted)}
 .proof b{color:var(--fg);font-weight:600}
-.panel-foot .cta{background:var(--tone)}
+.static{padding:18px 22px;display:grid;gap:10px;font-size:15.5px}
+.static b{font-weight:600}
 .how{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
 .how div{border-top:2px solid var(--fg);padding-top:10px;font-size:14.5px;color:var(--muted);min-width:0}
 .how b{display:block;color:var(--fg);font-size:16px;font-weight:600;margin-bottom:2px}
 @media (max-width:520px){.how{grid-template-columns:1fr}}
 
 /* QUIÉN */
-.trust{padding-block:56px 48px;border-top:1px solid var(--line)}
+.trust{padding-block:52px 40px;border-top:1px solid var(--line)}
 .bio{display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center}
 .bio img{width:120px;height:120px;border-radius:50%;object-fit:cover}
 .bio h2{font-size:clamp(26px,5.4vw,38px);line-height:1.1}
+.bio h2 em{color:var(--accent-t)}
 .bio p{color:var(--muted);margin-top:10px;font-size:16px}
-@media (max-width:460px){.bio{grid-template-columns:1fr}.bio img{width:96px;height:96px}}
-.logos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:26px}
+@media (max-width:460px){.bio{grid-template-columns:1fr}.bio img{width:96px;height:96px}.cform{margin-left:0}}
+.logos-h{margin-top:26px}
+.logos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .logos span{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-size:15px;font-weight:500;display:grid;line-height:1.3;min-width:0}
 .logos small{color:var(--muted);font-size:12.5px;font-weight:400}
-.final{margin-top:30px;padding:24px 22px;border-radius:var(--r);background:var(--fg);color:var(--bg);display:grid;gap:14px;justify-items:start}
+
+/* PREGUNTAS */
+.faq{padding-block:48px;border-top:1px solid var(--line)}
+.faq h2{font-size:clamp(26px,5.4vw,38px);line-height:1.1;margin-bottom:16px}
+.faq h2 em{color:var(--accent-t)}
+.faq details{border:1px solid var(--line);background:var(--surface);border-radius:14px;margin-top:8px}
+.faq summary{list-style:none;cursor:pointer;min-height:52px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600;font-size:15.5px;border-radius:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:22px;line-height:1;color:var(--muted);flex:none}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding:0 16px 16px;color:var(--muted);font-size:15.5px}
+.faq details p b{color:var(--fg);font-weight:600}
+
+.final{margin-top:0;padding:26px 22px;border-radius:var(--r);background:var(--fg);color:var(--bg);display:grid;gap:14px;justify-items:start}
 .final h3{font-size:clamp(26px,5.4vw,34px);line-height:1.1}
 .final .cta{background:var(--bg);color:var(--fg)}
+.closing{padding-bottom:44px}
 footer{padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:13px}
 footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+footer a{display:inline-flex;align-items:center;min-height:44px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<a class="skip" href="#inicio">Ir al chat</a>
 
 <header class="top">
   <div class="wrap">
-    <a class="me-chip" href="#inicio"><img src="damian-avatar.jpg" alt="" width="34" height="34"><div><b>Damián Barragán</b><span>Disponible</span></div></a>
-    <a class="brand-pill" href="#soluciones"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="brandName">Escríbeme</span></a>
+    <a class="me-chip" href="#inicio"><img src="damian-avatar.jpg" alt="" width="34" height="34"><div><b>Damián Barragán</b><span>Consultor independiente</span></div></a>
+    <a class="brand-pill" href="#inicio" id="pill"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="brandName">Escríbeme</span></a>
   </div>
 </header>
 
+<main>
 <!-- 1. CHAT -->
 <section class="hero" id="inicio">
   <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="wrap">
     <div class="greet">
-      <span class="hi"><img src="damian-avatar.jpg" alt="Damián Barragán" width="44" height="44">Hola, soy Damián</span>
-      <h1>¿Qué quieres <em>resolver</em> en tu negocio?</h1>
-      <p>Escríbeme o háblame. Te digo cómo lo resolvemos, sin rodeos.</p>
+      <span class="hi"><img src="damian-avatar.jpg" alt="" width="44" height="44">Hola, soy Damián</span>
+      <h1>Cuéntame qué te está <em>quitando tiempo</em>.</h1>
+      <p class="sub">Llevo 15 años en ventas y operación de empresas de servicio. Te ayudo con nómina, sistema de ventas e inventario, WhatsApp con IA y procesos.</p>
+      <p class="ref">¿Te pasaron mi link? Cuéntame lo mismo que le contaste a esa persona.</p>
     </div>
 
     <div class="box" id="box">
-      <div class="progress" id="progress"><span></span></div>
+      <div class="progress" id="progress" aria-hidden="true"><span></span></div>
+      <noscript><p class="ns">Para escribirme aquí necesitas activar JavaScript. Mientras tanto, mira abajo lo que resuelvo, o escríbeme por <a href="https://www.linkedin.com/in/soydamianbarragan" rel="noopener">LinkedIn</a>.</p></noscript>
       <div class="invite" id="invite">
-        <img src="damian-avatar.jpg" alt="">
-        <button type="button" class="sugg" id="sugg" aria-label="Usar esta sugerencia">
+        <img src="damian-avatar.jpg" alt="" width="26" height="26">
+        <button type="button" class="sugg" id="sugg">
           <small><i></i><span id="suggTag">Por ejemplo</span></small>
           <span class="txt" id="suggTxt"><span class="tdots"><i></i><i></i><i></i></span></span>
           <span class="use">Toca para usarla</span>
         </button>
       </div>
       <div class="thread" id="thread" aria-live="polite"></div>
-      <div class="rec-line" id="recLine">● Grabando 0:00 · toca el micrófono para terminar</div>
+      <div class="rec-line" id="recLine" role="status">● Grabando 0:00 · toca el micrófono para terminar</div>
       <div class="composer" id="composer">
-        <label for="msg" class="sr">Tu mensaje</label>
-        <textarea id="msg" rows="1" placeholder="Cuéntame aquí…"></textarea>
-        <button type="button" class="ibtn" id="mic" aria-label="Enviar nota de voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-        <button type="button" class="ibtn send" id="send" aria-label="Enviar" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <label for="msg" class="sr">Cuéntame tu problema</label>
+        <textarea id="msg" rows="1" placeholder="Escribe tu problema aquí…" enterkeyhint="send"></textarea>
+        <button type="button" class="ibtn" id="mic" aria-label="Contar mi problema con un audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button type="button" class="ibtn send" id="send" disabled>Enviar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
+      <p class="hint" id="hint">Escribe o mándame un audio. No tiene que quedar perfecto.</p>
     </div>
+    <ul class="facts"><li>Sin costo</li><li>Te respondo yo, por WhatsApp</li><li>Tus datos solo para escribirte</li></ul>
     <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
   </div>
 </section>
@@ -249,12 +322,20 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
       <h2 id="solTitle">¿Qué te está quitando <em>tiempo</em>?</h2>
       <p id="solLead">Elige un tema y mira exactamente qué incluye.</p>
     </div>
-    <div class="tabs" role="tablist" id="tabs"></div>
-    <div class="panel" id="panel" role="tabpanel"></div>
+    <div class="tabs" role="tablist" aria-label="Temas" id="tabs"></div>
+    <div class="panel" id="panel" role="tabpanel">
+      <div class="static">
+        <p><b>Nómina.</b> Liquidar, pagar y reportar sin que te quite días (Loggro Nómina o gestión completa con Nomiluz).</p>
+        <p><b>Software.</b> Elegir, configurar e implementar Loggro: POS, inventario, facturación electrónica y contabilidad.</p>
+        <p><b>IA y automatización.</b> Asistente de WhatsApp con IA, automatizaciones con n8n y tu página web.</p>
+        <p><b>Procesos.</b> Encontrar dónde se frena tu negocio y dejarlo ordenado.</p>
+        <p><b>Datos y campañas.</b> Organizar tu base de clientes y convertirla en campañas por WhatsApp.</p>
+      </div>
+    </div>
     <div class="how">
-      <div><b>1. Llamada de 30 min</b>Por Meet y sin costo. Entiendo tu caso.</div>
-      <div><b>2. Propuesta en 48 horas</b>Qué hago, cuánto cuesta y cuándo lo entrego.</div>
-      <div><b>3. Entrega con fecha</b>Lo dejo funcionando y capacito a tu equipo.</div>
+      <div><b>1. Te escribo por WhatsApp</b>Leo tu caso y te cuento cómo lo veo.</div>
+      <div><b>2. Llamada de 30 min</b>Por Meet y sin costo, si ves que hay camino.</div>
+      <div><b>3. Propuesta en 48 horas</b>Qué hago, cuánto cuesta y cuándo lo entrego. Lo dejo funcionando y capacito a tu equipo.</div>
     </div>
   </div>
 </section>
@@ -263,25 +344,63 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
 <section class="trust" id="quien">
   <div class="wrap">
     <div class="bio">
-      <img src="damian.jpg" alt="Damián Barragán" width="120" height="120">
+      <img src="damian.jpg" alt="Damián Barragán" width="120" height="120" loading="lazy" decoding="async">
       <div>
         <span class="label">¿Quién lo resuelve?</span>
         <h2>15 años en ventas y operación de empresas de servicio. Conozco tu <em>día a día</em>.</h2>
         <p>Fui cajero en banca, asesor en telecomunicaciones, administré una tienda y la oficina de una cooperativa. Hoy trabajo en operaciones de software y facturación electrónica. Entro a tu negocio con un problema claro, lo soluciono y te lo dejo andando.</p>
       </div>
     </div>
+    <p class="label logos-h">Negocios y aliados con los que trabajo</p>
     <div class="logos">
       <span>Tumbao<small>Baile para sanar · Salón de baile</small></span>
       <span>Joyería Tanya Santiago<small>Taller de joyería</small></span>
       <span>Loggro<small>Aliado en software</small></span>
       <span>Nomiluz<small>Aliada en nómina</small></span>
     </div>
+    <!-- TODO(Damián): PRUEBA SOCIAL. Es lo que más falta. Aquí va (visible) 1 a 3 testimonios REALES, con permiso de la persona:
+         "frase corta con el resultado" — Nombre, negocio, ciudad. Ideal: un antes/después medible (ej. "la nómina pasó de 2 días a 2 horas").
+         También sirve un caso corto: problema → qué hice → resultado. No publiques nada que no puedas respaldar. Borra este comentario al llenarlo. -->
+  </div>
+</section>
+
+<!-- 4. DUDAS -->
+<section class="faq" id="dudas">
+  <div class="wrap">
+    <h2>Lo que quizá te estás <em>preguntando</em>.</h2>
+    <details>
+      <summary>¿Cuánto cuesta?</summary>
+      <p>Hablar conmigo y la llamada de 30 minutos <b>no cuestan nada</b>. El trabajo depende de tu caso: te paso el valor por escrito, con fecha de entrega, antes de que decidas nada.</p>
+      <!-- TODO(Damián): si quieres, aquí puedes poner un "desde $X" o rangos por tema. Un precio de referencia suele subir las respuestas de gente seria. -->
+    </details>
+    <details>
+      <summary>¿Me va a contestar un robot?</summary>
+      <p>Una IA me ayuda a entender lo que escribes y a ordenar las preguntas. Pero quien te escribe por WhatsApp <b>soy yo, Damián</b>.</p>
+    </details>
+    <details>
+      <summary>¿Y si no sé explicar mi problema?</summary>
+      <p>No hace falta. Cuéntalo como se lo contarías a un amigo, desordenado y todo, o mándame un audio. Yo lo ordeno contigo.</p>
+    </details>
+    <details>
+      <summary>¿Qué haces con mi número?</summary>
+      <p>Solo lo uso para responderte sobre lo que me contaste. Lo dejas tú, con tu autorización, y no tienes que dar más datos que tu nombre y tu WhatsApp.</p>
+    </details>
+    <details>
+      <summary>¿Y si lo mío no es lo tuyo?</summary>
+      <p>Te lo digo de frente. Si conozco a alguien que sí te pueda ayudar, te lo recomiendo.</p>
+    </details>
+  </div>
+</section>
+
+<section class="closing">
+  <div class="wrap">
     <div class="final">
-      <h3>Cuéntame qué te está quitando tiempo.</h3>
-      <a class="cta" href="#inicio" id="backToChat">Escribirle a Damián ↑</a>
+      <h3>Si ya sabes qué te pesa, cuéntamelo. Te escribo yo.</h3>
+      <a class="cta" href="#inicio" id="backToChat">Contarle mi problema a Damián ↑</a>
     </div>
   </div>
 </section>
+</main>
 
 <footer><div class="wrap"><span>© 2026 Damián Barragán · Colombia</span><a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a></div></footer>
 
@@ -378,7 +497,11 @@ if (CONFIG.company) $('#brandName').textContent = CONFIG.company;
 /* ===== BACKEND (Cloudflare Worker). Si no responde, la página funciona sola en modo demo. ===== */
 const API = { online:false };
 const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
-const healthReady = (async () => { try { const r = await fetch('/api/health', {signal: AbortSignal.timeout(2500)}); API.online = r.ok; API.agenda = !!(await r.json()).agenda; } catch {} })();
+const healthReady = (async () => {
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
+  try { const r = await fetch('/api/health', {signal: ctl.signal}); API.online = r.ok; } catch {}
+  clearTimeout(to);
+})();
 async function api(path, body, isForm){
   if (!API.online) return null;
   try {
@@ -387,18 +510,48 @@ async function api(path, body, isForm){
   } catch { return null; }
 }
 
+/* ===== MEDICIÓN DEL EMBUDO: sin cookies ni terceros; "dispara y olvida"; solo si hay backend ===== */
+function utmParams(){
+  const u = {};
+  try { for (const [k, v] of new URLSearchParams(location.search)) if (/^utm_[a-z_]{1,30}$/i.test(k) && Object.keys(u).length < 8) u[k.toLowerCase()] = v.slice(0, 100); } catch {}
+  return u;
+}
+const sentEvents = new Set();
+function track(type, extra){
+  if (!API.online || sentEvents.has(type)) return;
+  sentEvents.add(type);
+  try {
+    const body = JSON.stringify(Object.assign({sessionId, type}, extra || {}));
+    if (navigator.sendBeacon && navigator.sendBeacon('/api/event', new Blob([body], {type:'application/json'}))) return;
+    fetch('/api/event', {method:'POST', headers:{'content-type':'application/json'}, body, keepalive:true}).catch(() => {});
+  } catch {}
+}
+healthReady.then(() => {
+  const utm = utmParams();
+  try { if (document.referrer){ const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) utm.referrer = h.slice(0, 100); } } catch {}
+  track('visit', Object.keys(utm).length ? {utm} : {});
+});
+
 /* ===== PESTAÑAS + PANEL ===== */
-$('#tabs').innerHTML = ORDER.map(k => `<button type="button" class="tab" role="tab" data-k="${k}"><i style="background:var(${SOL[k].color})"></i>${SOL[k].name}</button>`).join('');
+$('#tabs').innerHTML = ORDER.map(k => `<button type="button" class="tab" role="tab" id="tab-${k}" aria-controls="panel" data-k="${k}"><i style="background:var(${SOL[k].color})"></i>${SOL[k].name}</button>`).join('');
 function showSol(k, adapt){
   const s = SOL[k];
-  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.k === k));
-  const panel = $('#panel'); panel.style.setProperty('--tone', `var(${s.color})`);
+  document.querySelectorAll('.tab').forEach(t => { const on = t.dataset.k === k; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+  const panel = $('#panel'); panel.dataset.k = k; panel.style.setProperty('--tone', `var(${s.color})`); panel.setAttribute('aria-labelledby', 'tab-' + k);
   panel.innerHTML = `<div class="panel-top"><span class="label">${s.name}</span><h3>${s.title}</h3><p>${s.lead}</p></div>
     <div class="incl">${s.items.map(([b,t]) => `<div><p><b>${b}</b><span>${t}</span></p></div>`).join('')}</div>
-    <div class="panel-foot"><span class="proof">${s.proof}</span><a class="cta" href="#inicio">Hablemos de esto ↑</a></div>`;
+    <div class="panel-foot"><span class="proof">${s.proof}</span><a class="cta" href="#inicio" id="panelCta">Hablemos de esto ↑</a></div>`;
+  $('#panelCta').onclick = focusChatSoon;
   if (adapt){ $('#solLabel').textContent = 'Lo que necesitas'; $('#solTitle').innerHTML = `Así resolvemos <em>${s.of}</em>.`; $('#solLead').textContent = 'Esto es lo que incluye.'; }
 }
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => showSol(t.dataset.k, false));
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => showSol(t.dataset.k, false);
+  t.onkeydown = e => {
+    const i = ORDER.indexOf(t.dataset.k); let n = null;
+    if (e.key === 'ArrowRight') n = ORDER[(i + 1) % ORDER.length]; else if (e.key === 'ArrowLeft') n = ORDER[(i + ORDER.length - 1) % ORDER.length];
+    if (n){ e.preventDefault(); showSol(n, false); $('#tab-' + n).focus(); }
+  };
+});
 showSol('nomina', false);
 
 function detect(text){
@@ -415,10 +568,12 @@ async function rotateSugg(first){
   const k = ORDER[suggIdx % ORDER.length], s = SOL[k], txt = $('#suggTxt'), sugg = $('#sugg');
   sugg.style.setProperty('--sg', `var(${s.color})`); $('#suggTag').textContent = s.name;
   if (!first){ txt.classList.add('out'); await wait(350); }
+  if (suggStopped) return;
   txt.innerHTML = '<span class="tdots"><i></i><i></i><i></i></span>'; txt.classList.remove('out');
   await wait(900);
   if (suggStopped) return;
   txt.classList.add('out'); await wait(200);
+  if (suggStopped) return;
   txt.textContent = `“${s.sugg}”`; txt.classList.remove('out');
   sugg.dataset.k = k;
   suggIdx++;
@@ -428,18 +583,20 @@ rotateSugg(true);
 function stopSugg(){ suggStopped = true; clearTimeout(suggTimer); }
 $('#sugg').onclick = () => {
   const k = $('#sugg').dataset.k; if (!k) return;
+  stopSugg();
   msg.value = SOL[k].sugg; autosize(); sendBtn.disabled = false; msg.focus();
 };
 msg.addEventListener('focus', () => { clearTimeout(suggTimer); });
+msg.addEventListener('input', stopSugg);
 msg.addEventListener('blur', () => { if (!msg.value && !suggStopped) suggTimer = setTimeout(() => rotateSugg(false), 1500); });
 
 /* ===== CHAT ===== */
 const lead = { problem:'', intent:null, budget:null, timing:null, decider:null, contact:null };
-let audioBlob = null, started = false, agentLead = null, agentBusy = false;
+let audioBlob = null, started = false, busy = false;
 const TOTAL = 5;
 function prog(n){ $('#progress').classList.add('on'); $('#progress span').style.width = (n/TOTAL*100) + '%'; }
 const scroll = () => { thread.scrollTop = thread.scrollHeight; };
-function botRow(html){ const r = document.createElement('div'); r.className = 'row bot'; r.innerHTML = `<img src="damian-avatar.jpg" alt="">${html}`; thread.append(r); scroll(); return r; }
+function botRow(html){ const r = document.createElement('div'); r.className = 'row bot'; r.innerHTML = `<img src="damian-avatar.jpg" alt="" width="26" height="26">${html}`; thread.append(r); scroll(); return r; }
 async function say(html, plain){
   const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
   await wait(500 + Math.min(html.length*6, 900)); t.remove();
@@ -449,20 +606,23 @@ async function say(html, plain){
 function me(text){ const r = document.createElement('div'); r.className = 'row me'; r.innerHTML = `<div class="bub">${esc(text)}</div>`; thread.append(r); scroll(); }
 function choose(opts){
   return new Promise(res => {
-    const box = document.createElement('div'); box.className = 'choices';
+    const box = document.createElement('div'); box.className = 'choices'; box.setAttribute('role', 'group');
     opts.forEach(o => { const b = document.createElement('button'); b.type = 'button'; b.className = 'choice';
       b.innerHTML = `${o.t}${o.d ? `<small>${o.d}</small>` : ''}`; b.onclick = () => { box.remove(); me(o.t); res(o); }; box.append(b); });
     thread.append(box); scroll();
+    try { box.firstChild.focus({preventScroll:true}); } catch {}
   });
 }
 function autosize(){ msg.classList.toggle('typed', !!msg.value); msg.style.height = 'auto'; msg.style.height = Math.min(msg.scrollHeight, 140) + 'px'; }
-msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < (agentLead ? 1 : 3) && !audioBlob; });
-msg.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } });
-$('#backToChat').onclick = () => setTimeout(() => { if (!started) msg.focus({preventScroll:true}); }, 500);
+msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < 3 && !audioBlob; });
+msg.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } });
+function focusChatSoon(){ setTimeout(() => { if (!started) msg.focus({preventScroll:true}); }, 500); }
+$('#backToChat').onclick = focusChatSoon;
+$('#pill').onclick = focusChatSoon;
 
 sendBtn.onclick = () => {
-  if (agentLead) return agentSend();
-  if (started) return;
+  if (started || busy) return;
+  busy = true; sendBtn.disabled = true;
   const wasRecording = rec && rec.state === 'recording';
   stopRec();
   setTimeout(() => start(msg.value.trim()), wasRecording ? 400 : 0);
@@ -470,28 +630,33 @@ sendBtn.onclick = () => {
 
 async function start(text){
   started = true; stopSugg();
-  $('#composer').hidden = true; $('#invite').hidden = true; msg.value = '';
+  $('#composer').hidden = true; $('#invite').hidden = true; $('#hint').hidden = true; msg.value = '';
+  const hadAudio = !!audioBlob;
+  me(text || '🎙 Nota de voz');
+  await healthReady;               // que un envío rápido no caiga por error en modo demo
+  track('start');
+  lead.problem = text;
   // 1. Si hay nota de voz y backend, la transcribimos
-  if (audioBlob && API.online){
-    me('🎙 Nota de voz');
+  if (hadAudio && API.online){
     const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
     const fd = new FormData(); fd.append('audio', audioBlob, 'nota.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm')); fd.append('sessionId', sessionId);
     const tr = await api('/api/transcribe', fd, true); t.remove();
-    if (tr && tr.text){ text = tr.text; botRow(`<div class="bub"><small>Te entendí:</small><br>“${esc(text)}”</div>`); }
-  } else me(text || '🎙 Nota de voz');
-  lead.problem = text;
+    if (tr && tr.text){ text = tr.text; lead.problem = text; botRow(`<div class="bub"><small>Te entendí:</small><br>“${esc(text)}”</div>`); }
+  }
+  audioBlob = null;
   prog(1);
   // 2. Entender el problema: IA en el backend, palabras clave si no hay backend
   const ai = text ? await api('/api/chat', {sessionId, message:text}) : null;
   let k = ai && SOL[ai.intent] ? ai.intent : detect(text || '');
   if (ai && ai.reply) await say(ai.reply, true);
   if (!k){
-    if (!ai) await say('Gracias por contarme. Para orientarte bien, ¿con cuál de estas se parece más?');
+    if (!ai) await say(text ? 'Gracias por contarme. Para orientarte bien, ¿con cuál de estas se parece más?' : 'Recibí tu audio, pero ahora no pude transcribirlo. ¿Con cuál de estas se parece más tu caso?');
     const o = await choose(ORDER.map(x => ({t:SOL[x].name, k:x})).concat([{t:'Otra cosa', k:null}]));
     k = o.k;
   }
   if (k){
     lead.intent = k; document.body.dataset.intent = k; showSol(k, true);
+    track('intent', {intent:k});
     if (!ai) await say(SOL[k].chat);
     const card = document.createElement('div'); card.className = 'sol-card';
     card.innerHTML = `<b>${SOL[k].name}</b><ul>${SOL[k].items.slice(0,3).map(i => `<li>${i[0]}</li>`).join('')}</ul><button type="button" class="linkbtn">Ver el detalle ↓</button>`;
@@ -501,41 +666,59 @@ async function start(text){
     await say('Te soy sincero: puede que eso no sea lo mío. Igual déjame tus datos y, si te puedo ayudar o conozco a alguien, te escribo.');
   }
   // 3. Calificación
-  await say('Te hago 3 preguntas rápidas. ¿Cuánto tienes pensado invertir?');
+  await say('Te hago 3 preguntas rápidas, no toma ni un minuto. <b>1 de 3:</b> ¿cuánto tienes pensado invertir, más o menos?');
   prog(2);
   lead.budget = await choose([{id:'b1', t:'Hasta $1,5 M', d:'Algo puntual'},{id:'b2', t:'$1,5 M – $5 M', d:'Una solución completa'},{id:'b3', t:'Más de $5 M', d:'Varias áreas del negocio'}]);
-  await say('¿Cuándo lo necesitas?');
+  track('q_budget');
+  await say('<b>2 de 3:</b> ¿cuándo lo necesitas?');
   prog(3);
   lead.timing = await choose([{id:'now', t:'Ya, es urgente'},{id:'month', t:'Este mes'},{id:'later', t:'Solo estoy averiguando'}]);
-  await say('¿Esa decisión la tomas tú o con alguien más?');
+  track('q_timing');
+  await say('<b>3 de 3:</b> ¿esa decisión la tomas tú o con alguien más?');
   prog(4);
   lead.decider = await choose([{id:'solo', t:'La tomo yo'},{id:'with', t:'Con mi socio o familia'},{id:'other', t:'La toma otra persona'}]);
+  track('q_decider');
   if (lead.decider.id === 'with') await say('Perfecto. Si quieres, esa persona nos acompaña en la llamada y así nadie repite la historia.');
-  await say('Listo. ¿A qué WhatsApp te escribo?');
+  await say('Última cosa: ¿a qué WhatsApp te escribo? Solo lo uso para responderte.');
   prog(5);
+  track('contact_form');
   lead.contact = await contactForm();
-  me(`${lead.contact.name} · ${lead.contact.phone}`);
+  me(`${lead.contact.name} · ${lead.contact.shown}`);
   await finish();
 }
 
+/* Acepta "300 123 4567", "+57 300-123-4567", "(57) 3001234567", "0057 300 123 4567".
+   Devuelve el número con indicativo (57…) o null si no sirve. Otros países: solo con "+". */
+function normPhone(raw){
+  const t = String(raw).trim();
+  let d = t.replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.length === 12 && d.startsWith('57') && d[2] === '3') return {num:d, shown:`+57 ${d.slice(2,5)} ${d.slice(5,8)} ${d.slice(8)}`};
+  if (d.length === 10 && d[0] === '3') return {num:'57' + d, shown:`+57 ${d.slice(0,3)} ${d.slice(3,6)} ${d.slice(6)}`};
+  if (/^\+/.test(t) && !/^\+\s*57/.test(t) && d.length >= 10 && d.length <= 15) return {num:d, shown:'+' + d};
+  return null;
+}
 function contactForm(){
   return new Promise(res => {
     const f = document.createElement('form'); f.className = 'cform'; f.noValidate = true;
-    f.innerHTML = `<label class="sr" for="cName">Tu nombre</label><input type="text" id="cName" placeholder="Tu nombre" autocomplete="given-name" maxlength="80">
-      <label class="sr" for="cPhone">WhatsApp</label><input type="tel" id="cPhone" placeholder="WhatsApp · 300 123 4567" inputmode="tel" autocomplete="tel" maxlength="20">
-      <label class="ok"><input type="checkbox" id="cOk">Acepto que me escriban por WhatsApp y el tratamiento de mis datos (Ley 1581 de 2012).</label>
-      <span class="err" id="cErr" hidden></span>
-      <button type="submit" class="cta" style="justify-self:start">Enviar</button>`;
+    f.innerHTML = `<label class="f" for="cName">Tu nombre</label><input type="text" id="cName" placeholder="Ej: Marta" autocomplete="name" maxlength="80" enterkeyhint="next">
+      <label class="f" for="cPhone">Tu WhatsApp</label><input type="tel" id="cPhone" placeholder="300 123 4567" inputmode="tel" autocomplete="tel" maxlength="24" enterkeyhint="send">
+      <label class="ok"><input type="checkbox" id="cOk"><span>Acepto que Damián me escriba por WhatsApp y trate mis datos solo para responderme (Ley 1581 de 2012).</span></label>
+      <span class="err" id="cErr" role="alert" hidden></span>
+      <button type="submit" class="cta" style="justify-self:start">Enviar mis datos</button>`;
+    const nameI = f.querySelector('#cName'), phoneI = f.querySelector('#cPhone'), okI = f.querySelector('#cOk'), err = f.querySelector('#cErr');
+    [nameI, phoneI].forEach(i => i.addEventListener('focus', () => setTimeout(() => { try { i.scrollIntoView({block:'center', behavior: reduce ? 'auto' : 'smooth'}); } catch {} }, 300)));
     f.onsubmit = e => {
       e.preventDefault();
-      const name = f.querySelector('#cName').value.trim(), phone = f.querySelector('#cPhone').value.replace(/[^\d+]/g,''), err = f.querySelector('#cErr');
-      const fail = m => { err.textContent = m; err.hidden = false; };
-      if (!name) return fail('Escribe tu nombre para saber cómo saludarte.');
-      if (phone.replace(/\D/g,'').length < 10) return fail('El WhatsApp debe tener 10 dígitos. Ej: 300 123 4567.');
-      if (!f.querySelector('#cOk').checked) return fail('Necesito tu autorización para escribirte.');
-      f.remove(); res({ name, phone });
+      const name = nameI.value.trim(), ph = normPhone(phoneI.value);
+      nameI.removeAttribute('aria-invalid'); phoneI.removeAttribute('aria-invalid');
+      const fail = (m, el) => { err.textContent = m; err.hidden = false; if (el){ el.setAttribute('aria-invalid','true'); el.focus(); } };
+      if (!name) return fail('Escribe tu nombre para saber cómo saludarte.', nameI);
+      if (!ph) return fail('Revisa tu WhatsApp: 10 dígitos que empiezan por 3. Ej: 300 123 4567 (también sirve +57 300 123 4567).', phoneI);
+      if (!okI.checked) return fail('Necesito tu autorización para escribirte.', okI);
+      f.remove(); res({ name, phone:ph.num, shown:ph.shown });
     };
-    thread.append(f); scroll(); f.querySelector('input').focus({preventScroll:true});
+    thread.append(f); scroll(); nameI.focus({preventScroll:true});
   });
 }
 
@@ -546,111 +729,70 @@ function localScore(){
   return { tier: pts >= 20 ? 'A' : pts >= 13 ? 'B' : 'C', bookingUrl:null, demo:true };
 }
 async function finish(){
-  const res = await api('/api/lead', {
+  track('lead');
+  const payload = {
     sessionId, problem:lead.problem, intent:lead.intent, budget:lead.budget.id, timing:lead.timing.id, decider:lead.decider.id,
-    name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href,
-    utm:Object.fromEntries(new URLSearchParams(location.search)) }) || localScore();
-  const first = esc(lead.contact.name.split(' ')[0]), topic = lead.intent ? SOL[lead.intent].name.toLowerCase() : 'tu negocio';
-  if (res.agent && res.id){
-    await say(`Gracias, ${first}. Ahora sí, agendemos: ¿cuándo te queda bien una llamada de 30 minutos? Escríbeme o mándame un audio, por ejemplo <i>“mañana después de las 7”</i>.`);
-    openAgent(res.id, false); return;
+    name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href, utm:utmParams() };
+  let res = null, tries = 0;
+  while (!res){
+    if (!API.online){ res = localScore(); break; }
+    res = await api('/api/lead', payload);
+    if (!res && tries === 0){ await wait(1200); res = await api('/api/lead', payload); }   // un reintento silencioso
+    if (res) break;
+    // El servidor falló: no digas "te escribo" si tus datos no llegaron.
+    tries++;
+    await say('No pude enviar tus datos, parece un problema de conexión. Lo que escribiste no se perdió.' + (tries > 1 ? ' Si sigue fallando, escríbeme por <a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a>.' : ''));
+    await choose([{t:'Intentar de nuevo'}]);
   }
-  if (res.tier === 'A') await say(`Gracias, ${first}. Mi asistente te escribe <b>hoy mismo</b> por WhatsApp.`);
-  else if (res.tier === 'B') await say(`Gracias, ${first}. Mi asistente te escribe por WhatsApp <b>en menos de 24 horas</b>.`);
-  else await say(`Gracias, ${first}. Te voy a enviar por WhatsApp ideas prácticas sobre ${topic}. Cuando estés listo, lo resolvemos.`);
-  if (res.tier !== 'C' && res.bookingUrl){
-    await say('Si prefieres, elige tú mismo la hora de nuestra llamada:');
-    const a = document.createElement('a'); a.className = 'cta book'; a.href = res.bookingUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Elegir hora →';
+  const first = esc(lead.contact.name.split(' ')[0]), topic = lead.intent ? SOL[lead.intent].of : 'tu negocio';
+  if (res.tier === 'A') await say(`Gracias, ${first}. Yo, Damián, te escribo <b>hoy</b> por WhatsApp.`);
+  else if (res.tier === 'C') await say(`Gracias, ${first}. Te escribo por WhatsApp con ideas útiles sobre ${esc(topic)} para que empieces a avanzar. Cuando quieras que lo resolvamos juntos, me dices.`);
+  else await say(`Gracias, ${first}. Yo, Damián, te escribo por WhatsApp <b>en menos de 24 horas</b>.`);
+  if (typeof res.bookingUrl === 'string' && /^https:\/\//i.test(res.bookingUrl)){
+    const a = document.createElement('a'); a.className = 'cta ghost book'; a.href = res.bookingUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Prefiero elegir hora →';
     thread.append(a); scroll();
   }
   if (res.demo) await say('<small>(Modo demo: este mensaje no se envió a ningún sistema.)</small>');
 }
 
-/* ===== AGENTE QUE AGENDA ===== */
-function openAgent(id, resume){
-  agentLead = { id, resume };
-  $('#invite').hidden = true; $('#composer').hidden = false;
-  msg.placeholder = 'Ej: el jueves después de las 7'; msg.value = ''; autosize(); sendBtn.disabled = true;
-  audioBlob = null; msg.focus({preventScroll:true});
-}
-async function agentSend(){
-  if (agentBusy) return;
-  agentBusy = true;
-  const wasRecording = rec && rec.state === 'recording';
-  stopRec();
-  if (wasRecording) await wait(400);
-  let text = msg.value.trim();
-  if (audioBlob && API.online){
-    const fd = new FormData(); fd.append('audio', audioBlob, 'nota.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm')); fd.append('sessionId', sessionId);
-    audioBlob = null;
-    const tr = await api('/api/transcribe', fd, true);
-    if (tr && tr.text) text = tr.text;
-  }
-  audioBlob = null;
-  if (!text){ agentBusy = false; return; }
-  msg.value = ''; autosize(); sendBtn.disabled = true;
-  me(text);
-  const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
-  const r = await api('/api/agent', {leadId:agentLead.id, sessionId, message:text, resume:agentLead.resume});
-  t.remove();
-  if (r && r.reply) await say(r.reply, true);
-  else await say('Se me cruzó la señal. Intenta de nuevo en un momento; si no, Damián te escribe por WhatsApp.');
-  if (r && r.booked){
-    botRow(`<div class="bub"><small>📅 Agendado</small><br><b>${esc(r.booked.label)}</b></div>`);
-    msg.placeholder = '¿Algo más que quieras contarme antes de la llamada?';
-  }
-  agentBusy = false; msg.focus({preventScroll:true});
-}
-// Link del seguimiento por WhatsApp: holadami.com/?r=<id>
-(async () => {
-  const id = new URLSearchParams(location.search).get('r');
-  if (!id) return;
-  await healthReady;
-  if (!API.online || !API.agenda) return;
-  try {
-    const r = await fetch('/api/resume?lead=' + encodeURIComponent(id));
-    if (!r.ok) return;
-    const d = await r.json();
-    started = true; stopSugg();
-    me('Quiero agendar');
-    if (d.meeting) await say(`Hola de nuevo, ${esc(d.firstName)}. Ya tienes una llamada agendada: <b>${esc(d.meeting)}</b>. Si necesitas cambiarla, dime.`);
-    else await say(`Hola de nuevo, ${esc(d.firstName)}. ¿Cuándo te queda bien una llamada de 30 minutos? Por ejemplo <i>“mañana después de las 7”</i>.`);
-    openAgent(d.leadId, true);
-  } catch {}
-})();
-
 /* ===== VOZ ===== */
 let rec = null, chunks = [], stream = null, speech = null, timer = null, ac = null;
 mic.onclick = () => (rec && rec.state === 'recording') ? stopRec() : startRec();
+function flash(text){ const l = $('#recLine'); l.textContent = text; l.classList.add('warn', 'on'); setTimeout(() => { if (l.classList.contains('warn')) l.classList.remove('on', 'warn'); }, 6000); }
 async function startRec(){
+  if (started) return;
   try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch { msg.placeholder = 'No tengo acceso al micrófono. Escríbeme aquí.'; msg.focus(); return; }
+  catch { flash('No tengo acceso al micrófono. Escríbeme aquí, sin problema.'); msg.focus(); return; }
+  if (typeof MediaRecorder === 'undefined'){ stream.getTracks().forEach(t => t.stop()); flash('Tu navegador no graba audio. Escríbeme aquí, sin problema.'); msg.focus(); return; }
   stopSugg();
-  chunks = []; rec = new MediaRecorder(stream);
+  try { chunks = []; rec = new MediaRecorder(stream); }
+  catch { stream.getTracks().forEach(t => t.stop()); flash('No pude grabar. Escríbeme aquí, sin problema.'); return; }
   rec.ondataavailable = e => e.data.size && chunks.push(e.data);
   rec.onstop = () => { audioBlob = new Blob(chunks, {type: rec.mimeType || 'audio/webm'}); stream.getTracks().forEach(t => t.stop()); sendBtn.disabled = false; };
   rec.start();
-  ac = new (window.AudioContext||window.webkitAudioContext)(); const an = ac.createAnalyser(); an.fftSize = 128;
-  ac.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount);
-  (function meter(){ if (!rec || rec.state !== 'recording'){ document.documentElement.style.setProperty('--lvl', 0); return; }
-    an.getByteFrequencyData(buf); document.documentElement.style.setProperty('--lvl', Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/80, 1)); requestAnimationFrame(meter); })();
+  try {
+    ac = new (window.AudioContext||window.webkitAudioContext)(); const an = ac.createAnalyser(); an.fftSize = 128;
+    ac.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount);
+    (function meter(){ if (!rec || rec.state !== 'recording'){ document.documentElement.style.setProperty('--lvl', 0); return; }
+      an.getByteFrequencyData(buf); document.documentElement.style.setProperty('--lvl', Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/80, 1)); requestAnimationFrame(meter); })();
+  } catch {}
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SR){ speech = new SR(); speech.lang = 'es-CO'; speech.continuous = true; speech.interimResults = true;
+  if (SR){ try { speech = new SR(); speech.lang = 'es-CO'; speech.continuous = true; speech.interimResults = true;
     const prior = msg.value ? msg.value.trim() + ' ' : '';
     speech.onresult = e => { msg.value = prior + [...e.results].map(r => r[0].transcript).join(' '); autosize(); sendBtn.disabled = false; };
-    try { speech.start(); } catch {} }
+    speech.start(); } catch { speech = null; } }
   mic.classList.add('rec'); mic.setAttribute('aria-label','Detener grabación');
-  const t0 = Date.now(), line = $('#recLine'); line.classList.add('on');
+  const t0 = Date.now(), line = $('#recLine'); line.classList.remove('warn'); line.classList.add('on');
   timer = setInterval(() => { const s = Math.floor((Date.now()-t0)/1000);
     line.textContent = `● Grabando ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · toca el micrófono para terminar`;
     if (s >= CONFIG.maxRecordSeconds) stopRec(); }, 250);
 }
 function stopRec(){
-  clearInterval(timer); $('#recLine').classList.remove('on');
+  clearInterval(timer); const l = $('#recLine'); if (!l.classList.contains('warn')) l.classList.remove('on');
   if (speech){ try { speech.stop(); } catch {} speech = null; }
   if (rec && rec.state === 'recording') rec.stop();
   if (ac){ ac.close().catch(()=>{}); ac = null; }
-  mic.classList.remove('rec'); mic.setAttribute('aria-label','Enviar nota de voz');
+  mic.classList.remove('rec'); mic.setAttribute('aria-label','Contar mi problema con un audio');
 }
 </script>
 </body>

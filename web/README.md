@@ -6,7 +6,7 @@ Página tipo chat + backend en Cloudflare. Todo vive en Cloudflare: la página, 
 Visitante ──► Página (public/) ──► Worker (src/worker.js)
                                      ├─ OpenAI: entiende el problema y transcribe notas de voz
                                      ├─ D1: guarda leads y conversación
-                                     └─ Kapso: te avisa por WhatsApp cuando llega un lead
+                                     └─ Kapso: te avisa por WhatsApp (lead nuevo, sin contactar, resumen diario)
 ```
 
 ## Qué hace cada ruta
@@ -16,16 +16,19 @@ Visitante ──► Página (public/) ──► Worker (src/worker.js)
 | `GET /api/health` | Dice si la IA y WhatsApp están configurados |
 | `POST /api/chat` | La IA lee el problema, lo clasifica (nómina, software, IA, procesos, datos) y responde |
 | `POST /api/transcribe` | Convierte la nota de voz en texto |
-| `POST /api/lead` | Guarda el lead, calcula prioridad A/B/C, elige calendario y te avisa por WhatsApp |
-| `GET /api/leads` | Tu lista de leads (requiere `ADMIN_TOKEN`) |
-| `POST /api/agent` | El agente conversa con el lead y **agenda** la reunión (herramientas: horarios, reservar, avisarte) |
-| `GET /api/resume` | Retoma la conversación desde el link `holadami.com/?r=<lead>` de un seguimiento |
-| cron cada 30 min | Seguimiento a leads A/B, confirmación y recordatorios (solo con `AUTO_CONTACT_LEADS="true"`) |
+| `POST /api/lead` | Guarda el lead, calcula prioridad A/B/C, prepara el brief y te avisa por WhatsApp |
+| `POST /api/event` | Embudo: `{sessionId, type, intent?, utm?}`. Siempre responde 204; lo inválido se ignora. Límite ~120 por IP cada 10 min |
+| `GET /api/leads` | Tus leads con su brief y estado (requiere `ADMIN_TOKEN`) |
+| `PATCH /api/leads/:id` | Cambia el estado (`nuevo`, `contactado`, `agendado`, `cliente`, `descartado`) y/o la nota (máx. 1000) |
+| `GET /api/stats?days=30` | Embudo por sesiones únicas, prioridades, temas, fuentes, leads por día, estados y horas promedio al primer contacto (1 a 90 días) |
+| cron cada hora | Empujón a ti por leads sin contactar y resumen diario de las 7 am. Solo te escribe a ti |
+
+Los endpoints de admin usan `Authorization: Bearer <ADMIN_TOKEN>`.
 
 **Prioridad:** inversión ×3 + urgencia ×3 + quién decide ×2 + tema que sí resuelvo (3). Máximo 27.
 A ≥ 20 → contacto hoy · B ≥ 13 → contacto en 24 h · C → nutrir con contenido.
 
-**Calendario:** si el tema es *software* → `BOOKING_URL_LOGGRO` (HubSpot de Loggro). Todo lo demás → `BOOKING_URL_PERSONAL` (tu Google Calendar).
+**Agenda:** la haces tú a mano. `BOOKING_URL_LOGGRO` (software) y `BOOKING_URL_PERSONAL` (lo demás) son opcionales: si los llenas, `/api/lead` devuelve el link; vacíos, no pasa nada.
 
 Si el backend no responde, la página sigue funcionando sola (clasifica por palabras clave y muestra "modo demo").
 
@@ -42,7 +45,6 @@ npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put KAPSO_API_KEY
 npx wrangler secret put ADMIN_TOKEN           # una clave larga que inventes tú
 npx wrangler secret put IP_SALT               # otra cadena aleatoria
-npx wrangler secret put N8N_SECRET            # la misma clave que valida tus webhooks de n8n
 
 npx wrangler deploy
 ```
@@ -73,52 +75,23 @@ y pon `KAPSO_NOTIFY_TEMPLATE = "nuevo_lead"`.
 
 `AUTO_CONTACT_LEADS = "false"`. Si lo pones en `"true"` y defines `KAPSO_LEAD_TEMPLATE` (plantilla aprobada con `{{1}}` = nombre y `{{2}}` = tema), el asistente les escribe solo a los leads A y B. Es un mensaje a clientes reales: actívalo después de probar con tu propio número.
 
-## El agente que agenda (n8n)
+## Copiloto de leads
 
-Tras las 3 preguntas, los leads A y B siguen hablando con el agente en lenguaje natural ("el jueves después de las 7"), por texto o voz. El agente propone horarios y **reserva la cita**; no manda links. Si hace falta una persona (excepción de horario, cambio de cita, pregunta que no sabe), te avisa por WhatsApp.
+El sistema te ayuda a convertir; no agenda ni le escribe a los leads por su cuenta.
 
-**Las reglas de horario viven en `src/agent.js`** (el modelo no puede reservar fuera de ellas), en hora de Bogotá, llamadas de 30 min, 15 min de colchón, mínimo 3 h de anticipación, 14 días hacia adelante:
+**Brief del lead** (`src/brief.js`). Al guardar un lead, OpenAI prepara: resumen, qué necesita de verdad, la **apertura** (primer WhatsApp tuyo, máx. 350 caracteres, termina en pregunta), 3 preguntas de descubrimiento, alertas ("decide otra persona", "presupuesto bajo…") y el frente sugerido. Se guarda en `leads.brief`. El texto del lead va delimitado y se trata como dato, no como instrucción. Si la IA falla o tarda más de 10 s, se usa un brief de plantilla: nunca falta. Te llega por WhatsApp con prioridad, nombre, teléfono, resumen, la apertura y un link `wa.me` que abre el chat con la apertura ya escrita.
 
-| Tema | Calendario | Horarios |
-|---|---|---|
-| IA, procesos, datos, nómina | Google (`personal`) | L-V 6:30 pm–9:00 pm · sábado 8 am–12 m |
-| Software (Loggro) | Outlook (`loggro`) | L-V 9 am–6 pm |
+**Embudo.** La página manda a `POST /api/event` una etapa por sesión: `visit`, `start`, `intent`, `q_budget`, `q_timing`, `q_decider`, `contact_form`; el servidor registra `lead` solo. `GET /api/stats` las cuenta como sesiones únicas, con los días en hora de Bogotá.
 
-Cambiar un horario = editar `WINDOWS` en `src/agent.js`.
+**Empujón.** Cada hora, entre 7 am y 9 pm (Bogotá), el cron te avisa una sola vez por lead: lead A en `nuevo` hace más de 2 h, lead B hace más de 24 h. A las 7 am te llega el resumen del día anterior y los pendientes. Todo va a `OWNER_WHATSAPP`, nunca a un lead. Si marcas el lead como `contactado`, deja de avisar. Si Kapso falla, reintenta a la hora siguiente.
 
-### Los 2 webhooks de n8n
-
-Ambos reciben el header `x-api-key` (= secreto `N8N_SECRET`; rechaza si no coincide). `N8N_BASE_URL` es la base, ej. `https://tu-n8n.app.n8n.cloud/webhook`.
-
-**`POST {N8N_BASE_URL}/availability`** — qué está ocupado
-```json
-// entra
-{ "calendar": "personal" | "loggro", "from": "2026-10-26T00:00:00Z", "to": "2026-11-10T00:00:00Z" }
-// responde
-{ "busy": [ { "start": "2026-10-27T23:30:00Z", "end": "2026-10-28T00:30:00Z" } ] }
-```
-`personal` → Google Calendar (free/busy). `loggro` → Outlook (getSchedule / eventos).
-
-**`POST {N8N_BASE_URL}/book`** — crea el evento
-```json
-// entra
-{ "calendar": "personal", "start": "2026-10-29T00:00:00Z", "end": "2026-10-29T00:30:00Z",
-  "title": "Llamada con Marta · IA y automatización", "description": "…", "attendeeName": "Marta", "phone": "573001234567", "leadId": "…" }
-// responde
-{ "eventId": "abc123" }
-```
-
-### Mensajes proactivos (apagados por defecto)
-
-Escriben a clientes reales. Se activan con `AUTO_CONTACT_LEADS = "true"` **después** de probar con tu número y de tener las plantillas aprobadas en Meta:
-
-| Variable | Cuándo se envía | Parámetros |
-|---|---|---|
-| `KAPSO_FOLLOWUP_TEMPLATE` | Lead A/B sin cita: a las 3 h y a las 24 h (máx. 2, solo 8 am–8 pm) | `{{1}}` nombre · `{{2}}` tema · `{{3}}` link para retomar |
-| `KAPSO_CONFIRM_TEMPLATE` | Al agendar | `{{1}}` nombre · `{{2}}` cuándo |
-| `KAPSO_REMIND_TEMPLATE` | 24 h y 1 h antes de la cita | `{{1}}` nombre · `{{2}}` cuándo |
-
-Límite actual: si el lead responde **dentro de WhatsApp**, nadie lo procesa todavía (lo ves en el inbox de Kapso). El agente conversa en la página, a la que el lead vuelve con el link del seguimiento. Responder dentro de WhatsApp es la siguiente fase.
+| Variable | Para qué |
+|---|---|
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | El brief (sin llave, usa la plantilla) |
+| `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `OWNER_WHATSAPP` | Los avisos a ti |
+| `KAPSO_NOTIFY_TEMPLATE` | Plantilla Utility con **un** parámetro `{{1}}` (todo el aviso en una línea, hasta ~900 caracteres). Vacío = texto libre, que solo llega dentro de las 24 h desde que le escribiste al número. Para que el empujón y el resumen de las 7 am lleguen siempre, usa plantilla |
+| `ADMIN_TOKEN` | Leads, cambios de estado y métricas |
+| `AUTO_CONTACT_LEADS` | Sigue apagado (`"false"`). Es el único camino que escribiría a un lead |
 
 ## Probar en tu computador
 

@@ -10,6 +10,7 @@
 
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
 const FRENTES = ['nomina', 'software', 'ia', 'procesos', 'datos', 'otro'];
+const TEMA_FRASE = { nomina: 'la nómina', software: 'el software y la facturación', ia: 'automatización con IA', procesos: 'los procesos de tu negocio', datos: 'tus clientes y campañas' };
 const BUDGET = { b1: 'hasta $1,5 M', b2: '$1,5 M a $5 M', b3: 'más de $5 M' };
 const TIMING = { now: 'urgente', month: 'este mes', later: 'solo averiguando' };
 const DECIDER = { solo: 'decide solo', with: 'decide con socio o familia', other: 'decide otra persona' };
@@ -111,7 +112,7 @@ function normalize(out, base) {
 // Brief mínimo sin IA: plantillas con los datos que ya tenemos.
 export function fallbackBrief(lead) {
   const first = String(lead.name || '').trim().split(/\s+/)[0] || 'hola';
-  const tema = INTENT_NAMES[lead.intent];
+  const tema = TEMA_FRASE[lead.intent];
   const alertas = [];
   if (lead.decider === 'other') alertas.push('decide otra persona');
   if (lead.budget === 'b1' && (lead.timing === 'now' || lead.tier === 'A')) alertas.push('presupuesto bajo para la urgencia');
@@ -125,9 +126,9 @@ export function fallbackBrief(lead) {
     datos: ['¿Cuántos clientes tienen registrados y dónde están guardados?', '¿Han hecho campañas por WhatsApp antes? ¿Qué resultado tuvieron?', '¿Qué quisieran lograr con esa base en los próximos 3 meses?'],
   }[lead.intent] || ['¿Cuál es el problema que más tiempo o plata les está costando hoy?', '¿Cómo lo manejan actualmente?', '¿Qué resultado haría que valiera la pena resolverlo?'];
   return {
-    resumen: `${lead.name || 'El lead'} ${tema ? `escribió por ${tema.toLowerCase()}` : 'dejó sus datos'}. ${[BUDGET[lead.budget] && `Presupuesto ${BUDGET[lead.budget]}`, TIMING[lead.timing], DECIDER[lead.decider]].filter(Boolean).join(', ')}.`.slice(0, 400),
-    necesidad: tema ? `Resolver un tema de ${tema.toLowerCase()} en su negocio (por confirmar en la llamada).` : 'Por confirmar en la llamada: no quedó clasificado.',
-    apertura: `Hola ${first}, soy Damián Barragán. Vi lo que me contaste${tema ? ` sobre ${tema.toLowerCase()}` : ''} en mi página y quiero entender bien cómo lo estás manejando hoy. ¿Qué es lo que más te está quitando tiempo en este momento?`.slice(0, MAX_OPENING),
+    resumen: `${lead.name || 'El lead'} ${tema ? `escribió por ${tema}` : 'dejó sus datos'}. ${[BUDGET[lead.budget] && `Presupuesto ${BUDGET[lead.budget]}`, TIMING[lead.timing], DECIDER[lead.decider]].filter(Boolean).join(', ')}.`.slice(0, 400),
+    necesidad: tema ? `Resolver algo de ${tema} en su negocio (por confirmar en la llamada).` : 'Por confirmar en la llamada: no quedó clasificado.',
+    apertura: `Hola ${first}, soy Damián Barragán. Vi lo que me contaste${tema ? ` sobre ${tema}` : ''} en mi página y quiero entender bien cómo lo estás manejando hoy. ¿Qué es lo que más te está quitando tiempo en este momento?`.slice(0, MAX_OPENING),
     preguntas: pregTema,
     alertas,
     frente_sugerido: FRENTES.includes(lead.intent) ? lead.intent : 'otro',
