@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "damian-web",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "damian-web",
+      "database_id": "REEMPLAZAR_CON_EL_ID_DE_D1",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": { "enabled": true },
+  // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) van con `wrangler secret put`.
+  "vars": {
+    "OPENAI_MODEL": "gpt-4o-mini",
+    "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
+    "KAPSO_PHONE_NUMBER_ID": "",
+    "OWNER_WHATSAPP": "",
+    "KAPSO_NOTIFY_TEMPLATE": "",
+    "KAPSO_LEAD_TEMPLATE": "",
+    "KAPSO_TEMPLATE_LANG": "es",
+    "AUTO_CONTACT_LEADS": "false",
+    "BOOKING_URL_LOGGRO": "",
+    "BOOKING_URL_PERSONAL": ""
+  }
+}

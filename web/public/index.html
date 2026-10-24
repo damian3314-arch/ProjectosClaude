@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Damián Barragán</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Cuéntame qué quieres resolver en tu negocio: nómina, software, automatización con IA, procesos o campañas con tus datos.">
+<meta property="og:title" content="¿Qué quieres resolver en tu negocio?">
+<meta property="og:description" content="Escríbeme o háblame. Nómina, software, bots de WhatsApp, procesos y campañas con tus datos.">
+<meta property="og:image" content="damian.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: tres pantallas en el celular. 1) Un chat limpio con aura de color. 2) La solución, que se adapta a lo que la persona contó. 3) Quién soy y contacto.
+   Identidad: cinco colores = cinco formas de resolver. El aura y el acento de la página toman el color del problema detectado. */
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --fg:#0d1220; --muted:#5f6779; --line:#e3e6ec;
+  --c-nomina:#e0407a; --c-software:#2f5bff; --c-ia:#0fa874; --c-procesos:#e89a00; --c-datos:#7c5cff;
+  --accent:#0d1220; --accent-ink:#ffffff;
+  --f-body:"Onest","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-serif:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  --r:22px; --lvl:0;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a0c12; --surface:#121621; --fg:#eef1f7; --muted:#9aa2b5; --line:#232838;
+  --c-nomina:#ff6b9b; --c-software:#6e8cff; --c-ia:#2fd39a; --c-procesos:#ffbb3a; --c-datos:#a48fff;
+  --accent:#eef1f7; --accent-ink:#0a0c12; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0a0c12; --surface:#121621; --fg:#eef1f7; --muted:#9aa2b5; --line:#232838;
+  --c-nomina:#ff6b9b; --c-software:#6e8cff; --c-ia:#2fd39a; --c-procesos:#ffbb3a; --c-datos:#a48fff;
+  --accent:#eef1f7; --accent-ink:#0a0c12; color-scheme:dark }
+body[data-intent="nomina"]{--accent:var(--c-nomina);--accent-ink:#fff}
+body[data-intent="software"]{--accent:var(--c-software);--accent-ink:#fff}
+body[data-intent="ia"]{--accent:var(--c-ia);--accent-ink:#fff}
+body[data-intent="procesos"]{--accent:var(--c-procesos);--accent-ink:#1a1200}
+body[data-intent="datos"]{--accent:var(--c-datos);--accent-ink:#fff}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .4s}
+.wrap{width:100%;max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;font-weight:500;letter-spacing:-.025em;text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+em{font-family:var(--f-serif);font-style:italic;font-weight:400;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.label{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+/* Marca: cinco puntos = cinco soluciones */
+.dots{display:inline-flex;gap:3px}
+.dots i{width:6px;height:6px;border-radius:50%}
+.dots i:nth-child(1){background:var(--c-nomina)}.dots i:nth-child(2){background:var(--c-software)}
+.dots i:nth-child(3){background:var(--c-ia)}.dots i:nth-child(4){background:var(--c-procesos)}.dots i:nth-child(5){background:var(--c-datos)}
+
+/* TOP */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;max-width:1080px}
+.me-chip{display:flex;align-items:center;gap:10px;text-decoration:none}
+.me-chip img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.me-chip b{display:block;font-weight:600;font-size:15px;line-height:1.1}
+.me-chip span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.me-chip span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c-ia)}
+.brand-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:9px 14px;font:600 14px var(--f-body);text-decoration:none;letter-spacing:-.01em}
+
+/* HERO / CHAT */
+.hero{position:relative;isolation:isolate;padding-block:28px 48px;overflow:hidden}
+.aura{position:absolute;left:50%;top:46%;width:min(640px,150vw);aspect-ratio:1;transform:translate(-50%,-50%) scale(calc(1 + var(--lvl)*.25));z-index:-1;pointer-events:none;filter:blur(60px);opacity:.5;transition:transform .12s}
+.aura i{position:absolute;width:50%;height:50%;border-radius:50%;transition:background .8s;animation:drift 18s ease-in-out infinite}
+.aura i:nth-child(1){left:6%;top:8%;background:var(--c-nomina)}
+.aura i:nth-child(2){right:4%;top:14%;background:var(--c-software);animation-delay:-4s}
+.aura i:nth-child(3){left:12%;bottom:6%;background:var(--c-ia);animation-delay:-8s}
+.aura i:nth-child(4){right:10%;bottom:10%;background:var(--c-procesos);animation-delay:-12s}
+.aura i:nth-child(5){left:28%;top:28%;background:var(--c-datos);animation-delay:-15s}
+body[data-intent] .aura i{background:var(--accent)!important}
+body[data-intent] .aura{opacity:.38}
+@keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(8%,-6%)}66%{transform:translate(-6%,7%)}}
+.greet{text-align:center;display:grid;gap:14px;justify-items:center;padding-top:12px}
+.greet .hi{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
+.greet .hi img{width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px var(--surface)}
+.greet h1{font-size:clamp(38px,9vw,68px);line-height:1;max-width:12ch}
+.greet h1 em{color:var(--accent);transition:color .5s}
+.greet p{color:var(--muted);font-size:17px;max-width:34ch}
+
+.box{margin-top:24px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 20px 60px -30px color-mix(in srgb,var(--fg) 35%,transparent);overflow:hidden}
+
+/* Tarjeta de sugerencias que rota */
+.invite{display:flex;gap:8px;align-items:flex-end;padding:16px 16px 4px}
+.invite img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none}
+.sugg{position:relative;flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:18px;border-bottom-left-radius:6px;padding:10px 14px;font:inherit;cursor:pointer;min-height:64px;display:grid;align-content:center;gap:2px;transition:border-color .2s}
+.sugg:hover{border-color:var(--sg,var(--fg))}
+.sugg small{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.sugg small i{width:7px;height:7px;border-radius:50%;background:var(--sg,var(--muted));transition:background .3s}
+.sugg .txt{font-size:15.5px;line-height:1.35;transition:opacity .35s,transform .35s}
+.sugg .txt.out{opacity:0;transform:translateY(6px)}
+.sugg .tdots{display:inline-flex;gap:4px;padding:6px 0}
+.sugg .tdots i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.sugg .tdots i:nth-child(2){animation-delay:.15s}.sugg .tdots i:nth-child(3){animation-delay:.3s}
+.sugg .use{justify-self:end;font-size:12px;color:var(--muted)}
+
+.thread{display:flex;flex-direction:column;gap:12px;padding:18px 16px 6px;max-height:min(58vh,520px);overflow-y:auto}
+.thread:empty{display:none}
+.row{display:flex;gap:8px;align-items:flex-end;animation:rise .3s ease both}
+.row.me{justify-content:flex-end}
+.row img{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none}
+.bub{max-width:84%;padding:10px 14px;border-radius:18px;font-size:15.5px;line-height:1.45;overflow-wrap:anywhere}
+.row.bot .bub{background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:6px}
+.row.me .bub{background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px;transition:background .5s}
+.typing .bub{display:inline-flex;gap:4px;padding:14px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{50%{opacity:.25}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.choices{display:flex;flex-wrap:wrap;gap:8px;padding-left:34px;animation:rise .3s ease both}
+.choice{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:14px;padding:10px 14px;font:inherit;font-size:15px;cursor:pointer;text-align:left;transition:border-color .15s,transform .15s}
+.choice:hover{border-color:var(--accent);transform:translateY(-1px)}
+.choice small{display:block;color:var(--muted);font-size:12.5px}
+.sol-card{margin-left:34px;border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--surface);display:grid;gap:8px;animation:rise .3s ease both;border-left:4px solid var(--accent)}
+.sol-card b{font-weight:600}
+.sol-card ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px;display:grid;gap:2px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font:600 14.5px var(--f-body);cursor:pointer;justify-self:start}
+.cform{margin-left:34px;display:grid;gap:8px;animation:rise .3s ease both}
+.cform input[type=text],.cform input[type=tel]{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:12px 14px;font:16px var(--f-body);outline:none}
+.cform input:focus{border-color:var(--accent)}
+.cform .ok{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted)}
+.cform .ok input{margin-top:2px;accent-color:var(--accent)}
+.cform .err{color:var(--c-nomina);font-size:13.5px}
+.book{margin-left:34px;justify-self:start;animation:rise .3s ease both}
+
+.composer{display:flex;align-items:flex-end;gap:8px;padding:10px}
+.composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 17px/1.45 var(--f-body);padding:10px 8px;outline:none;max-height:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.composer textarea.typed{white-space:pre-wrap;overflow:auto}
+.composer textarea::placeholder{color:var(--muted)}
+.ibtn{width:46px;height:46px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:grid;place-items:center;cursor:pointer;transition:all .2s}
+.ibtn svg{width:20px;height:20px}
+.ibtn.send{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.ibtn.send:disabled{opacity:.3;cursor:not-allowed}
+.ibtn.rec{background:var(--c-nomina);color:#fff;border-color:transparent;animation:ring 1.3s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c-nomina) 50%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+.rec-line{display:none;padding:0 18px 10px;font-size:13px;color:var(--c-nomina)}
+.rec-line.on{display:block}
+.progress{height:3px;background:var(--line);display:none}
+.progress.on{display:block}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
+.scroll-hint{display:flex;justify-content:center;margin-top:20px;color:var(--muted);font-size:13px}
+
+.cta{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);cursor:pointer;text-decoration:none;transition:background .5s,transform .15s}
+.cta:hover{transform:translateY(-1px)}
+
+/* SOLUCIONES */
+.sol{padding-block:56px;border-top:1px solid var(--line)}
+.sol-head{display:grid;gap:10px;margin-bottom:20px}
+.sol-head h2{font-size:clamp(30px,6.4vw,48px);line-height:1.04}
+.sol-head h2 em{color:var(--accent);transition:color .5s}
+.sol-head p{color:var(--muted);font-size:16.5px}
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:16px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:9px 14px;font:500 14.5px var(--f-body);cursor:pointer}
+.tab i{width:8px;height:8px;border-radius:50%}
+.tab[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.panel-top{padding:22px;display:grid;gap:10px;background:linear-gradient(160deg,color-mix(in srgb,var(--tone) 16%,transparent),transparent 60%)}
+.panel-top h3{font-size:clamp(26px,5vw,34px);line-height:1.08}
+.panel-top h3 em{color:var(--tone)}
+.panel-top p{color:var(--muted);font-size:16px}
+.incl{display:grid;gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.incl div{background:var(--surface);padding:14px 22px;display:grid;grid-template-columns:18px 1fr;gap:10px;font-size:15.5px}
+.incl div::before{content:"";width:8px;height:8px;margin-top:8px;border-radius:50%;background:var(--tone)}
+.incl b{font-weight:600;display:block}
+.incl span{color:var(--muted);font-size:14.5px}
+.panel-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.proof{font-size:14px;color:var(--muted)}
+.proof b{color:var(--fg);font-weight:600}
+.panel-foot .cta{background:var(--tone)}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.how div{border-top:2px solid var(--fg);padding-top:10px;font-size:14.5px;color:var(--muted);min-width:0}
+.how b{display:block;color:var(--fg);font-size:16px;font-weight:600;margin-bottom:2px}
+@media (max-width:520px){.how{grid-template-columns:1fr}}
+
+/* QUIÉN */
+.trust{padding-block:56px 48px;border-top:1px solid var(--line)}
+.bio{display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center}
+.bio img{width:120px;height:120px;border-radius:50%;object-fit:cover}
+.bio h2{font-size:clamp(26px,5.4vw,38px);line-height:1.1}
+.bio p{color:var(--muted);margin-top:10px;font-size:16px}
+@media (max-width:460px){.bio{grid-template-columns:1fr}.bio img{width:96px;height:96px}}
+.logos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:26px}
+.logos span{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-size:15px;font-weight:500;display:grid;line-height:1.3;min-width:0}
+.logos small{color:var(--muted);font-size:12.5px;font-weight:400}
+.final{margin-top:30px;padding:24px 22px;border-radius:var(--r);background:var(--fg);color:var(--bg);display:grid;gap:14px;justify-items:start}
+.final h3{font-size:clamp(26px,5.4vw,34px);line-height:1.1}
+.final .cta{background:var(--bg);color:var(--fg)}
+footer{padding-block:22px calc(22px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="me-chip" href="#inicio"><img src="damian-avatar.jpg" alt="" width="34" height="34"><div><b>Damián Barragán</b><span>Disponible</span></div></a>
+    <a class="brand-pill" href="#soluciones"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="brandName">Escríbeme</span></a>
+  </div>
+</header>
+
+<!-- 1. CHAT -->
+<section class="hero" id="inicio">
+  <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <div class="greet">
+      <span class="hi"><img src="damian-avatar.jpg" alt="Damián Barragán" width="44" height="44">Hola, soy Damián</span>
+      <h1>¿Qué quieres <em>resolver</em> en tu negocio?</h1>
+      <p>Escríbeme o háblame. Te digo cómo lo resolvemos, sin rodeos.</p>
+    </div>
+
+    <div class="box" id="box">
+      <div class="progress" id="progress"><span></span></div>
+      <div class="invite" id="invite">
+        <img src="damian-avatar.jpg" alt="">
+        <button type="button" class="sugg" id="sugg" aria-label="Usar esta sugerencia">
+          <small><i></i><span id="suggTag">Por ejemplo</span></small>
+          <span class="txt" id="suggTxt"><span class="tdots"><i></i><i></i><i></i></span></span>
+          <span class="use">Toca para usarla</span>
+        </button>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+      <div class="rec-line" id="recLine">● Grabando 0:00 · toca el micrófono para terminar</div>
+      <div class="composer" id="composer">
+        <label for="msg" class="sr">Tu mensaje</label>
+        <textarea id="msg" rows="1" placeholder="Cuéntame aquí…"></textarea>
+        <button type="button" class="ibtn" id="mic" aria-label="Enviar nota de voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button type="button" class="ibtn send" id="send" aria-label="Enviar" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
+  </div>
+</section>
+
+<!-- 2. SOLUCIONES (se adapta) -->
+<section class="sol" id="soluciones">
+  <div class="wrap">
+    <div class="sol-head">
+      <span class="label" id="solLabel">Soluciones</span>
+      <h2 id="solTitle">¿Qué te está quitando <em>tiempo</em>?</h2>
+      <p id="solLead">Elige un tema y mira exactamente qué incluye.</p>
+    </div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="panel" id="panel" role="tabpanel"></div>
+    <div class="how">
+      <div><b>1. Llamada de 30 min</b>Por Meet y sin costo. Entiendo tu caso.</div>
+      <div><b>2. Propuesta en 48 horas</b>Qué hago, cuánto cuesta y cuándo lo entrego.</div>
+      <div><b>3. Entrega con fecha</b>Lo dejo funcionando y capacito a tu equipo.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. QUIÉN -->
+<section class="trust" id="quien">
+  <div class="wrap">
+    <div class="bio">
+      <img src="damian.jpg" alt="Damián Barragán" width="120" height="120">
+      <div>
+        <span class="label">¿Quién lo resuelve?</span>
+        <h2>Ingeniero de producción: veo tu negocio como un proceso que se puede <em>mejorar</em>.</h2>
+        <p>15 años del lado de la caja, el inventario, la contabilidad y la facturación electrónica. Entro a tu negocio con un problema claro, lo soluciono y te lo dejo andando.</p>
+      </div>
+    </div>
+    <div class="logos">
+      <span>Tumbao<small>Baile para sanar · Salón de baile</small></span>
+      <span>Joyería Tanya Santiago<small>Taller de joyería</small></span>
+      <span>Loggro<small>Aliado en software</small></span>
+      <span>Nomiluz<small>Aliada en nómina</small></span>
+    </div>
+    <div class="final">
+      <h3>Cuéntame qué te está quitando tiempo.</h3>
+      <a class="cta" href="#inicio" id="backToChat">Escribirle a Damián ↑</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap"><span>© 2026 Damián Barragán · Colombia</span><a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a></div></footer>
+
+<script>
+/* ===== CONFIGURACIÓN ===== */
+const CONFIG = {
+  company: "",            // Nombre de tu empresa para la esquina superior. Vacío = "Escríbeme".
+  maxRecordSeconds: 120
+};
+
+/* ===== SOLUCIONES ===== */
+const SOL = {
+  nomina: {
+    name:'Nómina', of:'tu nómina', color:'--c-nomina',
+    kw:/n[oó]mina|emplead|liquid|prestaci|pila|seguridad social|quincena|primas?\b|cesant|vacacion|contrat|trabajador/i,
+    title:'Tu nómina, <em>resuelta</em>.',
+    lead:'Liquidar, pagar y reportar no debería quitarte días. Hay dos caminos según tu equipo.',
+    items:[
+      ['Loggro Nómina','Tú registras novedades y el sistema calcula, genera la nómina electrónica y los soportes.'],
+      ['Gestión completa con Nomiluz','Mi aliada se encarga de todo: liquidación, prestaciones, seguridad social, nómina electrónica y reportes.'],
+      ['Ideal para equipos pequeños','Negocios con pocos empleados que no necesitan contratar a alguien solo para esto.']
+    ],
+    proof:'<b>Nomiluz</b> · aliada en nómina y soporte administrativo',
+    chat:'Eso lo resolvemos de dos formas: con <b>Loggro Nómina</b>, si quieres hacerlo tú con un sistema, o con la gestión completa de tus empleados junto a <b>Nomiluz</b>, mi aliada.',
+    sugg:'Liquidar la nómina de mis 3 empleados me quita dos días.'
+  },
+  software: {
+    name:'Software', of:'tu sistema', color:'--c-software',
+    kw:/software|sistema|programa|\bpos\b|caja registradora|inventari|factur|dian|contab|loggro|excel|vender|ventas|cuaderno/i,
+    title:'Un sistema que <em>ordena</em> tu negocio.',
+    lead:'Te ayudo a elegir, configurar e implementar Loggro, y acompaño a tu equipo hasta que lo use solo.',
+    items:[
+      ['POS y ventas','Vendes rápido, con caja que cuadra al cierre.'],
+      ['Inventario','Se descuenta solo con cada venta. Sabes qué tienes y qué pedir.'],
+      ['Facturación electrónica DIAN','Cada venta genera su factura sin redigitar.'],
+      ['Contabilidad y nómina','Todo en el mismo sistema, listo para tu contador.']
+    ],
+    proof:'<b>Loggro</b> · aliado en software',
+    chat:'Para eso trabajo con <b>Loggro</b>: POS, inventario, facturación electrónica y contabilidad en un solo lugar. Lo configuramos y capacito a tu equipo.',
+    sugg:'Llevo el inventario en Excel y la caja nunca me cuadra.'
+  },
+  ia: {
+    name:'IA y automatización', of:'tu atención con IA', color:'--c-ia',
+    kw:/bot|whatsapp|agente|\bia\b|inteligencia artificial|automat|chat|responder|mensajes|n8n|p[aá]gina|web|landing|correo|agendar|citas/i,
+    title:'Tu negocio <em>responde</em> solo.',
+    lead:'Agentes de IA y automatizaciones que atienden, agendan y conectan tus herramientas.',
+    items:[
+      ['Asistente de WhatsApp con IA','Responde preguntas, agenda citas y te pasa solo los clientes listos para comprar.'],
+      ['Automatizaciones con n8n','Facturas, reportes y avisos que se mueven solos entre tus apps.'],
+      ['Tu página web en Cloudflare','Rápida, segura y casi sin costo de hosting, conectada a tu asistente.']
+    ],
+    proof:'<b>Timba</b>, el asistente de WhatsApp de Tumbao',
+    chat:'Eso lo hago con <b>agentes de IA</b> conectados a WhatsApp y flujos en <b>n8n</b>. Si hace falta, también te monto la página en Cloudflare.',
+    sugg:'Quiero un bot que responda los WhatsApp de mis clientes.'
+  },
+  procesos: {
+    name:'Procesos', of:'tu operación', color:'--c-procesos',
+    kw:/desorden|proceso|organiz|depende de m|todo yo|caja no|no cuadra|cuello|lento|demora|procedimiento|control|ganancia|utilidad|no s[eé] cu[aá]nto/i,
+    title:'Orden en tu operación, <em>sin vueltas</em>.',
+    lead:'Encuentro dónde se frena tu negocio y lo arreglo. Un proyecto con inicio y fin.',
+    items:[
+      ['Diagnóstico del cuello de botella','Mido cómo trabaja tu equipo y encuentro qué frena todo.'],
+      ['Procesos claros','Cada persona sabe qué hacer sin preguntarte.'],
+      ['Caja y números del día','Sabes cuánto vendes y cuánto te queda, todos los días.']
+    ],
+    proof:'Ingeniero de producción · 15 años en caja, inventario y contabilidad',
+    chat:'Eso es lo mío: soy <b>ingeniero de producción</b>. Encontramos dónde se frena tu operación y lo dejamos ordenado, con inicio y fin.',
+    sugg:'Mi negocio depende de mí para todo y no sé cuánto me gano.'
+  },
+  datos: {
+    name:'Datos y campañas', of:'tus datos', color:'--c-datos',
+    kw:/campa[ñn]|mercadeo|marketing|base de datos|\bdatos\b|masiv|promoci|difusi|publicidad|fideliz|clientes (antiguos|dormidos|viejos)|volver a comprar|recompra/i,
+    title:'Tus datos, <em>trabajando</em> para vender.',
+    lead:'Los datos de tus clientes valen plata. Los organizo y los convierto en campañas que traen ventas.',
+    items:[
+      ['Una sola base de clientes','Junto ventas, WhatsApp y Excel en un solo lugar, limpio y sin duplicados.'],
+      ['Segmentos que sirven','Quién compra, cada cuánto y qué. Para hablarle a cada grupo distinto.'],
+      ['Campañas masivas por WhatsApp','Mensajes con plantillas aprobadas por Meta, con reporte de quién respondió.'],
+      ['Clientes que vuelven','Reactivo a los que dejaron de comprar con ofertas a su medida.']
+    ],
+    proof:'Campañas con plantillas oficiales de WhatsApp',
+    chat:'Eso lo resolvemos en dos pasos: primero organizo tu <b>base de clientes</b> y luego armamos <b>campañas por WhatsApp</b> para cada grupo.',
+    sugg:'Tengo muchos clientes que no volvieron a comprar.'
+  }
+};
+const ORDER = ['nomina','software','ia','procesos','datos'];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+if (CONFIG.company) $('#brandName').textContent = CONFIG.company;
+
+/* ===== BACKEND (Cloudflare Worker). Si no responde, la página funciona sola en modo demo. ===== */
+const API = { online:false };
+const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
+(async () => { try { const r = await fetch('/api/health', {signal: AbortSignal.timeout(2500)}); API.online = r.ok; } catch {} })();
+async function api(path, body, isForm){
+  if (!API.online) return null;
+  try {
+    const r = await fetch(path, isForm ? {method:'POST', body} : {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+
+/* ===== PESTAÑAS + PANEL ===== */
+$('#tabs').innerHTML = ORDER.map(k => `<button type="button" class="tab" role="tab" data-k="${k}"><i style="background:var(${SOL[k].color})"></i>${SOL[k].name}</button>`).join('');
+function showSol(k, adapt){
+  const s = SOL[k];
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.k === k));
+  const panel = $('#panel'); panel.style.setProperty('--tone', `var(${s.color})`);
+  panel.innerHTML = `<div class="panel-top"><span class="label">${s.name}</span><h3>${s.title}</h3><p>${s.lead}</p></div>
+    <div class="incl">${s.items.map(([b,t]) => `<div><p><b>${b}</b><span>${t}</span></p></div>`).join('')}</div>
+    <div class="panel-foot"><span class="proof">${s.proof}</span><a class="cta" href="#inicio">Hablemos de esto ↑</a></div>`;
+  if (adapt){ $('#solLabel').textContent = 'Lo que necesitas'; $('#solTitle').innerHTML = `Así resolvemos <em>${s.of}</em>.`; $('#solLead').textContent = 'Esto es lo que incluye.'; }
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => showSol(t.dataset.k, false));
+showSol('nomina', false);
+
+function detect(text){
+  let best = null, score = 0;
+  for (const k of ORDER){ const m = (text.match(new RegExp(SOL[k].kw.source, 'gi')) || []).length; if (m > score){ score = m; best = k; } }
+  return best;
+}
+
+/* ===== TARJETA DE SUGERENCIAS QUE ROTA ===== */
+const msg = $('#msg'), sendBtn = $('#send'), mic = $('#mic'), thread = $('#thread');
+let suggIdx = 0, suggTimer = null, suggStopped = false;
+async function rotateSugg(first){
+  if (suggStopped) return;
+  const k = ORDER[suggIdx % ORDER.length], s = SOL[k], txt = $('#suggTxt'), sugg = $('#sugg');
+  sugg.style.setProperty('--sg', `var(${s.color})`); $('#suggTag').textContent = s.name;
+  if (!first){ txt.classList.add('out'); await wait(350); }
+  txt.innerHTML = '<span class="tdots"><i></i><i></i><i></i></span>'; txt.classList.remove('out');
+  await wait(900);
+  if (suggStopped) return;
+  txt.classList.add('out'); await wait(200);
+  txt.textContent = `“${s.sugg}”`; txt.classList.remove('out');
+  sugg.dataset.k = k;
+  suggIdx++;
+  suggTimer = setTimeout(() => rotateSugg(false), reduce ? 6000 : 3600);
+}
+rotateSugg(true);
+function stopSugg(){ suggStopped = true; clearTimeout(suggTimer); }
+$('#sugg').onclick = () => {
+  const k = $('#sugg').dataset.k; if (!k) return;
+  msg.value = SOL[k].sugg; autosize(); sendBtn.disabled = false; msg.focus();
+};
+msg.addEventListener('focus', () => { clearTimeout(suggTimer); });
+msg.addEventListener('blur', () => { if (!msg.value && !suggStopped) suggTimer = setTimeout(() => rotateSugg(false), 1500); });
+
+/* ===== CHAT ===== */
+const lead = { problem:'', intent:null, budget:null, timing:null, decider:null, contact:null };
+let audioBlob = null, started = false;
+const TOTAL = 5;
+function prog(n){ $('#progress').classList.add('on'); $('#progress span').style.width = (n/TOTAL*100) + '%'; }
+const scroll = () => { thread.scrollTop = thread.scrollHeight; };
+function botRow(html){ const r = document.createElement('div'); r.className = 'row bot'; r.innerHTML = `<img src="damian-avatar.jpg" alt="">${html}`; thread.append(r); scroll(); return r; }
+async function say(html, plain){
+  const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
+  await wait(500 + Math.min(html.length*6, 900)); t.remove();
+  const r = botRow('<div class="bub"></div>'); const b = r.querySelector('.bub');
+  plain ? b.textContent = html : b.innerHTML = html;
+}
+function me(text){ const r = document.createElement('div'); r.className = 'row me'; r.innerHTML = `<div class="bub">${esc(text)}</div>`; thread.append(r); scroll(); }
+function choose(opts){
+  return new Promise(res => {
+    const box = document.createElement('div'); box.className = 'choices';
+    opts.forEach(o => { const b = document.createElement('button'); b.type = 'button'; b.className = 'choice';
+      b.innerHTML = `${o.t}${o.d ? `<small>${o.d}</small>` : ''}`; b.onclick = () => { box.remove(); me(o.t); res(o); }; box.append(b); });
+    thread.append(box); scroll();
+  });
+}
+function autosize(){ msg.classList.toggle('typed', !!msg.value); msg.style.height = 'auto'; msg.style.height = Math.min(msg.scrollHeight, 140) + 'px'; }
+msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < 3 && !audioBlob; });
+msg.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } });
+$('#backToChat').onclick = () => setTimeout(() => { if (!started) msg.focus({preventScroll:true}); }, 500);
+
+sendBtn.onclick = () => {
+  if (started) return;
+  const wasRecording = rec && rec.state === 'recording';
+  stopRec();
+  setTimeout(() => start(msg.value.trim()), wasRecording ? 400 : 0);
+};
+
+async function start(text){
+  started = true; stopSugg();
+  $('#composer').hidden = true; $('#invite').hidden = true; msg.value = '';
+  // 1. Si hay nota de voz y backend, la transcribimos
+  if (audioBlob && API.online){
+    me('🎙 Nota de voz');
+    const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
+    const fd = new FormData(); fd.append('audio', audioBlob, 'nota.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm')); fd.append('sessionId', sessionId);
+    const tr = await api('/api/transcribe', fd, true); t.remove();
+    if (tr && tr.text){ text = tr.text; botRow(`<div class="bub"><small>Te entendí:</small><br>“${esc(text)}”</div>`); }
+  } else me(text || '🎙 Nota de voz');
+  lead.problem = text;
+  prog(1);
+  // 2. Entender el problema: IA en el backend, palabras clave si no hay backend
+  const ai = text ? await api('/api/chat', {sessionId, message:text}) : null;
+  let k = ai && SOL[ai.intent] ? ai.intent : detect(text || '');
+  if (ai && ai.reply) await say(ai.reply, true);
+  if (!k){
+    if (!ai) await say('Gracias por contarme. Para orientarte bien, ¿con cuál de estas se parece más?');
+    const o = await choose(ORDER.map(x => ({t:SOL[x].name, k:x})).concat([{t:'Otra cosa', k:null}]));
+    k = o.k;
+  }
+  if (k){
+    lead.intent = k; document.body.dataset.intent = k; showSol(k, true);
+    if (!ai) await say(SOL[k].chat);
+    const card = document.createElement('div'); card.className = 'sol-card';
+    card.innerHTML = `<b>${SOL[k].name}</b><ul>${SOL[k].items.slice(0,3).map(i => `<li>${i[0]}</li>`).join('')}</ul><button type="button" class="linkbtn">Ver el detalle ↓</button>`;
+    card.querySelector('button').onclick = () => $('#soluciones').scrollIntoView({behavior: reduce ? 'auto' : 'smooth'});
+    thread.append(card); scroll();
+  } else {
+    await say('Te soy sincero: puede que eso no sea lo mío. Igual déjame tus datos y, si te puedo ayudar o conozco a alguien, te escribo.');
+  }
+  // 3. Calificación
+  await say('Te hago 3 preguntas rápidas. ¿Cuánto tienes pensado invertir?');
+  prog(2);
+  lead.budget = await choose([{id:'b1', t:'Hasta $1,5 M', d:'Algo puntual'},{id:'b2', t:'$1,5 M – $5 M', d:'Una solución completa'},{id:'b3', t:'Más de $5 M', d:'Varias áreas del negocio'}]);
+  await say('¿Cuándo lo necesitas?');
+  prog(3);
+  lead.timing = await choose([{id:'now', t:'Ya, es urgente'},{id:'month', t:'Este mes'},{id:'later', t:'Solo estoy averiguando'}]);
+  await say('¿Esa decisión la tomas tú o con alguien más?');
+  prog(4);
+  lead.decider = await choose([{id:'solo', t:'La tomo yo'},{id:'with', t:'Con mi socio o familia'},{id:'other', t:'La toma otra persona'}]);
+  if (lead.decider.id === 'with') await say('Perfecto. Si quieres, esa persona nos acompaña en la llamada y así nadie repite la historia.');
+  await say('Listo. ¿A qué WhatsApp te escribo?');
+  prog(5);
+  lead.contact = await contactForm();
+  me(`${lead.contact.name} · ${lead.contact.phone}`);
+  await finish();
+}
+
+function contactForm(){
+  return new Promise(res => {
+    const f = document.createElement('form'); f.className = 'cform'; f.noValidate = true;
+    f.innerHTML = `<label class="sr" for="cName">Tu nombre</label><input type="text" id="cName" placeholder="Tu nombre" autocomplete="given-name" maxlength="80">
+      <label class="sr" for="cPhone">WhatsApp</label><input type="tel" id="cPhone" placeholder="WhatsApp · 300 123 4567" inputmode="tel" autocomplete="tel" maxlength="20">
+      <label class="ok"><input type="checkbox" id="cOk">Acepto que me escriban por WhatsApp y el tratamiento de mis datos (Ley 1581 de 2012).</label>
+      <span class="err" id="cErr" hidden></span>
+      <button type="submit" class="cta" style="justify-self:start">Enviar</button>`;
+    f.onsubmit = e => {
+      e.preventDefault();
+      const name = f.querySelector('#cName').value.trim(), phone = f.querySelector('#cPhone').value.replace(/[^\d+]/g,''), err = f.querySelector('#cErr');
+      const fail = m => { err.textContent = m; err.hidden = false; };
+      if (!name) return fail('Escribe tu nombre para saber cómo saludarte.');
+      if (phone.replace(/\D/g,'').length < 10) return fail('El WhatsApp debe tener 10 dígitos. Ej: 300 123 4567.');
+      if (!f.querySelector('#cOk').checked) return fail('Necesito tu autorización para escribirte.');
+      f.remove(); res({ name, phone });
+    };
+    thread.append(f); scroll(); f.querySelector('input').focus({preventScroll:true});
+  });
+}
+
+/* Prioridad local (solo modo demo; en producción la calcula el backend) */
+function localScore(){
+  const S = {b1:1,b2:2,b3:3, now:3,month:2,later:0, solo:3,with:2,other:0};
+  const pts = S[lead.budget.id]*3 + S[lead.timing.id]*3 + S[lead.decider.id]*2 + (lead.intent ? 3 : 0);
+  return { tier: pts >= 20 ? 'A' : pts >= 13 ? 'B' : 'C', bookingUrl:null, demo:true };
+}
+async function finish(){
+  const res = await api('/api/lead', {
+    sessionId, problem:lead.problem, intent:lead.intent, budget:lead.budget.id, timing:lead.timing.id, decider:lead.decider.id,
+    name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href,
+    utm:Object.fromEntries(new URLSearchParams(location.search)) }) || localScore();
+  const first = esc(lead.contact.name.split(' ')[0]), topic = lead.intent ? SOL[lead.intent].name.toLowerCase() : 'tu negocio';
+  if (res.tier === 'A') await say(`Gracias, ${first}. Mi asistente te escribe <b>hoy mismo</b> por WhatsApp.`);
+  else if (res.tier === 'B') await say(`Gracias, ${first}. Mi asistente te escribe por WhatsApp <b>en menos de 24 horas</b>.`);
+  else await say(`Gracias, ${first}. Te voy a enviar por WhatsApp ideas prácticas sobre ${topic}. Cuando estés listo, lo resolvemos.`);
+  if (res.tier !== 'C' && res.bookingUrl){
+    await say('Si prefieres, elige tú mismo la hora de nuestra llamada:');
+    const a = document.createElement('a'); a.className = 'cta book'; a.href = res.bookingUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Elegir hora →';
+    thread.append(a); scroll();
+  }
+  if (res.demo) await say('<small>(Modo demo: este mensaje no se envió a ningún sistema.)</small>');
+}
+
+/* ===== VOZ ===== */
+let rec = null, chunks = [], stream = null, speech = null, timer = null, ac = null;
+mic.onclick = () => (rec && rec.state === 'recording') ? stopRec() : startRec();
+async function startRec(){
+  try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch { msg.placeholder = 'No tengo acceso al micrófono. Escríbeme aquí.'; msg.focus(); return; }
+  stopSugg();
+  chunks = []; rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => { audioBlob = new Blob(chunks, {type: rec.mimeType || 'audio/webm'}); stream.getTracks().forEach(t => t.stop()); sendBtn.disabled = false; };
+  rec.start();
+  ac = new (window.AudioContext||window.webkitAudioContext)(); const an = ac.createAnalyser(); an.fftSize = 128;
+  ac.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount);
+  (function meter(){ if (!rec || rec.state !== 'recording'){ document.documentElement.style.setProperty('--lvl', 0); return; }
+    an.getByteFrequencyData(buf); document.documentElement.style.setProperty('--lvl', Math.min(buf.reduce((a,b)=>a+b,0)/buf.length/80, 1)); requestAnimationFrame(meter); })();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR){ speech = new SR(); speech.lang = 'es-CO'; speech.continuous = true; speech.interimResults = true;
+    const prior = msg.value ? msg.value.trim() + ' ' : '';
+    speech.onresult = e => { msg.value = prior + [...e.results].map(r => r[0].transcript).join(' '); autosize(); sendBtn.disabled = false; };
+    try { speech.start(); } catch {} }
+  mic.classList.add('rec'); mic.setAttribute('aria-label','Detener grabación');
+  const t0 = Date.now(), line = $('#recLine'); line.classList.add('on');
+  timer = setInterval(() => { const s = Math.floor((Date.now()-t0)/1000);
+    line.textContent = `● Grabando ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · toca el micrófono para terminar`;
+    if (s >= CONFIG.maxRecordSeconds) stopRec(); }, 250);
+}
+function stopRec(){
+  clearInterval(timer); $('#recLine').classList.remove('on');
+  if (speech){ try { speech.stop(); } catch {} speech = null; }
+  if (rec && rec.state === 'recording') rec.stop();
+  if (ac){ ac.close().catch(()=>{}); ac = null; }
+  mic.classList.remove('rec'); mic.setAttribute('aria-label','Enviar nota de voz');
+}
+</script>
+</body>
+</html>
