@@ -19,7 +19,7 @@ const LABELS = {
 };
 const SCORES = { b1: 1, b2: 2, b3: 3, now: 3, month: 2, later: 0, solo: 3, with: 2, other: 0 };
 
-const SYSTEM_PROMPT = `Eres el asistente de la página web de Damián Barragán, ingeniero de producción en Colombia.
+const SYSTEM_PROMPT = `Eres el asistente de la página web de Damián Barragán, consultor en Colombia con 15 años en ventas y operación de empresas de servicio (banca, telecomunicaciones, comercio y software).
 Damián resuelve problemas puntuales de pequeños negocios en cinco frentes:
 - nomina: liquidación de nómina, prestaciones, seguridad social, nómina electrónica (con Loggro Nómina o con su aliada Nomiluz).
 - software: POS, inventario, facturación electrónica DIAN y contabilidad con Loggro.
