@@ -15,6 +15,8 @@ const BUDGET = { b1: 'hasta $1,5 M', b2: '$1,5 M a $5 M', b3: 'más de $5 M' };
 const TIMING = { now: 'urgente', month: 'este mes', later: 'solo averiguando' };
 const DECIDER = { solo: 'decide solo', with: 'decide con socio o familia', other: 'decide otra persona' };
 const MAX_OPENING = 350;
+// Enlaces (http, www), dominios sueltos y números largos (teléfonos): nada de eso debe venir en el brief
+const LINK_RE = /(https?:|ftp:|www\.|\b[a-z0-9-]{2,}\.(?:com|co|net|org|io|me|ly|app|link|xyz|info|biz|site|online|top|cc|tv|gl|gd|to|page|click|shop|store|dev|ai|gg|cloud|live|vip|pro|icu|work|lat|cl|mx|ar|es|us|uk)\b|\+?\d[\d\s-]{8,}\d)/i;
 
 const SYSTEM_PROMPT = `Eres el copiloto comercial de Damián Barragán, consultor independiente en Colombia (15 años en ventas y operación de empresas de servicio). Damián resuelve problemas puntuales de pequeños negocios en cinco frentes:
 - nomina: liquidación de nómina, prestaciones, seguridad social, nómina electrónica.
@@ -95,12 +97,14 @@ ${safe(lead.problem, 1500) || '(no escribió el problema; pudo ser una nota de v
 function normalize(out, base) {
   const str = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '');
   const list = (v, n, max) => (Array.isArray(v) ? v.map(x => str(x, max)).filter(Boolean).slice(0, n) : []);
-  const apertura = str(out.apertura, MAX_OPENING + 1);
-  const preguntas = list(out.preguntas, 3, 200);
-  const alertas = [...new Set([...base.alertas, ...list(out.alertas, 4, 120)])].slice(0, 5);
+  // Un texto con enlace, dominio o teléfono ajeno es señal de inyección (el visitante intentó colarlo): se descarta ese campo
+  const safe = t => (t && !LINK_RE.test(t) ? t : '');
+  const apertura = safe(str(out.apertura, MAX_OPENING + 1));
+  const preguntas = list(out.preguntas, 3, 200).filter(safe);
+  const alertas = [...new Set([...base.alertas, ...list(out.alertas, 4, 120).filter(safe)])].slice(0, 5);
   return {
-    resumen: str(out.resumen, 400) || base.resumen,
-    necesidad: str(out.necesidad, 400) || base.necesidad,
+    resumen: safe(str(out.resumen, 400)) || base.resumen,
+    necesidad: safe(str(out.necesidad, 400)) || base.necesidad,
     apertura: apertura && apertura.length <= MAX_OPENING ? apertura : base.apertura,
     preguntas: preguntas.length === 3 ? preguntas : base.preguntas,
     alertas,

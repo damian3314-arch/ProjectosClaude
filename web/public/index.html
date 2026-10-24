@@ -311,7 +311,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
         <button type="button" class="ibtn" id="mic" aria-label="Contar mi problema con un audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <button type="button" class="ibtn send" id="send" disabled>Enviar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
-      <p class="hint" id="hint">Escribe o mándame un audio. No tiene que quedar perfecto.</p>
+      <p class="hint" id="hint">Escribe o mándame un audio. No tiene que quedar perfecto. Una IA lo lee para entenderte: no incluyas claves ni datos de tarjetas.</p>
     </div>
     <ul class="facts"><li>Sin costo</li><li>Te respondo yo, por WhatsApp</li><li>Tus datos solo para escribirte</li></ul>
     <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
@@ -386,8 +386,9 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
       <p>No hace falta. Cuéntalo como se lo contarías a un amigo, desordenado y todo, o mándame un audio. Yo lo ordeno contigo.</p>
     </details>
     <details>
-      <summary>¿Qué haces con mi número?</summary>
-      <p>Solo lo uso para responderte sobre lo que me contaste. Lo dejas tú, con tu autorización, y no tienes que dar más datos que tu nombre y tu WhatsApp.</p>
+      <summary>¿Qué haces con mi número y mis datos?</summary>
+      <p>Solo los uso para responderte sobre lo que me contaste. Los dejas tú, con tu autorización, y no tienes que dar más que tu nombre y tu WhatsApp.</p>
+      <p><b>Política de tratamiento de datos (Ley 1581 de 2012).</b> Responsable: Damián Barragán, Colombia. Qué guardo: tu nombre, WhatsApp, lo que escribes o dices en el chat y tus respuestas a las preguntas. Para qué: contactarte por WhatsApp sobre tu caso y medir si la página funciona (sin cookies). Con quién se procesa: OpenAI (entiende tu mensaje y transcribe el audio), Cloudflare (aloja la página y la base de datos) y Meta/WhatsApp (el mensaje). Algunos están fuera de Colombia. No vendo ni comparto tus datos con nadie más. Tus derechos: conocer, actualizar, rectificar y suprimir tus datos y revocar tu autorización; escríbeme por WhatsApp o por <a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a> y lo hago.</p>
     </details>
     <details>
       <summary>¿Y si lo mío no es lo tuyo?</summary>
@@ -530,11 +531,13 @@ function track(type, extra){
     fetch('/api/event', {method:'POST', headers:{'content-type':'application/json'}, body, keepalive:true}).catch(() => {});
   } catch {}
 }
-healthReady.then(() => {
-  const utm = utmParams();
-  try { if (document.referrer){ const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) utm.referrer = h.slice(0, 100); } } catch {}
-  track('visit', Object.keys(utm).length ? {utm} : {});
-});
+/* utm_* + dominio de donde llegó (solo el nombre del sitio, nunca la URL completa). Va en la visita y en el lead. */
+function attribution(){
+  const u = utmParams();
+  try { if (document.referrer){ const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) u.referrer = h.slice(0, 100); } } catch {}
+  return u;
+}
+healthReady.then(() => { const utm = attribution(); track('visit', Object.keys(utm).length ? {utm} : {}); });
 
 /* ===== PESTAÑAS + PANEL ===== */
 $('#tabs').innerHTML = ORDER.map(k => `<button type="button" class="tab" role="tab" id="tab-${k}" aria-controls="panel" data-k="${k}"><i style="background:var(${SOL[k].color})"></i>${SOL[k].name}</button>`).join('');
@@ -708,7 +711,7 @@ function contactForm(){
     const f = document.createElement('form'); f.className = 'cform'; f.noValidate = true;
     f.innerHTML = `<label class="f" for="cName">Tu nombre</label><input type="text" id="cName" placeholder="Ej: Marta" autocomplete="name" maxlength="80" enterkeyhint="next">
       <label class="f" for="cPhone">Tu WhatsApp</label><input type="tel" id="cPhone" placeholder="300 123 4567" inputmode="tel" autocomplete="tel" maxlength="24" enterkeyhint="send">
-      <label class="ok"><input type="checkbox" id="cOk"><span>Acepto que Damián me escriba por WhatsApp y trate mis datos solo para responderme (Ley 1581 de 2012).</span></label>
+      <label class="ok"><input type="checkbox" id="cOk"><span>Autorizo a Damián Barragán (responsable) a escribirme por WhatsApp y a tratar mi nombre, número y lo que contaste solo para responderme (Ley 1581 de 2012). Puedo pedir ver, corregir o borrar mis datos cuando quiera, escribiéndole por WhatsApp o LinkedIn. Para entenderme usa un servicio de IA (OpenAI) y WhatsApp (Meta), que pueden estar fuera de Colombia. Más abajo está la política completa.</span></label>
       <span class="err" id="cErr" role="alert" hidden></span>
       <button type="submit" class="cta" style="justify-self:start">Enviar mis datos</button>`;
     const nameI = f.querySelector('#cName'), phoneI = f.querySelector('#cPhone'), okI = f.querySelector('#cOk'), err = f.querySelector('#cErr');
@@ -734,10 +737,9 @@ function localScore(){
   return { tier: pts >= 20 ? 'A' : pts >= 13 ? 'B' : 'C', bookingUrl:null, demo:true };
 }
 async function finish(){
-  track('lead');
   const payload = {
     sessionId, problem:lead.problem, intent:lead.intent, budget:lead.budget.id, timing:lead.timing.id, decider:lead.decider.id,
-    name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href, utm:utmParams() };
+    name:lead.contact.name, phone:lead.contact.phone, consent:true, page:location.href, utm:attribution() };
   let res = null, tries = 0;
   while (!res){
     if (!API.online){ res = localScore(); break; }

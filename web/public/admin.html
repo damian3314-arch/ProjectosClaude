@@ -530,6 +530,18 @@ function hbars(obj, colorFn, nameFn){
       '</span><span class="bar" aria-hidden="true"><i style="width:' + (obj[k] / max * 100) + '%"></i></span><span>' + esc(obj[k]) + '</span></li>';
   }).join('') + '</ul>';
 }
+/* Fuente = utm_source o, si no hay, el sitio desde donde llegaron (solo el dominio). Visitas = sesiones únicas. */
+function sourceTable(st){
+  var v = st.bySourceVisits || {}, l = st.bySource || {};
+  var keys = Object.keys(v).concat(Object.keys(l).filter(function(k){ return !(k in v); }))
+    .sort(function(a, b){ return (l[b] || 0) - (l[a] || 0) || (v[b] || 0) - (v[a] || 0); }).slice(0, 12);
+  if(!keys.length) return '<p class="muted">Sin datos en este rango.</p>';
+  return '<div style="overflow-x:auto"><table class="alt"><thead><tr><th>Fuente</th><th>Visitas</th><th>Leads</th><th>Conversión</th></tr></thead><tbody>' +
+    keys.map(function(k){
+      var vi = v[k] || 0, le = l[k] || 0;
+      return '<tr><td>' + esc(k || 'directo') + '</td><td>' + esc(vi) + '</td><td>' + esc(le) + '</td><td>' + (vi ? fmtPct(pct(le, vi)) : '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
 function dayChart(byDay){
   if(!byDay || !byDay.length) return '<p class="muted">Sin datos por día.</p>';
   var W = 640, H = 200, padL = 28, padB = 22, padT = 8, n = byDay.length;
@@ -590,7 +602,7 @@ function viewEmbudo(){
   h += '<div class="two"><section class="panel" aria-labelledby="hT"><h3 id="hT">Leads por prioridad</h3>' +
     hbars(st.tiers, function(k){ return k === 'A' ? 'var(--a)' : k === 'B' ? 'var(--b)' : 'var(--c)'; }, function(k){ return 'Prioridad ' + k; }) + '</section>' +
     '<section class="panel" aria-labelledby="hI"><h3 id="hI">Leads por tema</h3>' + hbars(st.byIntent, intentColor, intentName) + '</section></div>';
-  h += '<section class="panel" aria-labelledby="hS"><h3 id="hS">Leads por fuente</h3>' + hbars(st.bySource, null, function(k){ return k || 'directo'; }) + '</section>';
+  h += '<section class="panel" aria-labelledby="hS"><h3 id="hS">De dónde llegan</h3>' + sourceTable(st) + '</section>';
   h += '<section class="panel" aria-labelledby="hD"><h3 id="hD">Leads por día</h3>' + dayChart(st.byDay) + '</section>';
   return h;
 }
@@ -740,7 +752,7 @@ function buildDemo(){
   var days = []; for(var i = 29; i >= 0; i--){ var d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10); var v = 20 + ((i * 7) % 23); days.push({day:d, visits:v, leads: (i * 5) % 4 === 0 ? 2 : (i % 3 === 0 ? 1 : 0)}); }
   demoStats = {days:30, funnel:{visits:812, started:341, classified:262, budget:171, timing:150, decider:139, contact_form:64, leads:31},
     tiers:{A:9, B:13, C:9}, byIntent:{nomina:10, ia:8, software:5, procesos:5, datos:3},
-    bySource:{whatsapp:12, instagram:9, directo:6, google:4}, byDay:days,
+    bySource:{whatsapp:12, instagram:9, directo:6, google:4}, bySourceVisits:{whatsapp:160, instagram:240, directo:300, 'google.com':112}, byDay:days,
     statusCounts:{nuevo:5, contactado:12, agendado:6, cliente:3, descartado:5}, avgHoursToContact:3.4};
 }
 function demoApi(path, opts){

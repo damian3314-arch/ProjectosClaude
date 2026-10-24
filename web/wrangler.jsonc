@@ -4,7 +4,7 @@
   "account_id": "bf3b8e522cb09f86017e2ac7c0d16ea8",
   "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
-  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true }, // true: las cabeceras de seguridad se aplican también a la página
   "d1_databases": [
     {
       "binding": "DB",
@@ -29,7 +29,6 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
-    "PUBLIC_URL": "https://holadami.com",
     "BOOKING_URL_LOGGRO": "",
     "BOOKING_URL_PERSONAL": ""
   }
