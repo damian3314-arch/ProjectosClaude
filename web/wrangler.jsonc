@@ -14,6 +14,10 @@
     }
   ],
   "observability": { "enabled": true },
+  "routes": [
+    { "pattern": "holadami.com", "custom_domain": true },
+    { "pattern": "www.holadami.com", "custom_domain": true }
+  ],
   // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) van con `wrangler secret put`.
   "vars": {
     "OPENAI_MODEL": "gpt-4o-mini",
