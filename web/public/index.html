@@ -118,7 +118,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .brand-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:0 16px;font:600 14px var(--f-body);text-decoration:none;letter-spacing:-.01em}
 
 /* HERO / CHAT */
-.hero{position:relative;isolation:isolate;padding-block:22px 40px;overflow:hidden}
+.hero{position:relative;isolation:isolate;padding-block:30px 56px;overflow:hidden}
 .aura{position:absolute;left:50%;top:46%;width:min(640px,150vw);aspect-ratio:1;transform:translate(-50%,-50%) scale(calc(1 + var(--lvl)*.25));z-index:-1;pointer-events:none;filter:blur(60px);opacity:.5;transition:transform .12s}
 .aura i{position:absolute;width:50%;height:50%;border-radius:50%;transition:background .8s;animation:drift 18s ease-in-out infinite}
 .aura i:nth-child(1){left:6%;top:8%;background:var(--c-nomina)}
@@ -129,7 +129,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 body[data-intent] .aura i{background:var(--accent)!important}
 body[data-intent] .aura{opacity:.38}
 @keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(8%,-6%)}66%{transform:translate(-6%,7%)}}
-.greet{text-align:center;display:grid;gap:12px;justify-items:center;padding-top:6px}
+.greet{text-align:center;display:grid;gap:18px;justify-items:center;padding-top:10px}
 .greet .hi{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
 .greet .hi img{width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px var(--surface)}
 .greet h1{font-size:clamp(34px,8.6vw,60px);line-height:1.02;max-width:15ch}
@@ -137,9 +137,9 @@ body[data-intent] .aura{opacity:.38}
 .greet .slogan{font-size:clamp(17px,4.4vw,21px);line-height:1.3;letter-spacing:-.015em;max-width:30ch;font-weight:500}
 .greet .ref{color:var(--muted);font-size:15px;max-width:38ch}
 
-.box{margin-top:20px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 20px 60px -30px color-mix(in srgb,var(--fg) 35%,transparent);overflow:hidden}
+.box{margin-top:44px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 20px 60px -30px color-mix(in srgb,var(--fg) 35%,transparent);overflow:hidden}
 .box:focus-within{border-color:color-mix(in srgb,var(--accent-t) 55%,var(--line))}
-.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin:14px 0 0;padding:0;list-style:none;font-size:13.5px;color:var(--muted)}
+.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:26px 0 0;padding:0;list-style:none;font-size:13.5px;color:var(--muted)}
 .facts li{display:flex;align-items:center;gap:6px}
 .facts li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c-ia)}
 .ns{padding:18px;font-size:15px;color:var(--muted)}
@@ -184,13 +184,14 @@ html:not(.js) .composer{display:none}
 
 .composer{display:flex;align-items:center;gap:8px;margin:14px 14px 10px;padding:6px 6px 6px 10px;border:1.5px solid color-mix(in srgb,var(--accent-t) 45%,var(--line));border-radius:18px;background:var(--bg)}
 .composer:focus-within{border-color:var(--accent-t)}
-.composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 16.5px/1.38 var(--f-body);padding:9px 6px;outline:none;max-height:140px;overflow:auto}
+.composer textarea{flex:1;min-width:0;resize:none;border:0;background:transparent;color:var(--fg);font:400 16px/1.38 var(--f-body);padding:9px 6px;outline:none;max-height:140px;overflow:auto}
 .composer textarea::placeholder{color:var(--muted);opacity:1}
 .ibtn{width:48px;height:48px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:grid;place-items:center;cursor:pointer;transition:all .2s}
 .ibtn svg{width:20px;height:20px}
 .ibtn.send{width:auto;padding:0 16px 0 18px;display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--accent-ink);border-color:transparent;border-radius:999px;font:600 15px var(--f-body)}
 .ibtn.send:disabled{opacity:.35;cursor:not-allowed}
-@media (max-width:480px){.ibtn.send{width:48px;padding:0;justify-content:center}.ibtn.send .t{display:none}}
+@media (max-width:340px){.composer textarea{font-size:14px}}
+@media (max-width:480px){.ibtn.send{width:44px;padding:0;justify-content:center}.ibtn.send .t{display:none}.composer .ibtn{width:44px;height:44px}.composer{gap:6px;padding-left:8px}}
 .ibtn.rec{background:var(--t-nomina);color:#fff;border-color:transparent;animation:ring 1.3s infinite}
 @keyframes ring{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c-nomina) 50%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
 .rec-line{display:none;padding:0 18px 10px;font-size:13px;color:var(--t-nomina)}
@@ -199,7 +200,7 @@ html:not(.js) .composer{display:none}
 .progress{height:3px;background:var(--line);display:none}
 .progress.on{display:block}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
-.scroll-hint{display:flex;justify-content:center;align-items:center;min-height:44px;margin-top:10px;color:var(--muted);font-size:14px}
+.scroll-hint{display:flex;justify-content:center;align-items:center;min-height:44px;margin-top:18px;color:var(--muted);font-size:14px}
 
 .cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:999px;padding:0 20px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);cursor:pointer;text-decoration:none;transition:background .5s,transform .15s}
 .cta:hover{transform:translateY(-1px)}
@@ -590,7 +591,7 @@ function detect(text){
 /* ===== EJEMPLOS DENTRO DEL CAMPO: "Cuéntame aquí…" y, a continuación, un ejemplo que se escribe y se borra solo ===== */
 const msg = $('#msg'), sendBtn = $('#send'), mic = $('#mic'), thread = $('#thread');
 const PH_BASE = 'Cuéntame aquí… ';
-const PH_EX = ['mi nómina me quita dos días al mes', 'el inventario nunca me cuadra', 'quiero un bot que conteste mi WhatsApp', 'no sé cuánto me gano de verdad', 'mis clientes no vuelven a comprar'];
+const PH_EX = ['mi nómina me quita días', 'el inventario no cuadra', 'un bot para mi WhatsApp', 'no sé cuánto me gano', 'mis clientes no vuelven'];
 let phI = 0, phPos = 0, phDir = -1, phTimer = null;
 msg.placeholder = PH_BASE + PH_EX[0];
 const fitRows = () => { msg.rows = innerWidth >= 600 ? 1 : 2; if (!msg.value) msg.style.height = ''; };
