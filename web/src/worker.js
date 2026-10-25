@@ -16,6 +16,7 @@
  */
 
 import { generateBrief, fallbackBrief } from './brief.js';
+import { handleWhatsAppWebhook } from './whatsapp.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -64,6 +65,7 @@ async function route(request, env, ctx, url) {
       if (request.method === 'POST' && path === '/api/chat') return await chat(request, env);
       if (request.method === 'POST' && path === '/api/transcribe') return await transcribe(request, env);
       if (request.method === 'POST' && path === '/api/lead') return await createLead(request, env, ctx);
+      if (request.method === 'POST' && path === '/api/whatsapp') return await handleWhatsAppWebhook(request, env, ctx, agentHelpers());
       if (request.method === 'POST' && path === '/api/event') return await trackEvent(request, env);
       if (request.method === 'GET' && path === '/api/leads') return await listLeads(request, env);
       const m = path.match(/^\/api\/leads\/([A-Za-z0-9-]{1,64})$/);
@@ -111,6 +113,18 @@ async function chat(request, env) {
   await env.DB.prepare('INSERT INTO chat_messages (session_id, ip_hash, role, content) VALUES (?, ?, ?, ?)')
     .bind(sessionId, ipHash, 'user', message).run();
 
+  let out;
+  try { out = await triage(env, message); } catch (err) {
+    console.error('triage', err?.message || 'desconocido');
+    return json({ error: err?.status === 502 && err?.message === 'invalid' ? 'Respuesta inválida' : 'IA no disponible' }, 502);
+  }
+  await env.DB.prepare('INSERT INTO chat_messages (session_id, ip_hash, role, content, intent) VALUES (?, ?, ?, ?, ?)')
+    .bind(sessionId, ipHash, 'assistant', out.reply, out.intent).run();
+  return json({ intent: out.intent, reply: out.reply });
+}
+
+// La IA lee el problema y devuelve el frente (intent) y una respuesta corta. Lo usan la página y el agente de WhatsApp.
+async function triage(env, message) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     signal: AbortSignal.timeout(15000),
@@ -132,15 +146,14 @@ async function chat(request, env) {
       },
     }),
   });
-  if (!res.ok) { console.error('OpenAI chat', res.status); return json({ error: 'IA no disponible' }, 502); }
+  if (!res.ok) throw Object.assign(new Error('OpenAI ' + res.status), { status: 502 });
   const data = await res.json();
   let out;
-  try { out = JSON.parse(data.choices[0].message.content); } catch { return json({ error: 'Respuesta inválida' }, 502); }
-  const intent = INTENTS.includes(out.intent) ? out.intent : null;
-  const reply = noLinks(clean(out.reply, 600)); // la IA no debe mandar enlaces al visitante, pase lo que pase
-  await env.DB.prepare('INSERT INTO chat_messages (session_id, ip_hash, role, content, intent) VALUES (?, ?, ?, ?, ?)')
-    .bind(sessionId, ipHash, 'assistant', reply, intent).run();
-  return json({ intent, reply });
+  try { out = JSON.parse(data.choices[0].message.content); } catch { throw Object.assign(new Error('invalid'), { status: 502 }); }
+  return {
+    intent: INTENTS.includes(out.intent) ? out.intent : null,
+    reply: noLinks(clean(out.reply, 600)), // la IA no debe mandar enlaces al visitante, pase lo que pase
+  };
 }
 
 /* ---------- /api/transcribe ---------- */
@@ -192,11 +205,7 @@ async function createLead(request, env, ctx) {
   if (b.consent !== true) return json({ error: 'Falta la autorización de datos' }, 400);
 
   // La prioridad se calcula aquí, no en el navegador
-  const points = SCORES[budget] * 3 + SCORES[timing] * 3 + SCORES[decider] * 2 + (intent ? 3 : 0); // máx. 27
-  const tier = points >= 20 ? 'A' : points >= 13 ? 'B' : 'C';
-  const action = tier === 'C' ? 'nurture' : 'contact';
-  // Software (Loggro) usa el calendario de Loggro; lo demás, el de la empresa de Damián (solo para el link opcional)
-  const calendar = intent === 'software' ? 'loggro' : 'personal';
+  const { points, tier, action, calendar } = scoreLead({ budget, timing, decider, intent });
   const bookingFor = (act, cal) => (act === 'contact' ? (cal === 'loggro' ? env.BOOKING_URL_LOGGRO : env.BOOKING_URL_PERSONAL) || null : null);
 
   // Reintento del navegador (la respuesta se perdió): mismo envío en 10 min = mismo lead, sin duplicar ni avisar dos veces
@@ -212,26 +221,44 @@ async function createLead(request, env, ctx) {
     budget, timing, decider, points, tier, action, calendar,
     utm: cleanUtm(b.utm), page: clean(b.page, 500),
   };
+  await persistLead(env, ctx, lead, ipHash);
+
+  return json({ id, tier, action, bookingUrl: bookingFor(action, calendar) });
+}
+
+// Prioridad del lead (máx. 27). La misma cuenta para la página y para WhatsApp.
+function scoreLead({ budget, timing, decider, intent }) {
+  const points = SCORES[budget] * 3 + SCORES[timing] * 3 + SCORES[decider] * 2 + (intent ? 3 : 0);
+  const tier = points >= 20 ? 'A' : points >= 13 ? 'B' : 'C';
+  // Software (Loggro) usa el calendario de Loggro; lo demás, el de la empresa de Damián (solo para el link opcional)
+  return { points, tier, action: tier === 'C' ? 'nurture' : 'contact', calendar: intent === 'software' ? 'loggro' : 'personal' };
+}
+
+// Guarda el lead, registra el embudo y avisa a Damián si hay que gestionarlo. Lo usan /api/lead y el agente de WhatsApp.
+async function persistLead(env, ctx, lead, ipHash) {
   await env.DB.prepare(`INSERT INTO leads (id, session_id, name, phone, intent, problem, budget, timing, decider, points, tier, action, calendar, consent, utm, page)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`)
-    .bind(lead.id, lead.session_id, name, phone, intent, lead.problem, budget, timing, decider, points, tier, action, calendar, lead.utm, lead.page).run();
+    .bind(lead.id, lead.session_id, lead.name, lead.phone, lead.intent, lead.problem, lead.budget, lead.timing, lead.decider, lead.points, lead.tier, lead.action, lead.calendar, lead.utm, lead.page).run();
 
   // Embudo: la etapa 'lead' la registra el servidor (no depende del navegador). Si falla, el lead ya quedó guardado.
   await env.DB.prepare('INSERT INTO events (session_id, ip_hash, type, intent, utm) VALUES (?, ?, ?, ?, ?)')
-    .bind(lead.session_id || id, ipHash, 'lead', intent, lead.utm).run().catch(err => console.error('event lead', err?.message));
+    .bind(lead.session_id || lead.id, ipHash, 'lead', lead.intent, lead.utm).run().catch(err => console.error('event lead', err?.message));
 
   // Si llegan muchos leads de golpe (¿alguien automatizando?) se guardan igual, pero sin gastar IA ni avisar uno por uno:
   // el resumen de las 7 am y el panel los muestran.
   // Los leads para nutrir (tier C) tampoco avisan ni gastan IA: quedan en la base para campañas futuras.
   const burst = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE created_at > datetime('now', '-1 hour')").first();
-  if (action !== 'contact' || (burst?.n || 0) > LEADS_BURST) {
+  if (lead.action !== 'contact' || (burst?.n || 0) > LEADS_BURST) {
     ctx.waitUntil(env.DB.prepare('UPDATE leads SET brief = ?, brief_at = datetime(\'now\') WHERE id = ?').bind(JSON.stringify(fallbackBrief(lead)), lead.id).run().catch(() => {}));
   } else {
     ctx.waitUntil(prepareAndNotify(env, lead).catch(err => console.error('prepareAndNotify', err?.message || 'desconocido')));
   }
-  if (env.AUTO_CONTACT_LEADS === 'true' && action === 'contact') ctx.waitUntil(contactLead(env, lead).catch(err => console.error('contactLead', err?.message || 'desconocido')));
+  if (env.AUTO_CONTACT_LEADS === 'true' && lead.action === 'contact') ctx.waitUntil(contactLead(env, lead).catch(err => console.error('contactLead', err?.message || 'desconocido')));
+}
 
-  return json({ id, tier, action, bookingUrl: bookingFor(action, calendar) });
+// Lo que el agente de WhatsApp reutiliza de este archivo (misma IA, misma prioridad, mismo guardado, mismo envío)
+function agentHelpers() {
+  return { clean, normalizePhone, readText, triage, scoreLead, persistLead, sendWhatsApp, INTENT_NAMES };
 }
 
 // Brief (IA o plantilla) → se guarda → aviso a Damián con la apertura lista para copiar.
