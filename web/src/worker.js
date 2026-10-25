@@ -499,7 +499,12 @@ async function sendWhatsApp(env, payload) {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) console.error('Kapso', res.status); // sin el cuerpo de la respuesta ni del envío: traen teléfonos y texto del lead
+    if (!res.ok) {
+      // Solo el código y el motivo del error, con los números enmascarados: el envío y el resto de la respuesta traen teléfonos y texto del lead
+      const e = await res.json().then(j => j?.error || j).catch(() => null);
+      const why = e && typeof e === 'object' ? [e.code, e.message || e.error_data?.details].filter(Boolean).join(' ') : '';
+      console.error('Kapso', res.status, String(why).replace(/\d{5,}/g, '#').slice(0, 200));
+    }
     return res.ok;
   } catch (err) { console.error('Kapso', err?.name || 'error'); return false; } // un fallo de red no debe tumbar el resto del cron
 }
