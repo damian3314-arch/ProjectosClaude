@@ -999,19 +999,21 @@ const CONFIG = {
      ═══════════════════════════════════════════════════════════════ */
   html.halloween{
     --h-ease:cubic-bezier(0.23,1,0.32,1);
-    --bg:#08050c; --bg-2:#120a17; --bg-3:#1b1022;
-    --surface:#120a17; --surface-2:#1b1022;
-    --line:#2f1a38; --line-2:#4b2a58;
-    --hot:#ff7a1f; --hot-2:#ffa14f; --gold:#ffbd6b;
-    --neon:#b58cff; --neon-2:#d9c6ff; --violeta:#7a3cff;
-    --slime:#a6ff4d;
-    --grad-marca:linear-gradient(100deg,#ff7a1f 0%,#ff4d1a 55%,#b58cff 100%);
+    --bg:#050505; --bg-2:#0e0b09; --bg-3:#171210;
+    --surface:#0e0b09; --surface-2:#171210;
+    --line:#2a1f17; --line-2:#4a3322;
+    --tx:#fbf6f0; --tx-2:#cbbfb1; --tx-3:#8f8272;
+    --hot:#ff7a1f; --hot-2:#ffa14f; --gold:#ffb347;
+    --neon:#ff7a1f; --neon-2:#ffa14f; --violeta:#e8590c;
+    --slime:#ffa14f; --on-hot:#1a0a02;
+    --grad-marca:linear-gradient(100deg,#ffa14f 0%,#ff7a1f 55%,#e8590c 100%);
   }
   html.halloween body{
-    background:
-      radial-gradient(120% 50% at 50% -10%, rgba(122,60,255,.22), transparent 70%),
-      radial-gradient(80% 40% at 100% 105%, rgba(255,122,31,.10), transparent 70%),
-      var(--bg);
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(60rem 28rem at 50% -12rem,rgba(255,122,31,.30),transparent 66%),
+      radial-gradient(30rem 22rem at 110% 105%,rgba(255,106,0,.12),transparent 62%);
+    background-attachment:fixed;
   }
   /* viñeta: los bordes se oscurecen y la atención se va al centro */
   html.halloween body::before{
@@ -1031,7 +1033,7 @@ const CONFIG = {
   html.halloween .franja{
     position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
     padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,122,31,.55); border-radius:18px;
-    background-image:linear-gradient(165deg,#1a0b24 0%,#0c0612 62%,#07040b 100%)!important;
+    background-image:linear-gradient(165deg,#1d1209 0%,#0a0705 62%,#050505 100%)!important;
     box-shadow:0 18px 40px -18px rgba(255,122,31,.5), inset 0 1px 0 rgba(255,255,255,.06);
     display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
     opacity:0; transform:translateY(10px) scale(.985);
@@ -1052,8 +1054,8 @@ const CONFIG = {
   }
   .fr-niebla{
     position:absolute; left:-20%; right:-20%; bottom:-1.4rem; height:6rem;
-    background:radial-gradient(60% 100% at 30% 100%, rgba(181,140,255,.34), transparent 70%),
-               radial-gradient(50% 100% at 78% 100%, rgba(255,122,31,.22), transparent 70%);
+    background:radial-gradient(60% 100% at 30% 100%, rgba(255,122,31,.30), transparent 70%),
+               radial-gradient(50% 100% at 78% 100%, rgba(255,106,0,.20), transparent 70%);
     filter:blur(10px); animation:h-niebla 14s ease-in-out infinite alternate;
   }
   @keyframes h-niebla{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
@@ -1067,7 +1069,7 @@ const CONFIG = {
     50%{transform:translate(18rem,-.5rem) rotate(-3deg)} 75%{transform:translate(27rem,.8rem) rotate(4deg)}
     100%{transform:translate(36rem,0) rotate(-2deg)}
   }
-  html.halloween .franja-ceja{color:var(--slime);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(166,255,77,.45)}
+  html.halloween .franja-ceja{color:var(--hot-2);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,161,79,.4)}
   html.halloween .franja-titulo{
     font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:11ch;
     background:linear-gradient(180deg,#fff 0%,#ffd9b0 55%,#ff9a4a 100%);
@@ -1091,8 +1093,8 @@ const CONFIG = {
   }
   html.halloween .fr-cuenta{
     display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px;
-    font-size:.78rem; font-weight:700; letter-spacing:.02em; color:var(--slime);
-    border:1px solid rgba(166,255,77,.4); background:rgba(166,255,77,.07);
+    font-size:.78rem; font-weight:700; letter-spacing:.02em; color:var(--hot-2);
+    border:1px solid rgba(255,161,79,.45); background:rgba(255,122,31,.08);
   }
   .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:h-latido 2.4s ease-in-out infinite}
   @keyframes h-latido{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
@@ -1102,6 +1104,33 @@ const CONFIG = {
     .fr-m,.fr-niebla,.fr-cuenta::before,html.halloween .franja-titulo{animation:none}
     .fr-m{display:none}
   }
+
+  /* ── Halloween en negro y naranja: lo rosa y violeta de la capa neón pasa a naranja ── */
+  html.halloween header::before{background:linear-gradient(90deg,transparent,rgba(255,161,79,.9) 22%,#ff7a1f 62%,transparent);
+    box-shadow:0 0 14px 2px rgba(255,122,31,.5),0 0 34px 6px rgba(255,106,0,.2)}
+  html.halloween header::after{background:linear-gradient(90deg,transparent,rgba(255,122,31,.85) 40%,rgba(255,179,71,.8) 80%,transparent);
+    box-shadow:0 0 12px 2px rgba(255,122,31,.4)}
+  html.halloween .marca img{filter:drop-shadow(0 0 18px rgba(255,122,31,.35)) drop-shadow(0 2px 10px rgba(0,0,0,.7))}
+  html.halloween .pasos li[aria-current]{background:rgba(255,122,31,.12)}
+  html.halloween .opcion:hover,html.halloween .clase:hover:not(:disabled),html.halloween .tarjeta:hover,html.halloween .tarjeta:focus-visible{
+    box-shadow:0 0 0 1px rgba(255,122,31,.45),0 10px 30px -14px rgba(255,122,31,.5)}
+  html.halloween .opcion .ico{background:rgba(255,122,31,.13)}
+  html.halloween .tarjeta .clave{background:rgba(255,122,31,.08)}
+  html.halloween .dia[aria-pressed="true"]{box-shadow:0 8px 24px -8px rgba(255,122,31,.7)}
+  html.halloween .franja-promo{background:linear-gradient(135deg,rgba(255,122,31,.14),rgba(255,106,0,.05) 70%),var(--surface)}
+  html.halloween .franja-promo:hover{background:linear-gradient(135deg,rgba(255,122,31,.2),rgba(255,106,0,.08) 70%),var(--surface-2)}
+  html.halloween .oferta-tiq,html.halloween .oferta-espera{background:linear-gradient(135deg,rgba(255,122,31,.15),rgba(255,106,0,.08))}
+  html.halloween .grupo-total,html.halloween .pago-solo,html.halloween .cuantos-caja .grupo-total{background:linear-gradient(135deg,rgba(255,122,31,.12),rgba(255,106,0,.06))}
+  html.halloween #acompanantes{border-left-color:rgba(255,122,31,.5)}
+  html.halloween .btn{box-shadow:0 10px 28px -12px rgba(255,122,31,.8)}
+  html.halloween .btn:hover:not(:disabled){box-shadow:0 12px 32px -10px rgba(255,122,31,.9)}
+  html.halloween .btn:disabled{box-shadow:none}
+  html.halloween .btn-ghost{border-color:rgba(255,122,31,.35)}
+  html.halloween .btn-ghost:hover{background:rgba(255,122,31,.07)}
+  html.halloween #burbuja{box-shadow:0 8px 26px -6px rgba(255,122,31,.7)}
+  html.halloween .codigo{border-color:rgba(255,122,31,.4)}
+  html.halloween .codigo b{text-shadow:0 0 18px rgba(255,122,31,.45)}
+  html.halloween .tarjeta .destacado,html.halloween .btn{color:var(--on-hot)}
 </style>
 <script>
 /* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
