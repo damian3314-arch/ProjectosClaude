@@ -41,6 +41,8 @@ const CONFIG = {
      adicional por su constancia. Se dice «clase adicional», nunca «premio» ni «regalo». Solo tiquetera: la mensualidad ya tiene
      su tarifa baja y la clase suelta la elige quien la compra. Se apaga sola pasada `hasta` (hora de Bogotá). */
   CAMPANA: { activa: true, desde: '2026-10-25', hasta: '2026-10-31' },
+  // Clases adicionales al completar la tiquetera (Damián, 25 oct): 1 en la de 4 clases, 2 en la de 8. Aplica a todas, nuevas o viejas.
+  EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -688,52 +690,29 @@ const CONFIG = {
   @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
 
   /* ═══ Campaña de constancia (25 oct) ══════════════════════════════
-     El banner explica la idea en una frase, las tiqueteras llevan la
-     franja «+1 clase» y debajo va el cómo funciona. Todo sale de las
-     variables del tema (también el de Halloween). Quitar este bloque y
-     CONFIG.CAMPANA devuelve la página de antes. */
-  .campana{
-    position:relative;overflow:hidden;margin:1.2rem 0 .2rem;padding:1.1rem 1.1rem 1rem;
-    border-radius:calc(var(--r) + 4px);border:1px solid color-mix(in srgb,var(--hot) 55%,transparent);
-    background:
-      radial-gradient(90% 120% at 100% 0%,color-mix(in srgb,var(--hot) 24%,transparent),transparent 62%),
-      linear-gradient(160deg,var(--bg-3),var(--bg-2));
-    box-shadow:0 18px 40px -22px color-mix(in srgb,var(--hot) 70%,transparent);
-  }
-  .campana .ceja{
-    display:inline-flex;align-items:center;gap:.4rem;font-size:.68rem;font-weight:800;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--hot-2);margin-bottom:.45rem;
-  }
-  .campana .ceja::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--hot);box-shadow:0 0 12px var(--hot)}
-  .campana h3{margin:0 0 .35rem;font-size:1.32rem;line-height:1.12;letter-spacing:-.03em;font-weight:800}
-  .campana p{margin:0;font-size:.92rem;line-height:1.45;color:var(--tx-2)}
-  .campana .reloj{
-    display:inline-block;margin-top:.7rem;font-size:.78rem;font-weight:700;color:var(--ok);
-    border:1px solid color-mix(in srgb,var(--ok) 45%,transparent);border-radius:99px;padding:.3rem .65rem;
-    background:color-mix(in srgb,var(--ok) 8%,transparent);
-  }
-  .tarjeta .extra{
-    display:flex;gap:.55rem;align-items:flex-start;margin-top:.15rem;padding:.65rem .75rem;border-radius:12px;
-    font-size:.84rem;line-height:1.35;color:var(--tx);
-    background:linear-gradient(120deg,color-mix(in srgb,var(--hot) 20%,transparent),color-mix(in srgb,var(--hot) 6%,transparent));
-    box-shadow:inset 3px 0 0 var(--hot);
-  }
-  .tarjeta .extra b{color:var(--hot-2)}
-  .tarjeta .extra .mas{
-    flex:none;font-size:.78rem;font-weight:800;line-height:1;padding:.32rem .45rem;border-radius:8px;
-    color:var(--on-hot,#1c0b03);background:linear-gradient(100deg,var(--gold),var(--hot-2));
-  }
-  .tarjeta.recomendada{border-color:color-mix(in srgb,var(--hot) 60%,transparent)}
-  .como{margin:1.4rem 0 .2rem;padding:1.05rem 1.05rem .9rem;border-radius:calc(var(--r) + 2px);border:1px solid var(--line);background:var(--bg-2)}
-  .como h3{margin:0 0 .7rem;font-size:1rem;letter-spacing:-.01em}
-  .como ol{list-style:none;margin:0;padding:0;display:grid;gap:.65rem}
+     Sobria a propósito (Damián: «mucho color, no me gusta»): superficies
+     del tema, una línea fina y el color de marca SOLO en lo que importa
+     (la cifra de clases adicionales). Quitar este bloque y CONFIG.CAMPANA
+     devuelve la página de antes. */
+  .campana{margin:1.2rem 0 .2rem;padding:1rem 1.05rem;border-radius:calc(var(--r) + 2px);
+    border:1px solid var(--line-2);background:var(--bg-2)}
+  .campana .ceja{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--tx-3);margin-bottom:.4rem}
+  .campana h3{margin:0 0 .4rem;font-size:1.2rem;line-height:1.15;letter-spacing:-.02em;font-weight:700}
+  .campana p{margin:0;font-size:.92rem;line-height:1.5;color:var(--tx-2)}
+  .campana p b{color:var(--tx)}
+  .campana .reloj{display:block;margin-top:.6rem;font-size:.8rem;font-weight:600;color:var(--tx-3)}
+  .tarjeta .extra{display:block;margin-top:.1rem;padding:.55rem .75rem;border-radius:10px;font-size:.84rem;line-height:1.4;
+    color:var(--tx-2);background:var(--bg-3);box-shadow:inset 2px 0 0 var(--line-2)}
+  .tarjeta .extra b{color:var(--tx);font-weight:700}
+  .como{margin:1.3rem 0 .2rem;padding:1rem 1.05rem .85rem;border-radius:calc(var(--r) + 2px);border:1px solid var(--line);background:var(--bg-2)}
+  .como h3{margin:0 0 .65rem;font-size:1rem;letter-spacing:-.01em}
+  .como ol{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
   .como li{display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem;line-height:1.4;color:var(--tx-2)}
   .como li b{color:var(--tx)}
-  .como .n{
-    flex:none;width:1.6rem;height:1.6rem;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:800;
-    color:var(--on-hot,#1c0b03);background:linear-gradient(100deg,var(--gold),var(--hot));
-  }
-  .legal-campana{margin:.8rem 0 0;font-size:.74rem;line-height:1.4;color:var(--tx-3)}
+  .como .n{flex:none;width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;font-size:.78rem;font-weight:700;
+    color:var(--tx-2);border:1px solid var(--line-2)}
+  .legal-campana{margin:.75rem 0 0;font-size:.74rem;line-height:1.4;color:var(--tx-3)}
 
   /* ═══════════════════════════════════════════════════════════════
      HALLOWEEN · del 22 al 31 de octubre de 2026 (Damián, 22 oct)
@@ -1610,9 +1589,9 @@ const CONFIG = {
       caja.innerHTML = `
         <div class="campana">
           <span class="ceja">Esta semana · constancia</span>
-          <h3>Cumple todas tus clases y recibe una clase adicional</h3>
-          <p>Compra tu tiquetera esta semana. Cuando completes todas sus clases, por tu constancia y tu disciplina te sumamos
-             <b>una clase adicional</b>. Sin trámites: te avisamos por WhatsApp.</p>
+          <h3>Cumple todas tus clases y recibe clases adicionales</h3>
+          <p>Por tu constancia y tu disciplina: con la tiquetera de 4 clases recibes <b>1 clase adicional</b> y con la de 8
+             clases recibes <b>2 clases adicionales</b>. Sin trámites: te avisamos por WhatsApp.</p>
           <span class="reloj">${cuando}</span>
         </div>`;
       caja.hidden = false;
@@ -1623,9 +1602,9 @@ const CONFIG = {
         <ol>
           <li><span class="n">1</span><span><b>Compra</b> el paquete y paga por transferencia. Te confirmamos el pago y recibes tu código.</span></li>
           <li><span class="n">2</span><span><b>Reserva</b> cada clase en la página, en el horario que te sirva. Vigente 30 días.</span></li>
-          <li><span class="n">3</span><span><b>Baila</b> y completa todas tus clases.${campanaActiva() ? ' Ahí recibes tu clase adicional.' : ''}</span></li>
+          <li><span class="n">3</span><span><b>Baila</b> y completa todas tus clases.${campanaActiva() ? ' Ahí recibes tus clases adicionales: 1 con la de 4 y 2 con la de 8.' : ''}</span></li>
         </ol>
-        ${campanaActiva() ? '<p class="legal-campana">La clase adicional se activa cuando completas todas las clases de tu tiquetera y se avisa por WhatsApp. Es válida por 30 días. Aplica a tiqueteras compradas del 25 al 31 de octubre.</p>' : ''}
+        ${campanaActiva() ? '<p class="legal-campana">Las clases adicionales se activan cuando completas todas las clases de tu tiquetera y se avisa por WhatsApp. Valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.</p>' : ''}
       </div>`;
     como.hidden = false;
   }
@@ -1647,14 +1626,14 @@ const CONFIG = {
       const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - Number(p.precio_cop || 0), 0);
       const camp = campanaActiva();
       return `
-      <button type="button" class="tarjeta${camp ? ' recomendada' : ''}" data-elegir="tq" data-clave="${esc(p.clave)}">
+      <button type="button" class="tarjeta" data-elegir="tq" data-clave="${esc(p.clave)}">
         ${clases >= 8 ? '<span class="destacado">Mejor precio</span>' : ''}
         <svg class="icono" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
         <span class="titulo">Tiquetera de ${clases} clases</span>
         <span class="precio">${pesos(p.precio_cop)}</span>
         <span class="por-clase">${pesos(Math.round(Number(p.precio_cop || 0) / (clases || 1)))} por clase</span>
         ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
-        ${camp ? `<span class="extra"><span class="mas">+1</span><span>Completa tus <b>${clases} clases</b> y recibe <b>1 clase adicional</b> por tu constancia.</span></span>` : ''}
+        ${camp ? `<span class="extra">Completa tus <b>${clases} clases</b> y recibe <b>${CONFIG.EXTRA(clases)} ${CONFIG.EXTRA(clases) === 1 ? 'clase adicional' : 'clases adicionales'}</b> por tu constancia.</span>` : ''}
         <p class="desc">Compra una vez y ven cuando quieras. ${clases >= 8
           ? 'Ideal si vienes dos veces por semana o solo una parte del mes.'
           : 'Ideal para empezar o para venir una vez por semana.'}</p>

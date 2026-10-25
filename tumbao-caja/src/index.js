@@ -1370,6 +1370,26 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 0187 (25 oct): quien completa la tiquetera de 8 clases recibe 2 clases adicionales (la de 4 recibe 1, con pase_constancia).
+    // Esta plantilla dice cuántas son. Se activa con ajustes.wa_pase_constancia_2 cuando Meta la aprueba.
+    name: 'pase_constancia_2',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          '¡Felicidades {{1}}! 🎉 Completaste las {{2}} clases de tu tiquetera en Tumbao y, por tu constancia, recibes {{3}}.\n\n' +
+          '🎟️ {{4}}\n📅 Valen hasta el {{5}}\n\n' +
+          'Para usarlas entra a tumbaobaila.com y elige Tengo tiquetera.\n\n' +
+          'Gracias por bailar con nosotros 🧡',
+        example: { body_text: [['Laura', '8', '2 clases adicionales', 'Código: A1B2C3', 'jueves 29 de octubre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
+    ],
+  },
+  {
     // 0123: seguimiento a quien contestó «Me encantó» y todavía no volvió ni
     // compró. Sale al día 4 o más de su respuesta (la segunda visita llega a
     // los 7 días de mediana). Precio y número de clases vienen de
