@@ -163,7 +163,13 @@ async function onProblem(c, text) {
   if (c.env.OPENAI_API_KEY && (fresh?.n || 0) <= MAX_NEW_PER_HOUR) {
     try { t = await c.h.triage(c.env, problem); } catch (err) { console.error('triage wa', err?.message || 'desconocido'); }
   }
-  await save(c, { state: 'q_budget', problem, intent: t.intent, name: c.h.clean(c.inb.name, 80) || null });
+  // Si lo que escribió no parece un problema de negocio (saludo, charla, otro idioma), se le aclara una vez antes de calificarlo
+  const prior = c.st.state === 'need_problem' ? c.st.problem || '' : '';
+  if (!t.intent && !prior) {
+    await save(c, { state: 'need_problem', problem });
+    return sendText(c, 'Cuéntame un poco más 🙂 ¿Qué se te complica en tu negocio: la nómina, el inventario o la facturación, las ventas, el WhatsApp o el desorden en los procesos?');
+  }
+  await save(c, { state: 'q_budget', problem: prior ? `${prior}\n${problem}`.slice(0, 3000) : problem, intent: t.intent, name: c.h.clean(c.inb.name, 80) || null });
   const q = QUESTIONS.q_budget;
   return sendButtons(c, `${t.reply}\n\nTe hago 3 preguntas rápidas, no toma ni un minuto. ${q.text}`, q.options);
 }
