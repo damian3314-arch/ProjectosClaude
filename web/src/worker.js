@@ -377,7 +377,7 @@ const BOGOTA_MS = 5 * 3600e3;
 async function ownerPush(env) {
   // Limpieza: los intentos fallidos de clave solo sirven un rato
   await env.DB.prepare("DELETE FROM admin_fails WHERE created_at < datetime('now', '-1 day')").run().catch(() => {});
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.OWNER_WHATSAPP) return;
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return;
   const bog = new Date(Date.now() - BOGOTA_MS);
   const hour = bog.getUTCHours();
   if (hour < 7 || hour >= 21) return;
@@ -433,7 +433,7 @@ const TIER_ICON = { A: '🔥', B: '⭐', C: '🌱' };
 
 // Aviso de lead nuevo: prioridad, quién es, resumen y la apertura lista para copiar + link directo a WhatsApp.
 async function notifyOwner(env, lead, brief) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.OWNER_WHATSAPP) return;
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return;
   const ok = await ownerMessage(env, composeLeadMessage(lead, brief, `${TIER_ICON[lead.tier]} Lead ${lead.tier} (${lead.points}/27)`));
   if (ok) await env.DB.prepare("UPDATE leads SET notified_at = datetime('now') WHERE id = ?").bind(lead.id).run();
 }
@@ -467,23 +467,25 @@ function composeLeadMessage(lead, brief, header) {
 
 // Texto libre solo funciona dentro de las 24 h desde que Damián le escribió al número; fuera de eso, plantilla aprobada.
 async function ownerMessage(env, text) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.OWNER_WHATSAPP) return false;
-  const to = String(env.OWNER_WHATSAPP).replace(/\D/g, '');
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return false;
+  // WhatsApp ya puede identificar a Damián solo por un ID de usuario (BSUID, sin teléfono): la ventana de 24 h queda abierta para ese ID,
+  // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
+  const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
   return sendWhatsApp(env, env.KAPSO_NOTIFY_TEMPLATE
-    ? template(to, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text])
-    : { messaging_product: 'whatsapp', to, type: 'text', text: { body: text, preview_url: false } });
+    ? template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text])
+    : { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } });
 }
 
 // Mensaje a un cliente real: apagado por defecto (AUTO_CONTACT_LEADS = "false").
 async function contactLead(env, lead) {
   if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.KAPSO_LEAD_TEMPLATE) return;
   const first = waSafe(lead.name, 40).split(' ')[0];
-  await sendWhatsApp(env, template(lead.phone, env.KAPSO_LEAD_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [first, INTENT_NAMES[lead.intent] || 'tu negocio']));
+  await sendWhatsApp(env, template({ to: lead.phone }, env.KAPSO_LEAD_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [first, INTENT_NAMES[lead.intent] || 'tu negocio']));
 }
 
-function template(to, name, lang, params) {
+function template(dest, name, lang, params) {
   return {
-    messaging_product: 'whatsapp', to, type: 'template',
+    messaging_product: 'whatsapp', ...dest, type: 'template',
     template: {
       name, language: { code: lang || 'es' },
       components: [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: String(t).replace(/\s*\n\s*/g, ' · ').slice(0, 1024) })) }],
