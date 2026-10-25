@@ -143,11 +143,11 @@ body[data-intent] .aura{opacity:.38}
 .facts li{display:flex;align-items:center;gap:6px}
 .facts li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c-ia)}
 .ns{padding:18px;font-size:15px;color:var(--muted)}
-html:not(.js) .composer,html:not(.js) .hint{display:none}
+html:not(.js) .composer{display:none}
 
 /* El campo de escritura es el protagonista: los ejemplos viven dentro, como texto de ayuda que rota */
 .box{display:flex;flex-direction:column}
-.thread{order:0}.rec-line{order:1}.composer{order:2}.hint{order:3}
+.thread{order:0}.rec-line{order:1}.composer{order:2}
 
 .thread{display:flex;flex-direction:column;gap:12px;padding:18px 14px 14px;max-height:min(58vh,520px);max-height:min(62dvh,520px);overflow-y:auto;overscroll-behavior:contain}
 .thread:empty{display:none}
@@ -196,7 +196,6 @@ html:not(.js) .composer,html:not(.js) .hint{display:none}
 .rec-line{display:none;padding:0 18px 10px;font-size:13px;color:var(--t-nomina)}
 .rec-line.on{display:block}
 .rec-line.warn{color:var(--muted)}
-.hint{padding:0 18px 12px;font-size:13px;color:var(--muted)}
 .progress{height:3px;background:var(--line);display:none}
 .progress.on{display:block}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
@@ -319,7 +318,6 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
         <button type="button" class="ibtn" id="mic" aria-label="Contar mi problema con un audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <button type="button" class="ibtn send" id="send" disabled aria-label="Enviar"><span class="t">Enviar</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
-      <p class="hint" id="hint">Escribe o graba un audio · sin claves ni tarjetas</p>
     </div>
     <ul class="facts"><li>Diagnóstico inicial sin costo</li><li>Te contacto yo, por WhatsApp</li><li>Tus datos solo para contactarte</li></ul>
     <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
@@ -656,7 +654,7 @@ sendBtn.onclick = () => {
 
 async function start(text){
   started = true; stopPh();
-  $('#composer').hidden = true; $('#hint').hidden = true; msg.value = '';
+  $('#composer').hidden = true; msg.value = '';
   const hadAudio = !!audioBlob;
   me(text || '🎙 Nota de voz');
   await healthReady;               // que un envío rápido no caiga por error en modo demo
@@ -677,7 +675,7 @@ async function start(text){
     // Preguntó quién soy o de qué se trata: se le explica y se le devuelve el campo, sin pasarlo al formulario
     await say(ai.reply, true);
     started = false; busy = false; lead.problem = ''; $('#progress').classList.remove('on');
-    $('#composer').hidden = false; $('#hint').hidden = false; msg.placeholder = 'Cuéntame tu caso o pregúntame lo que quieras…';
+    $('#composer').hidden = false; msg.placeholder = 'Cuéntame tu caso o pregúntame lo que quieras…';
     sendBtn.disabled = true; autosize(); msg.focus({preventScroll:true});
     return;
   }
