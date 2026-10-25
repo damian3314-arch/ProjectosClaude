@@ -501,9 +501,8 @@ async function sendWhatsApp(env, payload) {
     });
     if (!res.ok) {
       // Solo el código y el motivo del error, con los números enmascarados: el envío y el resto de la respuesta traen teléfonos y texto del lead
-      const e = await res.json().then(j => j?.error || j).catch(() => null);
-      const why = e && typeof e === 'object' ? [e.code, e.message || e.error_data?.details].filter(Boolean).join(' ') : '';
-      console.error('Kapso', res.status, String(why).replace(/\d{5,}/g, '#').slice(0, 200));
+      const raw = await res.text().catch(() => '');
+      console.error('Kapso', res.status, raw.replace(/\d{5,}/g, '#').slice(0, 300));
     }
     return res.ok;
   } catch (err) { console.error('Kapso', err?.name || 'error'); return false; } // un fallo de red no debe tumbar el resto del cron
