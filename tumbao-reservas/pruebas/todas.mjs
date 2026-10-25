@@ -64,6 +64,7 @@ const SUITES = [
   'timba-modo-redes',
   'timba-sin-repetir',
   'halloween-29',
+  'campana-constancia',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
