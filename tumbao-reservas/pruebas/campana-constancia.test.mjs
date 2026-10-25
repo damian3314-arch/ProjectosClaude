@@ -25,7 +25,9 @@ ok('la mensualidad no se anuncia con la campaña (solo las tiqueteras)', !/extra
 
 titulo('1b. Los pases');
 ok('la mensualidad va primero y cada producto es un pase con su botón', mens.indexOf("tipo: 'mensualidad'") < mens.indexOf('for (const p of tiqPaquetes)') && /class="pase /.test(mens) && /id="btn-pase" data-elegir=/.test(mens));
-ok('el botón del pase sigue llevando al flujo de siempre (mensualidad o tiquetera)', /elegirTiqueteraDirecta\(b\.dataset\.clave\)/.test(mens) && /\$\('#pasos'\)\.hidden = false/.test(mens));
+ok('el botón del pase sigue llevando al flujo de siempre (mensualidad o tiquetera)', /elegirTiqueteraDirecta\(p\.clave\)/.test(mens) && /\$\('#pasos'\)\.hidden = false/.test(mens));
+ok('el botón de comprar va pegado a los pases, antes de lo que incluye', mens.indexOf('id="cta-pase"') > mens.indexOf('id="tarjetas-eleccion"') && mens.indexOf('id="cta-pase"') < mens.indexOf('id="detalle"'));
+ok('tocar el pase elegido arranca la compra', /if \(i === paseActivo\) \{ comprarPase\(pasesActuales\[i\]\); return; \}/.test(mens));
 ok('hay preguntas frecuentes y el enlace a WhatsApp para más dudas', /Preguntas frecuentes/.test(mens) && /¿Tengo más dudas\?/.test(mens));
 ok('las fotos de los pases se pueden poner desde CONFIG.FOTOS', /FOTOS: \{ mensualidad: '', '4': '', '8': '' \}/.test(mens));
 ok('el movimiento respeta a quien pide menos movimiento', /prefers-reduced-motion:reduce\)\{\s*\.pase,\.puntos-pager i,\.detalle \.det\{transition:none\}/.test(mens));

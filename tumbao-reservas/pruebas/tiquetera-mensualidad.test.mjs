@@ -107,7 +107,8 @@ async function verPase(p, clave) {
   await p.locator(`.pase[data-pase="tq"][data-clave="${clave}"]`).click();
   await p.waitForFunction((c) => {
     const b = document.querySelector('#btn-pase');
-    return b && b.dataset.clave === c;
+    const h = document.querySelector('#detalle h3');
+    return b && b.dataset.clave === c && h && h.textContent.includes(c + ' clases');
   }, clave, { timeout: 5000 });
   return (await p.locator(`.pase[data-clave="${clave}"]`).innerText()) + '\n' + (await p.locator('#detalle').innerText());
 }

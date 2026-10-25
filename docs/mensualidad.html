@@ -701,17 +701,17 @@ const CONFIG = {
      Las fotos: CONFIG.FOTOS. Si un pase tiene foto, va de fondo con un
      velo oscuro para que el texto se lea. */
   :root{--ease-salida:cubic-bezier(0.23,1,0.32,1)}
-  .el-titulo{font-size:1.65rem;letter-spacing:-.035em;margin-bottom:.2rem}
-  .el-sub{margin:0 0 .9rem}
+  .el-titulo{font-size:1.7rem;letter-spacing:-.035em;margin:.4rem 0 .3rem}
+  .el-sub{margin:0 0 1.2rem}
   .campana-chip{
-    margin:0 0 .9rem;padding:.55rem .8rem;border-radius:12px;font-size:.84rem;line-height:1.4;color:var(--tx-2);
+    margin:0 0 1.3rem;padding:.7rem .9rem;border-radius:14px;font-size:.85rem;line-height:1.45;color:var(--tx-2);
     background:var(--surface,var(--bg-2));border:1px solid var(--line-2);
   }
   .campana-chip b{color:var(--tx)}
   .pases{
     display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:.8rem;
     overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
-    margin:0 -1rem;padding:.4rem 8% 1rem;-webkit-overflow-scrolling:touch;
+    margin:0 -1rem;padding:.5rem 8% 1.2rem;-webkit-overflow-scrolling:touch;
   }
   .pases::-webkit-scrollbar{display:none}
   @media (min-width:34rem){.pases{grid-auto-columns:20rem;padding-inline:calc(50% - 10rem)}}
@@ -771,37 +771,57 @@ const CONFIG = {
   .pase.brilla::after{animation:brillo 900ms var(--ease-salida) 120ms 1}
   @keyframes brillo{0%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(420%) skewX(-12deg)}}
   /* pager */
-  .puntos-pager{display:flex;justify-content:center;gap:.4rem;margin:.1rem 0 .9rem}
+  .puntos-pager{display:flex;justify-content:center;gap:.4rem;margin:0 0 1.2rem}
   .puntos-pager i{width:.42rem;height:.42rem;border-radius:99px;background:var(--line-2);transition:transform 200ms var(--ease-salida),background-color 200ms ease}
   .puntos-pager i.on{background:var(--hot);transform:scaleX(2.2)}
-  /* detalle del pase al frente */
-  .detalle{min-height:13.5rem}
-  .detalle .det{transition:opacity 180ms ease,filter 180ms ease}
+  /* la marca de «elegido» sobre el pase al frente */
+  .pase .elegido{position:absolute;z-index:2;right:1rem;top:.85rem;display:inline-flex;align-items:center;gap:.3rem;
+    font-size:.66rem;font-weight:800;letter-spacing:.04em;padding:.28rem .55rem .28rem .4rem;border-radius:99px;
+    color:#1a0a02;background:#fff;opacity:0;transform:translateY(4px) scale(.96);
+    transition:opacity 200ms var(--ease-salida),transform 200ms var(--ease-salida)}
+  .pase .elegido::before{content:"";width:.7rem;height:.4rem;margin-top:-.15rem;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg)}
+  .pase.activo .elegido{opacity:1;transform:none}
+  .pase.activo .chip{opacity:0}
+  .pase .chip{transition:opacity 200ms ease}
+  .pase.pase-mensualidad .elegido{background:#1a0a02;color:#fff}
+  /* el botón de comprar, pegado a los pases */
+  .cta-pase{margin:0 0 .3rem}
+  .cta-pase .btn{width:100%;margin:0;transition:transform 160ms var(--ease-salida),filter 160ms ease}
+  .cta-pase .btn:active{transform:scale(.97)}
+  .cta-pase .btn.cambio{animation:cta-cambio 260ms var(--ease-salida)}
+  @keyframes cta-cambio{from{transform:scale(.97);opacity:.6}to{transform:none;opacity:1}}
+  .cta-pase .pista{margin:.6rem 0 0;text-align:center;font-size:.78rem;color:var(--tx-3)}
+  /* lo que incluye el pase al frente: su propia caja, con aire */
+  .detalle{margin-top:1.9rem}
+  .detalle .det{padding:1.2rem 1.15rem 1.15rem;border-radius:18px;border:1px solid var(--line);background:var(--surface,var(--bg-2));
+    transition:opacity 180ms ease,filter 180ms ease}
   .detalle .det.cambia{opacity:0;filter:blur(2px)}
-  .detalle h3{margin:0 0 .15rem;font-size:1.1rem;letter-spacing:-.02em}
-  .detalle .linea{margin:0 0 .7rem;color:var(--tx-2);font-size:.9rem}
-  .detalle ul{list-style:none;margin:0 0 .95rem;padding:0;display:grid;gap:.45rem}
-  .detalle li{position:relative;padding-left:1rem;font-size:.88rem;line-height:1.4;color:var(--tx-2)}
-  .detalle li::before{content:"";position:absolute;left:0;top:.45rem;width:.42rem;height:.42rem;border-radius:50%;background:var(--hot)}
+  .detalle .ceja-d{display:block;font-size:.66rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--tx-3);margin-bottom:.35rem}
+  .detalle h3{margin:0 0 .25rem;font-size:1.15rem;letter-spacing:-.02em}
+  .detalle .linea{margin:0 0 1rem;color:var(--tx-2);font-size:.9rem;line-height:1.45}
+  .detalle ul{list-style:none;margin:0;padding:0;display:grid;gap:.8rem}
+  .detalle li{position:relative;padding-left:1.75rem;font-size:.9rem;line-height:1.45;color:var(--tx-2)}
+  .detalle li::before{content:"";position:absolute;left:0;top:.05rem;width:1.15rem;height:1.15rem;border-radius:50%;
+    background:color-mix(in srgb,var(--hot) 16%,transparent)}
+  .detalle li::after{content:"";position:absolute;left:.36rem;top:.36rem;width:.42rem;height:.24rem;
+    border-left:2px solid var(--hot-2);border-bottom:2px solid var(--hot-2);transform:rotate(-45deg)}
   .detalle li b{color:var(--tx)}
-  .detalle li.extra-li{color:var(--tx)}
-  .detalle .btn{width:100%;transition:transform 160ms var(--ease-salida),filter 160ms ease}
-  .detalle .btn:active{transform:scale(.97)}
-  /* preguntas frecuentes */
-  .faq{margin-top:1.6rem}
-  .faq h3{font-size:1rem;margin:0 0 .5rem;letter-spacing:-.01em}
+  .detalle li .extra-li{color:var(--tx)}
+  /* preguntas frecuentes: cómodas de tocar */
+  .faq{margin-top:2.4rem}
+  .faq h3{font-size:1.05rem;margin:0 0 .6rem;letter-spacing:-.01em}
   .faq details{border-top:1px solid var(--line)}
   .faq details:last-of-type{border-bottom:1px solid var(--line)}
-  .faq summary{list-style:none;cursor:pointer;padding:.85rem 1.8rem .85rem 0;position:relative;font-size:.92rem;font-weight:600;color:var(--tx)}
+  .faq summary{list-style:none;cursor:pointer;padding:1.05rem 2rem 1.05rem 0;position:relative;font-size:.94rem;font-weight:600;color:var(--tx);line-height:1.35}
   .faq summary::-webkit-details-marker{display:none}
-  .faq summary::after{content:"";position:absolute;right:.3rem;top:50%;width:.55rem;height:.55rem;margin-top:-.4rem;
+  .faq summary::after{content:"";position:absolute;right:.35rem;top:50%;width:.55rem;height:.55rem;margin-top:-.4rem;
     border-right:2px solid var(--tx-3);border-bottom:2px solid var(--tx-3);transform:rotate(45deg);transition:transform 200ms var(--ease-salida)}
   .faq details[open] summary::after{transform:rotate(225deg);margin-top:-.1rem}
-  .faq details p{margin:0 0 .9rem;font-size:.88rem;line-height:1.5;color:var(--tx-2)}
+  .faq details p{margin:0 0 1.1rem;font-size:.9rem;line-height:1.55;color:var(--tx-2)}
   .faq details p b{color:var(--tx)}
   @media (prefers-reduced-motion:reduce){
     .pase,.puntos-pager i,.detalle .det{transition:none}
-    .pase.activo .cinta,.pase.brilla::after{animation:none}
+    .pase.activo .cinta,.pase.brilla::after,.cta-pase .btn.cambio{animation:none}
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -1001,6 +1021,9 @@ const CONFIG = {
     <div class="pase pase-skel"></div><div class="pase pase-skel"></div>
   </div>
   <div class="puntos-pager" id="pager" aria-hidden="true"></div>
+  <!-- 25 oct (Damián): el botón de comprar va PEGADO a los pases. Tocar un pase lo elige; tocarlo otra vez (o el
+       botón) arranca la compra. Lo que incluye va debajo, en su propia caja. -->
+  <div class="cta-pase" id="cta-pase"></div>
   <div class="detalle" id="detalle" aria-live="polite"></div>
 
   <div class="faq" id="faq"></div>
@@ -1748,6 +1771,7 @@ const CONFIG = {
         ${ARTE}
         <span class="num" aria-hidden="true">${esc(p.num)}</span>
         ${p.sello ? `<span class="sello">${esc(p.sello)}</span>` : ''}
+        <span class="elegido" aria-hidden="true">Elegido</span>
         <span class="cont">
           <span class="top"><span class="marca-p">TUMBAO · PASE</span><span class="chip" aria-hidden="true"></span></span>
           <span class="nom">${esc(p.nombre)}</span>
@@ -1760,37 +1784,44 @@ const CONFIG = {
   let pasesActuales = [];
   let paseActivo = -1;
 
+  // Arranca la compra del pase que está al frente: mensualidad o la tiquetera de siempre.
+  function comprarPase(p) {
+    $('#eleccion').hidden = true;
+    if (p.tipo === 'mensualidad') {
+      $('#pasos').hidden = false;
+      $('#ir-a-tiquetera').hidden = false;
+      ir(0);
+    } else {
+      elegirTiqueteraDirecta(p.clave);
+    }
+  }
+
   function mostrarDetalle(i, animar) {
     const p = pasesActuales[i];
     if (!p || i === paseActivo) return;
+    const primero = paseActivo === -1;
     paseActivo = i;
     const cajas = $('#tarjetas-eleccion').querySelectorAll('.pase');
     cajas.forEach((c, k) => { c.classList.toggle('activo', k === i); c.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
     const caja = cajas[i];
     if (caja && animar !== false) { caja.classList.remove('brilla'); void caja.offsetWidth; caja.classList.add('brilla'); }
     $('#pager').querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+
+    // El botón, pegado a los pases: dice qué pase está elegido y su precio.
+    $('#cta-pase').innerHTML = `
+      <button type="button" class="btn${primero ? '' : ' cambio'}" id="btn-pase" data-elegir="${p.tipo === 'mensualidad' ? 'mensualidad' : 'tq'}" data-clave="${esc(p.clave || '')}">${esc(p.cta)}</button>
+      <p class="pista">Desliza para ver los otros pases · toca el pase elegido para comprarlo</p>`;
+    $('#btn-pase').addEventListener('click', () => comprarPase(p));
+
     const html = `
       <div class="det">
+        <span class="ceja-d">Lo que incluye</span>
         <h3>${esc(p.nombre)} · ${esc(p.cant)}</h3>
         <p class="linea">${esc(p.linea)}</p>
         <ul>${p.puntos.map(t => `<li>${t}</li>`).join('')}</ul>
-        <button type="button" class="btn" id="btn-pase" data-elegir="${p.tipo === 'mensualidad' ? 'mensualidad' : 'tq'}" data-clave="${esc(p.clave || '')}">${esc(p.cta)}</button>
       </div>`;
     const viejo = $('#detalle .det');
-    const poner = () => {
-      $('#detalle').innerHTML = html;
-      $('#btn-pase').addEventListener('click', (ev) => {
-        const b = ev.currentTarget;
-        $('#eleccion').hidden = true;
-        if (b.dataset.elegir === 'mensualidad') {
-          $('#pasos').hidden = false;
-          $('#ir-a-tiquetera').hidden = false;
-          ir(0);
-        } else {
-          elegirTiqueteraDirecta(b.dataset.clave);
-        }
-      });
-    };
+    const poner = () => { $('#detalle').innerHTML = html; };
     if (viejo && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       viejo.classList.add('cambia');
       setTimeout(poner, 160);
@@ -1828,7 +1859,8 @@ const CONFIG = {
     $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
     const cajas = [...cont.querySelectorAll('.pase')];
     cajas.forEach((c, i) => c.addEventListener('click', () => {
-      if (i === paseActivo) { $('#btn-pase') && $('#btn-pase').focus(); return; }
+      // Tocar el pase que ya está elegido arranca la compra; tocar otro lo trae al frente y lo elige.
+      if (i === paseActivo) { comprarPase(pasesActuales[i]); return; }
       c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       mostrarDetalle(i);
     }));
