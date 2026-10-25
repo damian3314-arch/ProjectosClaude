@@ -32,7 +32,7 @@ const QUESTIONS = {
   },
 };
 
-const GREETING = 'Hola 👋 Soy el asistente de Damián Barragán. Cuéntame en una frase qué te está quitando tiempo en tu negocio.\n\nUso lo que me cuentes solo para que Damián te responda.';
+const GREETING = 'Hola 👋 Soy Damián Barragán, o mejor dicho, mi asistente de IA, que contesta por mí mientras llego yo. Cuéntame en una frase qué te está quitando tiempo en tu negocio.\n\nUso lo que me cuentes solo para responderte.';
 const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero)\s*[.!]*\s*$/i;
 const GREETING_RE = /^\s*(hola|holi|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|hi|hello|buen d[ií]a|informaci[oó]n|info)\b[\s,.!¡?¿a-záéíóúñ]{0,25}$/i;
 
@@ -209,7 +209,7 @@ async function finish(c) {
   const phone = c.inb.from ? c.h.normalizePhone(c.inb.from) : st.phone;
   if (!phone) {
     await save(c, { state: 'need_phone' });
-    return sendText(c, 'Última cosa: ¿a qué número de WhatsApp te escribe Damián? Escríbelo con el indicativo, por ejemplo 573001234567.');
+    return sendText(c, 'Última cosa: ¿a qué número de WhatsApp te escribo? Escríbelo con el indicativo, por ejemplo 573001234567.');
   }
   const name = c.h.clean(st.name || c.inb.name, 80) || 'Contacto de WhatsApp';
   const score = c.h.scoreLead({ budget: st.budget, timing: st.timing, decider: st.decider, intent: st.intent });
@@ -222,7 +222,7 @@ async function finish(c) {
   await save(c, { state: 'done', lead_id: lead.id, phone });
   const first = c.h.clean(name, 40).split(' ')[0];
   return sendText(c, score.action === 'contact'
-    ? `Listo, ${first}. Ya le pasé tu caso a Damián: te contacta personalmente en menos de 24 horas.`
+    ? `Listo, ${first}. Ya tengo tu caso: te contacto personalmente en menos de 24 horas.`
     : `Gracias, ${first}. Quedó registrado. Si más adelante quieres retomarlo, escríbeme por aquí.`);
 }
 
