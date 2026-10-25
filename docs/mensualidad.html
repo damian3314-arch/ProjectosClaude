@@ -774,16 +774,6 @@ const CONFIG = {
   .puntos-pager{display:flex;justify-content:center;gap:.4rem;margin:0 0 1.2rem}
   .puntos-pager i{width:.42rem;height:.42rem;border-radius:99px;background:var(--line-2);transition:transform 200ms var(--ease-salida),background-color 200ms ease}
   .puntos-pager i.on{background:var(--hot);transform:scaleX(2.2)}
-  /* la marca de «elegido» sobre el pase al frente */
-  .pase .elegido{position:absolute;z-index:2;right:1rem;top:.85rem;display:inline-flex;align-items:center;gap:.3rem;
-    font-size:.66rem;font-weight:800;letter-spacing:.04em;padding:.28rem .55rem .28rem .4rem;border-radius:99px;
-    color:#1a0a02;background:#fff;opacity:0;transform:translateY(4px) scale(.96);
-    transition:opacity 200ms var(--ease-salida),transform 200ms var(--ease-salida)}
-  .pase .elegido::before{content:"";width:.7rem;height:.4rem;margin-top:-.15rem;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg)}
-  .pase.activo .elegido{opacity:1;transform:none}
-  .pase.activo .chip{opacity:0}
-  .pase .chip{transition:opacity 200ms ease}
-  .pase.pase-mensualidad .elegido{background:#1a0a02;color:#fff}
   /* el botón de comprar, pegado a los pases */
   .cta-pase{margin:0 0 .3rem}
   .cta-pase .btn{width:100%;margin:0;transition:transform 160ms var(--ease-salida),filter 160ms ease}
@@ -1735,7 +1725,8 @@ const CONFIG = {
       ].filter(Boolean),
       cta: `Quiero la mensualidad · ${pesos(valorCop)}`, foto: CONFIG.FOTOS.mensualidad,
     }];
-    for (const p of tiqPaquetes) {
+    // Orden (Damián, 25 oct): mensualidad, la de 8 clases y luego la de 4.
+    for (const p of [...tiqPaquetes].sort((a, b) => Number(b.clases) - Number(a.clases))) {
       const clases = Number(p.clases) || 0, precio = Number(p.precio_cop) || 0;
       const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - precio, 0);
       pases.push({
@@ -1771,7 +1762,6 @@ const CONFIG = {
         ${ARTE}
         <span class="num" aria-hidden="true">${esc(p.num)}</span>
         ${p.sello ? `<span class="sello">${esc(p.sello)}</span>` : ''}
-        <span class="elegido" aria-hidden="true">Elegido</span>
         <span class="cont">
           <span class="top"><span class="marca-p">TUMBAO · PASE</span><span class="chip" aria-hidden="true"></span></span>
           <span class="nom">${esc(p.nombre)}</span>
