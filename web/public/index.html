@@ -778,8 +778,8 @@ async function finish(){
   }
   const first = esc(lead.contact.name.split(' ')[0]), topic = lead.intent ? SOL[lead.intent].of : 'tu negocio';
   if (res.tier === 'A') await say(`Gracias, ${first}. Yo, Damián, te escribo <b>hoy</b> por WhatsApp.`);
-  else if (res.tier === 'C') await say(`Gracias, ${first}. Te escribo por WhatsApp con ideas útiles sobre ${esc(topic)} para que empieces a avanzar. Cuando quieras que lo resolvamos juntos, me dices.`);
-  else await say(`Gracias, ${first}. Yo, Damián, te escribo por WhatsApp <b>en menos de 24 horas</b>.`);
+  else if (res.tier === 'B') await say(`Gracias, ${first}. Ya tengo tu caso sobre ${esc(topic)}. Lo reviso y, si veo cómo ayudarte, te escribo por WhatsApp.`);
+  else await say(`Gracias, ${first}. Quedó registrado. Si más adelante quieres retomar lo de ${esc(topic)}, escríbeme por aquí.`);
   if (typeof res.bookingUrl === 'string' && /^https:\/\//i.test(res.bookingUrl)){
     const a = document.createElement('a'); a.className = 'cta ghost book'; a.href = res.bookingUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Prefiero elegir hora →';
     thread.append(a); scroll();

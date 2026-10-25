@@ -9,7 +9,7 @@
  *   GET   /api/leads       → lista de leads con su brief (requiere ADMIN_TOKEN)
  *   PATCH /api/leads/:id   → estado y nota del lead (requiere ADMIN_TOKEN)
  *   GET   /api/stats       → métricas del embudo (requiere ADMIN_TOKEN)
- *   cron (cada hora)       → empujón a Damián por leads sin contactar y resumen diario de las 7 am (solo le escribe a él)
+ *   cron (cada hora)       → limpieza. Damián solo recibe WhatsApp por leads en caliente (prioridad A), al momento
  *
  * Damián agenda a mano: el sistema solo le prepara el terreno y mide el embudo.
  * Todo lo demás lo sirve la carpeta /public (la página).
@@ -31,6 +31,7 @@ const CHAT_PER_HOUR = 400;     // mensajes de chat en total por hora
 const AUDIO_PER_IP = 8;        // audios por IP cada 10 min
 const AUDIO_PER_DAY = 150;     // audios en total por día
 const MAX_AUDIO = 4 * 1024 * 1024;
+const BOGOTA_MS = 5 * 3600e3;  // Colombia es UTC-5, sin horario de verano
 const LEADS_BURST = 10;        // más de estos leads en una hora: se guardan sin IA ni aviso individual
 const SCORES = { b1: 1, b2: 2, b3: 3, now: 3, month: 2, later: 0, solo: 3, with: 2, other: 0 };
 
@@ -252,14 +253,14 @@ async function persistLead(env, ctx, lead, ipHash) {
 
   // Si llegan muchos leads de golpe (¿alguien automatizando?) se guardan igual, pero sin gastar IA ni avisar uno por uno:
   // el resumen de las 7 am y el panel los muestran.
-  // Los leads para nutrir (tier C) tampoco avisan ni gastan IA: quedan en la base para campañas futuras.
+  // Solo los leads en caliente (prioridad A) avisan a Damián y gastan IA. B y C quedan guardados, con su resumen básico, para revisarlos en el panel o nutrirlos después.
   const burst = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE created_at > datetime('now', '-1 hour')").first();
-  if (lead.action !== 'contact' || (burst?.n || 0) > LEADS_BURST) {
+  if (lead.tier !== 'A' || (burst?.n || 0) > LEADS_BURST) {
     ctx.waitUntil(env.DB.prepare('UPDATE leads SET brief = ?, brief_at = datetime(\'now\') WHERE id = ?').bind(JSON.stringify(fallbackBrief(lead)), lead.id).run().catch(() => {}));
   } else {
     ctx.waitUntil(prepareAndNotify(env, lead).catch(err => console.error('prepareAndNotify', err?.message || 'desconocido')));
   }
-  if (env.AUTO_CONTACT_LEADS === 'true' && lead.action === 'contact') ctx.waitUntil(contactLead(env, lead).catch(err => console.error('contactLead', err?.message || 'desconocido')));
+  if (env.AUTO_CONTACT_LEADS === 'true' && lead.tier === 'A') ctx.waitUntil(contactLead(env, lead).catch(err => console.error('contactLead', err?.message || 'desconocido')));
 }
 
 // Lo que el agente de WhatsApp reutiliza de este archivo (misma IA, misma prioridad, mismo guardado, mismo envío)
@@ -400,65 +401,12 @@ async function stats(request, env, url) {
   });
 }
 
-/* ---------- Empujón al dueño (cron cada hora) ----------
- * Solo le escribe a Damián (OWNER_WHATSAPP), nunca a leads. Entre 7 am y 9 pm hora de Bogotá.
- *  - Lead A en 'nuevo' hace más de 2 h, o lead B hace más de 24 h → un aviso por lead (nudged_at).
- *  - Resumen diario: la primera corrida desde las 7 am (owner_digest evita repetirlo).
+/* ---------- Limpieza (cron cada hora) ----------
+ * Damián solo recibe un WhatsApp cuando entra un lead en caliente (prioridad A), en el momento. Nada de resúmenes ni recordatorios.
  */
-const BOGOTA_MS = 5 * 3600e3;
-
 async function ownerPush(env) {
-  // Limpieza: los intentos fallidos de clave solo sirven un rato
+  // Los intentos fallidos de clave solo sirven un rato
   await env.DB.prepare("DELETE FROM admin_fails WHERE created_at < datetime('now', '-1 day')").run().catch(() => {});
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return;
-  const bog = new Date(Date.now() - BOGOTA_MS);
-  const hour = bog.getUTCHours();
-  if (hour < 7 || hour >= 21) return;
-
-  // 1. Resumen diario
-  const today = bog.toISOString().slice(0, 10);
-  // Se reserva el día antes de enviar (dos corridas a la vez no lo duplican); si el envío falla, se libera para reintentar la hora siguiente
-  const claim = await env.DB.prepare('INSERT OR IGNORE INTO owner_digest (day) VALUES (?)').bind(today).run();
-  if (claim.meta?.changes) {
-    const yesterday = new Date(bog.getTime() - 864e5).toISOString().slice(0, 10);
-    let ok = false;
-    try {
-      const text = await dailyDigest(env, yesterday);
-      ok = !text || (await ownerMessage(env, text)); // sin nada que contar no se manda mensaje, pero el día queda marcado
-    } catch (err) { console.error('digest', err?.message || 'desconocido'); }
-    if (!ok) await env.DB.prepare('DELETE FROM owner_digest WHERE day = ?').bind(today).run();
-  }
-
-  // 2. Leads sin contactar (máx. 1 aviso por lead; solo los de la última semana)
-  const { results } = await env.DB.prepare(`SELECT * FROM leads
-    WHERE status = 'nuevo' AND nudged_at IS NULL AND created_at > datetime('now', '-7 days')
-      AND ((tier = 'A' AND created_at <= datetime('now', '-2 hours')) OR (tier = 'B' AND created_at <= datetime('now', '-24 hours')))
-    ORDER BY created_at LIMIT 10`).all();
-  for (const lead of results) {
-    const hours = Math.max(1, Math.floor((Date.now() - Date.parse(lead.created_at.replace(' ', 'T') + 'Z')) / 3600e3));
-    const brief = parseJson(lead.brief) || fallbackBrief(lead);
-    const icon = lead.tier === 'A' ? '🔥' : '⭐';
-    // Se marca antes de enviar (no se repite aunque corran dos a la vez); si Kapso falla, se desmarca y reintenta a la hora siguiente
-    const claim = await env.DB.prepare("UPDATE leads SET nudged_at = datetime('now') WHERE id = ? AND nudged_at IS NULL").bind(lead.id).run();
-    if (!claim.meta?.changes) continue;
-    const ok = await ownerMessage(env, composeLeadMessage(lead, brief, `${icon} Lead ${lead.tier} sin contactar hace ${hours} h`));
-    if (!ok) await env.DB.prepare('UPDATE leads SET nudged_at = NULL WHERE id = ?').bind(lead.id).run();
-  }
-}
-
-async function dailyDigest(env, yesterday) {
-  const since = `${yesterday} 05:00:00`;
-  const until = `${new Date(Date.parse(yesterday + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10)} 05:00:00`;
-  const fresh = (await env.DB.prepare('SELECT tier, COUNT(*) AS n FROM leads WHERE created_at >= ? AND created_at < ? GROUP BY tier').bind(since, until).all()).results;
-  const pending = (await env.DB.prepare("SELECT name, tier, created_at FROM leads WHERE status = 'nuevo' AND tier IN ('A', 'B') ORDER BY tier, created_at LIMIT 5").all()).results;
-  const total = fresh.reduce((s, r) => s + r.n, 0);
-  if (!total && !pending.length) return null;
-  const tiers = fresh.map(r => `${r.n} ${r.tier}`).join(', ');
-  const lines = [`☀️ Buen día, Damián. Ayer llegaron ${total} leads${tiers ? ` (${tiers})` : ''}.`];
-  if (pending.length) {
-    lines.push(`Pendientes por contactar: ${pending.map(p => `${waSafe(p.name, 40)} (${p.tier})`).join(', ')}.`);
-  }
-  return lines.join('\n');
 }
 
 /* ---------- WhatsApp vía Kapso ---------- */

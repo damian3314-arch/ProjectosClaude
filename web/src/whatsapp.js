@@ -221,9 +221,11 @@ async function finish(c) {
   await c.h.persistLead(c.env, c.ctx, lead, null);
   await save(c, { state: 'done', lead_id: lead.id, phone });
   const first = c.h.clean(name, 40).split(' ')[0];
-  return sendText(c, score.action === 'contact'
-    ? `Listo, ${first}. Ya tengo tu caso: te contacto personalmente en menos de 24 horas.`
-    : `Gracias, ${first}. Quedó registrado. Si más adelante quieres retomarlo, escríbeme por aquí.`);
+  return sendText(c, score.tier === 'A'
+    ? `Listo, ${first}. Ya tengo tu caso: te contacto personalmente hoy.`
+    : score.tier === 'B'
+      ? `Gracias, ${first}. Ya tengo tu caso. Lo reviso y, si veo cómo ayudarte, te escribo.`
+      : `Gracias, ${first}. Quedó registrado. Si más adelante quieres retomarlo, escríbeme por aquí.`);
 }
 
 async function save(c, fields) {
