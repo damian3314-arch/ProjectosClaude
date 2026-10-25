@@ -41,7 +41,10 @@ export async function handleWhatsAppWebhook(request, env, ctx, h) {
   if (!env.KAPSO_WEBHOOK_SECRET) return new Response('Webhook no configurado', { status: 503 });
   const raw = await h.readText(request, 512 * 1024);
   if (raw == null) return new Response('Muy grande', { status: 413 });
-  if (!(await validSignature(env.KAPSO_WEBHOOK_SECRET, raw, request.headers.get('x-webhook-signature') || ''))) {
+  // El secreto se pega a mano en dos paneles: un espacio o salto de línea de más no debe tumbar el agente
+  const signature = (request.headers.get('x-webhook-signature') || '').trim().replace(/^sha256=/i, '');
+  if (!(await validSignature(String(env.KAPSO_WEBHOOK_SECRET).trim(), raw, signature))) {
+    console.error('webhook: firma inválida', signature ? `(llegó una firma de ${signature.length} caracteres)` : '(no llegó firma)');
     return new Response('Firma inválida', { status: 401 });
   }
   if (request.headers.get('x-webhook-event') !== 'whatsapp.message.received') return new Response('OK');
