@@ -45,7 +45,7 @@ const CONFIG = {
   EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
   // Fotos de fondo de cada pase (opcional). Ruta dentro de docs/, p. ej. 'img/pase-4.jpg'. Vacío = arte gráfico.
   // Ideal: fotos reales de la clase (4 personas bailando para la de 4, el grupo para la de 8, el salón lleno para la mensualidad).
-  FOTOS: { mensualidad: '', '4': '', '8': '' },
+  FOTOS: { mensualidad: 'img/pase-mensualidad.jpg', '4': 'img/pase-4.jpg', '8': 'img/pase-8.jpg' },
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -732,6 +732,8 @@ const CONFIG = {
   .pase .foto{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
   .pase .foto::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,.45) 60%,rgba(0,0,0,.15) 100%)}
   .pase.con-foto{color:#fff}
+  .pase.con-foto .cinta{opacity:.45}
+  .pase.con-foto .num{color:rgba(255,255,255,.1)}
   /* arte: cintas */
   .pase .arte{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
   .pase .cinta{fill:none;stroke-linecap:round;stroke-dasharray:420 900;stroke-dashoffset:0}

@@ -31,7 +31,7 @@ ok('tocar el pase elegido arranca la compra', /if \(i === paseActivo\) \{ compra
 ok('hay preguntas frecuentes y el enlace a WhatsApp para más dudas', /Preguntas frecuentes/.test(mens) && /¿Tengo más dudas\?/.test(mens));
 ok('orden: mensualidad, la de 8 y luego la de 4 (Damián, 25 oct)', /sort\(\(a, b\) => Number\(b\.clases\) - Number\(a\.clases\)\)/.test(mens));
 ok('sin la palabra «Elegido» en los pases', !/>Elegido</.test(mens));
-ok('las fotos de los pases se pueden poner desde CONFIG.FOTOS', /FOTOS: \{ mensualidad: '', '4': '', '8': '' \}/.test(mens));
+ok('cada pase lleva su foto de gente bailando (CONFIG.FOTOS)', /FOTOS: \{ mensualidad: 'img\/pase-mensualidad\.jpg', '4': 'img\/pase-4\.jpg', '8': 'img\/pase-8\.jpg' \}/.test(mens));
 ok('el movimiento respeta a quien pide menos movimiento', /prefers-reduced-motion:reduce\)\{\s*\.pase,\.puntos-pager i,\.detalle \.det\{transition:none\}/.test(mens));
 
 titulo('2. Timba');
