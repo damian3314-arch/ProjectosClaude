@@ -599,6 +599,10 @@ function viewEmbudo(){
       return '<li' + (i === worst && worstLoss > 0 ? ' class="worst"' : '') + '><div class="f-top"><span>' + esc(s[1]) + '</span><span>' + esc(v) + '</span></div>' +
         '<div class="bar" aria-hidden="true"><i style="width:' + w + '%"></i></div>' + (drop ? '<div class="drop">' + esc(drop) + '</div>' : '') + '</li>';
     }).join('') + '</ol></section>';
+  h += '<section class="panel" aria-labelledby="hM"><h3 id="hM">Uso del micrófono</h3><div class="kpis">' +
+    '<div class="kpi"><small>Tocaron el micrófono</small><b>' + esc(f.mic_tap || 0) + '</b></div>' +
+    '<div class="kpi"><small>Enviaron un audio</small><b>' + esc(f.audio_sent || 0) + '</b></div>' +
+    '<div class="kpi"><small>De quienes iniciaron el chat</small><b>' + fmtPct(pct(f.audio_sent || 0, f.started || 0)) + '</b></div></div></section>';
   h += '<div class="two"><section class="panel" aria-labelledby="hT"><h3 id="hT">Leads por prioridad</h3>' +
     hbars(st.tiers, function(k){ return k === 'A' ? 'var(--a)' : k === 'B' ? 'var(--b)' : 'var(--c)'; }, function(k){ return 'Prioridad ' + k; }) + '</section>' +
     '<section class="panel" aria-labelledby="hI"><h3 id="hI">Leads por tema</h3>' + hbars(st.byIntent, intentColor, intentName) + '</section></div>';

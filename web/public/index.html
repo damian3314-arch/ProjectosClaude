@@ -657,6 +657,7 @@ async function start(text){
   started = true; stopPh();
   $('#composer').hidden = true; msg.value = '';
   const hadAudio = !!audioBlob;
+  if (hadAudio) track('audio_sent');
   me(text || '🎙 Nota de voz');
   await healthReady;               // que un envío rápido no caiga por error en modo demo
   track('start');
@@ -789,7 +790,7 @@ async function finish(){
 
 /* ===== VOZ ===== */
 let rec = null, chunks = [], stream = null, speech = null, timer = null, ac = null;
-mic.onclick = () => (rec && rec.state === 'recording') ? stopRec() : startRec();
+mic.onclick = () => { track('mic_tap'); (rec && rec.state === 'recording') ? stopRec() : startRec(); };
 function flash(text){ const l = $('#recLine'); l.textContent = text; l.classList.add('warn', 'on'); setTimeout(() => { if (l.classList.contains('warn')) l.classList.remove('on', 'warn'); }, 6000); }
 async function startRec(){
   if (started) return;

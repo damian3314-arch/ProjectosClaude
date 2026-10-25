@@ -279,7 +279,7 @@ async function prepareAndNotify(env, lead) {
 }
 
 /* ---------- /api/event (embudo, público) ---------- */
-const EVENT_TYPES = ['visit', 'start', 'intent', 'q_budget', 'q_timing', 'q_decider', 'contact_form', 'lead'];
+const EVENT_TYPES = ['visit', 'start', 'intent', 'q_budget', 'q_timing', 'q_decider', 'contact_form', 'lead', 'mic_tap', 'audio_sent'];
 
 // Nunca falla ruidosamente: lo inválido se ignora y siempre responde 204.
 async function trackEvent(request, env) {
@@ -375,6 +375,7 @@ async function stats(request, env, url) {
   const funnel = {
     visits: by.visit || 0, started: by.start || 0, classified: by.intent || 0, budget: by.q_budget || 0,
     timing: by.q_timing || 0, decider: by.q_decider || 0, contact_form: by.contact_form || 0, leads: by.lead || 0,
+    mic_tap: by.mic_tap || 0, audio_sent: by.audio_sent || 0,   // uso del micrófono (para decidir si vale la pena una llamada por voz)
   };
   const tiers = { A: 0, B: 0, C: 0 };
   const byIntent = { nomina: 0, software: 0, ia: 0, procesos: 0, datos: 0, otro: 0 };
