@@ -43,6 +43,9 @@ const CONFIG = {
   CAMPANA: { activa: true, desde: '2026-10-25', hasta: '2026-10-31' },
   // Clases adicionales al completar la tiquetera (Damián, 25 oct): 1 en la de 4 clases, 2 en la de 8. Aplica a todas, nuevas o viejas.
   EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
+  // Fotos de fondo de cada pase (opcional). Ruta dentro de docs/, p. ej. 'img/pase-4.jpg'. Vacío = arte gráfico.
+  // Ideal: fotos reales de la clase (4 personas bailando para la de 4, el grupo para la de 8, el salón lleno para la mensualidad).
+  FOTOS: { mensualidad: '', '4': '', '8': '' },
   PAGO: {
     qr:      'img/qr-breb.png',
     llave:   '1096803067',
@@ -689,30 +692,117 @@ const CONFIG = {
   .codigo b{color:var(--neon-2);text-shadow:0 0 18px rgba(255,46,143,.45)}
   @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
 
-  /* ═══ Campaña de constancia (25 oct) ══════════════════════════════
-     Sobria a propósito (Damián: «mucho color, no me gusta»): superficies
-     del tema, una línea fina y el color de marca SOLO en lo que importa
-     (la cifra de clases adicionales). Quitar este bloque y CONFIG.CAMPANA
-     devuelve la página de antes. */
-  .campana{margin:1.2rem 0 .2rem;padding:1rem 1.05rem;border-radius:calc(var(--r) + 2px);
-    border:1px solid var(--line-2);background:var(--bg-2)}
-  .campana .ceja{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--tx-3);margin-bottom:.4rem}
-  .campana h3{margin:0 0 .4rem;font-size:1.2rem;line-height:1.15;letter-spacing:-.02em;font-weight:700}
-  .campana p{margin:0;font-size:.92rem;line-height:1.5;color:var(--tx-2)}
-  .campana p b{color:var(--tx)}
-  .campana .reloj{display:block;margin-top:.6rem;font-size:.8rem;font-weight:600;color:var(--tx-3)}
-  .tarjeta .extra{display:block;margin-top:.1rem;padding:.55rem .75rem;border-radius:10px;font-size:.84rem;line-height:1.4;
-    color:var(--tx-2);background:var(--bg-3);box-shadow:inset 2px 0 0 var(--line-2)}
-  .tarjeta .extra b{color:var(--tx);font-weight:700}
-  .como{margin:1.3rem 0 .2rem;padding:1rem 1.05rem .85rem;border-radius:calc(var(--r) + 2px);border:1px solid var(--line);background:var(--bg-2)}
-  .como h3{margin:0 0 .65rem;font-size:1rem;letter-spacing:-.01em}
-  .como ol{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-  .como li{display:flex;gap:.7rem;align-items:flex-start;font-size:.9rem;line-height:1.4;color:var(--tx-2)}
-  .como li b{color:var(--tx)}
-  .como .n{flex:none;width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;font-size:.78rem;font-weight:700;
-    color:var(--tx-2);border:1px solid var(--line-2)}
-  .legal-campana{margin:.75rem 0 0;font-size:.74rem;line-height:1.4;color:var(--tx-3)}
+  /* ═══ PASES (25 oct) ═════════════════════════════════════════════
+     Las tarjetas de compra como objetos: proporción de tarjeta física
+     (1,586), arte propio (cintas que se mueven como una falda al girar),
+     el número grande del pase y un brillo que la recorre cuando queda al
+     frente. Movimiento solo con transform y opacidad, curva fuerte de
+     salida, y nada se mueve si la persona pidió menos movimiento.
+     Las fotos: CONFIG.FOTOS. Si un pase tiene foto, va de fondo con un
+     velo oscuro para que el texto se lea. */
+  :root{--ease-salida:cubic-bezier(0.23,1,0.32,1)}
+  .el-titulo{font-size:1.65rem;letter-spacing:-.035em;margin-bottom:.2rem}
+  .el-sub{margin:0 0 .9rem}
+  .campana-chip{
+    margin:0 0 .9rem;padding:.55rem .8rem;border-radius:12px;font-size:.84rem;line-height:1.4;color:var(--tx-2);
+    background:var(--surface,var(--bg-2));border:1px solid var(--line-2);
+  }
+  .campana-chip b{color:var(--tx)}
+  .pases{
+    display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:.8rem;
+    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
+    margin:0 -1rem;padding:.4rem 8% 1rem;-webkit-overflow-scrolling:touch;
+  }
+  .pases::-webkit-scrollbar{display:none}
+  @media (min-width:34rem){.pases{grid-auto-columns:20rem;padding-inline:calc(50% - 10rem)}}
+  .pase{
+    position:relative;isolation:isolate;overflow:hidden;scroll-snap-align:center;
+    aspect-ratio:1.586;border-radius:20px;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;
+    color:#fff;background:linear-gradient(150deg,#1b1410 0%,#0b0806 70%);
+    box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 18px 36px -20px rgba(0,0,0,.9);
+    transform:scale(.94);opacity:.62;
+    transition:transform 280ms var(--ease-salida),opacity 280ms var(--ease-salida),box-shadow 280ms ease;
+  }
+  .pase.activo{transform:none;opacity:1;box-shadow:0 1px 0 rgba(255,255,255,.1) inset,0 22px 44px -18px color-mix(in srgb,var(--hot) 55%,transparent)}
+  .pase:active{transform:scale(.97)}
+  .pase:focus-visible{outline:2px solid var(--hot-2);outline-offset:3px}
+  .pase-skel{background:var(--bg-2);opacity:.5;animation:none}
+  /* el pase protagonista (mensualidad): la tarjeta encendida */
+  .pase.pase-mensualidad{color:#1a0a02;background:linear-gradient(150deg,var(--gold) 0%,var(--hot) 48%,color-mix(in srgb,var(--hot) 70%,#000) 100%)}
+  .pase .foto{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .pase .foto::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,.45) 60%,rgba(0,0,0,.15) 100%)}
+  .pase.con-foto{color:#fff}
+  /* arte: cintas */
+  .pase .arte{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+  .pase .cinta{fill:none;stroke-linecap:round;stroke-dasharray:420 900;stroke-dashoffset:0}
+  .pase .cinta.c1{stroke:var(--hot);stroke-width:14;opacity:.9}
+  .pase .cinta.c2{stroke:var(--gold);stroke-width:6;opacity:.75}
+  .pase .cinta.c3{stroke:var(--hot-2);stroke-width:2.5;opacity:.6}
+  .pase.pase-mensualidad .cinta.c1{stroke:#1a0a02;opacity:.16}
+  .pase.pase-mensualidad .cinta.c2{stroke:#fff;opacity:.35}
+  .pase.pase-mensualidad .cinta.c3{stroke:#1a0a02;opacity:.25}
+  .pase.activo .cinta{animation:cinta 9s linear infinite}
+  .pase.activo .cinta.c2{animation-duration:12s}
+  .pase.activo .cinta.c3{animation-duration:7s}
+  @keyframes cinta{to{stroke-dashoffset:-1320}}
+  /* el número grande del pase, como relieve */
+  .pase .num{
+    position:absolute;right:1rem;bottom:-1.1rem;z-index:0;font-size:7.6rem;font-weight:900;line-height:1;letter-spacing:-.06em;
+    color:rgba(255,255,255,.07);pointer-events:none;
+  }
+  .pase.pase-mensualidad .num{font-size:5.2rem;bottom:-.3rem;color:rgba(26,10,2,.1)}
+  /* contenido */
+  .pase .cont{position:absolute;inset:0;z-index:1;padding:1rem 1.1rem;display:flex;flex-direction:column}
+  .pase .top{display:flex;justify-content:space-between;align-items:center}
+  .pase .marca-p{font-size:.6rem;font-weight:800;letter-spacing:.26em;opacity:.8}
+  .pase .chip{width:2rem;height:1.45rem;border-radius:.35rem;opacity:.85;
+    background:linear-gradient(135deg,#f6d38a,#c99540);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .pase .chip::before{content:"";display:block;margin:.33rem .3rem;height:.75rem;border:1px solid rgba(0,0,0,.35);border-radius:.2rem}
+  .pase .nom{margin-top:.55rem;font-size:.82rem;font-weight:700;opacity:.85}
+  .pase .cant{font-size:1.75rem;line-height:1;font-weight:800;letter-spacing:-.04em;margin-top:.1rem}
+  .pase .pie{margin-top:auto;display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
+  .pase .precio-p{font-size:1.4rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .pase .xc{font-size:.74rem;font-weight:600;opacity:.8}
+  .pase .sello{position:absolute;z-index:2;top:2.75rem;right:1.1rem;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:.25rem .5rem;border-radius:99px;color:#1a0a02;background:var(--gold)}
+  /* brillo que cruza el pase cuando queda al frente */
+  .pase::after{content:"";position:absolute;inset:-20% auto -20% -60%;width:40%;z-index:1;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:translateX(0) skewX(-12deg);opacity:0}
+  .pase.brilla::after{animation:brillo 900ms var(--ease-salida) 120ms 1}
+  @keyframes brillo{0%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(420%) skewX(-12deg)}}
+  /* pager */
+  .puntos-pager{display:flex;justify-content:center;gap:.4rem;margin:.1rem 0 .9rem}
+  .puntos-pager i{width:.42rem;height:.42rem;border-radius:99px;background:var(--line-2);transition:transform 200ms var(--ease-salida),background-color 200ms ease}
+  .puntos-pager i.on{background:var(--hot);transform:scaleX(2.2)}
+  /* detalle del pase al frente */
+  .detalle{min-height:13.5rem}
+  .detalle .det{transition:opacity 180ms ease,filter 180ms ease}
+  .detalle .det.cambia{opacity:0;filter:blur(2px)}
+  .detalle h3{margin:0 0 .15rem;font-size:1.1rem;letter-spacing:-.02em}
+  .detalle .linea{margin:0 0 .7rem;color:var(--tx-2);font-size:.9rem}
+  .detalle ul{list-style:none;margin:0 0 .95rem;padding:0;display:grid;gap:.45rem}
+  .detalle li{position:relative;padding-left:1rem;font-size:.88rem;line-height:1.4;color:var(--tx-2)}
+  .detalle li::before{content:"";position:absolute;left:0;top:.45rem;width:.42rem;height:.42rem;border-radius:50%;background:var(--hot)}
+  .detalle li b{color:var(--tx)}
+  .detalle li.extra-li{color:var(--tx)}
+  .detalle .btn{width:100%;transition:transform 160ms var(--ease-salida),filter 160ms ease}
+  .detalle .btn:active{transform:scale(.97)}
+  /* preguntas frecuentes */
+  .faq{margin-top:1.6rem}
+  .faq h3{font-size:1rem;margin:0 0 .5rem;letter-spacing:-.01em}
+  .faq details{border-top:1px solid var(--line)}
+  .faq details:last-of-type{border-bottom:1px solid var(--line)}
+  .faq summary{list-style:none;cursor:pointer;padding:.85rem 1.8rem .85rem 0;position:relative;font-size:.92rem;font-weight:600;color:var(--tx)}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"";position:absolute;right:.3rem;top:50%;width:.55rem;height:.55rem;margin-top:-.4rem;
+    border-right:2px solid var(--tx-3);border-bottom:2px solid var(--tx-3);transform:rotate(45deg);transition:transform 200ms var(--ease-salida)}
+  .faq details[open] summary::after{transform:rotate(225deg);margin-top:-.1rem}
+  .faq details p{margin:0 0 .9rem;font-size:.88rem;line-height:1.5;color:var(--tx-2)}
+  .faq details p b{color:var(--tx)}
+  @media (prefers-reduced-motion:reduce){
+    .pase,.puntos-pager i,.detalle .det{transition:none}
+    .pase.activo .cinta,.pase.brilla::after{animation:none}
+  }
 
   /* ═══════════════════════════════════════════════════════════════
      HALLOWEEN · del 22 al 31 de octubre de 2026 (Damián, 22 oct)
@@ -896,20 +986,26 @@ const CONFIG = {
   <p class="tagline">Mensualidad y tiquetera</p>
 </header>
 
-<!-- ═══════ elegir · mensualidad o tiquetera ═══════
-     Lo primero que se ve: la decisión, no el embudo de mensualidad
-     empujando por delante. Las tarjetas de tiquetera llevan el precio,
-     el ahorro y --lo más importante-- que hay que reservar cada clase y
-     que vencen a los 30 días, sin que haga falta buscarlo. -->
+<!-- ═══════ elegir · el pase ═══════
+     (25 oct, Damián) «Esto es una página para vender: la gente no lee».
+     Arriba, los PASES: tarjetas que se sienten como un producto físico
+     (un pase, una gift card), una al lado de la otra, que se deslizan.
+     Debajo, lo esencial del pase que está a la vista y UN botón. Lo
+     demás —cómo se reserva, cuánto dura, cómo se paga— va en las
+     preguntas frecuentes, al final. Dos o tres pantallazos y listo. -->
 <section id="eleccion">
-  <h2>¿Qué quieres comprar?</h2>
-  <p class="sub">Un horario fijo cada mes, o un paquete de clases sueltas para reservar cuando quieras.</p>
-  <div id="campana" hidden></div>
-  <div class="eleccion" id="tarjetas-eleccion">
-    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+  <h2 class="el-titulo">Elige tu pase</h2>
+  <p class="sub el-sub">Desliza para ver las opciones.</p>
+  <p class="campana-chip" id="campana" hidden></p>
+  <div class="pases" id="tarjetas-eleccion" role="listbox" aria-label="Pases de Tumbao">
+    <div class="pase pase-skel"></div><div class="pase pase-skel"></div>
   </div>
-  <div id="como" hidden></div>
-  <p class="sub" style="margin-top:1.1rem;text-align:center">
+  <div class="puntos-pager" id="pager" aria-hidden="true"></div>
+  <div class="detalle" id="detalle" aria-live="polite"></div>
+
+  <div class="faq" id="faq"></div>
+
+  <p class="sub" style="margin-top:1.2rem;text-align:center">
     ¿Ya compraste una tiquetera y perdiste el código?
     <a href="#" id="link-recuperar-2">Recupéralo aquí</a>
   </p>
@@ -1578,23 +1674,6 @@ const CONFIG = {
     irTiq(1);
   }
 
-  // La tarjeta dice $125.000: si en algún horario no hay cupo, lo dice ahí
-  // mismo, antes de hacer clic.
-  function notaCupoTarjeta() {
-    if (!horas.length) return '';
-    const cerradas = horasSinCupo();
-    const abiertas = horas.filter(h => Number(h.libres) > 0);
-    // El número exacto de cupos por horario, a la vista desde la primera pantalla (9 oct): «9 cupos» mueve más que «hay cupo».
-    const conCupos = (h) => `${h.etiqueta} (${Number(h.libres) === 1 ? '1 cupo' : `${Number(h.libres)} cupos`})`;
-    const lista = abiertas.map(conCupos);
-    const hayCupo = lista.length > 1 ? `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}` : lista[0];
-    const donde = abiertas.length
-      ? `Hay cupo a las <b>${esc(hayCupo)}</b>.` +
-        (cerradas.length ? ` ${esc(unirHoras(cerradas))}: apúntate a la lista de espera, es gratis.` : '')
-      : 'Hoy no hay cupo libre: apúntate a la lista de espera, es gratis.';
-    return `<p class="desc"><b>${donde}</b></p>`;
-  }
-
   /* «Alrededor de $5.000 por clase»: la cuenta que convence, dicha como cuenta y no como descuento. Siempre «alrededor de»
      porque el número de clases cambia de un mes a otro (23 a 26). Sale del valor que manda el sistema. */
   const porClasePlan = () => Math.round(valorCop / CONFIG.CLASES_MES_REF / 100) * 100;
@@ -1607,77 +1686,101 @@ const CONFIG = {
     const c = CONFIG.CAMPANA, h = hoyBogota();
     return !!(c && c.activa && h >= c.desde && h <= c.hasta);
   };
-  const diasParaFin = () => Math.round((Date.parse(CONFIG.CAMPANA.hasta + 'T12:00:00-05:00') - Date.parse(hoyBogota() + 'T12:00:00-05:00')) / 86400000);
+  const extraTxt = (clases) => { const n = CONFIG.EXTRA(clases); return `${n} ${n === 1 ? 'clase adicional' : 'clases adicionales'}`; };
 
-  function pintarCampana(conTiquetera) {
-    const caja = $('#campana'), como = $('#como');
-    if (!conTiquetera) { caja.hidden = true; como.hidden = true; return; }
-    if (campanaActiva()) {
-      const d = diasParaFin();
-      const cuando = d <= 0 ? 'Último día' : d === 1 ? 'Queda 1 día' : `Quedan ${d} días`;
-      caja.innerHTML = `
-        <div class="campana">
-          <span class="ceja">Esta semana · constancia</span>
-          <h3>Cumple todas tus clases y recibe clases adicionales</h3>
-          <p>Por tu constancia y tu disciplina: con la tiquetera de 4 clases recibes <b>1 clase adicional</b> y con la de 8
-             clases recibes <b>2 clases adicionales</b>. Sin trámites: te avisamos por WhatsApp.</p>
-          <span class="reloj">${cuando}</span>
-        </div>`;
-      caja.hidden = false;
-    } else { caja.hidden = true; }
-    como.innerHTML = `
-      <div class="como">
-        <h3>Así funciona la tiquetera</h3>
-        <ol>
-          <li><span class="n">1</span><span><b>Compra</b> el paquete y paga por transferencia. Te confirmamos el pago y recibes tu código.</span></li>
-          <li><span class="n">2</span><span><b>Reserva</b> cada clase en la página, en el horario que te sirva. Vigente 30 días.</span></li>
-          <li><span class="n">3</span><span><b>Baila</b> y completa todas tus clases.${campanaActiva() ? ' Ahí recibes tus clases adicionales: 1 con la de 4 y 2 con la de 8.' : ''}</span></li>
-        </ol>
-        ${campanaActiva() ? '<p class="legal-campana">Las clases adicionales se activan cuando completas todas las clases de tu tiquetera y se avisa por WhatsApp. Valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.</p>' : ''}
-      </div>`;
-    como.hidden = false;
+  /* ═══ Los pases ═══
+     Cada producto es una tarjeta (un pase). Se deslizan; el que queda al
+     frente se ilumina y abajo aparece lo esencial de ese pase y un solo
+     botón. Las dudas van en las preguntas frecuentes, al final. */
+  const ARTE = `<svg class="arte" viewBox="0 0 320 202" preserveAspectRatio="none" aria-hidden="true">
+      <path class="cinta c1" d="M-30 170 C 60 120, 110 210, 190 140 S 300 40, 360 80"/>
+      <path class="cinta c2" d="M-20 120 C 70 60, 140 170, 220 100 S 320 10, 360 30"/>
+      <path class="cinta c3" d="M-10 200 C 80 150, 150 230, 240 170 S 330 110, 370 140"/>
+    </svg>`;
+
+  function listaDePases() {
+    const camp = campanaActiva();
+    const pases = [{
+      tipo: 'mensualidad', nombre: 'Mensualidad', cant: 'Todo el mes', num: 'MES',
+      precio: valorCop, xc: `≈ ${pesos(porClasePlan())} por clase`,
+      linea: 'Tu horario fijo de lunes a sábado.',
+      puntos: [
+        'De lunes a viernes <b>no reservas</b>: llegas a tu horario y entras.',
+        'Los sábados, <b>Rumba terapia</b> incluida (se aparta el cupo).',
+        `Sale a <b>≈ ${pesos(porClasePlan())} por clase</b> si vienes a todas (la suelta vale ${pesos(CONFIG.PRECIO_SUELTA_REF)}).`,
+        cuposTxt(),
+      ].filter(Boolean),
+      cta: `Quiero la mensualidad · ${pesos(valorCop)}`, foto: CONFIG.FOTOS.mensualidad,
+    }];
+    for (const p of tiqPaquetes) {
+      const clases = Number(p.clases) || 0, precio = Number(p.precio_cop) || 0;
+      const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - precio, 0);
+      pases.push({
+        tipo: 'tq', clave: p.clave, nombre: 'Tiquetera', cant: `${clases} clases`, num: String(clases),
+        precio, xc: `${pesos(Math.round(precio / (clases || 1)))} por clase`, sello: clases >= 8 ? 'Mejor precio' : '',
+        linea: clases >= 8 ? 'Para venir dos veces por semana, sin horario fijo.' : 'Para empezar o venir una vez por semana.',
+        puntos: [
+          'Úsala en <b>cualquier horario</b>: reservas cada clase en la página con tu código.',
+          `Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.`,
+          ahorro > 0 ? `Ahorras <b>${pesos(ahorro)}</b> frente a pagar clase suelta.` : '',
+          camp ? `<span class="extra-li">Completa tus ${clases} clases y recibe <b>${extraTxt(clases)}</b> por tu constancia.</span>` : '',
+        ].filter(Boolean),
+        cta: `Quiero la de ${clases} clases · ${pesos(precio)}`, foto: CONFIG.FOTOS[String(clases)] || '',
+      });
+    }
+    return pases;
   }
 
-  function pintarEleccion() {
-    const tarjetaMensualidad = `
-      <button type="button" class="tarjeta" data-elegir="mensualidad">
-        <svg class="icono" aria-hidden="true" focusable="false"><use href="#ph-calendar-check"/></svg>
-        <span class="titulo">Plan mensualidad</span>
-        <span class="precio">${pesos(valorCop)}</span>
-        <span class="precio-cada">al mes · horario fijo</span>
-        <span class="por-clase larga">${textoPorClasePlan()}</span>
-        <p class="desc">Todas tus clases de lunes a sábado, sin domingos ni festivos. De lunes a viernes no reservas: solo llegas y entras.</p>
-        ${notaCupoTarjeta()}
+  // Cupos de la mensualidad, en una línea (9 oct: «9 cupos» mueve más que «hay cupo»).
+  function cuposTxt() {
+    if (!horas.length) return '';
+    const partes = horas.map(h => Number(h.libres) > 0
+      ? `${h.etiqueta}: <b>${Number(h.libres)} ${Number(h.libres) === 1 ? 'cupo' : 'cupos'}</b>`
+      : `${h.etiqueta}: lista de espera`);
+    return 'Cupos hoy · ' + partes.join(' · ');
+  }
+
+  function htmlPase(p, i) {
+    return `
+      <button type="button" class="pase ${p.tipo === 'mensualidad' ? 'pase-mensualidad' : 'pase-tq'}${p.foto ? ' con-foto' : ''}"
+              data-i="${i}" data-pase="${p.tipo}" data-clave="${esc(p.clave || '')}" role="option" aria-label="${esc(p.nombre)} ${esc(p.cant)}, ${pesos(p.precio)}">
+        ${p.foto ? `<span class="foto" style="background-image:url('${esc(p.foto)}')"></span>` : ''}
+        ${ARTE}
+        <span class="num" aria-hidden="true">${esc(p.num)}</span>
+        ${p.sello ? `<span class="sello">${esc(p.sello)}</span>` : ''}
+        <span class="cont">
+          <span class="top"><span class="marca-p">TUMBAO · PASE</span><span class="chip" aria-hidden="true"></span></span>
+          <span class="nom">${esc(p.nombre)}</span>
+          <span class="cant">${esc(p.cant)}</span>
+          <span class="pie"><b class="precio-p">${pesos(p.precio)}</b><span class="xc">${p.xc}</span></span>
+        </span>
       </button>`;
+  }
 
-    const tarjetasTQ = tiqPaquetes.map(p => {
-      const clases = Number(p.clases) || 0;
-      const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - Number(p.precio_cop || 0), 0);
-      const camp = campanaActiva();
-      return `
-      <button type="button" class="tarjeta" data-elegir="tq" data-clave="${esc(p.clave)}">
-        ${clases >= 8 ? '<span class="destacado">Mejor precio</span>' : ''}
-        <svg class="icono" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
-        <span class="titulo">Tiquetera de ${clases} clases</span>
-        <span class="precio">${pesos(p.precio_cop)}</span>
-        <span class="por-clase">${pesos(Math.round(Number(p.precio_cop || 0) / (clases || 1)))} por clase</span>
-        ${ahorro > 0 ? `<span class="ahorro">Ahorras ${pesos(ahorro)} vs. pagar suelta</span>` : ''}
-        ${camp ? `<span class="extra">Completa tus <b>${clases} clases</b> y recibe <b>${CONFIG.EXTRA(clases)} ${CONFIG.EXTRA(clases) === 1 ? 'clase adicional' : 'clases adicionales'}</b> por tu constancia.</span>` : ''}
-        <p class="desc">Compra una vez y ven cuando quieras. ${clases >= 8
-          ? 'Ideal si vienes dos veces por semana o solo una parte del mes.'
-          : 'Ideal para empezar o para venir una vez por semana.'}</p>
-        <div class="clave"><svg class="ico-i" aria-hidden="true" focusable="false"><use href="#ph-clock"/></svg><span><b>Reservas cada clase</b> en la página de reservas.
-          Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.</span></div>
-      </button>`;
-    }).join('');
+  let pasesActuales = [];
+  let paseActivo = -1;
 
-    pintarCampana(tiqPaquetes.length > 0);
-    $('#tarjetas-eleccion').innerHTML = tarjetaMensualidad +
-      (tiqPaquetes.length ? tarjetasTQ
-        : '<p class="sub">Las tiqueteras no están disponibles en este momento.</p>');
-
-    for (const b of $('#tarjetas-eleccion').querySelectorAll('[data-elegir]')) {
-      b.addEventListener('click', () => {
+  function mostrarDetalle(i, animar) {
+    const p = pasesActuales[i];
+    if (!p || i === paseActivo) return;
+    paseActivo = i;
+    const cajas = $('#tarjetas-eleccion').querySelectorAll('.pase');
+    cajas.forEach((c, k) => { c.classList.toggle('activo', k === i); c.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+    const caja = cajas[i];
+    if (caja && animar !== false) { caja.classList.remove('brilla'); void caja.offsetWidth; caja.classList.add('brilla'); }
+    $('#pager').querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+    const html = `
+      <div class="det">
+        <h3>${esc(p.nombre)} · ${esc(p.cant)}</h3>
+        <p class="linea">${esc(p.linea)}</p>
+        <ul>${p.puntos.map(t => `<li>${t}</li>`).join('')}</ul>
+        <button type="button" class="btn" id="btn-pase" data-elegir="${p.tipo === 'mensualidad' ? 'mensualidad' : 'tq'}" data-clave="${esc(p.clave || '')}">${esc(p.cta)}</button>
+      </div>`;
+    const viejo = $('#detalle .det');
+    const poner = () => {
+      $('#detalle').innerHTML = html;
+      $('#btn-pase').addEventListener('click', (ev) => {
+        const b = ev.currentTarget;
         $('#eleccion').hidden = true;
         if (b.dataset.elegir === 'mensualidad') {
           $('#pasos').hidden = false;
@@ -1687,7 +1790,57 @@ const CONFIG = {
           elegirTiqueteraDirecta(b.dataset.clave);
         }
       });
+    };
+    if (viejo && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      viejo.classList.add('cambia');
+      setTimeout(poner, 160);
+    } else poner();
+  }
+
+  function pintarFaq() {
+    const camp = campanaActiva();
+    const preguntas = [
+      ['¿Qué diferencia hay entre la mensualidad y la tiquetera?',
+       'La <b>mensualidad</b> es tu horario fijo todo el mes: de lunes a viernes llegas y entras, sin reservar, y los sábados tienes la Rumba terapia. La <b>tiquetera</b> es un paquete de clases para usar en el horario que quieras: reservas cada clase en la página.'],
+      ['¿Cómo reservo mis clases con la tiquetera?',
+       'Entra a <a href="https://tumbaobaila.com">tumbaobaila.com</a>, elige <b>Tengo tiquetera</b>, escribe tu código y aparta la clase. Cada reserva descuenta una clase.'],
+      ['¿Cuánto me dura?',
+       'La mensualidad, el mes. La tiquetera, <b>30 días</b> desde la compra.'],
+      ['¿Cómo pago?',
+       'Por transferencia, desde aquí mismo: eliges tu pase, dejas tus datos y te mostramos los datos de pago. Apenas confirmamos el pago queda activo (con la tiquetera te llega tu código).'],
+    ];
+    if (camp) preguntas.push(['¿Qué son las clases adicionales por constancia?',
+      'Cuando completas <b>todas</b> las clases de tu tiquetera, por tu constancia te sumamos clases: <b>1 clase adicional</b> con la de 4 y <b>2 clases adicionales</b> con la de 8. Te avisamos por WhatsApp y valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.']);
+    preguntas.push(['¿Tengo más dudas?',
+      `Escríbenos por <a href="${waUrl('Hola Tumbao, tengo una duda sobre los pases.')}" target="_blank" rel="noopener">WhatsApp</a> y te ayudamos.`]);
+    $('#faq').innerHTML = '<h3>Preguntas frecuentes</h3>' +
+      preguntas.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('');
+  }
+
+  function pintarEleccion() {
+    pasesActuales = listaDePases();
+    paseActivo = -1;
+    const camp = campanaActiva() && tiqPaquetes.length;
+    $('#campana').hidden = !camp;
+    if (camp) $('#campana').innerHTML = 'Esta semana: completa tu tiquetera y recibe <b>clases adicionales</b> por tu constancia.';
+    const cont = $('#tarjetas-eleccion');
+    cont.innerHTML = pasesActuales.map(htmlPase).join('');
+    $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
+    const cajas = [...cont.querySelectorAll('.pase')];
+    cajas.forEach((c, i) => c.addEventListener('click', () => {
+      if (i === paseActivo) { $('#btn-pase') && $('#btn-pase').focus(); return; }
+      c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      mostrarDetalle(i);
+    }));
+    // El pase que queda al centro al deslizar es el activo.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((ents) => {
+        for (const e of ents) if (e.isIntersecting && e.intersectionRatio > 0.6) mostrarDetalle(Number(e.target.dataset.i));
+      }, { root: cont, threshold: [0.6] });
+      cajas.forEach(c => io.observe(c));
     }
+    mostrarDetalle(0, false);
+    pintarFaq();
   }
 
   async function cargarPaquetes() {

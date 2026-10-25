@@ -38,9 +38,9 @@ titulo('2. La gracia de 5 días se cumple completa');
 
 titulo('3. La página muestra los cupos');
 {
-  ok('la tarjeta de entrada dice «Hay cupo a las 7:00 am (9 cupos)…» con el número exacto de cada horario',
-     /conCupos = \(h\) => `\$\{h\.etiqueta\} \(\$\{Number\(h\.libres\) === 1 \? '1 cupo'/.test(men) && /Hay cupo a las <b>/.test(men));
-  ok('los horarios sin cupo siguen invitando a la lista de espera (gratis)', /apúntate a la lista de espera, es gratis/.test(men));
+  ok('el pase de mensualidad dice «7:00 am: 9 cupos…» con el número exacto de cada horario (25 oct: pases)',
+     /\$\{h\.etiqueta\}: <b>\$\{Number\(h\.libres\)\} \$\{Number\(h\.libres\) === 1 \? 'cupo' : 'cupos'\}<\/b>/.test(men));
+  ok('los horarios sin cupo dicen lista de espera', /`\$\{h\.etiqueta\}: lista de espera`/.test(men));
   ok('la pastilla de cada horario sigue mostrando «N cupos» y se pone dorada con 3 o menos', /n <= 3 \? 'pocos'/.test(men));
 }
 

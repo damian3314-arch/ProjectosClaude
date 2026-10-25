@@ -22,7 +22,7 @@ titulo('1. Mensualidad: lunes a sábado');
   ok('ningún texto de la página dice «lunes a viernes» como lo que cubre la mensualidad',
      !/Todas tus clases de (<b>)?lunes a viernes/.test(men) && !/'Lunes a viernes'/.test(men));
   ok('el detalle del plan dice lunes a sábado, sin domingos ni festivos', /Entras a todas tus clases de <b>lunes a sábado<\/b>, sin domingos ni festivos/.test(men));
-  ok('la tarjeta de entrada dice lo mismo', /Todas tus clases de lunes a sábado, sin domingos ni festivos/.test(men));
+  ok('el pase de entrada dice lo mismo (25 oct: pases)', /linea: 'Tu horario fijo de lunes a sábado\.'/.test(men));
   ok('entre semana no se reserva y el sábado sí se aparta cupo', /no reservas<\/b>: solo llegas y entras/.test(men) && /sábado<\/b> sí se aparta cupo/.test(men));
   ok('las filas de horarios dicen lunes a sábado', /libre \? 'Lunes a sábado'/.test(men) && /'Sin domingos ni festivos'/.test(men));
 }
@@ -33,8 +33,8 @@ titulo('2. Precio por clase');
      /CLASES_MES_REF: 25/.test(men) && /Math\.round\(valorCop \/ CONFIG\.CLASES_MES_REF \/ 100\) \* 100/.test(men));
   ok('siempre «alrededor de» y contra la clase suelta, nunca como descuento',
      /Alrededor de \$\{pesos\(porClasePlan\(\)\)\} por clase si vienes a todas \(la suelta cuesta/.test(men));
-  ok('se pinta en la tarjeta y en el detalle del plan, y se repinta cuando llega el valor del sistema',
-     /\$\{textoPorClasePlan\(\)\}<\/span>/.test(men) && /id="plan-por-clase"/.test(men) && /getElementById\('plan-por-clase'\)/.test(men));
+  ok('se pinta en el pase y en el detalle del plan, y se repinta cuando llega el valor del sistema',
+     /xc: `≈ \$\{pesos\(porClasePlan\(\)\)\} por clase`/.test(men) && /id="plan-por-clase"/.test(men) && /getElementById\('plan-por-clase'\)/.test(men));
   const por = Math.round(125000 / 25 / 100) * 100;
   ok('con $125.000 y 25 clases da $5.000 (igual que el bot)', por === 5000, String(por));
 }
@@ -42,7 +42,7 @@ titulo('2. Precio por clase');
 titulo('3. Para quién es cada tiquetera y la franja de reservas');
 {
   ok('la de 8: dos veces por semana o parte del mes; la de 4: empezar o una vez por semana',
-     /clases >= 8\s*\? 'Ideal si vienes dos veces por semana o solo una parte del mes\.'\s*: 'Ideal para empezar o para venir una vez por semana\.'/.test(men));
+     /clases >= 8 \? 'Para venir dos veces por semana, sin horario fijo\.' : 'Para empezar o venir una vez por semana\.'/.test(men));
   // 13 oct: la franja dice primero los cupos REALES de mensualidad (lo que más cayó en octubre) y la tiquetera queda de
   // segunda opción; sin cupos, la cuenta de la tiquetera como antes.
   ok('la franja de reservas pone primero los cupos reales de mensualidad (los dos horarios con menos cupos) y el precio del mes',
@@ -62,7 +62,7 @@ titulo('4. Nada suena a descuento');
 {
   const nuevo = [
     /Alrededor de \$\{pesos\(porClasePlan\(\)\)\}[^`]*/.exec(men)[0],
-    'Ideal si vienes dos veces por semana o solo una parte del mes. Ideal para empezar o para venir una vez por semana.',
+    'Para venir dos veces por semana, sin horario fijo. Para empezar o venir una vez por semana.',
     /cada clase te sale a <b>[^`]*/.exec(idx)[0],
   ].join(' ');
   ok('el texto nuevo no dice descuento, regalo, promoción, oferta ni «gratis»', !/descuento|regalo|promoci|oferta|gratis|últimos? cupos?/i.test(nuevo), nuevo.slice(0, 90));

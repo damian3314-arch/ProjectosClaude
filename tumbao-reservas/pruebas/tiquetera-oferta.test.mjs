@@ -165,7 +165,7 @@ async function mensualidad(estado) {
 titulo('3. Tarjetas de tiquetera: el precio por clase a la vista');
 {
   const { p, ctx, errores } = await mensualidad('lista_espera');
-  await p.waitForSelector('.tarjeta .por-clase', { timeout: 5000 });
+  await p.waitForSelector('.pase .xc', { timeout: 5000 });
   const t = await p.locator('#tarjetas-eleccion').innerText();
   ok('4 clases: $13.000 por clase', /\$13\.000 por clase/.test(t), t.replace(/\n/g, ' ').slice(0, 160));
   ok('8 clases: $12.000 por clase', /\$12\.000 por clase/.test(t));

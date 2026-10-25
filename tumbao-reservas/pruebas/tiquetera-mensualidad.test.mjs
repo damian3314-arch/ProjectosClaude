@@ -97,8 +97,23 @@ async function abrir({ estado } = {}) {
     };
   }, [estado]);
   await p.goto(PAGINA);
-  await p.waitForSelector('#tarjetas-eleccion .tarjeta', { timeout: 10000 });
+  await p.waitForSelector('#tarjetas-eleccion .pase[data-pase]', { timeout: 10000 });
   return { p, errs };
+}
+
+/* 25 oct: las tarjetas pasaron a ser «pases» que se deslizan. Tocar un pase lo pone al frente y abajo aparece su
+   detalle con UN botón (#btn-pase) que lleva al flujo de siempre. */
+async function verPase(p, clave) {
+  await p.locator(`.pase[data-pase="tq"][data-clave="${clave}"]`).click();
+  await p.waitForFunction((c) => {
+    const b = document.querySelector('#btn-pase');
+    return b && b.dataset.clave === c;
+  }, clave, { timeout: 5000 });
+  return (await p.locator(`.pase[data-clave="${clave}"]`).innerText()) + '\n' + (await p.locator('#detalle').innerText());
+}
+async function comprarPase(p, clave) {
+  await verPase(p, clave);
+  await p.locator('#btn-pase').click();
 }
 
 /* ═══════ 1 · lo primero es la elección, con lo clave a la vista ═══ */
@@ -109,12 +124,11 @@ titulo('1. Las tres tarjetas de entrada');
   ok('la elección arranca visible', await p.locator('#eleccion').isVisible());
   ok('mensualidad arranca oculta detrás', await p.locator('#s0').isHidden());
 
-  const tarjetas = p.locator('#tarjetas-eleccion .tarjeta');
-  ok('hay tres tarjetas (mensualidad + 2 tiqueteras)',
+  const tarjetas = p.locator('#tarjetas-eleccion .pase[data-pase]');
+  ok('hay tres pases (mensualidad + 2 tiqueteras)',
      await tarjetas.count() === 3, String(await tarjetas.count()));
 
-  const t4 = p.locator('[data-elegir="tq"][data-clave="4"]');
-  const texto4 = await t4.innerText();
+  const texto4 = await verPase(p, '4');
   ok('la tarjeta de 4 clases dice que hay que reservar',
      /reservas cada clase/i.test(texto4), texto4.replace(/\n/g, ' '));
   ok('y dice los 30 días, sin tener que buscarlo',
@@ -122,9 +136,9 @@ titulo('1. Las tres tarjetas de entrada');
   ok('trae el ahorro real contra clase suelta',
      /ahorras \$8\.000/i.test(texto4), texto4.replace(/\n/g, ' '));
 
-  const t8 = p.locator('[data-elegir="tq"][data-clave="8"]');
-  ok('la de 8 también avisa la vigencia', /30 días/i.test(await t8.innerText()));
-  ok('la de 8 se marca como mejor precio', /mejor precio/i.test(await t8.innerText()));
+  const texto8 = await verPase(p, '8');
+  ok('la de 8 también avisa la vigencia', /30 días/i.test(texto8));
+  ok('la de 8 se marca como mejor precio', /mejor precio/i.test(texto8));
 
   ok('sin errores de JS', errs.length === 0, errs.join(' | '));
   await p.close();
@@ -154,7 +168,7 @@ titulo('2. Mensualidad, sin tocarle ni un pixel');
 titulo('3. La tarjeta ya decide el paquete');
 {
   const { p, errs } = await abrir();
-  await p.locator('[data-elegir="tq"][data-clave="4"]').click();
+  await comprarPase(p, '4');
   ok('va directo a pedir los datos (sin pasar por la lista)',
      await p.locator('#st1').isVisible());
   ok('el resumen trae el paquete elegido',
@@ -170,7 +184,7 @@ titulo('4. El banco confirma automático, como una suelta');
   const { p, errs } = await abrir({
     estado: { ok: true, estado: 'confirmada', codigo: 'ABC123', clases: 4, tiquetera_saldo: 4 },
   });
-  await p.locator('[data-elegir="tq"][data-clave="4"]').click();
+  await comprarPase(p, '4');
   await p.fill('#tiq-nombre', 'Camila Rojas');
   await p.fill('#tiq-celular', '3001234567');
   await p.check('#tiq-habeas');
@@ -208,7 +222,7 @@ titulo('5. Sin confirmación a tiempo, invita a escribir');
   const { p, errs } = await abrir({
     estado: { ok: true, estado: 'pendiente_pago', codigo: 'ABC123' },
   });
-  await p.locator('[data-elegir="tq"][data-clave="4"]').click();
+  await comprarPase(p, '4');
   await p.fill('#tiq-nombre', 'Camila Rojas');
   await p.fill('#tiq-celular', '3001234567');
   await p.check('#tiq-habeas');

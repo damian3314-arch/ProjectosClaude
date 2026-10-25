@@ -199,11 +199,11 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
                  estado: 'lista_espera', valor_cop: 125000, ya_estaba: false },
   });
 
-  // La tarjeta de la puerta de entrada (ya oculta: se lee el textContent).
-  const tarjeta = await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent();
-  ok('la tarjeta de entrada dice dónde sí hay cupo, con el número exacto (9 oct)', /Hay cupo a las\s*7:00 am \(15 cupos\)/.test(tarjeta), tarjeta);
-  ok('y que en los otros es solo lista, sin pago',
-     /6:00 pm y 7:00 pm: apúntate a la lista de espera, es gratis/.test(tarjeta), tarjeta);
+  // El detalle del pase de mensualidad en la puerta de entrada (ya oculto: se lee el textContent). 25 oct: pases.
+  const tarjeta = await p.locator('#detalle').textContent();
+  ok('el pase de entrada dice dónde sí hay cupo, con el número exacto (9 oct)', /7:00 am:\s*15 cupos/.test(tarjeta), tarjeta);
+  ok('y que en los otros es solo lista de espera',
+     /6:00 pm: lista de espera/.test(tarjeta) && /7:00 pm: lista de espera/.test(tarjeta), tarjeta);
 
   // El aviso de arriba.
   const aviso = await p.locator('#aviso-lleno').innerText();
@@ -281,8 +281,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
     ] },
   });
   ok('sin horas llenas no hay aviso', await p.locator('#aviso-lleno').isHidden());
-  ok('ni nota en la tarjeta',
-     !/lista de espera/.test(await p.locator('#tarjetas-eleccion [data-elegir="mensualidad"]').textContent()));
+  ok('ni nota en el pase',
+     !/lista de espera/.test(await p.locator('#detalle').textContent()));
 
   // Y el botón de WhatsApp vuelve a su texto normal tras un pago.
   await p.click('.hora[data-hora="07:00"]');
