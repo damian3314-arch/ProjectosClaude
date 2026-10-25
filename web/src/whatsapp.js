@@ -163,6 +163,11 @@ async function onProblem(c, text) {
   if (c.env.OPENAI_API_KEY && (fresh?.n || 0) <= MAX_NEW_PER_HOUR) {
     try { t = await c.h.triage(c.env, problem); } catch (err) { console.error('triage wa', err?.message || 'desconocido'); }
   }
+  // Preguntó quién es Damián o de qué se trata: se le explica y se queda esperando su problema (sin calificarlo todavía)
+  if (t.kind === 'sobre') {
+    await save(c, { state: 'need_problem' });
+    return sendText(c, t.reply);
+  }
   // Si lo que escribió no parece un problema de negocio (saludo, charla, otro idioma), se le aclara una vez antes de calificarlo
   const prior = c.st.state === 'need_problem' ? c.st.problem || '' : '';
   if (!t.intent && !prior) {
