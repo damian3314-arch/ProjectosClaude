@@ -594,7 +594,7 @@ const PH_BASE = 'Cuéntame aquí… ';
 const PH_EX = ['mi nómina me quita días', 'el inventario no cuadra', 'un bot para mi WhatsApp', 'no sé cuánto me gano', 'mis clientes no vuelven'];
 let phI = 0, phPos = 0, phDir = -1, phTimer = null;
 msg.placeholder = PH_BASE + PH_EX[0];
-const fitRows = () => { msg.rows = innerWidth >= 600 ? 1 : 2; if (!msg.value) msg.style.height = ''; };
+const fitRows = () => { msg.rows = innerWidth >= 600 ? 1 : innerWidth < 340 ? 3 : 2; if (!msg.value) msg.style.height = ''; };
 fitRows(); addEventListener('resize', fitRows);
 function stopPh(){ clearTimeout(phTimer); phTimer = null; }
 function tickPh(){
