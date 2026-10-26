@@ -407,7 +407,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
       <summary>¿Y si no sé explicar mi problema?</summary>
       <p>No hace falta. Cuéntalo como se lo contarías a un amigo, desordenado y todo, o mándame un audio. Yo lo ordeno contigo.</p>
     </details>
-    <details data-rv="0">
+    <details data-rv="0" id="privacidad">
       <summary>¿Qué haces con mi número y mis datos?</summary>
       <p>Solo los uso para responderte sobre lo que me contaste. Los dejas tú, con tu autorización, y no tienes que dar más que tu nombre y tu WhatsApp.</p>
       <p><b>Política de tratamiento de datos (Ley 1581 de 2012).</b> Responsable: Damián Barragán, Colombia. Qué guardo: tu nombre, WhatsApp, lo que escribes o dices en el chat y tus respuestas a las preguntas. Para qué: contactarte por WhatsApp sobre tu caso y medir si la página funciona (sin cookies). Con quién se procesa: OpenAI (entiende tu mensaje y transcribe el audio), Cloudflare (aloja la página y la base de datos) y Meta/WhatsApp (el mensaje). Algunos están fuera de Colombia. No vendo ni comparto tus datos con nadie más. Tus derechos: conocer, actualizar, rectificar y suprimir tus datos y revocar tu autorización; escríbeme por WhatsApp o por <a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a> y lo hago.</p>
@@ -432,6 +432,8 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
 <footer><div class="wrap"><span>© 2026 HolaDami · Damián Barragán · Colombia</span><a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a></div></footer>
 
 <script>
+/* El enlace holadami.com/#privacidad (el que manda el bot de WhatsApp) abre la política de datos */
+(function(){function o(){if(location.hash==='#privacidad'){var d=document.getElementById('privacidad');if(d){d.open=true;d.scrollIntoView()}}}addEventListener('hashchange',o);addEventListener('load',o)})();
 /* ===== CONFIGURACIÓN ===== */
 const CONFIG = {
   company: "",            // Nombre de tu empresa para la esquina superior. Vacío = "Escríbeme".

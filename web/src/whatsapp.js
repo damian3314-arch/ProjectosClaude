@@ -34,7 +34,10 @@ const QUESTIONS = {
   },
 };
 
-const GREETING = 'Hola 👋 Soy Damián Barragán, o mejor dicho, mi asistente de IA, que contesta por mí mientras llego yo. Cuéntame en una frase qué te está quitando tiempo en tu negocio.\n\nUso lo que me cuentes solo para responderte.';
+// El saludo no anuncia que es IA: la conversación fluye como un DM normal. Si la persona pregunta, se le dice la verdad (BOT_REPLY).
+const GREETING = 'Hola 👋 Soy Damián Barragán. Cuéntame en una frase qué te está quitando tiempo en tu negocio.';
+const BOT_REPLY = 'Soy el asistente de IA de Damián y lo estoy apoyando para que todo sea más rápido. Él revisa personalmente cada caso.';
+const ASKS_BOT_RE = /\b(eres|hablo con|hablando con|esto es|es esto)\b[^.?!]{0,20}\b(bot|robot|chatbot|ia|inteligencia artificial|humano|persona|real|m[aá]quina)\b/i;
 const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero)\s*[.!]*\s*$/i;
 const GREETING_RE = /^\s*(hola|holi|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|hi|hello|buen d[ií]a|informaci[oó]n|info)\b[\s,.!¡?¿a-záéíóúñ]{0,25}$/i;
 
@@ -151,6 +154,17 @@ async function handleInbound(env, ctx, h, payload) {
     return sendText(ctxw, 'Listo, no te escribo más. Si cambias de idea, escríbeme cuando quieras.');
   }
 
+  // Si pregunta si es un bot o una persona, se le dice la verdad y se retoma el paso donde iba
+  if (inb.text.length <= 80 && ASKS_BOT_RE.test(inb.text)) {
+    if (QUESTIONS[st.state]) {
+      await sendText(ctxw, BOT_REPLY);
+      return sendButtons(ctxw, QUESTIONS[st.state].text, QUESTIONS[st.state].options);
+    }
+    if (st.state === 'need_phone') return sendText(ctxw, `${BOT_REPLY} ¿A qué número de WhatsApp te escribo? Con el indicativo, por ejemplo 573001234567.`);
+    await save(ctxw, { state: 'need_problem' });
+    return sendText(ctxw, `${BOT_REPLY} Cuéntame en una frase qué te está quitando tiempo en tu negocio.`);
+  }
+
   switch (st.state) {
     case 'new': {
       if (looksLikeProblem(inb.text)) return onProblem(ctxw, inb.text);
@@ -158,7 +172,7 @@ async function handleInbound(env, ctx, h, payload) {
       return sendText(ctxw, GREETING);
     }
     case 'need_problem': {
-      if (!inb.text) return sendText(ctxw, 'Por ahora solo puedo leer texto. ¿Me cuentas en una frase qué te está quitando tiempo?');
+      if (!inb.text) return sendText(ctxw, 'Por aquí no alcanzo a abrir eso. ¿Me cuentas en una frase qué te está quitando tiempo?');
       if (GREETING_RE.test(inb.text)) return sendText(ctxw, 'Cuéntame en una frase qué te está quitando tiempo en tu negocio, y sigo con unas preguntas rápidas.');
       return onProblem(ctxw, inb.text);
     }
@@ -196,7 +210,7 @@ async function onProblem(c, text) {
   }
   await save(c, { state: 'q_budget', problem: prior ? `${prior}\n${problem}`.slice(0, 3000) : problem, intent: t.intent, name: c.h.clean(c.inb.name, 80) || null });
   const q = QUESTIONS.q_budget;
-  return sendButtons(c, `${t.reply}\n\nTe hago 3 preguntas rápidas, no toma ni un minuto. ${q.text}`, q.options);
+  return sendButtons(c, `${t.reply}\n\nTe hago 3 preguntas rápidas, no toma ni un minuto. ${q.text}\n\nAl responder autorizas que guarde tus datos para atenderte. Política: holadami.com/#privacidad`, q.options);
 }
 
 async function onAnswer(c, state) {
