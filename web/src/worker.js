@@ -16,7 +16,7 @@
  */
 
 import { generateBrief, fallbackBrief } from './brief.js';
-import { handleWhatsAppWebhook } from './whatsapp.js';
+import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
 import { sendHotAlert, rescueSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
@@ -60,6 +60,8 @@ export default {
     return secure(await route(request, env, ctx, url), url.pathname);
   },
   async scheduled(event, env, ctx) {
+    // Cada 5 minutos: seguimiento a quien dejó la conversación a medias. Lo demás corre cada hora en punto.
+    if (event.cron === '*/5 * * * *') return ctx.waitUntil(nudgeIdle(env, agentHelpers()).catch(err => console.error('nudge', err?.message || 'desconocido')));
     ctx.waitUntil(ownerPush(env).catch(err => console.error('ownerPush', err?.message || 'desconocido')));
     ctx.waitUntil(rescueSend(env).then(r => r.sent && console.log('rescate', JSON.stringify(r))).catch(err => console.error('rescate', err?.message || 'desconocido')));
   },

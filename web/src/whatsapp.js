@@ -133,7 +133,7 @@ async function handleInbound(env, ctx, h, payload) {
   const s = await env.DB.prepare('SELECT * FROM wa_sessions WHERE id = ?').bind(key).first();
   if (!s || s.last_msg_id === inb.id) return;
   const today = new Date().toISOString().slice(0, 10);
-  const claim = await env.DB.prepare(`UPDATE wa_sessions SET last_msg_id = ?, msg_count = CASE WHEN day = ? THEN msg_count + 1 ELSE 1 END, day = ?
+  const claim = await env.DB.prepare(`UPDATE wa_sessions SET last_msg_id = ?, msg_count = CASE WHEN day = ? THEN msg_count + 1 ELSE 1 END, day = ?, updated_at = datetime('now')
       WHERE id = ? AND (last_msg_id IS NULL OR last_msg_id != ?)`).bind(inb.id, today, today, key, inb.id).run();
   if (!claim.meta?.changes) return; // el mismo mensaje llegó dos veces
   if (inb.ad) await env.DB.prepare('INSERT INTO events (session_id, type, utm) VALUES (?, ?, ?)').bind(`wa:${key}`.slice(0, 64), 'wa_ad', inb.ad).run().catch(err => console.error('wa_ad', err?.message));
@@ -284,3 +284,46 @@ function sendButtons(c, body, options) {
     },
   });
 }
+
+/* ---------- Seguimiento si la persona deja de responder ----------
+ * Mientras la ventana de 24 h está abierta, si alguien deja la conversación a medias se le escribe una vez a los 15 minutos
+ * y otra 30 minutos después, en tono de Damián. Ahí se cierra: no se le insiste más (si vuelve a escribir, sigue donde iba).
+ * Solo de 7 am a 9 pm (hora de Bogotá). Lo corre el cron cada 5 minutos.
+ */
+const NUDGE_FIRST_MIN = 15, NUDGE_SECOND_MIN = 30;
+const NUDGE_LAST = 'No te quiero llenar de mensajes 😅 Si ahora no es buen momento, tranqui: cuando quieras me escribes por aquí y seguimos donde quedamos.';
+const NUDGE_FIRST = {
+  need_problem: '¿Sigues por ahí? 🙂 Cuéntame con tus palabras qué es lo que más tiempo te está quitando y te digo si te puedo ayudar.',
+  q_budget: '¿Sigues por ahí? Te dejé una pregunta arriba 👆 Con tocar una opción basta y seguimos.',
+  q_timing: '¿Sigues por ahí? Te dejé una pregunta arriba 👆 Con tocar una opción basta y seguimos.',
+  q_decider: '¿Sigues por ahí? Te dejé una pregunta arriba 👆 Con tocar una opción basta y seguimos.',
+  need_phone: '¿Me compartes el número de WhatsApp donde te escribo? Con eso termino 🙂',
+  loggro: '¿Sigues por ahí? Te falta poquito: toca una opción de arriba 👆 y te digo qué solución te sirve.',
+};
+
+export async function nudgeIdle(env, h) {
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0 };
+  const hour = new Date(Date.now() - 5 * 3600e3).getUTCHours();
+  if (hour < 7 || hour >= 21) return { sent: 0 };
+  const since = sqlTime(Date.now() - 23 * 3600e3), firstBefore = sqlTime(Date.now() - NUDGE_FIRST_MIN * 60e3);
+  const ho = (await env.DB.prepare(`SELECT id AS dest, state, updated_at FROM wa_sessions
+      WHERE state IN ('need_problem', 'q_budget', 'q_timing', 'q_decider', 'need_phone') AND updated_at > ? AND updated_at <= ? LIMIT 50`).bind(since, firstBefore).all()).results || [];
+  const lg = (await env.DB.prepare(`SELECT phone AS dest, 'loggro' AS state, updated_at FROM loggro_leads
+      WHERE (state IN ('q_pn', 'q_size', 'q_system', 'q_when') OR (state = 'sent' AND msg_count > 0)) AND updated_at > ? AND updated_at <= ? LIMIT 50`).bind(since, firstBefore).all()).results || [];
+  let sent = 0;
+  for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...lg.map(x => ({ ...x, sid: `nudge:lg:${x.dest}` }))]) {
+    const prev = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last FROM events WHERE session_id = ? AND type = 'nudge' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
+    const n = prev?.n || 0;
+    if (n >= 2) continue; // ya se cerró
+    if (n === 1 && prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3)) continue;
+    const body = n === 0 ? NUDGE_FIRST[r.state] : NUDGE_LAST;
+    if (!body) continue;
+    const dest = /^\d+$/.test(r.dest) ? { to: r.dest } : { recipient: r.dest };
+    if (await h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body, preview_url: false } })) {
+      await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'nudge')").bind(r.sid.slice(0, 64)).run();
+      sent++;
+    }
+  }
+  return { sent };
+}
+const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
