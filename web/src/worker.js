@@ -17,7 +17,7 @@
 
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook } from './whatsapp.js';
-import { sendHotAlert, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
+import { sendHotAlert, rescueSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -61,6 +61,7 @@ export default {
   },
   async scheduled(event, env, ctx) {
     ctx.waitUntil(ownerPush(env).catch(err => console.error('ownerPush', err?.message || 'desconocido')));
+    ctx.waitUntil(rescueSend(env).then(r => r.sent && console.log('rescate', JSON.stringify(r))).catch(err => console.error('rescate', err?.message || 'desconocido')));
   },
 };
 

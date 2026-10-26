@@ -63,7 +63,8 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
 
   switch (row.state) {
     case 'pending': case 'sent': return onFirstReply(c);
-    case 'retomar':  return onRetomar(c);
+    case 'retomar': case 'q_retomar': return onRetomar(c);
+    case 'q_rescate': return onFirstReply(c);
     case 'q_pn':     return onPn(c);
     case 'q_size':   return onChoice(c, 'size', sizeOptions(row.product), 'q_system');
     case 'q_system': return onChoice(c, 'system', SYSTEM, 'q_when');
@@ -201,3 +202,56 @@ const sendList = (c, body, rows) => c.h.sendWhatsApp(c.env, {
   messaging_product: 'whatsapp', ...c.dest, type: 'interactive',
   interactive: { type: 'list', body: { text: body.slice(0, 1024) }, action: { button: 'Ver opciones', sections: [{ title: 'Tu negocio', rows: rows.map(([id, title]) => ({ id, title: title.slice(0, 24) })) }] } },
 });
+
+/* ---------- Campaña de rescate: envío por lotes desde el cron ----------
+ * Los leads viejos de Damián quedan en cola en loggro_leads con estado q_retomar (tibios) o q_rescate (sin contacto / perdidos).
+ * Cada hora en punto, de 9 am a 7 pm (Bogotá), se envían hasta 30, con tope de 150 al día (el número nuevo de WhatsApp
+ * puede escribirle a 250 personas por día y la rutina de leads nuevos necesita su parte). Primero los tibios.
+ * Si Meta aún no aprueba la plantilla o hay un límite, se detiene y reintenta en la siguiente hora. Se apaga con RESCATE_ENVIOS != 'on'.
+ */
+export const RESCUE = { from: 9, to: 19, perRun: 30, perDay: 150 };
+const STOP_CODES = new Set([132001, 132000, 131048, 130429, 131056, 368]); // plantilla no aprobada, límites o bloqueo temporal: parar
+const BAD_NUMBER_CODES = new Set([131026, 131049, 131021]); // sin WhatsApp, Meta decidió no entregar, o es el mismo número
+
+export async function rescueSend(env) {
+  if (env.RESCATE_ENVIOS !== 'on' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  const bogota = new Date(Date.now() - 5 * 3600e3);
+  const hour = bogota.getUTCHours();
+  if (hour < RESCUE.from || hour >= RESCUE.to) return { sent: 0, reason: 'hora' };
+  const dayStart = `${bogota.toISOString().slice(0, 10)} 05:00:00`;
+  const done = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE type = 'rescate_sent' AND created_at >= ?").bind(dayStart).first();
+  const budget = Math.min(RESCUE.perRun, RESCUE.perDay - (done?.n || 0));
+  if (budget <= 0) return { sent: 0, reason: 'tope' };
+  const rows = (await env.DB.prepare(`SELECT phone, name, state FROM loggro_leads WHERE state IN ('q_retomar', 'q_rescate')
+      ORDER BY CASE state WHEN 'q_retomar' THEN 0 ELSE 1 END, rowid LIMIT ?`).bind(budget).all()).results || [];
+  let sent = 0;
+  for (const r of rows) {
+    const retomar = r.state === 'q_retomar';
+    const res = await sendTemplate(env, r.phone, retomar ? 'loggro_retomar' : 'loggro_rescate', r.name || 'buen día');
+    if (res.ok) {
+      await env.DB.prepare("UPDATE loggro_leads SET state = ?, wamid = ?, sent_at = datetime('now'), updated_at = datetime('now') WHERE phone = ? AND state = ?")
+        .bind(retomar ? 'retomar' : 'sent', res.wamid || null, r.phone, r.state).run();
+      await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('rescate', 'rescate_sent')").run();
+      sent++;
+    } else if (BAD_NUMBER_CODES.has(res.code)) {
+      await env.DB.prepare("UPDATE loggro_leads SET state = 'failed', summary = ?, updated_at = datetime('now') WHERE phone = ?").bind(`Rescate: no se pudo entregar (${res.code}).`, r.phone).run();
+    } else {
+      return { sent, reason: STOP_CODES.has(res.code) ? `meta ${res.code}` : `error ${res.code || res.status}` };
+    }
+  }
+  return { sent, reason: 'ok' };
+}
+
+async function sendTemplate(env, phone, name, param) {
+  try {
+    const res = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/messages`, {
+      method: 'POST',
+      headers: { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: String(param).slice(0, 60) }] }] } }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) console.error('Rescate', res.status, body?.error?.code, String(body?.error?.message || '').replace(/\d{5,}/g, '#').slice(0, 200));
+    return { ok: res.ok, status: res.status, code: Number(body?.error?.code) || 0, wamid: body?.messages?.[0]?.id };
+  } catch (err) { console.error('Rescate', err?.name || 'error'); return { ok: false, status: 0, code: 0 }; }
+}

@@ -29,6 +29,7 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
+    "RESCATE_ENVIOS": "on",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "BOOKING_URL_LOGGRO": "",
     "BOOKING_URL_PERSONAL": ""
   }
