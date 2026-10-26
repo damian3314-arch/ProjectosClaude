@@ -453,9 +453,9 @@ async function ownerMessage(env, text) {
   // WhatsApp ya puede identificar a Damián solo por un ID de usuario (BSUID, sin teléfono): la ventana de 24 h queda abierta para ese ID,
   // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
-  return sendWhatsApp(env, env.KAPSO_NOTIFY_TEMPLATE
-    ? template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text])
-    : { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } });
+  // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
+  if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
+  return sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } });
 }
 
 // Mensaje a un cliente real: apagado por defecto (AUTO_CONTACT_LEADS = "false").
