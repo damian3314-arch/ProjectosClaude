@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es" data-resolution="portrait">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400..800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+:root{--ground:#0a0c12;--ink:#eef1f7;--muted:#9aa2b5;--nom:#e0407a;--sw:#2f5bff;--ia:#0fa874;--pro:#e89a00;--dat:#7c5cff;--wa:#25d366;--font-display:Onest,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--ground)}
+#root{width:100%;height:100%;position:relative;font-family:var(--font-display);color:var(--ink)}
+.clip{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 96px}
+em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400}
+.aura{position:absolute;inset:0;overflow:hidden}
+.aura i{position:absolute;width:760px;height:760px;border-radius:50%;filter:blur(150px);opacity:.5}
+h1{font-size:118px;line-height:1.02;letter-spacing:-.04em;font-weight:750}
+h2{font-size:92px;line-height:1.05;letter-spacing:-.035em;font-weight:720}
+.pain{display:flex;align-items:center;gap:30px;background:#121621;border:2px solid #232838;border-radius:34px;padding:38px 42px;margin-top:30px;font-size:46px;line-height:1.2;font-weight:600}
+.pain b{flex:none;width:22px;height:22px;border-radius:50%}
+.kicker{font-size:40px;color:var(--muted);margin-bottom:36px;font-weight:500}
+.me img{width:300px;height:300px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 10px #121621,0 0 0 14px var(--ia)}
+.me .n{font-size:72px;font-weight:750;letter-spacing:-.03em;margin-top:56px}
+.me .r{font-size:42px;color:var(--muted);margin-top:14px;line-height:1.35}
+.cta{display:inline-flex;align-items:center;gap:24px;background:var(--wa);color:#06341b;font-weight:780;font-size:52px;padding:38px 56px;white-space:nowrap;border-radius:999px;align-self:center}
+.cta svg{width:64px;height:64px}
+.url{font-size:46px;color:var(--muted);margin-top:44px;text-align:center}
+.center{align-items:center;text-align:center}
+.free{display:inline-block;margin-top:44px;font-size:44px;font-weight:650;color:var(--ia)}
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="23" data-width="1080" data-height="1920">
+  <div class="aura" aria-hidden="true"><i id="a1" style="background:#e0407a;left:-200px;top:-100px"></i><i id="a2" style="background:#2f5bff;right:-260px;top:600px"></i><i id="a3" style="background:#0fa874;left:-100px;bottom:-200px"></i></div>
+
+  <section id="s1" class="clip" data-start="0" data-duration="4.2" data-track-index="0">
+    <p class="kicker" id="k1">Diciembre ya viene.</p>
+    <h1 id="h1">¿Tu negocio está <em>listo</em> o tú vas a estar apagando incendios?</h1>
+  </section>
+
+  <section id="s2" class="clip" data-start="4.2" data-duration="5.4" data-track-index="0">
+    <p class="kicker">Lo que más tiempo roba en temporada:</p>
+    <div class="pain" id="p1"><b style="background:var(--nom)"></b>La prima de diciembre, liquidada a mano</div>
+    <div class="pain" id="p2"><b style="background:var(--sw)"></b>El inventario en un Excel que nadie entiende</div>
+    <div class="pain" id="p3"><b style="background:var(--ia)"></b>Clientes en WhatsApp sin respuesta</div>
+    <div class="pain" id="p4"><b style="background:var(--dat)"></b>Vendes más y no sabes si ganas más</div>
+  </section>
+
+  <section id="s3" class="clip" data-start="9.6" data-duration="4.4" data-track-index="0">
+    <h2 id="h3a">Un consultor no te vende un software.</h2>
+    <h2 id="h3b" style="margin-top:40px">Encuentra dónde se te va el <em>tiempo</em> y lo ordena.</h2>
+  </section>
+
+  <section id="s4" class="clip center me" data-start="14" data-duration="5.4" data-track-index="0">
+    <img id="ph" src="assets/damian.jpg" alt="Damián Barragán">
+    <p class="n" id="nm">Damián Barragán</p>
+    <p class="r" id="rl">Ingeniero de producción · 15 años en operación<br>IA y automatización para negocios en Colombia</p>
+  </section>
+
+  <section id="s5" class="clip center" data-start="19.4" data-duration="3.6" data-track-index="0">
+    <h2 id="h5" style="margin-bottom:64px">Cuéntame qué te quita <em>tiempo</em>.</h2>
+    <span class="cta" id="cta"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3Z"/></svg>Escríbeme por WhatsApp</span>
+    <span class="free" id="fr">Diagnóstico inicial sin costo</span>
+    <p class="url" id="url">holadami.com</p>
+  </section>
+</div>
+<script>
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+const up = { opacity: 0, y: 60, filter: "blur(10px)" }, on = { opacity: 1, y: 0, filter: "blur(0px)", ease: "power3.out" };
+tl.to("#a1", { x: 220, y: 300, duration: 23, ease: "none" }, 0)
+  .to("#a2", { x: -260, y: -200, duration: 23, ease: "none" }, 0)
+  .to("#a3", { x: 200, y: -260, duration: 23, ease: "none" }, 0);
+tl.fromTo("#h1 em", { color: "#eef1f7" }, { color: "#2fd39a", duration: 0.6 }, 0.8)
+  .fromTo("#h1", { scale: 1 }, { scale: 1.03, duration: 4, ease: "none" }, 0);
+["#p1","#p2","#p3","#p4"].forEach((s, i) => tl.fromTo(s, { opacity: 0, x: -80 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }, 4.4 + i * 0.6));
+tl.fromTo("#h3a", up, { ...on, duration: 0.7 }, 9.8)
+  .fromTo("#h3b", up, { ...on, duration: 0.8 }, 10.4);
+tl.fromTo("#ph", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, 14.2)
+  .fromTo("#nm", up, { ...on, duration: 0.6 }, 14.6)
+  .fromTo("#rl", up, { ...on, duration: 0.6 }, 14.9);
+tl.fromTo("#h5", up, { ...on, duration: 0.6 }, 19.5)
+  .fromTo("#cta", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" }, 19.9)
+  .to("#cta", { scale: 1.05, duration: 0.4, yoyo: true, repeat: 3, ease: "sine.inOut" }, 20.6)
+  .fromTo(["#fr","#url"], { opacity: 0 }, { opacity: 1, duration: 0.5 }, 20.3);
+window.__timelines["main"] = tl;
+tl.seek(0);
+</script>
+</body>
+</html>
