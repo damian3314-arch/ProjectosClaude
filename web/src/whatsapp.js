@@ -210,7 +210,7 @@ async function onProblem(c, text) {
   }
   await save(c, { state: 'q_budget', problem: prior ? `${prior}\n${problem}`.slice(0, 3000) : problem, intent: t.intent, name: c.h.clean(c.inb.name, 80) || null });
   const q = QUESTIONS.q_budget;
-  return sendButtons(c, `${t.reply}\n\nTe hago 3 preguntas rápidas, no toma ni un minuto. ${q.text}`, q.options);
+  return sendButtons(c, `${t.reply}\n\nTe hago 3 preguntas rápidas, no toma ni un minuto. ${q.text}\n\nAl responder autorizas que guarde tus datos para atenderte. Política: holadami.com/#privacidad`, q.options);
 }
 
 async function onAnswer(c, state) {
