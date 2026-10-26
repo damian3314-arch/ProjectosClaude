@@ -185,6 +185,8 @@ async function handleInbound(env, ctx, h, payload) {
   }
 }
 
+const FROM_AD_RE = /vi tu anuncio|quiero contarte qu[eé] me quita tiempo/i;
+
 function looksLikeProblem(text) {
   if (!text || GREETING_RE.test(text)) return false;
   return text.split(/\s+/).length >= 4;
@@ -206,6 +208,8 @@ async function onProblem(c, text) {
   const prior = c.st.state === 'need_problem' ? c.st.problem || '' : '';
   if (!t.intent && !prior) {
     await save(c, { state: 'need_problem', problem });
+    // Llega del anuncio con el mensaje listo ("vi tu anuncio, quiero contarte…"): pregunta abierta y cálida, sin lista de temas
+    if (c.inb.ad || FROM_AD_RE.test(text)) return sendText(c, '¡Claro! Cuéntame, ¿qué tipo de negocio tienes y qué es lo que más te está costando?');
     return sendText(c, 'Cuéntame un poco más 🙂 ¿Qué se te complica en tu negocio: la nómina, el inventario o la facturación, las ventas, el WhatsApp o el desorden en los procesos?');
   }
   await save(c, { state: 'q_budget', problem: prior ? `${prior}\n${problem}`.slice(0, 3000) : problem, intent: t.intent, name: c.h.clean(c.inb.name, 80) || null });
@@ -287,7 +291,8 @@ function sendButtons(c, body, options) {
 
 /* ---------- Seguimiento si la persona deja de responder ----------
  * Mientras la ventana de 24 h está abierta, si alguien deja la conversación a medias se le escribe una vez a los 15 minutos
- * y otra 30 minutos después, en tono de Damián. Ahí se cierra: no se le insiste más (si vuelve a escribir, sigue donde iba).
+ * y otra 30 minutos después, en tono de Damián. 30 minutos más tarde el chat se cierra en la bandeja de Kapso y no se le insiste
+ * más (si vuelve a escribir, el chat se reabre y el bot sigue donde iba).
  * Solo de 7 am a 9 pm (hora de Bogotá). Lo corre el cron cada 5 minutos.
  */
 const NUDGE_FIRST_MIN = 15, NUDGE_SECOND_MIN = 30;
@@ -314,7 +319,14 @@ export async function nudgeIdle(env, h) {
   for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...lg.map(x => ({ ...x, sid: `nudge:lg:${x.dest}` }))]) {
     const prev = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last FROM events WHERE session_id = ? AND type = 'nudge' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
     const n = prev?.n || 0;
-    if (n >= 2) continue; // ya se cerró
+    if (n >= 2) {
+      // 30 minutos después del último recordatorio sin respuesta: se cierra el chat en la bandeja de Kapso (una sola vez)
+      if (prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3) || !/^\d+$/.test(r.dest)) continue;
+      const closed = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'chat_closed' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
+      if (closed) continue;
+      if (await closeKapsoChat(env, r.dest)) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'chat_closed')").bind(r.sid.slice(0, 64)).run();
+      continue;
+    }
     if (n === 1 && prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3)) continue;
     const body = n === 0 ? NUDGE_FIRST[r.state] : NUDGE_LAST;
     if (!body) continue;
@@ -325,5 +337,20 @@ export async function nudgeIdle(env, h) {
     }
   }
   return { sent };
+}
+// Busca el chat activo de ese número en Kapso y lo marca como terminado (queda en "Ended" en la bandeja; si escribe, se reabre solo)
+async function closeKapsoChat(env, phone) {
+  try {
+    const headers = { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' };
+    const list = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/conversations?status=active&limit=5&phone_number=${encodeURIComponent('+' + phone)}`, { headers, signal: AbortSignal.timeout(10000) });
+    if (!list.ok) { console.error('Kapso chat list', list.status); return false; }
+    const ids = ((await list.json().catch(() => ({}))).data || []).map(c => c.id).filter(Boolean);
+    let ok = ids.length === 0; // si ya no está activo, no hay nada que cerrar
+    for (const id of ids) {
+      const res = await fetch(`https://api.kapso.ai/platform/v1/whatsapp/conversations/${encodeURIComponent(id)}`, { method: 'PATCH', headers, body: JSON.stringify({ whatsapp_conversation: { status: 'ended' } }), signal: AbortSignal.timeout(10000) });
+      if (res.ok) ok = true; else console.error('Kapso chat close', res.status);
+    }
+    return ok;
+  } catch (err) { console.error('Kapso chat close', err?.name || 'error'); return false; }
 }
 const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
