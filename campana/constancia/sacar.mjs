@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const IDS = ['c1', 'c2', 'c3', 'c4', 'c5', 'f1', 'f2', 'h1', 'h2', 'h3'];
+// 26 oct: se retiraron las piezas que ofrecían clases adicionales por constancia (c1, c4, c5, f1, f2, h1): la dueña no lo aprobó.
+const IDS = ['c2', 'c3', 'h2', 'h3'];
 const NOMBRES = {
   c1: 'carrusel-1-portada', c2: 'carrusel-2-elige', c3: 'carrusel-3-reserva', c4: 'carrusel-4-completa', c5: 'carrusel-5-clases-adicionales',
   f1: 'fija-tiquetera-8', f2: 'fija-tiquetera-4', h1: 'historia-constancia', h2: 'historia-halloween', h3: 'historia-mensualidad',

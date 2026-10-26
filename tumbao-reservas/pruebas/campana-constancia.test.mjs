@@ -13,15 +13,9 @@ const ok = (n, c, extra = '') => { if (!c) fallos++; console.log(`${c ? '✓' : 
 const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.length))}`);
 const mens = readFileSync(new URL('../../docs/mensualidad.html', import.meta.url), 'utf8');
 
-titulo('1. La página de mensualidad y tiquetera (pases)');
-ok('la campaña está configurada del 25 al 31 de octubre y se apaga sola', /CAMPANA: \{ activa: true, desde: '2026-10-25', hasta: '2026-10-31' \}/.test(mens) && /h >= c\.desde && h <= c\.hasta/.test(mens));
-ok('cada tiquetera dice cuántas clases adicionales recibe (4 → 1, 8 → 2)', /EXTRA: \(clases\) => \(Number\(clases\) >= 8 \? 2 : 1\)/.test(mens) && /Completa tus \$\{clases\} clases y recibe <b>\$\{extraTxt\(clases\)\}<\/b> por tu constancia/.test(mens));
-ok('la pregunta frecuente explica 1 con la de 4 y 2 con la de 8, para todas, nuevas o viejas',
-   /<b>1 clase adicional<\/b> con la de 4 y <b>2 clases adicionales<\/b> con la de 8/.test(mens) && /Aplica a todas las tiqueteras, nuevas o ya compradas/.test(mens) && /valen 30 días/.test(mens));
-const textoCampana = mens.slice(mens.indexOf('function listaDePases'), mens.indexOf('function pintarEleccion'));
-ok('la campaña no habla de premio, regalo, gratis ni promoción', !/(premio|regalo|gratis|promoci)/i.test(textoCampana));
-const mensPase = mens.slice(mens.indexOf("tipo: 'mensualidad'"), mens.indexOf('for (const p of [...tiqPaquetes]'));
-ok('la mensualidad no se anuncia con la campaña (solo las tiqueteras)', !/extraTxt|constancia/.test(mensPase));
+titulo('1. La clase adicional por constancia se desmontó (26 oct, la dueña no la aprobó)');
+ok('la página no menciona clases adicionales, extra ni constancia', !/(clase[s]? adicional|clases? extra|constancia)/i.test(mens.replace(/\/\/ 26 oct:.*\n/, '')));
+ok('ya no existe la configuración de la campaña', !/CAMPANA:|EXTRA:|campanaActiva|extraTxt/.test(mens));
 
 titulo('1b. Los pases');
 ok('la mensualidad va primero y cada producto es un pase con su botón', mens.indexOf("tipo: 'mensualidad'") < mens.indexOf('for (const p of [...tiqPaquetes]') && /class="pase /.test(mens) && /id="btn-pase" data-elegir=/.test(mens));
@@ -36,9 +30,8 @@ ok('el movimiento respeta a quien pide menos movimiento', /prefers-reduced-motio
 
 titulo('2. Timba');
 for (const [n, t] of [['ventas', INSTRUCCIONES_VENTAS], ['asistente', INSTRUCCIONES_ASISTENTE]]) {
-  ok(`${n}: sabe la campaña, la dice como «clase adicional» y no como premio`, /CAMPAÑA DE CONSTANCIA \(esta semana, hasta el 31 de octubre\)/.test(t) && /UNA clase adicional con la tiquetera de 4 clases y DOS clases adicionales con la de 8 clases/.test(t) && /Aplica a todas las tiqueteras, nuevas o ya compradas/.test(t) && /NUNCA como premio, gratis ni promoción/.test(t));
-  ok(`${n}: sabe por qué no aplica a mensualidad ni a clase suelta`, /mensualidad ya tiene una tarifa muy baja/.test(t) && /la persona decide cuándo reserva/.test(t));
-  ok(`${n}: no promete nada distinto`, /NO prometas nada distinto/.test(t));
+  ok(`${n}: ya no habla de la campaña de constancia`, !/CAMPAÑA DE CONSTANCIA/.test(t));
+  ok(`${n}: sabe que NO existe clase extra por completar clases y no la menciona`, /NO EXISTE ninguna clase extra, adicional, de regalo ni pase por completar las clases de una tiquetera/.test(t) && /No lo menciones nunca/.test(t));
 }
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
