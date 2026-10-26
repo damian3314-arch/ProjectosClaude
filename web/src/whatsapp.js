@@ -92,12 +92,20 @@ function parseInbound(p) {
     const t = m.kapso?.transcript;
     text = typeof t === 'string' ? t : t?.text || '';
   }
+  // Si llegó desde un anuncio de Meta (Click to WhatsApp), viene el dato del anuncio: se guarda para medir qué trae cada peso
+  const ref = m.referral || m.kapso?.referral;
+  let ad = '';
+  if (ref && typeof ref === 'object') {
+    const u = { utm_source: 'meta_ads', utm_medium: 'whatsapp', utm_campaign: String(ref.source_id || '').slice(0, 100), utm_content: String(ref.headline || '').slice(0, 100) };
+    ad = JSON.stringify(Object.fromEntries(Object.entries(u).filter(([, v]) => v)));
+  }
   return {
     id: String(m.id), type: m.type, text: String(text).trim(), buttonId: String(buttonId),
     from: String(m.from || '').replace(/\D/g, ''),
     userId: m.from_user_id ? String(m.from_user_id) : '',
     name: String(p.conversation?.contact_name || ''),
     phoneNumberId: String(p.phone_number_id || ''),
+    ad,
   };
 }
 
@@ -125,6 +133,7 @@ async function handleInbound(env, ctx, h, payload) {
   const claim = await env.DB.prepare(`UPDATE wa_sessions SET last_msg_id = ?, msg_count = CASE WHEN day = ? THEN msg_count + 1 ELSE 1 END, day = ?
       WHERE id = ? AND (last_msg_id IS NULL OR last_msg_id != ?)`).bind(inb.id, today, today, key, inb.id).run();
   if (!claim.meta?.changes) return; // el mismo mensaje llegó dos veces
+  if (inb.ad) await env.DB.prepare('INSERT INTO events (session_id, type, utm) VALUES (?, ?, ?)').bind(`wa:${key}`.slice(0, 64), 'wa_ad', inb.ad).run().catch(err => console.error('wa_ad', err?.message));
 
   const ageH = (Date.now() - Date.parse(String(s.updated_at).replace(' ', 'T') + 'Z')) / 3600e3;
   let st = { ...s };
@@ -224,10 +233,12 @@ async function finish(c) {
   }
   const name = c.h.clean(st.name || c.inb.name, 80) || 'Contacto de WhatsApp';
   const score = c.h.scoreLead({ budget: st.budget, timing: st.timing, decider: st.decider, intent: st.intent });
+  const sessionId = `wa:${c.key}`.slice(0, 64);
+  const ad = await c.env.DB.prepare("SELECT utm FROM events WHERE session_id = ? AND type = 'wa_ad' ORDER BY id DESC LIMIT 1").bind(sessionId).first().catch(() => null);
   const lead = {
-    id: crypto.randomUUID(), session_id: `wa:${c.key}`.slice(0, 64), name, phone,
+    id: crypto.randomUUID(), session_id: sessionId, name, phone,
     intent: st.intent || null, problem: st.problem || '', budget: st.budget, timing: st.timing, decider: st.decider,
-    ...score, utm: null, page: 'whatsapp',
+    ...score, utm: ad?.utm || null, page: 'whatsapp',
   };
   await c.h.persistLead(c.env, c.ctx, lead, null);
   await save(c, { state: 'done', lead_id: lead.id, phone });

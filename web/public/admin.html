@@ -599,6 +599,11 @@ function viewEmbudo(){
       return '<li' + (i === worst && worstLoss > 0 ? ' class="worst"' : '') + '><div class="f-top"><span>' + esc(s[1]) + '</span><span>' + esc(v) + '</span></div>' +
         '<div class="bar" aria-hidden="true"><i style="width:' + w + '%"></i></div>' + (drop ? '<div class="drop">' + esc(drop) + '</div>' : '') + '</li>';
     }).join('') + '</ol></section>';
+  var adL = (st.bySource || {}).meta_ads || 0;
+  h += '<section class="panel" aria-labelledby="hAd"><h3 id="hAd">Anuncios de Meta</h3><div class="kpis">' +
+    '<div class="kpi"><small>Conversaciones desde anuncios</small><b>' + esc(f.wa_ad || 0) + '</b></div>' +
+    '<div class="kpi"><small>Leads desde anuncios</small><b>' + esc(adL) + '</b></div>' +
+    '<div class="kpi"><small>Conversaciones que terminan en lead</small><b>' + fmtPct(pct(adL, f.wa_ad || 0)) + '</b></div></div></section>';
   h += '<section class="panel" aria-labelledby="hM"><h3 id="hM">Uso del micrófono</h3><div class="kpis">' +
     '<div class="kpi"><small>Tocaron el micrófono</small><b>' + esc(f.mic_tap || 0) + '</b></div>' +
     '<div class="kpi"><small>Enviaron un audio</small><b>' + esc(f.audio_sent || 0) + '</b></div>' +
