@@ -32,7 +32,7 @@ const LABEL = {
   system: Object.fromEntries(SYSTEM.map(([id, t]) => [id, t])),
   urgency: { now: 'lo quiere esta semana', month: 'lo quiere este mes', later: 'solo está averiguando' },
 };
-const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero)\s*[.!]*\s*$/i;
+const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero|(ya )?no me interesa)\s*[.!]*\s*$/i;
 
 // Qué producto sugiere lo que escribió o el botón que tocó
 export function detectProducts(text) {
@@ -63,6 +63,7 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
 
   switch (row.state) {
     case 'pending': case 'sent': return onFirstReply(c);
+    case 'retomar':  return onRetomar(c);
     case 'q_pn':     return onPn(c);
     case 'q_size':   return onChoice(c, 'size', sizeOptions(row.product), 'q_system');
     case 'q_system': return onChoice(c, 'system', SYSTEM, 'q_when');
@@ -70,6 +71,21 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
     case 'done':     return onAfterDone(c);
     default: return;
   }
+}
+
+// Campaña de rescate a leads tibios (plantilla loggro_retomar): "Sí, agendemos" o cualquier respuesta con interés → aviso a Damián.
+// "Más adelante" queda anotado sin aviso. "Ya no me interesa" lo atiende STOP_RE (no se le vuelve a escribir).
+async function onRetomar(c) {
+  const t = `${c.inb.buttonId} ${c.inb.text}`.toLowerCase();
+  if (/m[aá]s adelante|despu[eé]s|otro momento|ahora no|el otro a[nñ]o|enero/.test(t)) {
+    await save(c, { state: 'done', hot: 0, summary: 'Campaña de rescate: quiere retomar más adelante.' });
+    return sendText(c, `Listo${c.first ? ', ' + c.first : ''}, lo dejo anotado. Cuando quieras retomar, escríbeme por aquí y Damián te contacta.`);
+  }
+  const said = /^s[ií],? agendemos$/i.test(c.inb.text.trim()) ? '' : ` Escribió: «${h2(c.h, c.inb.text, 160)}».`;
+  const summary = `Campaña de rescate: quiere retomar la demo.${said}`;
+  await save(c, { state: 'done', hot: 1, summary });
+  await maybeAlert(c);
+  return sendText(c, `¡Perfecto${c.first ? ', ' + c.first : ''}! Soy el asistente de Damián. Le aviso para que te escriba y agenden la demo. Si tienes un día y una hora que te sirvan, escríbelos aquí.`);
 }
 
 const sizeOptions = product => (PRODUCTS[product] || PRODUCTS.pymes).sizes;
