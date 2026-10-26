@@ -65,6 +65,7 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
     case 'pending': case 'sent': return onFirstReply(c);
     case 'retomar': case 'q_retomar': return onRetomar(c);
     case 'q_rescate': return onFirstReply(c);
+    case 'demo':     return onDemo(c);
     case 'q_pn':     return onPn(c);
     case 'q_size':   return onChoice(c, 'size', sizeOptions(row.product), 'q_system');
     case 'q_system': return onChoice(c, 'system', SYSTEM, 'q_when');
@@ -87,6 +88,17 @@ async function onRetomar(c) {
   await save(c, { state: 'done', hot: 1, summary });
   await maybeAlert(c);
   return sendText(c, `¡Perfecto${c.first ? ', ' + c.first : ''}! Soy el asistente de Damián. Le aviso para que te escriba y agenden la demo. Si tienes un día y una hora que te sirvan, escríbelos aquí.`);
+}
+
+// Recordatorio de demo: mientras no haya plantilla de recordatorio aprobada, se le escribe con contacto_inicial y el texto con el
+// link (guardado en summary) sale apenas responda, ya dentro de la ventana de 24 h. Luego queda como caliente: lo que escriba
+// después le llega a Damián.
+async function onDemo(c) {
+  const msg = String(c.row.summary || '').trim();
+  if (!msg) return;
+  await save(c, { state: 'done', hot: 1, summary: 'Recordatorio de demo: se le envió la confirmación con el link.' });
+  await sendText(c, msg);
+  return c.h.alertMessage(c.env, `📅 ${c.row.name || 'Tu cliente'} (+${c.row.phone}) respondió y ya le envié el link de la demo. Escribió: «${h2(c.h, c.inb.text, 120)}».`, c.env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
 const sizeOptions = product => (PRODUCTS[product] || PRODUCTS.pymes).sizes;
