@@ -295,7 +295,7 @@ function sendButtons(c, body, options) {
  * más (si vuelve a escribir, el chat se reabre y el bot sigue donde iba).
  * Solo de 7 am a 9 pm (hora de Bogotá). Lo corre el cron cada 5 minutos.
  */
-const NUDGE_FIRST_MIN = 15, NUDGE_SECOND_MIN = 30;
+const NUDGE_FIRST_MIN = 15, NUDGE_SECOND_MIN = 30, NUDGE_MAX_HOURS = 3; // conversaciones de hace más de 3 h no se retoman (sonaría raro)
 const NUDGE_LAST = 'No te quiero llenar de mensajes 😅 Si ahora no es buen momento, tranqui: cuando quieras me escribes por aquí y seguimos donde quedamos.';
 const NUDGE_FIRST = {
   need_problem: '¿Sigues por ahí? 🙂 Cuéntame con tus palabras qué es lo que más tiempo te está quitando y te digo si te puedo ayudar.',
@@ -310,7 +310,7 @@ export async function nudgeIdle(env, h) {
   if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0 };
   const hour = new Date(Date.now() - 5 * 3600e3).getUTCHours();
   if (hour < 7 || hour >= 21) return { sent: 0 };
-  const since = sqlTime(Date.now() - 23 * 3600e3), firstBefore = sqlTime(Date.now() - NUDGE_FIRST_MIN * 60e3);
+  const since = sqlTime(Date.now() - NUDGE_MAX_HOURS * 3600e3), firstBefore = sqlTime(Date.now() - NUDGE_FIRST_MIN * 60e3);
   const ho = (await env.DB.prepare(`SELECT id AS dest, state, updated_at FROM wa_sessions
       WHERE state IN ('need_problem', 'q_budget', 'q_timing', 'q_decider', 'need_phone') AND updated_at > ? AND updated_at <= ? LIMIT 50`).bind(since, firstBefore).all()).results || [];
   const lg = (await env.DB.prepare(`SELECT phone AS dest, 'loggro' AS state, updated_at FROM loggro_leads
