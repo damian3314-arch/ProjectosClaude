@@ -17,6 +17,7 @@
 
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook } from './whatsapp.js';
+import { sendHotAlert, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -265,7 +266,7 @@ async function persistLead(env, ctx, lead, ipHash) {
 
 // Lo que el agente de WhatsApp reutiliza de este archivo (misma IA, misma prioridad, mismo guardado, mismo envío)
 function agentHelpers() {
-  return { clean, normalizePhone, readText, triage, scoreLead, persistLead, sendWhatsApp, INTENT_NAMES };
+  return { clean, normalizePhone, readText, triage, scoreLead, persistLead, sendWhatsApp, alertMessage, INTENT_NAMES };
 }
 
 // Brief (IA o plantilla) → se guarda → aviso a Damián con la apertura lista para copiar.
@@ -408,6 +409,16 @@ async function stats(request, env, url) {
 async function ownerPush(env) {
   // Los intentos fallidos de clave solo sirven un rato
   await env.DB.prepare("DELETE FROM admin_fails WHERE created_at < datetime('now', '-1 day')").run().catch(() => {});
+  // Leads calientes de Loggro cuyo aviso quedó esperando el horario (de 9 am a 9 pm, hora de Bogotá) o no se pudo enviar
+  const hour = new Date(Date.now() - BOGOTA_MS).getUTCHours();
+  if (hour < ALERT_FROM_HOUR || hour >= ALERT_TO_HOUR) return;
+  const { results } = await env.DB.prepare("SELECT * FROM loggro_leads WHERE hot = 1 AND state = 'done' AND alerted_at IS NULL AND updated_at > datetime('now', '-3 days') ORDER BY updated_at LIMIT 10").all().catch(() => ({ results: [] }));
+  for (const row of results) {
+    const claim = await env.DB.prepare("UPDATE loggro_leads SET alerted_at = datetime('now') WHERE phone = ? AND alerted_at IS NULL").bind(row.phone).run();
+    if (!claim.meta?.changes) continue;
+    const ok = await sendHotAlert(env, agentHelpers(), row);
+    if (!ok) await env.DB.prepare('UPDATE loggro_leads SET alerted_at = NULL WHERE phone = ?').bind(row.phone).run();
+  }
 }
 
 /* ---------- WhatsApp vía Kapso ---------- */
@@ -456,6 +467,25 @@ async function ownerMessage(env, text) {
   // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
   if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
   return sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } });
+}
+
+// Aviso de leads de Loggro: va a Damián (BSUID o teléfono) y, si existe LOGGRO_ALERT_WHATSAPP, también a su número de trabajo.
+// Con plantilla aprobada llega siempre; si no hay plantilla o falla, se intenta como texto libre (sirve con la ventana de 24 h abierta).
+async function alertMessage(env, text, templateName) {
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return false;
+  const dests = [];
+  if (env.OWNER_BSUID) dests.push({ recipient: String(env.OWNER_BSUID).trim() });
+  else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
+  const work = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
+  if (work) dests.push({ to: work });
+  let ok = false;
+  for (const dest of dests) {
+    let sent = false;
+    if (templateName) sent = await sendWhatsApp(env, template(dest, templateName, env.KAPSO_TEMPLATE_LANG, [text]));
+    if (!sent) sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
+    ok = ok || sent;
+  }
+  return ok;
 }
 
 // Mensaje a un cliente real: apagado por defecto (AUTO_CONTACT_LEADS = "false").

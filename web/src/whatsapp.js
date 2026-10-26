@@ -12,6 +12,8 @@
  *  - Lo que escribe la persona es DATO: nunca se ejecuta ni se reenvía a otra persona.
  */
 
+import { handleLoggroInbound } from './loggro.js';
+
 const STALE_HOURS = 24;          // un formulario a medias se reinicia si pasaron más de 24 h
 const REOPEN_DAYS = 7;           // quien ya terminó puede volver a entrar como lead nuevo después de 7 días
 const MAX_MSGS_PER_DAY = 60;     // tope por persona (cuida el costo de IA)
@@ -83,6 +85,9 @@ function parseInbound(p) {
     const r = m.interactive?.button_reply || m.interactive?.list_reply;
     buttonId = r?.id || '';
     text = r?.title || '';
+  } else if (m.type === 'button') {
+    buttonId = m.button?.payload || '';
+    text = m.button?.text || '';
   } else if (m.type === 'audio') {
     const t = m.kapso?.transcript;
     text = typeof t === 'string' ? t : t?.text || '';
@@ -106,6 +111,12 @@ async function handleInbound(env, ctx, h, payload) {
   // Damián no entra al formulario: si él escribe (por ejemplo su "hola" diario para abrir la ventana), el agente calla
   const ownerPhone = String(env.OWNER_WHATSAPP || '').replace(/\D/g, '');
   if ((ownerPhone && inb.from === ownerPhone) || (env.OWNER_BSUID && inb.userId === String(env.OWNER_BSUID).trim())) return;
+
+  // Si es un lead de Loggro al que Damián le escribió el primer mensaje, lo atiende el flujo de Loggro, nunca el de HolaDami
+  if (inb.from) {
+    const lg = await env.DB.prepare('SELECT * FROM loggro_leads WHERE phone = ?').bind(inb.from).first().catch(() => null);
+    if (lg) return handleLoggroInbound(env, ctx, h, inb, lg);
+  }
 
   await env.DB.prepare('INSERT OR IGNORE INTO wa_sessions (id) VALUES (?)').bind(key).run();
   const s = await env.DB.prepare('SELECT * FROM wa_sessions WHERE id = ?').bind(key).first();
