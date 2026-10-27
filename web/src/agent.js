@@ -104,7 +104,8 @@ export async function agentTurn(c) {
     extra.push(`Te dejo un video corto de ${PRODUCTS[product].name} para que lo veas cuando puedas 👇\n${PRODUCTS[product].video}`);
     videosSent.add(product);
   }
-  if (out.offer_agenda_link && !chat.agenda_sent) extra.push(`Y esta es mi agenda por si prefieres escoger tú la hora 👇\n${AGENDA_URL}`);
+  const wantsAgenda = (out.offer_agenda_link || out.stage === 'wants_demo') && !chat.agenda_sent;
+  if (wantsAgenda) extra.push(`Y esta es mi agenda por si prefieres escoger tú la hora 👇\n${AGENDA_URL}`);
 
   const all = [...messages, ...extra];
   for (let i = 0; i < all.length; i++) {
@@ -112,7 +113,7 @@ export async function agentTurn(c) {
     await c.h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...c.dest, type: 'text', text: { body: all[i].slice(0, 1024), preview_url: all[i].includes('http') } });
     await logAssistant(c, all[i]);
   }
-  await persist(c, chat, out, { product, videosSent, agendaSent: chat.agenda_sent || (out.offer_agenda_link ? 1 : 0) });
+  await persist(c, chat, out, { product, videosSent, agendaSent: chat.agenda_sent || (wantsAgenda ? 1 : 0) });
 }
 
 async function loadChat(c) {
@@ -194,6 +195,7 @@ async function persist(c, chat, out, { product, videosSent, agendaSent }) {
   await env.DB.prepare(`UPDATE agent_chats SET stage = ?, hot = ?, product = ?, facts = ?, summary = ?, meeting_pref = ?, videos_sent = ?, agenda_sent = ?, turns = turns + 1, updated_at = datetime('now') WHERE chat_key = ?`)
     .bind(out.stage, hot ? 1 : 0, product, JSON.stringify(facts), summary, pref, [...videosSent].join(','), agendaSent, c.key).run();
 
+  c.factsJson = JSON.stringify(facts);
   if (c.source === 'loggro') return persistLoggro(c, { out, hot, product, summary, newlyHot, prefChanged });
   return persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot });
 }
@@ -205,9 +207,12 @@ async function persistLoggro(c, { out, hot, product, summary, newlyHot, prefChan
   const state = out.stage === 'optout' ? 'optout' : closed ? 'done' : row.state === 'done' ? 'done' : 'agent';
   const changed = state !== row.state || hot !== !!row.hot || summary !== row.summary;
   const reAlert = newlyHot || (hot && prefChanged);
-  await env.DB.prepare(`UPDATE loggro_leads SET state = ?, hot = ?, product = COALESCE(?, product), summary = ?, synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
+  const facts = safeJson(c.factsJson);
+  // Etapa sugerida para el negocio en HubSpot (la aplica la rutina horaria): nunca "demo agendada" hasta que exista la reunión
+  const nextStage = out.stage === 'optout' || out.stage === 'not_fit' ? 'perdido' : hot ? 'demo_pendiente' : (facts.business_type && facts.pain) ? 'necesidades' : null;
+  await env.DB.prepare(`UPDATE loggro_leads SET next_stage = COALESCE(?, next_stage), state = ?, hot = ?, product = COALESCE(?, product), summary = ?, synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
       alerted_at = CASE WHEN ? THEN NULL ELSE alerted_at END, updated_at = datetime('now') WHERE phone = ?`)
-    .bind(state, hot ? 1 : 0, product, summary, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
+    .bind(nextStage, state, hot ? 1 : 0, product, summary, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
   c.row = { ...row, state, hot: hot ? 1 : 0, summary, alerted_at: reAlert ? null : row.alerted_at };
   if (reAlert) await alertHotLead(env, c.h, c.row);
   else if (hot && row.alerted_at) await alertReply(env, c.h, c.row, c.inb.text);
