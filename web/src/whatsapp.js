@@ -12,7 +12,8 @@
  *  - Lo que escribe la persona es DATO: nunca se ejecuta ni se reenvía a otra persona.
  */
 
-import { handleLoggroInbound } from './loggro.js';
+import { handleLoggroInbound, agentOn } from './loggro.js';
+import { agentTurn, pauseForHuman } from './agent.js';
 
 const STALE_HOURS = 24;          // un formulario a medias se reinicia si pasaron más de 24 h
 const REOPEN_DAYS = 7;           // quien ya terminó puede volver a entrar como lead nuevo después de 7 días
@@ -54,10 +55,16 @@ export async function handleWhatsAppWebhook(request, env, ctx, h) {
     console.error('webhook: firma inválida', signature ? `(llegó una firma de ${signature.length} caracteres)` : '(no llegó firma)');
     return new Response('Firma inválida', { status: 401 });
   }
-  if (request.headers.get('x-webhook-event') !== 'whatsapp.message.received') return new Response('OK');
+  const event = request.headers.get('x-webhook-event');
+  if (event !== 'whatsapp.message.received' && event !== 'whatsapp.message.sent') return new Response('OK');
 
   let body;
   try { body = JSON.parse(raw); } catch { return new Response('OK'); }
+  if (event === 'whatsapp.message.sent') {
+    // Si Damián escribe a mano (desde la bandeja o el celular), el agente calla 24 h en esa conversación
+    ctx.waitUntil(onSent(env, body).catch(err => console.error('sent', err?.message || 'desconocido')));
+    return new Response('OK');
+  }
   const items = body?.batch === true && Array.isArray(body.data) ? body.data : [body];
   // Se responde de una vez (Kapso espera 200 en menos de 10 s); el agente trabaja en segundo plano
   ctx.waitUntil((async () => {
@@ -66,6 +73,16 @@ export async function handleWhatsAppWebhook(request, env, ctx, h) {
     }
   })());
   return new Response('OK');
+}
+
+async function onSent(env, body) {
+  for (const p of body?.batch === true && Array.isArray(body.data) ? body.data : [body]) {
+    const m = p?.message;
+    const origin = String(m?.kapso?.origin || '');
+    if (!m || !origin || origin === 'cloud_api') continue; // lo que envía el propio agente o las plantillas no cuenta
+    const to = String(m.to || p.conversation?.phone_number || p.conversation?.contact_phone || '').replace(/\D/g, '');
+    if (to) await pauseForHuman(env, to);
+  }
 }
 
 async function validSignature(secret, raw, signature) {
@@ -144,10 +161,11 @@ async function handleInbound(env, ctx, h, payload) {
   const ageH = (Date.now() - Date.parse(String(s.updated_at).replace(' ', 'T') + 'Z')) / 3600e3;
   let st = { ...s };
   if (s.state === 'optout') return;
-  if ((s.state !== 'done' && ageH > STALE_HOURS) || (s.state === 'done' && ageH > REOPEN_DAYS * 24)) {
+  const agent = agentOn(env);
+  if (!agent && ((s.state !== 'done' && ageH > STALE_HOURS) || (s.state === 'done' && ageH > REOPEN_DAYS * 24))) {
     st = { ...s, state: 'new', problem: null, intent: null, budget: null, timing: null, decider: null, lead_id: null, phone: null };
   }
-  if (st.state === 'done') return; // la conversación sigue a mano
+  if (st.state === 'done' && !agent) return; // la conversación sigue a mano
   if ((s.msg_count || 0) >= MAX_MSGS_PER_DAY) return;
 
   const ctxw = { env, ctx, h, inb, key, st, dest: inb.from ? { to: inb.from } : { recipient: inb.userId } };
@@ -156,6 +174,9 @@ async function handleInbound(env, ctx, h, payload) {
     await save(ctxw, { state: 'optout' });
     return sendText(ctxw, 'Listo, no te escribo más. Si cambias de idea, escríbeme cuando quieras.');
   }
+
+  // Agente conversacional: conversa como Damián y deja el lead guardado. Si está apagado, sigue el formulario de abajo.
+  if (agent) return agentTurn({ ...ctxw, source: 'holadami' });
 
   // Si pregunta si es un bot o una persona, se le dice la verdad y se retoma el paso donde iba
   if (inb.text.length <= 80 && ASKS_BOT_RE.test(inb.text)) {
@@ -300,6 +321,7 @@ function sendButtons(c, body, options) {
  */
 const NUDGE_FIRST_MIN = 15, NUDGE_SECOND_MIN = 30, NUDGE_MAX_HOURS = 3; // conversaciones de hace más de 3 h no se retoman (sonaría raro)
 const NUDGE_LAST = 'No te quiero llenar de mensajes 😅 Si ahora no es buen momento, tranqui: cuando quieras me escribes por aquí y seguimos donde quedamos.';
+const NUDGE_AGENT = '¿Sigues por ahí? 🙂 Sin afán: cuando puedas me cuentas y seguimos.';
 const NUDGE_FIRST = {
   need_problem: '¿Sigues por ahí? 🙂 Cuéntame con tus palabras qué es lo que más tiempo te está quitando y te digo si te puedo ayudar.',
   q_budget: '¿Sigues por ahí? Te dejé una pregunta arriba 👆 Con tocar una opción basta y seguimos.',
@@ -318,8 +340,12 @@ export async function nudgeIdle(env, h) {
       WHERE state IN ('need_problem', 'q_budget', 'q_timing', 'q_decider', 'need_phone') AND updated_at > ? AND updated_at <= ? LIMIT 50`).bind(since, firstBefore).all()).results || [];
   const lg = (await env.DB.prepare(`SELECT phone AS dest, 'loggro' AS state, updated_at FROM loggro_leads
       WHERE (state IN ('q_pn', 'q_size', 'q_system', 'q_when') OR (state = 'sent' AND msg_count > 0)) AND updated_at > ? AND updated_at <= ? LIMIT 50`).bind(since, firstBefore).all()).results || [];
+  // Conversaciones del agente: la última palabra fue del agente y la persona no ha contestado
+  const ag = (await env.DB.prepare(`SELECT a.chat_key AS dest, a.source AS source, 'agente' AS state, l.created_at AS updated_at FROM agent_chats a
+      JOIN agent_log l ON l.id = (SELECT MAX(id) FROM agent_log WHERE chat_key = a.chat_key)
+      WHERE l.role = 'assistant' AND a.stage = 'qualifying' AND a.hot = 0 AND a.paused_until IS NULL AND l.created_at > ? AND l.created_at <= ? LIMIT 50`).bind(since, firstBefore).all().catch(() => ({ results: [] }))).results || [];
   let sent = 0;
-  for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...lg.map(x => ({ ...x, sid: `nudge:lg:${x.dest}` }))]) {
+  for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...(agentOn(env) ? [] : lg).map(x => ({ ...x, sid: `nudge:lg:${x.dest}` })), ...ag.map(x => ({ ...x, sid: `nudge:ag:${x.dest}` }))]) {
     const prev = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last FROM events WHERE session_id = ? AND type = 'nudge' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
     const n = prev?.n || 0;
     if (n >= 2) {
@@ -327,11 +353,15 @@ export async function nudgeIdle(env, h) {
       if (prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3) || !/^\d+$/.test(r.dest)) continue;
       const closed = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'chat_closed' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
       if (closed) continue;
-      if (await closeKapsoChat(env, r.dest)) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'chat_closed')").bind(r.sid.slice(0, 64)).run();
+      if (await closeKapsoChat(env, r.dest)) {
+        await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'chat_closed')").bind(r.sid.slice(0, 64)).run();
+        // Lead de Loggro que dejó de responder: queda anotado en HubSpot (la rutina lee 'done') sin marcarlo como caliente
+        if (r.source === 'loggro') await env.DB.prepare(`UPDATE loggro_leads SET state = 'done', hot = 0, summary = 'Dejó de responder tras el seguimiento. ' || COALESCE(summary, ''), synced_state = NULL, updated_at = datetime('now') WHERE phone = ? AND state = 'agent'`).bind(r.dest).run();
+      }
       continue;
     }
     if (n === 1 && prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3)) continue;
-    const body = n === 0 ? NUDGE_FIRST[r.state] : NUDGE_LAST;
+    const body = n === 0 ? (r.state === 'agente' ? NUDGE_AGENT : NUDGE_FIRST[r.state]) : NUDGE_LAST;
     if (!body) continue;
     const dest = /^\d+$/.test(r.dest) ? { to: r.dest } : { recipient: r.dest };
     if (await h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body, preview_url: false } })) {

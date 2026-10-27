@@ -13,6 +13,8 @@
  *  - Después de terminar, el asistente calla: sigue Damián a mano, desde Kapso.
  */
 
+import { agentTurn } from './agent.js';
+
 const MAX_MSGS = 30;
 const REPLY_ALERT_MINUTES = 30;
 export const ALERT_FROM_HOUR = 9, ALERT_TO_HOUR = 21; // hora de Bogotá
@@ -52,7 +54,7 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
   const claim = await env.DB.prepare(`UPDATE loggro_leads SET last_msg_id = ?, msg_count = msg_count + 1, updated_at = datetime('now')
       WHERE phone = ? AND (last_msg_id IS NULL OR last_msg_id != ?)`).bind(inb.id, row.phone, inb.id).run();
   if (!claim.meta?.changes) return;
-  if ((row.msg_count || 0) >= MAX_MSGS) return;
+  if ((row.msg_count || 0) >= (agentOn(env) ? 200 : MAX_MSGS)) return;
 
   const c = { env, ctx, h, inb, row, dest: { to: row.phone }, first: h.clean(row.name || inb.name, 40).split(' ')[0] || '' };
 
@@ -60,6 +62,9 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
     await save(c, { state: 'optout' });
     return sendText(c, 'Listo, no te escribo más. Si más adelante lo necesitas, escríbeme cuando quieras.');
   }
+
+  // Agente conversacional: atiende cualquier etapa como un chat de persona. Si está apagado, siguen los botones de abajo.
+  if (agentOn(env)) return agentTurn({ ...c, key: row.phone, source: 'loggro' });
 
   switch (row.state) {
     case 'pending': case 'sent': return onFirstReply(c);
@@ -176,6 +181,8 @@ async function onAfterDone(c) {
   return c.h.alertMessage(c.env, text, c.env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
+export const agentOn = env => env.AGENT_V2 === 'on' && !!env.OPENAI_API_KEY;
+
 // Aviso a Damián: solo entre las 9 am y las 9 pm; fuera de horario espera a la siguiente hora en punto (la envía el cron)
 async function maybeAlert(c) {
   const hour = new Date(Date.now() - 5 * 3600e3).getUTCHours();
@@ -241,8 +248,8 @@ export async function rescueSend(env) {
     const retomar = r.state === 'q_retomar';
     const res = await sendTemplate(env, r.phone, retomar ? 'loggro_retomar' : 'loggro_rescate', r.name || 'buen día');
     if (res.ok) {
-      await env.DB.prepare("UPDATE loggro_leads SET state = ?, wamid = ?, sent_at = datetime('now'), updated_at = datetime('now') WHERE phone = ? AND state = ?")
-        .bind(retomar ? 'retomar' : 'sent', res.wamid || null, r.phone, r.state).run();
+      await env.DB.prepare("UPDATE loggro_leads SET state = ?, campaign = ?, wamid = ?, sent_at = datetime('now'), updated_at = datetime('now') WHERE phone = ? AND state = ?")
+        .bind(retomar ? 'retomar' : 'sent', retomar ? 'retomar' : 'rescate', res.wamid || null, r.phone, r.state).run();
       await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('rescate', 'rescate_sent')").run();
       sent++;
     } else if (BAD_NUMBER_CODES.has(res.code)) {
@@ -266,4 +273,12 @@ async function sendTemplate(env, phone, name, param) {
     if (!res.ok) console.error('Rescate', res.status, body?.error?.code, String(body?.error?.message || '').replace(/\d{5,}/g, '#').slice(0, 200));
     return { ok: res.ok, status: res.status, code: Number(body?.error?.code) || 0, wamid: body?.messages?.[0]?.id };
   } catch (err) { console.error('Rescate', err?.name || 'error'); return { ok: false, status: 0, code: 0 }; }
+}
+
+// Lo usa el agente conversacional: aviso de lead caliente (con el horario de siempre) y aviso cuando un lead caliente vuelve a escribir
+export const alertHotLead = (env, h, row) => maybeAlert({ env, h, row });
+export async function alertReply(env, h, row, text) {
+  if (!text) return;
+  const c = { env, h, row };
+  return onAfterDone({ ...c, inb: { text } });
 }

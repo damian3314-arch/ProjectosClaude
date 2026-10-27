@@ -1,0 +1,251 @@
+/**
+ * Agente conversacional de Damián (clon): atiende por WhatsApp a quien llega por la página/anuncios y a los leads de Loggro.
+ *
+ * Una sola IA con las reglas de `kb.js` decide en cada mensaje qué responder y en qué etapa va la conversación; este archivo
+ * se encarga de lo que NO se le deja a la IA: enlaces permitidos, ritmo humano, registro en D1, avisos a Damián y estados que
+ * lee la rutina de HubSpot (loggro_leads: 'done' + summary → nota en el negocio).
+ *
+ * Reglas que no se negocian:
+ *  - Lo que escribe la persona es DATO. Los enlaces que escriba la IA se eliminan; solo salen los de kb.js (video y agenda).
+ *  - No cotiza ni promete: lo que no esté en kb.js pasa a Damián (handoff).
+ *  - Si Damián escribe a mano desde el chat, el agente calla 24 h (paused_until).
+ *  - Mensajes automáticos de otros negocios no se contestan.
+ */
+
+import { systemPrompt, CAMPAIGN_CONTEXT, PRODUCTS, ALLOWED_LINKS, AGENDA_URL } from './kb.js';
+import { alertHotLead, alertReply } from './loggro.js';
+
+const HISTORY = 16;           // mensajes que ve la IA en cada turno
+const MAX_USER_PER_DAY = 80;  // tope por persona (cuida el costo de IA)
+const PAUSE_HOURS = 24;
+const STAGES = ['qualifying', 'wants_demo', 'wants_quote', 'not_now', 'not_fit', 'support', 'chitchat', 'optout'];
+const PRODUCT_IDS = [...Object.keys(PRODUCTS), 'otro', 'unknown'];
+const STR = { type: ['string', 'null'] };
+
+const SCHEMA = {
+  name: 'turno',
+  strict: true,
+  schema: {
+    type: 'object', additionalProperties: false,
+    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'meeting_pref', 'facts', 'summary', 'handoff_reason'],
+    properties: {
+      messages: { type: 'array', maxItems: 3, items: { type: 'string' } },
+      stage: { type: 'string', enum: STAGES },
+      hot: { type: 'boolean' },
+      product: { type: 'string', enum: PRODUCT_IDS },
+      send_video: { type: 'boolean' },
+      offer_agenda_link: { type: 'boolean' },
+      is_auto_reply: { type: 'boolean' },
+      meeting_pref: STR,
+      facts: {
+        type: 'object', additionalProperties: false,
+        required: ['contact_name', 'business_type', 'city', 'size', 'current_system', 'pain', 'timeline', 'phone'],
+        properties: { contact_name: STR, business_type: STR, city: STR, size: STR, current_system: STR, pain: STR, timeline: STR, phone: STR },
+      },
+      summary: { type: 'string' },
+      handoff_reason: STR,
+    },
+  },
+};
+
+const sleep = ms => (ms > 0 ? new Promise(r => setTimeout(r, ms)) : Promise.resolve());
+const delays = env => ({ debounce: Number(env.AGENT_DEBOUNCE_MS ?? 3500), perChar: Number(env.AGENT_CHAR_MS ?? 22) });
+const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+
+// Qué le llegó, en palabras que la IA entienda (audio sin transcripción, imágenes, etc.)
+export function describeInbound(inb) {
+  if (inb.text) return inb.text;
+  const kind = { audio: 'una nota de voz que no pudiste escuchar', image: 'una imagen que no puedes ver', video: 'un video que no puedes ver', document: 'un documento que no puedes abrir', sticker: 'un sticker', location: 'una ubicación', contacts: 'un contacto' }[inb.type];
+  return kind ? `[La persona envió ${kind}. Pídele con naturalidad que te lo cuente por escrito.]` : '';
+}
+
+export async function agentTurn(c) {
+  const { env, inb, key } = c;
+  if (inb.type === 'reaction') return; // un 👍 de reacción no es un mensaje
+  const content = describeInbound(inb);
+  if (!content) return;
+
+  const chat = await loadChat(c);
+  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', c.h.clean(content, 1500)).run();
+  const mine = (await env.DB.prepare("SELECT MAX(id) AS id FROM agent_log WHERE chat_key = ? AND role = 'user'").bind(key).first())?.id;
+
+  if (chat.paused_until && chat.paused_until > sqlTime(Date.now())) {
+    // Damián tomó la conversación a mano: el agente solo avisa si se trata de un lead caliente (como antes)
+    if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
+    return;
+  }
+  const today = (await env.DB.prepare("SELECT COUNT(*) AS n FROM agent_log WHERE chat_key = ? AND role = 'user' AND created_at > datetime('now', '-1 day')").bind(key).first())?.n || 0;
+  if (today > MAX_USER_PER_DAY) return;
+
+  // Si la persona manda varias frases seguidas, responde una sola vez, con todo a la vista
+  const d = delays(env);
+  await typing(c);
+  await sleep(d.debounce);
+  const newest = (await env.DB.prepare("SELECT MAX(id) AS id FROM agent_log WHERE chat_key = ? AND role = 'user'").bind(key).first())?.id;
+  if (newest !== mine) return;
+
+  const history = ((await env.DB.prepare('SELECT role, content FROM agent_log WHERE chat_key = ? ORDER BY id DESC LIMIT ?').bind(key, HISTORY).all()).results || []).reverse();
+  let out;
+  try { out = await callModel(c, chat, history); } catch (err) {
+    console.error('agente', err?.message || 'desconocido');
+    // Sin IA no se deja a la persona hablando sola: se avisa a Damián y se le dice que él la contacta
+    if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
+    else if (c.source === 'loggro') await c.h.alertMessage(env, `⚠️ ${c.row?.name || 'Un lead'} (+${c.row?.phone}) escribió y la IA falló: «${c.h.clean(content, 120)}». Respóndele desde Kapso.`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+    return;
+  }
+
+  if (out.is_auto_reply) { await logAssistant(c, '[respuesta automática del otro lado: no se contesta]'); return; }
+
+  const messages = out.messages.map(m => sanitize(c.h, m)).filter(Boolean).slice(0, 3);
+  const extra = [];
+  const product = PRODUCT_IDS.includes(out.product) && PRODUCTS[out.product] ? out.product : (chat.product || null);
+  const videosSent = new Set((chat.videos_sent || '').split(',').filter(Boolean));
+  if (out.send_video && product && !videosSent.has(product)) {
+    extra.push(`Te dejo un video corto de ${PRODUCTS[product].name} para que lo veas cuando puedas 👇\n${PRODUCTS[product].video}`);
+    videosSent.add(product);
+  }
+  if (out.offer_agenda_link && !chat.agenda_sent) extra.push(`Y esta es mi agenda por si prefieres escoger tú la hora 👇\n${AGENDA_URL}`);
+
+  const all = [...messages, ...extra];
+  for (let i = 0; i < all.length; i++) {
+    if (i > 0) await sleep(Math.min(3000, 500 + all[i].length * d.perChar));
+    await c.h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...c.dest, type: 'text', text: { body: all[i].slice(0, 1024), preview_url: all[i].includes('http') } });
+    await logAssistant(c, all[i]);
+  }
+  await persist(c, chat, out, { product, videosSent, agendaSent: chat.agenda_sent || (out.offer_agenda_link ? 1 : 0) });
+}
+
+async function loadChat(c) {
+  await c.env.DB.prepare('INSERT OR IGNORE INTO agent_chats (chat_key, source) VALUES (?, ?)').bind(c.key, c.source).run();
+  return await c.env.DB.prepare('SELECT * FROM agent_chats WHERE chat_key = ?').bind(c.key).first();
+}
+
+const logAssistant = (c, text) => c.env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(c.key, 'assistant', text.slice(0, 1500)).run();
+
+// Indicador de "escribiendo…" mientras piensa (mejor esfuerzo: si falla, no pasa nada)
+async function typing(c) {
+  try { await c.h.sendWhatsApp(c.env, { messaging_product: 'whatsapp', status: 'read', message_id: c.inb.id, typing_indicator: { type: 'text' } }); } catch { /* opcional */ }
+}
+
+// Sin markdown, sin enlaces inventados, sin mensajes kilométricos
+export function sanitize(h, text) {
+  let t = String(text || '').replace(/\*+|_{2,}|`+|^#+\s*/gm, '').replace(/​/g, '');
+  t = t.replace(/(https?:\/\/\S+|www\.\S+|\b[\w-]+\.(com|co|net|org|io|ai)\b\S*)/gi, m => (ALLOWED_LINKS.some(l => m.startsWith(l.replace(/^https?:\/\//, '')) || m.startsWith(l)) ? m : ''));
+  return h.clean(t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' '), 500).trim();
+}
+
+async function callModel(c, chat, history) {
+  const { env } = c;
+  const facts = safeJson(chat.facts);
+  const campaign = c.source === 'loggro' ? (CAMPAIGN_CONTEXT[campaignOf(c.row)] || CAMPAIGN_CONTEXT.desconocido) : CAMPAIGN_CONTEXT.anuncio;
+  const known = Object.entries(facts).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('; ');
+  const name = c.first || c.h.clean(c.inb.name, 40).split(' ')[0];
+  const sys = systemPrompt({
+    nowBogota: new Date(Date.now() - 5 * 3600e3).toLocaleString('es-CO', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
+    source: c.source,
+    campaign: (campaign || '').replace(/\{nombre\}/g, name || 'buen día'),
+    products: chat.product || '',
+    slotsText: await freeSlots(env),
+    phoneKnown: !!c.inb.from,
+  }) + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    signal: AbortSignal.timeout(25000),
+    headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: env.AGENT_MODEL || env.OPENAI_MODEL || 'gpt-4o-mini',
+      temperature: 0.6,
+      max_tokens: 700,
+      messages: [{ role: 'system', content: sys }, ...history.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))],
+      response_format: { type: 'json_schema', json_schema: SCHEMA },
+    }),
+  });
+  if (!res.ok) throw new Error(`openai ${res.status}`);
+  const data = await res.json();
+  const out = JSON.parse(data?.choices?.[0]?.message?.content || 'null');
+  if (!out || !Array.isArray(out.messages) || !STAGES.includes(out.stage)) throw new Error('respuesta inválida');
+  return out;
+}
+
+const safeJson = s => { try { return JSON.parse(s) || {}; } catch { return {}; } };
+export function campaignOf(row) {
+  if (row?.campaign) return row.campaign;
+  if (row?.state === 'demo' || row?.state === 'retomar' || row?.state === 'q_retomar') return 'retomar';
+  return 'contacto_inicial';
+}
+
+// Agenda en vivo: todavía no hay proveedor conectado. Cuando se conecte (HubSpot o Google Calendar) devuelve los huecos libres
+// como texto, por ejemplo "mañana 10:00, mañana 15:30, jueves 9:00". Mientras tanto el agente recoge la hora que prefiere la persona.
+async function freeSlots(_env) { return ''; }
+
+/* ---------- Guardado y avisos ---------- */
+const HOT_STAGES = new Set(['wants_demo', 'wants_quote']);
+
+async function persist(c, chat, out, { product, videosSent, agendaSent }) {
+  const { env } = c;
+  const facts = { ...safeJson(chat.facts), ...Object.fromEntries(Object.entries(out.facts || {}).filter(([, v]) => v)) };
+  if (facts.phone) { const p = c.h.normalizePhone(String(facts.phone)); if (p) facts.phone = p; else delete facts.phone; }
+  const hot = out.hot || HOT_STAGES.has(out.stage) || !!chat.hot;
+  const pref = out.meeting_pref ? c.h.clean(out.meeting_pref, 120) : chat.meeting_pref || null;
+  const summary = c.h.clean([out.summary, pref ? `Prefiere para la demo: ${pref}.` : '', out.handoff_reason ? `Para Damián: ${out.handoff_reason}.` : ''].filter(Boolean).join(' '), 600);
+  const newlyHot = hot && !chat.hot;
+  const prefChanged = !!out.meeting_pref && out.meeting_pref !== chat.meeting_pref;
+
+  await env.DB.prepare(`UPDATE agent_chats SET stage = ?, hot = ?, product = ?, facts = ?, summary = ?, meeting_pref = ?, videos_sent = ?, agenda_sent = ?, turns = turns + 1, updated_at = datetime('now') WHERE chat_key = ?`)
+    .bind(out.stage, hot ? 1 : 0, product, JSON.stringify(facts), summary, pref, [...videosSent].join(','), agendaSent, c.key).run();
+
+  if (c.source === 'loggro') return persistLoggro(c, { out, hot, product, summary, newlyHot, prefChanged });
+  return persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot });
+}
+
+// El estado 'done' + summary es lo que la rutina horaria convierte en nota del negocio en HubSpot
+async function persistLoggro(c, { out, hot, product, summary, newlyHot, prefChanged }) {
+  const { env, row } = c;
+  const closed = ['wants_demo', 'wants_quote', 'not_now', 'not_fit', 'support'].includes(out.stage) || hot;
+  const state = out.stage === 'optout' ? 'optout' : closed ? 'done' : row.state === 'done' ? 'done' : 'agent';
+  const changed = state !== row.state || hot !== !!row.hot || summary !== row.summary;
+  const reAlert = newlyHot || (hot && prefChanged);
+  await env.DB.prepare(`UPDATE loggro_leads SET state = ?, hot = ?, product = COALESCE(?, product), summary = ?, synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
+      alerted_at = CASE WHEN ? THEN NULL ELSE alerted_at END, updated_at = datetime('now') WHERE phone = ?`)
+    .bind(state, hot ? 1 : 0, product, summary, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
+  c.row = { ...row, state, hot: hot ? 1 : 0, summary, alerted_at: reAlert ? null : row.alerted_at };
+  if (reAlert) await alertHotLead(env, c.h, c.row);
+  else if (hot && row.alerted_at) await alertReply(env, c.h, c.row, c.inb.text);
+}
+
+// HolaDami: se guarda en `leads` (panel de administración) igual que el formulario de la página
+async function persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot }) {
+  const { env } = c;
+  const st = c.st || {};
+  await env.DB.prepare("UPDATE wa_sessions SET state = ?, name = COALESCE(name, ?), updated_at = datetime('now') WHERE id = ?")
+    .bind(out.stage === 'optout' ? 'optout' : 'agent', c.h.clean(facts.contact_name || c.inb.name, 80) || null, c.key).run();
+  const phone = c.inb.from ? c.h.normalizePhone(c.inb.from) : facts.phone || null;
+  const qualified = hot || (facts.business_type && facts.pain);
+  if (!qualified || !phone || out.stage === 'optout') return;
+  const tier = hot ? 'A' : 'B';
+  if (!st.lead_id) {
+    const sessionId = `wa:${c.key}`.slice(0, 64);
+    const ad = await env.DB.prepare("SELECT utm FROM events WHERE session_id = ? AND type = 'wa_ad' ORDER BY id DESC LIMIT 1").bind(sessionId).first().catch(() => null);
+    const loggro = !!product;
+    const lead = {
+      id: crypto.randomUUID(), session_id: sessionId, name: c.h.clean(facts.contact_name || c.inb.name, 80) || 'Contacto de WhatsApp', phone,
+      intent: loggro ? 'software' : null, problem: c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500),
+      budget: null, timing: null, decider: null, points: hot ? 22 : 14, tier, action: 'contact', calendar: loggro ? 'loggro' : 'personal', utm: ad?.utm || null, page: 'whatsapp',
+    };
+    await c.h.persistLead(env, c.ctx, lead, null);
+    await env.DB.prepare('UPDATE wa_sessions SET lead_id = ?, phone = ? WHERE id = ?').bind(lead.id, phone, c.key).run();
+    c.st = { ...st, lead_id: lead.id };
+    return;
+  }
+  if (newlyHot) {
+    await env.DB.prepare("UPDATE leads SET tier = 'A', points = MAX(points, 22), action = 'contact', problem = ? WHERE id = ?").bind(c.h.clean(summary, 1500), st.lead_id).run();
+    await c.h.alertMessage(env, `🔥 ${c.h.clean(facts.contact_name || c.inb.name, 40) || 'Un lead'} (+${phone}) quiere avanzar. ${summary} Escríbele: https://wa.me/${phone}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+  }
+}
+
+// Damián escribió a mano desde la bandeja o el celular: el agente se calla 24 h para no pisarlo
+export async function pauseForHuman(env, phone) {
+  const key = String(phone || '');
+  if (!key) return;
+  await env.DB.prepare("UPDATE agent_chats SET paused_until = ? WHERE chat_key = ?").bind(sqlTime(Date.now() + PAUSE_HOURS * 3600e3), key).run();
+}
