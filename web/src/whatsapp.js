@@ -37,6 +37,8 @@ const QUESTIONS = {
 // El saludo no anuncia que es IA: la conversación fluye como un DM normal. Si la persona pregunta, se le dice la verdad (BOT_REPLY).
 const GREETING = 'Hola 👋 Soy Damián Barragán. Cuéntame en una frase qué te está quitando tiempo en tu negocio.';
 const BOT_REPLY = 'Soy el asistente de IA de Damián y lo estoy apoyando para que todo sea más rápido. Él revisa personalmente cada caso.';
+// Mensaje predeterminado de los anuncios (enlace wa.me): no es un problema, es el saludo. Además sirve para saber que llegó desde un anuncio
+const PREFILL_RE = /^\s*hola\s+dami[aá]n[,.!]?\s+vi\s+tu\s+(anuncio|video|v[ií]deo|carrusel)/i;
 const ASKS_BOT_RE = /\b(eres|hablo con|hablando con|esto es|es esto)\b[^.?!]{0,20}\b(bot|robot|chatbot|ia|inteligencia artificial|humano|persona|real|m[aá]quina)\b/i;
 const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero)\s*[.!]*\s*$/i;
 const GREETING_RE = /^\s*(hola|holi|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|hi|hello|buen d[ií]a|informaci[oó]n|info)\b[\s,.!¡?¿a-záéíóúñ]{0,25}$/i;
@@ -98,6 +100,7 @@ function parseInbound(p) {
   // Si llegó desde un anuncio de Meta (Click to WhatsApp), viene el dato del anuncio: se guarda para medir qué trae cada peso
   const ref = m.referral || m.kapso?.referral;
   let ad = '';
+  if (!ref && PREFILL_RE.test(text)) ad = JSON.stringify({ utm_source: 'meta_ads', utm_medium: 'whatsapp', utm_campaign: 'wa_link', utm_content: 'mensaje_anuncio' });
   if (ref && typeof ref === 'object') {
     const u = { utm_source: 'meta_ads', utm_medium: 'whatsapp', utm_campaign: String(ref.source_id || '').slice(0, 100), utm_content: String(ref.headline || '').slice(0, 100) };
     ad = JSON.stringify(Object.fromEntries(Object.entries(u).filter(([, v]) => v)));
@@ -167,13 +170,13 @@ async function handleInbound(env, ctx, h, payload) {
 
   switch (st.state) {
     case 'new': {
-      if (looksLikeProblem(inb.text)) return onProblem(ctxw, inb.text);
+      if (!PREFILL_RE.test(inb.text) && looksLikeProblem(inb.text)) return onProblem(ctxw, inb.text);
       await save(ctxw, { state: 'need_problem' });
       return sendText(ctxw, GREETING);
     }
     case 'need_problem': {
       if (!inb.text) return sendText(ctxw, 'Por aquí no alcanzo a abrir eso. ¿Me cuentas en una frase qué te está quitando tiempo?');
-      if (GREETING_RE.test(inb.text)) return sendText(ctxw, 'Cuéntame en una frase qué te está quitando tiempo en tu negocio, y sigo con unas preguntas rápidas.');
+      if (GREETING_RE.test(inb.text) || PREFILL_RE.test(inb.text)) return sendText(ctxw, 'Cuéntame en una frase qué te está quitando tiempo en tu negocio, y sigo con unas preguntas rápidas.');
       return onProblem(ctxw, inb.text);
     }
     case 'q_budget': case 'q_timing': case 'q_decider':
