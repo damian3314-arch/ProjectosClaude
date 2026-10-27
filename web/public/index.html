@@ -132,11 +132,11 @@ body[data-intent] .aura{opacity:.38}
 .greet{text-align:center;display:grid;gap:18px;justify-items:center;padding-top:10px}
 .greet .hi{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--muted)}
 .greet .hi img{width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px var(--surface);flex:none}
-.greet .hi b{color:var(--fg);font-weight:600}
-.greet .hi .verify{display:block;font-size:13px;color:var(--accent-t);text-decoration:none;margin-top:1px}
-.greet .hi .verify:hover{text-decoration:underline}
-.safe{display:flex;gap:8px;align-items:flex-start;max-width:560px;margin:12px auto 0;font-size:13.5px;line-height:1.45;color:var(--muted);text-align:left}
-.safe svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--accent-t)}
+.in-link{display:inline-flex;align-items:center;gap:6px;margin-top:-8px;font-size:13.5px;color:var(--muted);text-decoration:none;min-height:32px}
+.in-link svg{width:15px;height:15px;color:#0a66c2}
+.in-link:hover{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.safe{display:flex;gap:6px;align-items:center;justify-content:center;margin:12px auto 0;font-size:13px;color:var(--muted)}
+.safe svg{width:15px;height:15px;flex:none;color:var(--c-ia)}
 .greet h1{font-size:clamp(34px,8.6vw,60px);line-height:1.02;max-width:15ch}
 .greet h1 em{color:var(--accent-t);transition:color .5s}
 .greet .slogan{font-size:clamp(17px,4.4vw,21px);line-height:1.3;letter-spacing:-.015em;max-width:30ch;font-weight:500}
@@ -203,6 +203,17 @@ html:not(.js) .composer{display:none}
 .rec-line.on{display:block}
 .rec-line.warn{color:var(--muted)}
 .progress{height:3px;background:var(--line);display:none}
+/* Al tocar el campo, el cuadro se abre como una ventana de chat (sin salir de la página) */
+.chat-head{order:-1;display:none;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface);text-align:left}
+.chat-head img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none}
+.chat-head b{display:block;font-size:15px;font-weight:600;line-height:1.2}
+.chat-head small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.chat-head small i{width:8px;height:8px;border-radius:50%;background:#25d366;box-shadow:0 0 0 3px color-mix(in srgb,#25d366 25%,transparent)}
+.box.open{scroll-margin-top:76px;animation:chatOpen .35s ease both}
+.box.open .chat-head{display:flex}
+.box.open .thread{min-height:min(34dvh,280px);background-image:radial-gradient(color-mix(in srgb,var(--fg) 7%,transparent) 1px,transparent 1px);background-size:18px 18px}
+@keyframes chatOpen{from{transform:scale(.98);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.box.open{animation:none}}
 .progress.on{display:block}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
 .scroll-hint{display:flex;justify-content:center;align-items:center;min-height:44px;margin-top:18px;color:var(--muted);font-size:14px}
@@ -307,13 +318,15 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
   <div class="aura" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="wrap">
     <div class="greet">
-      <span class="hi"><img src="damian-avatar.jpg" alt="" width="44" height="44"><span>Hola, soy <b>Damián Barragán</b><a class="verify" href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">Verifica que soy yo en LinkedIn ✓</a></span></span>
+      <span class="hi"><img src="damian-avatar.jpg" alt="" width="44" height="44">Hola, soy Damián</span>
+      <a class="in-link" href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11H3v-11Zm6.5 0h3.8v1.5h.06c.53-.95 1.83-1.95 3.77-1.95 4.03 0 4.77 2.5 4.77 5.75v5.7h-4v-5.05c0-1.2-.02-2.75-1.7-2.75-1.7 0-1.95 1.3-1.95 2.66v5.14h-4v-11Z"/></svg>Mi perfil en LinkedIn</a>
       <p class="slogan">Menos trabajo manual.<br>Más tiempo para crecer.</p>
       <h1>Cuéntame qué te está <em>quitando tiempo</em>.</h1>
       <p class="ref">¿Te pasaron mi link? Cuéntame lo mismo que le contaste a esa persona.</p>
     </div>
 
     <div class="box" id="box">
+      <div class="chat-head"><img src="damian-avatar.jpg" alt="" width="38" height="38"><div><b>Damián Barragán</b><small><i aria-hidden="true"></i>En línea · te respondo por aquí</small></div></div>
       <div class="progress" id="progress" aria-hidden="true"><span></span></div>
       <noscript><p class="ns">Para escribirme aquí necesitas activar JavaScript. Mientras tanto, mira abajo lo que resuelvo, o escríbeme por <a href="https://www.linkedin.com/in/soydamianbarragan" rel="noopener">LinkedIn</a>.</p></noscript>
       <div class="thread" id="thread" aria-live="polite"></div>
@@ -326,7 +339,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
       </div>
     </div>
     <ul class="facts"><li>Diagnóstico inicial sin costo</li><li>Te contacto yo, por WhatsApp</li><li>Tus datos solo para contactarte</li></ul>
-    <p class="safe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Nunca te pido contraseñas, códigos de WhatsApp, datos bancarios ni pagos por aquí. Solo tu nombre y tu WhatsApp, si tú quieres.</span></p>
+    <p class="safe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Espacio seguro · conexión cifrada</span></p>
     <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
   </div>
 </section>
@@ -611,7 +624,7 @@ const fitRows = () => { msg.rows = innerWidth >= 600 ? 1 : innerWidth < 340 ? 3 
 fitRows(); addEventListener('resize', fitRows);
 function stopPh(){ clearTimeout(phTimer); phTimer = null; }
 function tickPh(){
-  if (msg.value || started){ phTimer = null; return; }
+  if (msg.value || started || chatOpened){ phTimer = null; return; }
   const full = PH_EX[phI % PH_EX.length];
   if (phDir === 1){
     phPos++; msg.placeholder = PH_BASE + full.slice(0, phPos);
@@ -654,6 +667,17 @@ function choose(opts){
 function autosize(){ msg.classList.toggle('typed', !!msg.value); msg.style.height = 'auto'; msg.style.height = Math.min(msg.scrollHeight, 140) + 'px'; }
 msg.addEventListener('input', () => { autosize(); sendBtn.disabled = msg.value.trim().length < 3 && !audioBlob; });
 msg.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); } });
+// Al tocar el campo (o el micrófono) el cuadro se convierte en una ventana de chat conmigo y saludo primero
+let chatOpened = false;
+function openChat(){
+  if (chatOpened) return; chatOpened = true;
+  const box = $('#box'); box.classList.add('open'); track('chat_open');
+  stopPh(); msg.placeholder = 'Escribe tu mensaje…';
+  setTimeout(() => { try { box.scrollIntoView({block:'start', behavior: reduce ? 'auto' : 'smooth'}); } catch {} }, 120);
+  if (!thread.children.length && !started) say('Hola 👋 Cuéntame con tus palabras qué te está quitando tiempo en tu negocio. Te leo.', true);
+}
+msg.addEventListener('focus', openChat);
+mic.addEventListener('click', openChat);
 function focusChatSoon(){ setTimeout(() => { if (!started) msg.focus({preventScroll:true}); }, 500); }
 $('#backToChat').onclick = focusChatSoon;
 $('#pill').onclick = focusChatSoon;
@@ -726,7 +750,7 @@ async function start(text){
   lead.decider = await choose([{id:'solo', t:'La tomo yo'},{id:'with', t:'Con mi socio o familia'},{id:'other', t:'La toma otra persona'}]);
   track('q_decider');
   if (lead.decider.id === 'with') await say('Perfecto. Si quieres, esa persona nos acompaña en la llamada y así nadie repite la historia.');
-  await say('Última cosa: ¿a qué WhatsApp te escribo? Solo lo uso para responderte.');
+  await say('Última cosa: ¿a qué WhatsApp te escribo? Solo lo uso para responderte. Y tranquilo: nunca te voy a pedir claves, códigos ni pagos por aquí.');
   prog(5);
   track('contact_form');
   lead.contact = await contactForm();

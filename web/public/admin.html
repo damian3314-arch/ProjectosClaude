@@ -605,6 +605,7 @@ function viewEmbudo(){
     '<div class="kpi"><small>Leads desde anuncios</small><b>' + esc(adL) + '</b></div>' +
     '<div class="kpi"><small>Conversaciones que terminan en lead</small><b>' + fmtPct(pct(adL, f.wa_ad || 0)) + '</b></div></div></section>';
   h += '<section class="panel" aria-labelledby="hM"><h3 id="hM">Uso del micrófono</h3><div class="kpis">' +
+    '<div class="kpi"><small>Abrieron la ventana de chat</small><b>' + esc(f.chat_open || 0) + '</b></div>' +
     '<div class="kpi"><small>Tocaron el micrófono</small><b>' + esc(f.mic_tap || 0) + '</b></div>' +
     '<div class="kpi"><small>Enviaron un audio</small><b>' + esc(f.audio_sent || 0) + '</b></div>' +
     '<div class="kpi"><small>De quienes iniciaron el chat</small><b>' + fmtPct(pct(f.audio_sent || 0, f.started || 0)) + '</b></div></div></section>';
