@@ -29,7 +29,7 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
-    "RESCATE_ENVIOS": "on",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
+    "RESCATE_ENVIOS": "off",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "AGENT_V2": "on",   // agente conversacional (chat como Damián); "off" vuelve al flujo de botones
     "BOOKING_URL_LOGGRO": "",
     "BOOKING_URL_PERSONAL": ""
