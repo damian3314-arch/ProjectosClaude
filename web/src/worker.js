@@ -17,6 +17,7 @@
 
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
+import { webTurn, webContact } from './agent.js';
 import { sendHotAlert, rescueSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
@@ -73,6 +74,7 @@ async function route(request, env, ctx, url) {
       const path = url.pathname;
       if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID) });
       if (request.method === 'POST' && path === '/api/chat') return await chat(request, env);
+      if (request.method === 'POST' && path === '/api/agent') return await agentChat(request, env, ctx);
       if (request.method === 'POST' && path === '/api/transcribe') return await transcribe(request, env);
       if (request.method === 'POST' && path === '/api/lead') return await createLead(request, env, ctx);
       if (request.method === 'POST' && path === '/api/whatsapp') return await handleWhatsAppWebhook(request, env, ctx, agentHelpers());
@@ -120,6 +122,37 @@ function secure(res, path) {
   h.set('referrer-policy', priv ? 'no-referrer' : 'strict-origin-when-cross-origin');
   if (priv) { h.set('cache-control', 'no-store'); h.set('x-robots-tag', 'noindex, nofollow'); }
   return r;
+}
+
+/* ---------- /api/agent: el chat de la página conversa con el mismo motor que WhatsApp ---------- */
+async function agentChat(request, env, ctx) {
+  if (!sameOrigin(request)) return json({ error: 'Origen no permitido' }, 403);
+  if (!env.OPENAI_API_KEY || env.AGENT_V2 !== 'on') return json({ error: 'IA no configurada' }, 503);
+  const body = await readJson(request, 8 * 1024);
+  const sessionId = clean(body?.sessionId, 64).replace(/[^\w-]/g, '');
+  if (!sessionId) return json({ error: 'Falta la sesión' }, 400);
+  const ipHash = await hashIp(request, env);
+  if (await overLimit(env, ipHash)) return json({ error: 'Demasiados mensajes. Intenta en unos minutos.' }, 429);
+  if (await globalOver(env, 'user', CHAT_PER_HOUR, '-1 hour')) return json({ error: 'Muchos mensajes ahora mismo. Intenta en unos minutos.' }, 429);
+  const h = agentHelpers();
+  try {
+    if (body.contact) {
+      // El formulario con la autorización de datos: sin consentimiento expreso no se guarda nada
+      const name = clean(body.contact.name, 80), phone = normalizePhone(body.contact.phone);
+      if (!name || !phone || body.contact.consent !== true) return json({ error: 'Datos incompletos' }, 400);
+      const utm = body.utm && typeof body.utm === 'object' ? JSON.stringify(Object.fromEntries(Object.entries(body.utm).filter(([k, v]) => /^utm_|^referrer$/.test(k) && typeof v === 'string').slice(0, 8).map(([k, v]) => [k, v.slice(0, 100)]))) : null;
+      await webContact(env, h, ctx, { sessionId, name, phone, utm });
+      await env.DB.prepare("INSERT INTO chat_messages (session_id, ip_hash, role, content) VALUES (?, ?, 'user', '')").bind(sessionId, ipHash).run();
+      return json(await webTurn(env, h, { sessionId, message: `[Dejé mis datos de contacto en el formulario. Me llamo ${name.split(' ')[0]}.]`, ctx }));
+    }
+    const message = clean(body?.message, 1500);
+    if (!message) return json({ error: 'Falta el mensaje' }, 400);
+    await env.DB.prepare("INSERT INTO chat_messages (session_id, ip_hash, role, content) VALUES (?, ?, 'user', '')").bind(sessionId, ipHash).run();
+    return json(await webTurn(env, h, { sessionId, message, ctx }));
+  } catch (err) {
+    console.error('agent web', err?.message || 'desconocido');
+    return json({ error: 'IA no disponible' }, 502);
+  }
 }
 
 /* ---------- /api/chat ---------- */
@@ -480,19 +513,34 @@ function composeLeadMessage(lead, brief, header) {
 
 // Texto libre solo funciona dentro de las 24 h desde que Damián le escribió al número; fuera de eso, plantilla aprobada.
 async function ownerMessage(env, text) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return false;
+  const tg = await telegram(env, text);
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return tg;
   // WhatsApp ya puede identificar a Damián solo por un ID de usuario (BSUID, sin teléfono): la ventana de 24 h queda abierta para ese ID,
   // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
   // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
   if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
-  return sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } });
+  return (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) || tg;
+}
+
+// Canal de avisos que no depende de WhatsApp: un bot de Telegram propio (TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID como secretos)
+async function telegram(env, text) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return false;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text: String(text).slice(0, 4000), disable_web_page_preview: true }),
+    });
+    if (!res.ok) console.error('Telegram', res.status);
+    return res.ok;
+  } catch (err) { console.error('Telegram', err?.name || 'error'); return false; }
 }
 
 // Aviso de leads de Loggro: va a Damián (BSUID o teléfono) y, si existe LOGGRO_ALERT_WHATSAPP, también a su número de trabajo.
 // Con plantilla aprobada llega siempre; si no hay plantilla o falla, se intenta como texto libre (sirve con la ventana de 24 h abierta).
 async function alertMessage(env, text, templateName) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return false;
+  const tg = await telegram(env, text);
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return tg;
   const dests = [];
   if (env.OWNER_BSUID) dests.push({ recipient: String(env.OWNER_BSUID).trim() });
   else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
@@ -505,7 +553,7 @@ async function alertMessage(env, text, templateName) {
     if (!sent) sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
     ok = ok || sent;
   }
-  return ok;
+  return ok || tg;
 }
 
 // Mensaje a un cliente real: apagado por defecto (AUTO_CONTACT_LEADS = "false").

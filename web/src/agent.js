@@ -27,7 +27,7 @@ const SCHEMA = {
   strict: true,
   schema: {
     type: 'object', additionalProperties: false,
-    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'meeting_pref', 'facts', 'summary', 'handoff_reason'],
+    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'ask_contact', 'meeting_pref', 'facts', 'summary', 'handoff_reason'],
     properties: {
       messages: { type: 'array', maxItems: 3, items: { type: 'string' } },
       stage: { type: 'string', enum: STAGES },
@@ -36,6 +36,7 @@ const SCHEMA = {
       send_video: { type: 'boolean' },
       offer_agenda_link: { type: 'boolean' },
       is_auto_reply: { type: 'boolean' },
+      ask_contact: { type: 'boolean' },
       meeting_pref: STR,
       facts: {
         type: 'object', additionalProperties: false,
@@ -148,7 +149,7 @@ async function callModel(c, chat, history) {
     products: chat.product || '',
     slotsText: await freeSlots(env),
     phoneKnown: !!c.inb.from,
-  }) + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
+  }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     signal: AbortSignal.timeout(25000),
@@ -196,6 +197,7 @@ async function persist(c, chat, out, { product, videosSent, agendaSent }) {
     .bind(out.stage, hot ? 1 : 0, product, JSON.stringify(facts), summary, pref, [...videosSent].join(','), agendaSent, c.key).run();
 
   c.factsJson = JSON.stringify(facts);
+  if (c.source === 'web') return persistWeb(c, chat, { out, hot, facts, summary, newlyHot });
   if (c.source === 'loggro') return persistLoggro(c, { out, hot, product, summary, newlyHot, prefChanged });
   return persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot });
 }
@@ -253,4 +255,64 @@ export async function pauseForHuman(env, phone) {
   const key = String(phone || '');
   if (!key) return;
   await env.DB.prepare("UPDATE agent_chats SET paused_until = ? WHERE chat_key = ?").bind(sqlTime(Date.now() + PAUSE_HOURS * 3600e3), key).run();
+}
+
+
+/* ---------- Chat de la página (sin WhatsApp) ----------
+ * Mismo motor y mismas reglas: la respuesta vuelve al navegador en vez de enviarse por WhatsApp. El lead solo se guarda cuando la persona
+ * deja su nombre y WhatsApp en el formulario (con la autorización de datos), nunca antes.
+ */
+const WEB_DAILY = 60;
+
+export async function webTurn(env, h, { sessionId, message, ctx }) {
+  const key = `web:${sessionId}`.slice(0, 64);
+  const c = { env, h, ctx, key, source: 'web', inb: { text: message, type: 'text', id: '', name: '' }, first: '' };
+  const chat = await loadChat(c);
+  const today = (await env.DB.prepare("SELECT COUNT(*) AS n FROM agent_log WHERE chat_key = ? AND role = 'user' AND created_at > datetime('now', '-1 day')").bind(key).first())?.n || 0;
+  if (today >= WEB_DAILY) return { messages: ['Hoy ya hablamos bastante 🙂 Déjame tus datos y te escribo yo, o vuelve mañana.'], links: [], ask_contact: !safeJson(chat.facts).lead_id };
+  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', h.clean(message, 1500)).run();
+  const history = ((await env.DB.prepare('SELECT role, content FROM agent_log WHERE chat_key = ? ORDER BY id DESC LIMIT ?').bind(key, HISTORY).all()).results || []).reverse();
+  const out = await callModel(c, chat, history);
+  if (out.is_auto_reply) return { messages: [], links: [], ask_contact: false };
+
+  const messages = out.messages.map(m => sanitize(h, m)).filter(Boolean).slice(0, 3);
+  const product = PRODUCT_IDS.includes(out.product) && PRODUCTS[out.product] ? out.product : (chat.product || null);
+  const videosSent = new Set((chat.videos_sent || '').split(',').filter(Boolean));
+  const links = [];
+  if (out.send_video && product && !videosSent.has(product)) { links.push({ t: `Video de ${PRODUCTS[product].name}`, url: PRODUCTS[product].video }); videosSent.add(product); }
+  const wantsAgenda = (out.offer_agenda_link || out.stage === 'wants_demo') && !chat.agenda_sent;
+  if (wantsAgenda) links.push({ t: 'Elegir hora en mi agenda', url: AGENDA_URL });
+  for (const m of messages) await logAssistant(c, m);
+  await persist(c, chat, out, { product, videosSent, agendaSent: chat.agenda_sent || (wantsAgenda ? 1 : 0) });
+  const facts = safeJson((await env.DB.prepare('SELECT facts FROM agent_chats WHERE chat_key = ?').bind(key).first())?.facts);
+  return { messages, links, ask_contact: !!out.ask_contact && !facts.lead_id && out.stage !== 'optout' };
+}
+
+// La persona dejó nombre y WhatsApp (con autorización): se guarda el lead una sola vez y se avisa a Damián
+export async function webContact(env, h, ctx, { sessionId, name, phone, utm }) {
+  const key = `web:${sessionId}`.slice(0, 64);
+  const chat = await env.DB.prepare('SELECT * FROM agent_chats WHERE chat_key = ?').bind(key).first();
+  const facts = safeJson(chat?.facts);
+  if (facts.lead_id) return facts.lead_id;
+  const tier = chat?.hot ? 'A' : (facts.business_type && facts.pain) ? 'B' : 'C';
+  const loggro = !!chat?.product;
+  const lead = {
+    id: crypto.randomUUID(), session_id: key, name, phone,
+    intent: loggro ? 'software' : null, problem: h.clean([facts.business_type, facts.pain, chat?.summary].filter(Boolean).join(' · ') || 'Dejó sus datos en el chat de la página', 1500),
+    budget: null, timing: null, decider: null, points: tier === 'A' ? 22 : tier === 'B' ? 14 : 6, tier, action: tier === 'C' ? 'nurture' : 'contact', calendar: loggro ? 'loggro' : 'personal',
+    utm: utm || null, page: 'web-chat',
+  };
+  await h.persistLead(env, ctx, lead, null);
+  await env.DB.prepare('INSERT OR IGNORE INTO agent_chats (chat_key, source) VALUES (?, ?)').bind(key, 'web').run();
+  await env.DB.prepare("UPDATE agent_chats SET facts = ?, updated_at = datetime('now') WHERE chat_key = ?").bind(JSON.stringify({ ...facts, lead_id: lead.id, contact_name: name }), key).run();
+  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', `[Dejé mis datos de contacto en el formulario. Me llamo ${h.clean(name, 40)}.]`).run();
+  return lead.id;
+}
+
+async function persistWeb(c, chat, { out, hot, facts, summary, newlyHot }) {
+  const { env } = c;
+  if (facts.lead_id && newlyHot) {
+    await env.DB.prepare("UPDATE leads SET tier = 'A', points = MAX(points, 22), action = 'contact', problem = ? WHERE id = ?").bind(c.h.clean(summary, 1500), facts.lead_id).run();
+    await c.h.alertMessage(env, `🔥 ${c.h.clean(facts.contact_name, 40) || 'Un lead del chat'} quiere avanzar. ${summary} Está en el panel de administración.`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+  }
 }

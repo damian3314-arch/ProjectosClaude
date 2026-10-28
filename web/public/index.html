@@ -642,7 +642,7 @@ msg.addEventListener('input', () => { if (msg.value) stopPh(); else startPh(); }
 
 /* ===== CHAT ===== */
 const lead = { problem:'', intent:null, budget:null, timing:null, decider:null, contact:null };
-let audioBlob = null, started = false, busy = false;
+let audioBlob = null, started = false, busy = false, convo = false;
 const TOTAL = 5;
 function prog(n){ $('#progress').classList.add('on'); $('#progress span').style.width = (n/TOTAL*100) + '%'; }
 const scroll = () => { thread.scrollTop = thread.scrollHeight; };
@@ -683,6 +683,7 @@ $('#backToChat').onclick = focusChatSoon;
 $('#pill').onclick = focusChatSoon;
 
 sendBtn.onclick = () => {
+  if (convo) return sendTurn();
   if (started || busy) return;
   busy = true; sendBtn.disabled = true;
   const wasRecording = rec && rec.state === 'recording';
@@ -708,6 +709,8 @@ async function start(text){
   }
   audioBlob = null;
   prog(1);
+  // 1b. Conversación libre con el agente (mismo motor que WhatsApp). Si el servidor no responde, sigue el formulario de siempre.
+  if (API.online && text){ if (await converse(text)) return; }
   // 2. Entender el problema: IA en el backend, palabras clave si no hay backend
   const ai = text ? await api('/api/chat', {sessionId, message:text}) : null;
   if (ai && ai.kind === 'sobre' && ai.reply){
@@ -756,6 +759,63 @@ async function start(text){
   lead.contact = await contactForm();
   me(`${lead.contact.name} · ${lead.contact.shown}`);
   await finish();
+}
+
+/* ===== CONVERSACIÓN LIBRE: el agente responde como Damián; el formulario de contacto aparece solo cuando hace falta ===== */
+const SAFE_LINK = /^https:\/\/(meetings\.hubspot\.com|youtu\.be|www\.youtube\.com)\//;
+async function agentCall(payload){
+  const r = await api('/api/agent', Object.assign({sessionId, utm:attribution()}, payload));
+  return r && Array.isArray(r.messages) ? r : null;
+}
+async function show(r){
+  for (const m of r.messages) await say(m, true);
+  for (const l of (r.links || [])) if (SAFE_LINK.test(l.url)){
+    const a = document.createElement('a'); a.className = 'cta ghost book'; a.href = l.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = l.t + ' →';
+    thread.append(a); scroll();
+  }
+}
+async function converse(text){
+  const typing = botRow('<div class="bub"><i></i><i></i><i></i></div>'); typing.classList.add('typing');
+  const r = await agentCall({message:text}); typing.remove();
+  if (!r) return false;
+  convo = true; busy = false;
+  $('#composer').hidden = false; msg.placeholder = 'Escribe tu respuesta…'; sendBtn.disabled = true; autosize();
+  await afterReply(r);
+  return true;
+}
+async function afterReply(r){
+  await show(r);
+  if (r.ask_contact){
+    track('contact_form');
+    lead.contact = await contactForm();
+    me(`${lead.contact.name} · ${lead.contact.shown}`);
+    const typing = botRow('<div class="bub"><i></i><i></i><i></i></div>'); typing.classList.add('typing');
+    const r2 = await agentCall({contact:{name:lead.contact.name, phone:lead.contact.phone, consent:true}}); typing.remove();
+    if (!r2){ await say('No pude enviar tus datos, parece un problema de conexión. Inténtalo de nuevo en un momento.', true); const r3 = await agentCall({message:'Quiero dejar mis datos de contacto'}); if (r3) await afterReply(r3); return; }
+    track('lead');
+    await show(r2);
+  }
+  busy = false; sendBtn.disabled = msg.value.trim().length < 3; try { msg.focus({preventScroll:true}); } catch {}
+}
+async function sendTurn(){
+  if (busy) return;
+  busy = true; sendBtn.disabled = true;
+  const wasRecording = rec && rec.state === 'recording';
+  stopRec(); if (wasRecording) await wait(400);
+  let text = msg.value.trim(); msg.value = ''; autosize();
+  const hadAudio = !!audioBlob;
+  if (hadAudio){
+    me(text || '🎙 Nota de voz');
+    const t = botRow('<div class="bub"><i></i><i></i><i></i></div>'); t.classList.add('typing');
+    const fd = new FormData(); fd.append('audio', audioBlob, 'nota.' + ((audioBlob.type||'').includes('mp4') ? 'm4a' : 'webm')); fd.append('sessionId', sessionId);
+    const tr = await api('/api/transcribe', fd, true); t.remove(); audioBlob = null;
+    if (tr && tr.text){ text = tr.text; botRow(`<div class="bub"><small>Te entendí:</small><br>“${esc(text)}”</div>`); }
+  } else if (text) me(text);
+  if (!text){ await say('No alcancé a entender el audio. ¿Me lo escribes?', true); busy = false; return; }
+  const typing = botRow('<div class="bub"><i></i><i></i><i></i></div>'); typing.classList.add('typing');
+  const r = await agentCall({message:text}); typing.remove();
+  if (!r){ await say('Se me cortó la conexión. ¿Me lo repites en un momento?', true); busy = false; return; }
+  await afterReply(r);
 }
 
 /* Acepta "300 123 4567", "+57 300-123-4567", "(57) 3001234567", "0057 300 123 4567".
@@ -830,7 +890,7 @@ let rec = null, chunks = [], stream = null, speech = null, timer = null, ac = nu
 mic.onclick = () => { track('mic_tap'); (rec && rec.state === 'recording') ? stopRec() : startRec(); };
 function flash(text){ const l = $('#recLine'); l.textContent = text; l.classList.add('warn', 'on'); setTimeout(() => { if (l.classList.contains('warn')) l.classList.remove('on', 'warn'); }, 6000); }
 async function startRec(){
-  if (started) return;
+  if (started && !convo) return;
   try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
   catch { flash('No tengo acceso al micrófono. Escríbeme aquí, sin problema.'); msg.focus(); return; }
   if (typeof MediaRecorder === 'undefined'){ stream.getTracks().forEach(t => t.stop()); flash('Tu navegador no graba audio. Escríbeme aquí, sin problema.'); msg.focus(); return; }

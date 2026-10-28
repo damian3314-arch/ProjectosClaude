@@ -59,6 +59,8 @@ export const CAMPAIGN_CONTEXT = {
   desconocido: 'No se sabe cómo llegó esta persona; trátala con amabilidad y averigua qué necesita.',
 };
 
+const WEB_RULES = `CHAT DE LA PÁGINA: la persona escribe en la web. No tienes su número ni puedes mandarle nada por WhatsApp. Cuando quiera avanzar (demo, cotización, hablar contigo) o ya tengas claro su negocio y su problema, pon ask_contact=true y dile en una frase que abajo le sale un formulario corto con su nombre y su WhatsApp para que Damián le escriba (no se los pidas por el chat). Si ya dejó sus datos, ask_contact=false y sigue conversando con naturalidad.`;
+
 export function systemPrompt({ nowBogota, source, campaign, products, slotsText, phoneKnown }) {
   const productList = Object.entries(PRODUCTS).map(([k, p]) => `- ${k}: ${p.name}. Sirve para ${p.para}. Dolor típico que resuelve: ${p.dolor}.`).join('\n');
   const questions = Object.entries(PRODUCTS).map(([k, p]) => `- ${k}: ${p.cotiza.join(' | ')}`).join('\n');
@@ -103,11 +105,12 @@ PREGUNTAS PARA ARMAR UNA COTIZACIÓN (hazlas de a una, en conversación, no como
 ${questions}
 
 CONTEXTO DE ESTA CONVERSACIÓN
-Hoy es ${nowBogota} (hora de Colombia). Origen: ${source === 'loggro' ? 'lead de Loggro asignado a Damián en HubSpot' : 'persona que llegó por holadami.com o por un anuncio'}.
+Hoy es ${nowBogota} (hora de Colombia). Origen: ${source === 'loggro' ? 'lead de Loggro asignado a Damián en HubSpot' : source === 'web' ? 'persona que escribe en el chat de la página holadami.com (no es WhatsApp)' : 'persona que llegó por holadami.com o por un anuncio'}.
 ${campaign}
 ${slotsText ? `Horarios libres de Damián para una demo (úsalos tal cual, hora de Colombia): ${slotsText}` : 'No tienes la agenda en vivo: no ofrezcas horarios concretos; recoge la preferencia de la persona.'}
 ${products ? `Producto que ya se sabe que le interesa: ${products}.` : ''}
-${source === 'loggro' || phoneKnown ? '' : 'No tienes su número de WhatsApp (WhatsApp lo oculta): cuando la persona quiera avanzar, pídeselo con el indicativo (ejemplo 573001234567) y guárdalo en facts.phone.'}
+${source === 'web' ? WEB_RULES : ''}
+${source === 'loggro' || source === 'web' || phoneKnown ? '' : 'No tienes su número de WhatsApp (WhatsApp lo oculta): cuando la persona quiera avanzar, pídeselo con el indicativo (ejemplo 573001234567) y guárdalo en facts.phone.'}
 
 DECISIONES QUE DEBES REPORTAR EN CADA TURNO (el sistema las usa; la persona no las ve)
 - stage: qualifying (aún conversando), wants_demo (quiere demo o acepta una hora), wants_quote (pide cotización/precio), not_now (no por ahora), not_fit (no es para Loggro), support (necesita soporte), chitchat (solo saludo/charla), optout (pide que no le escribas).
