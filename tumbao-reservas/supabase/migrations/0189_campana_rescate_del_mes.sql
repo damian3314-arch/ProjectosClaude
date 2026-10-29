@@ -28,8 +28,7 @@ declare v_gracia int; v_f int; v_g int; v_enc_f int := 0; v_enc_g int := 0;
 begin
   v_gracia := coalesce(nullif((select valor from ajustes where clave = 'mensualidad_gracia_dias'), '')::int, 3);
 
-  create temporary table if not exists _rescate (t text primary key, n text, v30 int, seg text) on commit drop;
-  truncate _rescate;
+  create temporary table _rescate (t text primary key, n text, v30 int, seg text) on commit drop;
 
   insert into _rescate (t, n, v30, seg)
   with base as (
