@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tablero gerencial · Joyería Santiago</title>
+  <meta name="description" content="Ventas, recaudo por cuenta, metas, temporada y precio del oro del Taller Joyería Santiago.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip" href="#principal">Saltar al contenido</a>
+
+  <header class="top">
+    <div class="wrap top-in">
+      <div class="marca">
+        <span class="marca-rombo" aria-hidden="true"></span>
+        <div>
+          <h1>Tablero gerencial</h1>
+          <p id="subtitulo">Taller Joyería Santiago</p>
+        </div>
+      </div>
+      <div class="controles">
+        <div class="seg" role="group" aria-label="Medida">
+          <button type="button" data-medida="facturado" aria-pressed="true" title="Lo vendido en el día, se haya cobrado o no (contado + crédito)">Facturado</button>
+          <button type="button" data-medida="recaudo" aria-pressed="false" title="Plata que entró en el día (contado + abonos)">Recaudo</button>
+        </div>
+        <label class="corte">
+          <span>Corte</span>
+          <input type="date" id="corte" aria-label="Fecha de corte">
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main id="principal" class="wrap">
+    <div id="avisos-datos" role="status"></div>
+
+    <section aria-labelledby="h-periodos">
+      <div class="sec-cab"><h2 id="h-periodos">Cómo vamos</h2><p id="nota-medida" class="nota"></p></div>
+      <div id="kpis" class="kpis"></div>
+    </section>
+
+    <section aria-labelledby="h-meta">
+      <div class="sec-cab"><h2 id="h-meta">Meta del mes</h2><p class="nota">Equilibrio y meta definidos en <code>js/config.js</code>.</p></div>
+      <div id="meta" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-curva">
+      <div class="sec-cab"><h2 id="h-curva">Mes acumulado frente al anterior y al año pasado</h2></div>
+      <div id="curva" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-cuentas">
+      <div class="sec-cab">
+        <h2 id="h-cuentas">Recaudo por cuenta</h2>
+        <div class="seg seg-sm" role="group" aria-label="Periodo de cuentas" id="periodo-cuentas">
+          <button type="button" data-p="dia" aria-pressed="false">Día</button>
+          <button type="button" data-p="semana" aria-pressed="false">Semana</button>
+          <button type="button" data-p="mes" aria-pressed="true">Mes</button>
+          <button type="button" data-p="trimestre" aria-pressed="false">Trimestre</button>
+          <button type="button" data-p="semestre" aria-pressed="false">Semestre</button>
+          <button type="button" data-p="anio" aria-pressed="false">Año</button>
+        </div>
+      </div>
+      <div id="cuentas" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-temporada">
+      <div class="sec-cab"><h2 id="h-temporada">Lo que falta del año y las fechas pico</h2></div>
+      <div id="temporada" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-insights">
+      <div class="sec-cab"><h2 id="h-insights">Lo que dicen los datos</h2><p class="nota">Reglas fijas sobre tus números; cada hallazgo trae las cifras que lo sustentan.</p></div>
+      <div id="insights" class="insights"></div>
+    </section>
+
+    <section aria-labelledby="h-oro">
+      <div class="sec-cab"><h2 id="h-oro">Oro hoy</h2><button type="button" id="oro-refrescar" class="btn">Actualizar</button></div>
+      <div id="oro" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-detalle">
+      <div class="sec-cab"><h2 id="h-detalle">Detalle de movimientos</h2></div>
+      <div id="detalle" class="tarjeta"></div>
+    </section>
+
+    <section aria-labelledby="h-calidad">
+      <div class="sec-cab"><h2 id="h-calidad">Calidad de los datos</h2></div>
+      <div id="calidad" class="tarjeta"></div>
+    </section>
+  </main>
+
+  <footer class="wrap pie">
+    <p id="pie">—</p>
+  </footer>
+
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
