@@ -62,6 +62,23 @@
   .fila{display:flex;align-items:center;justify-content:space-between;padding:34px 44px;border-radius:30px;background:rgba(255,255,255,.05);border:2px solid rgba(255,161,79,.25)}
   .fila .izq{font-size:44px;font-weight:800}
   .fila .der{font-size:44px;font-weight:900;color:var(--naranja)}
+
+  /* ── 29 oct · versión navideña de los anuncios (sin cosas encimadas: cada bloque vive en su franja) ── */
+  :root{--oro:#ffd479;--rojo:#e0243a}
+  .fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+  .n-logo{position:absolute;left:50%;transform:translateX(-50%);width:250px}
+  .n-franja-sup{position:absolute;left:0;right:0;top:0;height:470px;z-index:-1;background:linear-gradient(180deg,#050505 0%,rgba(5,5,5,.96) 52%,rgba(5,5,5,0) 100%)}
+  .n-velo{position:absolute;inset:0;z-index:-1;background:rgba(5,5,5,.38)}
+  .n-bloque{position:absolute;left:90px;right:90px}
+  .n-bloque .ceja{margin-bottom:20px}
+  .n-bloque h1{font-size:104px}
+  .n-bloque h2{font-size:84px}
+  .n-bloque .sub{font-size:36px;margin-top:22px}
+  .n-bloque .web{margin-top:34px;padding:24px 38px;font-size:38px}
+  .n-oro{color:var(--oro)}
+  .n-cinta{display:inline-flex;align-items:center;gap:12px;padding:10px 22px;border-radius:99px;font-size:26px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:#2a0a05;background:linear-gradient(180deg,#ffe7a8,#ffc14d);box-shadow:0 10px 26px -8px rgba(255,193,77,.7)}
+  .n-cinta i{width:12px;height:12px;border-radius:50%;background:var(--rojo);box-shadow:0 0 0 3px rgba(224,36,58,.25)}
 </style>
 </head>
 <body>
@@ -85,6 +102,30 @@ const PM = { foto: 'pase-mensualidad.jpg', nom: 'Mensualidad', cant: 'Todo el me
 const WEB = '<span class="web">tumbaobaila.com/mensualidad</span>';
 const WA = '<span class="web">Escríbenos por WhatsApp</span>';
 const LETRA = '<p class="letra">Clases adicionales al completar todas las clases de tu tiquetera: 1 con la de 4 y 2 con la de 8. Valen 30 días. Aplica a todas las tiqueteras.</p>';
+
+
+// Brillo navideño: guirnalda de luces arriba, nieve fina y destellos dorados. Todo en un SVG detrás del texto.
+const navidad = (W, H, { nieve = 46, destellos = [], semilla = 7, evitar = [] } = {}) => {
+  let r = semilla; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  const colores = ['#ffd479', '#ff5a4d', '#ff9a3c', '#fff2cf', '#ffd479', '#ff6b81'];
+  const hilo = (x) => 78 + Math.sin((x / W) * Math.PI * 3) * 20;   // el cable se descuelga entre luces
+  let luces = '<path d="M-10 70 ' + Array.from({ length: 28 }, (_, i) => { const x = (i + 1) * (W + 20) / 28; return `L${x.toFixed(0)} ${hilo(x).toFixed(0)}`; }).join(' ') + '" fill="none" stroke="#2a1a10" stroke-width="5" stroke-linecap="round"/>';
+  for (let i = 0; i < 15; i++) {
+    const x = 40 + i * (W - 80) / 14, y = hilo(x) + 22, c = colores[i % colores.length];
+    luces += `<line x1="${x}" y1="${hilo(x)}" x2="${x}" y2="${y - 10}" stroke="#2a1a10" stroke-width="4"/>
+      <circle cx="${x}" cy="${y + 8}" r="38" fill="${c}" opacity=".16"/><circle cx="${x}" cy="${y + 8}" r="22" fill="${c}" opacity=".3"/>
+      <ellipse cx="${x}" cy="${y + 6}" rx="11" ry="16" fill="${c}"/><ellipse cx="${x - 3}" cy="${y}" rx="3.5" ry="6" fill="#fff" opacity=".7"/>`;
+  }
+  let copos = '';
+  for (let i = 0; i < nieve; i++) {
+    const x = rnd() * W, y = 150 + rnd() * (H - 150), t = 2 + rnd() * 4.5;
+    if (evitar.some(([a, b, c, d]) => x > a - 14 && x < c + 14 && y > b - 14 && y < d + 14)) continue;
+    copos += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${t.toFixed(1)}" fill="#fff" opacity="${(.25 + rnd() * .5).toFixed(2)}"/>`;
+  }
+  const estrella = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})"><circle r="46" fill="#ffd479" opacity=".14"/>
+      <path d="M0 -34 C3 -10 10 -3 34 0 C10 3 3 10 0 34 C-3 10 -10 3 -34 0 C-10 -3 -3 -10 0 -34Z" fill="#ffe7a8"/><circle r="4" fill="#fff"/></g>`;
+  return `<svg class="fx" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${copos}${luces}${destellos.map(d => estrella(d[0], d[1], d[2])).join('')}</svg>`;
+};
 
 const PIEZAS = {
   // ── Carrusel «Tu constancia suma» (1080 × 1350) ───────────────────────────
@@ -127,6 +168,25 @@ const PIEZAS = {
         <div class="cont" style="top:230px;bottom:auto"><span class="ceja">Tú eliges cómo bailar</span><h2>Elige cómo<br>bailar noviembre</h2></div>
         <div class="pases" style="top:500px">${pase(PM)}</div>
         <div class="cont" style="bottom:70px"><p class="sub" style="margin-top:0">También tiquetera de <b>4 y 8 clases</b>.</p>${WA}</div></div>`,
+
+  // ── 29 oct · versión navideña (cada bloque en su franja: logo, foto, texto y botón no se pisan) ──
+  n1: `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="velo"></div><div class="n-franja-sup" style="height:400px"></div>
+        <div class="n-velo" style="background:rgba(5,5,5,.1)"></div>${navidad(1080, 1350, { nieve: 70, destellos: [[930, 470, 1], [140, 560, .6], [985, 700, .5]], evitar: [[60, 730, 1020, 1300], [380, 130, 700, 270]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:150px">
+        <div class="n-bloque" style="bottom:84px"><span class="n-cinta"><i></i>Noviembre en Tumbao</span><h1 style="margin-top:22px">Noviembre<br><em>se baila.</em></h1>
+        <p class="sub">Mensualidad <b>$125.000</b>: todas tus clases de lunes a sábado, a <b class="n-oro">≈ $5.000 cada una</b>.</p>${WA}</div></div>`,
+  n2: `<div class="pieza"><div class="resplandor"></div>
+        ${navidad(1080, 1350, { nieve: 60, destellos: [[930, 330, .9], [70, 560, .5], [1000, 1130, .7]], semilla: 11, evitar: [[80, 290, 780, 570], [160, 580, 920, 1070], [80, 1090, 720, 1300], [380, 130, 700, 270]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:150px">
+        <div class="n-bloque" style="top:300px"><span class="n-cinta"><i></i>Tú eliges cómo bailar</span><h2 style="margin-top:20px">Elige cómo<br>bailar noviembre</h2></div>
+        <div class="pases" style="top:590px;transform:translateX(-50%) scale(.9);transform-origin:top center">${pase(PM)}</div>
+        <div class="n-bloque" style="bottom:60px"><p class="sub" style="margin-top:0">También tiquetera de <b class="n-oro">4 y 8 clases</b>.</p>${WA}</div></div>`,
+  n3: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div><div class="n-velo" style="background:rgba(5,5,5,.5)"></div><div class="n-franja-sup" style="height:620px"></div>
+        ${navidad(1080, 1920, { nieve: 80, destellos: [[975, 1010, .8], [70, 1010, .5], [990, 1290, .6]], semilla: 5, evitar: [[150, 450, 930, 960], [80, 1010, 900, 1580], [380, 270, 700, 400]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:290px">
+        <div class="pases" style="top:470px;transform:translateX(-50%) scale(.92);transform-origin:top center">${pase(PM)}</div>
+        <div class="n-bloque" style="top:1030px"><span class="n-cinta"><i></i>Arranca noviembre</span><h1 style="margin-top:22px">Bailemos<br><em>noviembre.</em></h1>
+        <p class="sub">Todas tus clases de lunes a sábado. Escríbenos y te ayudamos a elegir tu horario.</p>${WA}</div></div>`,
 
   // ── Historias (1080 × 1920) ─────────────────────────────────────────────
   h1: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div>
