@@ -209,6 +209,11 @@ const PIEZAS = {
         <div class="cont" style="bottom:240px"><span class="ceja">Mensualidad</span><h2>Todo el mes,<br>tu horario fijo</h2>
         <p class="sub">De lunes a viernes llegas y entras, sin reservar. Sale a <b>≈ $5.000 por clase</b> si vienes a todas.</p>${WEB}</div></div>`,
 };
+
+// Versión para el anuncio que abre la página (mientras el número de Timba se vincula a la página de anuncios): el botón dice la dirección.
+const aWeb = h => h.replace('Escríbenos por WhatsApp', 'tumbaobaila.com/mensualidad')
+  .replace('Escríbenos y te ayudamos a elegir tu horario.', 'Elige tu horario y apártalo en un minuto.');
+PIEZAS.w1 = aWeb(PIEZAS.n1); PIEZAS.w2 = aWeb(PIEZAS.n2); PIEZAS.w3 = aWeb(PIEZAS.n3);
 const id = new URLSearchParams(location.search).get('p') || 'c1';
 document.getElementById('raiz').innerHTML = PIEZAS[id] || '';
 window.LISTAS = Object.keys(PIEZAS);
