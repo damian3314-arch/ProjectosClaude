@@ -224,6 +224,17 @@ titulo('6. Lista de espera: sin preguntas de salud hasta que haya cupo');
   await p.close();
 }
 
+titulo('7. Los cupos reales debajo del botón de comprar');
+{
+  const { p } = await abrir({ entrar: false });
+  await p.waitForSelector('#cupos-vivos:not([hidden])', { timeout: 10000 });
+  const t = await p.locator('#cupos-vivos').innerText();
+  ok('dice cuántos cupos hay en cada horario, con los números del servidor', /7:00 am · 15 cupos/.test(t) && /7:00 pm · 10 cupos/.test(t), t);
+  ok('el horario lleno se dice como lista de espera', /6:00 pm · lista de espera/.test(t), t);
+  ok('sin descuentos, regalos ni «últimas horas»', !/descuento|regalo|gratis|promo|últimas horas/i.test(t));
+  await p.close();
+}
+
 await b.close();
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

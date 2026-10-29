@@ -1268,6 +1268,59 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 29 oct: «rescatar el mes». Dos mensajes, uno para quien baila seguido y otro para el resto de la base. Sin descuento, regalo
+    // ni promoción (la dueña no los autoriza): solo la mensualidad y las tiqueteras con sus precios de siempre. Se crean en Meta
+    // (gratis); enviarlas cuesta (marketing) y escribe a clientes reales: lo autoriza Damián (campana_rescate_mes, 0189).
+    name: 'rescate_mes_frecuentes',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 💃🧡\n\n' +
+          'Este mes ya bailaste *{{2}} veces* con nosotros. Qué manera tan linda de moverte.\n\n' +
+          'Para que noviembre empiece con el mismo ritmo, elige cómo seguir:\n' +
+          '• *Mensualidad* $125.000: todas tus clases de lunes a sábado en tu horario (alrededor de $5.000 cada una)\n' +
+          '• *Tiquetera* de 4 u 8 clases, para ir a tu paso\n\n' +
+          'Se aparta en un minuto 👇',
+        example: { body_text: [['Laura', '4']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver mensualidad y tiqueteras', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'rescate_mes_general',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡\n\n' +
+          '¿Al cuerpo le quedaron ganas de rumba? Cerremos octubre bailando y empecemos noviembre con ritmo 💃\n\n' +
+          'Tenemos *mensualidad* ($125.000, todas tus clases de lunes a sábado) y *tiqueteras* de 4 y 8 clases para que vengas a tu paso.\n\n' +
+          'Elige la tuya y apártala en un minuto 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver mensualidad y tiqueteras', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 9 oct (0165): a quien reservó una clase suelta y no ha pagado se le recuerda, a los ~8 minutos y UNA sola vez, que
     // su cupo sigue guardado. Es sobre SU reserva (utilidad), sin oferta ni descuento.
     name: 'reserva_pendiente_pago',

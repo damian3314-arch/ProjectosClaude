@@ -980,6 +980,12 @@ const CONFIG = {
     border:1px solid rgba(255,122,31,.4);text-align:left;line-height:1.5}
   .bloque-huella b.t{display:block;font-size:1rem;margin-bottom:.2rem;color:var(--hot-2)}
   [data-nueva][hidden],[data-pago][hidden]{display:none}
+  .cupos-vivos{margin:.2rem 0 0;text-align:center;font-size:.8rem;color:var(--tx-2);display:flex;flex-wrap:wrap;gap:.35rem .5rem;justify-content:center;align-items:center}
+  .cupos-vivos[hidden]{display:none}
+  .cupos-vivos b{width:100%;color:var(--tx);font-weight:600}
+  .cupos-vivos .cv{padding:.25rem .65rem;border-radius:999px;background:var(--bg-2);border:1px solid var(--line)}
+  .cupos-vivos .cv.pocos{border-color:var(--hot);color:var(--hot-2)}
+  .cupos-vivos .cv.lleno{color:var(--tx-3)}
 </style>
 <script>
 /* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
@@ -1039,6 +1045,8 @@ const CONFIG = {
   <!-- 25 oct (Damián): el botón de comprar va PEGADO a los pases. Tocar un pase lo elige; tocarlo otra vez (o el
        botón) arranca la compra. Lo que incluye va debajo, en su propia caja. -->
   <div class="cta-pase" id="cta-pase"></div>
+  <!-- 29 oct: la urgencia honesta —los cupos reales de mensualidad ahora mismo—, sin descuentos ni «últimas horas». -->
+  <p class="cupos-vivos" id="cupos-vivos" hidden></p>
   <div class="detalle" id="detalle" aria-live="polite"></div>
 
   <div class="faq" id="faq"></div>
@@ -1420,6 +1428,7 @@ const CONFIG = {
       $('#precio').textContent = pesos(valorCop);
       $('#monto').textContent = pesos(valorCop);
       pintarHoras();
+      pintarCuposVivos();
     } catch (e) {
       $('#horas').innerHTML = '';
       aviso('#err0',
@@ -1427,6 +1436,20 @@ const CONFIG = {
         `<a href="${waUrl('Hola Tumbao, quiero mensualidad pero la página no cargó los cupos.')}" ` +
         'target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y te decimos.', 'malo');
     }
+  }
+
+  /* Debajo del botón de comprar: cuántos cupos de mensualidad hay AHORA en cada horario (los de la base, no inventados).
+     Quien lee «quedan 3» decide más rápido que quien lee «hay cupo». Un horario lleno se dice como lista de espera. */
+  function pintarCuposVivos() {
+    const el = $('#cupos-vivos');
+    if (!el || !horas.length) return;
+    const trozos = horas.map(h => {
+      const n = Number(h.libres);
+      if (!(n > 0)) return `<span class="cv lleno">${esc(h.etiqueta)} · lista de espera</span>`;
+      return `<span class="cv${n <= 5 ? ' pocos' : ''}">${esc(h.etiqueta)} · ${n === 1 ? '1 cupo' : n + ' cupos'}</span>`;
+    });
+    el.innerHTML = '<b>Cupos de mensualidad ahora:</b> ' + trozos.join('');
+    el.hidden = false;
   }
 
   /* Los horarios sin cupo no se pueden comprar: solo lista de espera. La
