@@ -80,9 +80,16 @@ async function abrir({ cupos, solicitar, pague } = {}) {
 }
 
 const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
-                           habeas = true } = {}) => {
+                           habeas = true, registro = true } = {}) => {
   await p.fill('#nombre', nombre);
   await p.fill('#celular', celular);
+  // 29 oct: quien viene por primera vez y va a pagar deja también nacimiento, correo y salud.
+  if (registro && await p.locator('#nacimiento').isVisible()) {
+    await p.fill('#nacimiento', '1990-05-14');
+    await p.fill('#correo', 'maria@correo.com');
+    for (const k of ['corazon', 'pecho', 'lesion', 'embarazo', 'otra']) await p.check(`input[name="s-${k}"][value="0"]`);
+    await p.check('#salud-ok');
+  }
   if (habeas) await p.check('#habeas');
 };
 
@@ -212,9 +219,8 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   ok('el aviso no habla de requisitos', !/requisito/i.test(aviso), aviso);
   ok('no dice «lleno» ni «no se puede comprar»: no espanta', !/lleno|no se puede comprar/i.test(aviso), aviso);
   ok('y que no hay nada que pagar', /no hay nada que pagar/.test(aviso), aviso);
-  const href = await p.locator('#aviso-lleno a').getAttribute('href');
-  ok('el alumno que renueva tiene su salida por WhatsApp',
-     /wa\.me\/573017833550/.test(href) && /renovar/.test(decodeURIComponent(href)), href);
+  ok('la alumna que renueva tiene su entrada en la página (29 oct), no en el chat',
+     (await p.locator('#aviso-lleno a[data-renovar]').count()) === 1 && /Renueva aquí/.test(aviso), aviso);
 
   // Las filas.
   const filas = await p.evaluate(() =>
@@ -233,7 +239,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const sub = await p.locator('#sub1').innerText();
   ok('el formulario explica que es una lista', /tiene lista de espera/.test(sub), sub);
   ok('y que no se paga nada', /No tienes que pagar nada ahora/.test(sub), sub);
-  ok('y manda al alumno que renueva al chat', /ya eres alumno y quieres renovar/i.test(sub), sub);
+  ok('y manda a la alumna que renueva a la renovación de la página', /ya eres alumna y estás renovando/i.test(sub) && (await p.locator('#sub1 [data-renovar]').count()) === 1, sub);
   const boton = await p.locator('#btn-enviar').textContent();
   ok('el botón dice que es apuntarse a la lista', /Apuntarme a la lista de espera/.test(boton), boton);
   ok('y no habla de pagar', !/pag/i.test(boton), boton);
@@ -311,6 +317,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   ok('un celular corto tampoco', /10 dígitos/.test(await p.locator('#err1').innerText()));
 
   await p.fill('#celular', '3001234567');
+  await llenar(p, { habeas: false });
   await p.click('#btn-enviar');
   ok('ni sin autorizar los datos',
      /autorizar el uso de tus datos/.test(await p.locator('#err1').innerText()),

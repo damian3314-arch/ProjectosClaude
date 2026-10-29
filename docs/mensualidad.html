@@ -951,6 +951,35 @@ const CONFIG = {
   html.halloween .codigo{border-color:rgba(255,122,31,.4)}
   html.halloween .codigo b{text-shadow:0 0 18px rgba(255,122,31,.45)}
   html.halloween .tarjeta .destacado,html.halloween .btn{color:var(--on-hot)}
+
+  /* ---------- 29 oct: renovar y registro de primera vez ---------- */
+  .renovar-caja{display:flex;align-items:center;gap:.9rem;justify-content:space-between;margin:0 0 1.1rem;
+    padding:.8rem .95rem;border-radius:var(--r);background:var(--bg-2);border:1px solid var(--line-2)}
+  .renovar-caja b{display:block;font-size:.95rem;color:var(--tx)}
+  .renovar-caja span{display:block;font-size:.8rem;color:var(--tx-2);margin-top:.1rem}
+  .renovar-caja button{flex:none;padding:.62rem .9rem;border-radius:999px;border:1px solid var(--hot);background:transparent;
+    color:var(--hot-2);font:inherit;font-weight:700;font-size:.85rem;cursor:pointer}
+  .renovar-caja button:hover{background:rgba(255,122,31,.12)}
+  @media (max-width:420px){.renovar-caja{flex-direction:column;align-items:stretch;text-align:center}}
+  input[type=date],textarea{width:100%;padding:.72rem .85rem;border-radius:11px;background:var(--bg-2);
+    border:1px solid var(--line);color:var(--tx);font:inherit;transition:.16s;color-scheme:dark}
+  textarea{resize:vertical;min-height:4.2rem}
+  input[type=date]:focus,textarea:focus{border-color:var(--hot);background:var(--bg-3);outline:none}
+  input[type=date].mal,.pregunta.mal{border-color:var(--bad)}
+  .salud{border:1px solid var(--line);border-radius:var(--r);padding:.9rem;display:grid;gap:.8rem;margin:0;min-width:0}
+  .salud legend{padding:0 .4rem;font-weight:700;font-size:.9rem;color:var(--tx)}
+  .pregunta{display:grid;gap:.45rem;padding:.2rem 0;border-radius:10px;border:1px solid transparent}
+  .pregunta > span{font-size:.84rem;color:var(--tx-2);line-height:1.45}
+  .sn{display:flex;gap:.6rem}
+  .sn label{margin:0;flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.55rem;border-radius:10px;
+    background:var(--bg-2);border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:.88rem}
+  .sn input{accent-color:var(--hot);width:1rem;height:1rem;margin:0}
+  .sn label:has(input:checked){border-color:var(--hot);background:rgba(255,122,31,.12)}
+  .aviso-salud{margin:0;border-left:3px solid var(--gold);line-height:1.5}
+  .bloque-huella{margin-top:1rem;padding:.9rem 1rem;border-radius:var(--r);background:rgba(255,122,31,.1);
+    border:1px solid rgba(255,122,31,.4);text-align:left;line-height:1.5}
+  .bloque-huella b.t{display:block;font-size:1rem;margin-bottom:.2rem;color:var(--hot-2)}
+  [data-nueva][hidden],[data-pago][hidden]{display:none}
 </style>
 <script>
 /* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
@@ -995,6 +1024,12 @@ const CONFIG = {
      demás —cómo se reserva, cuánto dura, cómo se paga— va en las
      preguntas frecuentes, al final. Dos o tres pantallazos y listo. -->
 <section id="eleccion">
+  <!-- 29 oct (Damián): el bot manda a las alumnas a esta página y se quedaban perdidas. Quien YA es alumna o está
+       renovando entra por aquí: solo nombre y celular, y directo al pago. -->
+  <div class="renovar-caja" id="renovar-caja">
+    <div><b>¿Ya eres alumna de Tumbao?</b><span>Si estás renovando tu plan, entra por aquí: más rápido.</span></div>
+    <button type="button" id="btn-renovar">Renovar mi mensualidad</button>
+  </div>
   <h2 class="el-titulo">Elige tu pase</h2>
   <p class="sub el-sub">Desliza para ver las opciones.</p>
   <div class="pases" id="tarjetas-eleccion" role="listbox" aria-label="Pases de Tumbao">
@@ -1031,8 +1066,8 @@ const CONFIG = {
 <!-- ═══════ 0 · qué es y qué horario ═══════ -->
 <section id="s0" hidden>
   <button type="button" class="volver-eleccion" id="volver-eleccion-mens">← Cambiar de opción</button>
-  <h2>Tu mensualidad en Tumbao</h2>
-  <p class="sub">Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.</p>
+  <h2 id="s0-titulo">Tu mensualidad en Tumbao</h2>
+  <p class="sub" id="s0-sub">Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.</p>
 
   <!-- Se llena solo cuando hay horarios sin cupo (pintarHoras). Va ARRIBA,
        antes del precio: quien lee «$125.000 al mes» tiene que saber ya que
@@ -1071,30 +1106,66 @@ const CONFIG = {
     </div>
 
     <div>
-      <label for="nombre">Nombre y apellido</label>
+      <label for="nombre" id="l-nombre">Nombre completo</label>
       <input id="nombre" type="text" autocomplete="name" placeholder="María Fernanda Ruiz">
+      <p class="hint" id="h-nombre" data-nueva>Con tu apellido, como aparece en tu documento.</p>
     </div>
     <div>
       <label for="celular">Celular (WhatsApp)</label>
       <input id="celular" type="tel" inputmode="numeric" autocomplete="tel-national"
              placeholder="3001234567" maxlength="12">
-      <p class="hint">Por ahí te confirmamos.</p>
+      <p class="hint" id="h-celular">Por ahí te confirmamos.</p>
     </div>
-    <div>
+    <!-- Solo para quien viene por primera vez. Sin estos datos el sistema de accesos no la crea. -->
+    <div data-nueva data-pago>
+      <label for="nacimiento">Fecha de nacimiento</label>
+      <input id="nacimiento" type="date" autocomplete="bday" min="1925-01-01">
+    </div>
+    <div data-nueva>
       <label for="documento">Documento <span class="opt">(opcional)</span></label>
       <input id="documento" type="text" inputmode="numeric" placeholder="1098765432" maxlength="20">
     </div>
-    <div>
-      <label for="correo">Correo <span class="opt">(opcional)</span></label>
+    <div data-nueva data-pago>
+      <label for="correo" id="l-correo">Correo</label>
       <input id="correo" type="email" autocomplete="email" placeholder="maria@correo.com">
     </div>
 
-    <div class="check">
-      <input id="habeas" type="checkbox">
-      <label for="habeas">Autorizo a Tumbao a guardar y usar mis datos para
-        gestionar mi mensualidad y contactarme por WhatsApp.</label>
+    <fieldset class="salud" id="bloque-salud" data-nueva data-pago>
+      <legend>Tu salud</legend>
+      <p class="hint" style="margin:0">Cinco preguntas rápidas, para cuidarte en clase. Contesta con sinceridad.</p>
+      <div class="pregunta" data-k="corazon"><span>¿Algún médico te ha dicho que tienes una condición del corazón o la presión alta?</span>
+        <div class="sn"><label><input type="radio" name="s-corazon" value="0"> No</label><label><input type="radio" name="s-corazon" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="pecho"><span>¿Sientes dolor en el pecho, mareos o pierdes el equilibrio cuando haces ejercicio?</span>
+        <div class="sn"><label><input type="radio" name="s-pecho" value="0"> No</label><label><input type="radio" name="s-pecho" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="lesion"><span>¿Tienes alguna lesión o dolor en huesos, articulaciones o espalda que el baile pueda empeorar?</span>
+        <div class="sn"><label><input type="radio" name="s-lesion" value="0"> No</label><label><input type="radio" name="s-lesion" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="embarazo"><span>¿Estás en embarazo o en posparto reciente?</span>
+        <div class="sn"><label><input type="radio" name="s-embarazo" value="0"> No</label><label><input type="radio" name="s-embarazo" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="otra"><span>¿Tienes alguna otra condición de salud, o tomas medicación, que limite la actividad física?</span>
+        <div class="sn"><label><input type="radio" name="s-otra" value="0"> No</label><label><input type="radio" name="s-otra" value="1"> Sí</label></div></div>
+      <div class="aviso info aviso-salud" id="aviso-salud" hidden>
+        Gracias por contarnos. <b>Recomendamos siempre que la actividad física se haga siguiendo las
+        recomendaciones médicas que hayas recibido</b> de tu médico, sobre todo si tienes una condición especial.
+      </div>
+      <div id="salud-detalle-caja" hidden>
+        <label for="salud-detalle">Si quieres, cuéntanos cuál <span class="opt">(opcional)</span></label>
+        <textarea id="salud-detalle" maxlength="400" placeholder="Ej: operación de rodilla hace dos años"></textarea>
+      </div>
+    </fieldset>
+    <div class="check" data-nueva data-pago>
+      <input id="salud-ok" type="checkbox">
+      <label for="salud-ok">Declaro que lo que contesté sobre mi salud es verdad, que me siento en condiciones de
+        hacer actividad física y que la hago bajo mi propia responsabilidad.</label>
     </div>
-    <div class="check">
+
+    <div class="check" data-nueva>
+      <input id="habeas" type="checkbox">
+      <label for="habeas" id="l-habeas">Autorizo a Tumbao a guardar y usar mis datos personales —incluida mi huella
+        dactilar, que se registra para controlar el ingreso a las clases— para gestionar mi mensualidad y
+        contactarme por WhatsApp. Puedo pedir que los borren cuando quiera
+        (<a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a>).</label>
+    </div>
+    <div class="check" data-nueva>
       <input id="novedades" type="checkbox">
       <label for="novedades">Quiero recibir novedades y promociones de Tumbao por
         WhatsApp <span class="opt">(opcional)</span></label>
@@ -1303,6 +1374,9 @@ const CONFIG = {
   let horaElegida = null;  // 'HH:MM'
   let valorCop = 125000;
   let solicitud = null;    // { id, estado }
+  // 29 oct: «nueva» = primera vez (registro completo) · «renovacion» = ya es alumna (nombre, celular y a pagar).
+  let modo = 'nueva';
+  let hayPago = true;      // el horario elegido se puede pagar (si no, lista de espera sin datos de salud)
 
   const waUrl = (texto) =>
     `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(texto)}`;
@@ -1379,8 +1453,7 @@ const CONFIG = {
       `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
       `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo. ` +
       'Apuntarte es gratis: <b>no hay nada que pagar</b>. ' +
-      `¿Ya eres alumno y quieres renovar? <a href="${waRenovar('')}" target="_blank" ` +
-      'rel="noopener">Escríbenos por WhatsApp</a> y te damos los datos.';
+      '¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>: tu cupo es tuyo.';
     caja.hidden = false;
   }
 
@@ -1402,7 +1475,9 @@ const CONFIG = {
          El número exacto se queda —"1 cupo" mueve mucho más que "hay
          cupo"— con su concordancia, y la urgencia la pone el color: de
          tres para abajo la pastilla se vuelve dorada. */
-      const pastilla = libre
+      // Quien renueva ya tiene su cupo en ese horario: no ve «cupos» ni «lista de espera», ve «Renovar».
+      const renueva = modo === 'renovacion';
+      const pastilla = renueva ? 'Renovar' : libre
         ? (n === 1 ? '1 cupo' : `${n} cupos`)
         : 'Apuntarme';
       /* El renglón del medio decía "Plan mensualidad" en las tres filas:
@@ -1413,10 +1488,10 @@ const CONFIG = {
       return `<button type="button" class="clase hora" data-hora="${esc(h.hora)}">
           <span class="hr">${esc(h.etiqueta)}</span>
           <span class="info">
-            <span class="nom">${libre ? 'Lunes a sábado' : 'Lista de espera'}</span>
-            <span class="meta">${libre ? 'Sin domingos ni festivos' : 'Sin pago · te avisamos'}</span>
+            <span class="nom">${renueva ? 'Tu horario de siempre' : libre ? 'Lunes a sábado' : 'Lista de espera'}</span>
+            <span class="meta">${renueva ? 'Pagas y sigues bailando' : libre ? 'Sin domingos ni festivos' : 'Sin pago · te avisamos'}</span>
           </span>
-          <span class="cupos ${libre ? (n <= 3 ? 'pocos' : '') : 'invita'}">${pastilla}</span>
+          <span class="cupos ${renueva ? '' : libre ? (n <= 3 ? 'pocos' : '') : 'invita'}">${pastilla}</span>
         </button>`;
     }).join('');
 
@@ -1424,33 +1499,74 @@ const CONFIG = {
       b.addEventListener('click', () => {
         horaElegida = b.dataset.hora;
         const h = laHora();
-        const hay = Number(h.libres) > 0;
-        // La barra «Horario · Datos · Pago» promete un paso de pago: en la
-        // lista de espera no existe, así que no se enseña.
-        $('#pasos').hidden = !hay;
-        $('#t1').textContent = hay ? '¿Quién eres?' : 'Apúntate a la lista de espera';
-        // Se dice ANTES de pedir los datos si va a poder pagar o no. Que
-        // alguien llene el formulario creyendo que compra y termine en
-        // una lista de espera es la peor forma de enterarse.
-        $('#resumen').innerHTML = hay
-          ? `<strong>Plan mensualidad · ${esc(h.etiqueta)}</strong>` +
-            `<span>${pesos(valorCop)} al mes</span>`
-          : `<strong>Lista de espera · ${esc(h.etiqueta)}</strong>` +
-            '<span>Sin pago</span>';
-        $('#sub1').innerHTML = hay
-          ? 'Con estos datos te apartamos el cupo mientras pagas.'
-          : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
-            'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
-            '<b>No tienes que pagar nada ahora.</b> ' +
-            `<br><br>¿Ya eres alumno y quieres renovar? No uses este formulario: ` +
-            `<a href="${waRenovar(h.etiqueta)}" target="_blank" rel="noopener">` +
-            'escríbenos por WhatsApp</a> y te damos los datos.';
-        $('#btn-enviar').textContent = hay ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
+        // Quien renueva ya tiene su cupo: siempre va al pago. El servidor confirma que sí es alumna.
+        hayPago = modo === 'renovacion' || Number(h.libres) > 0;
+        pintarDatos();
         aviso('#err1', '');
         ir(1);
       });
     }
   }
+
+  /* Pinta la pantalla de datos según el caso: renovación (corta), primera vez con pago (completa, con salud) o
+     lista de espera (nombre, celular y autorización: sin preguntas de salud hasta que haya cupo). */
+  function pintarDatos(aviso1) {
+    const h = laHora();
+    if (!h) return;
+    const renueva = modo === 'renovacion';
+    const hay = hayPago;
+    // La barra «Horario · Datos · Pago» promete un paso de pago: en la lista de espera no existe, así que no se enseña.
+    $('#pasos').hidden = !hay;
+    $('#t1').textContent = renueva ? 'Renueva tu mensualidad' : hay ? '¿Quién eres?' : 'Apúntate a la lista de espera';
+    // Se dice ANTES de pedir los datos si va a poder pagar o no. Que alguien llene el formulario creyendo que compra
+    // y termine en una lista de espera es la peor forma de enterarse.
+    $('#resumen').innerHTML = hay
+      ? `<strong>${renueva ? 'Renovación' : 'Plan mensualidad'} · ${esc(h.etiqueta)}</strong>` +
+        `<span>${pesos(valorCop)} al mes</span>`
+      : `<strong>Lista de espera · ${esc(h.etiqueta)}</strong>` +
+        '<span>Sin pago</span>';
+    $('#sub1').innerHTML = (aviso1 ? `<b>${esc(aviso1)}</b><br><br>` : '') + (renueva
+      ? 'Escribe tu nombre y el celular con el que te inscribiste: te encontramos y pasas directo al pago.'
+      : hay
+        ? 'Es tu primera vez en Tumbao: con estos datos te creamos en el sistema de acceso y te apartamos el cupo mientras pagas.'
+        : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
+          'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
+          '<b>No tienes que pagar nada ahora.</b> ' +
+          '<br><br>¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>.');
+    // Qué campos se ven: nada de registro para quien renueva; salud y nacimiento solo si de verdad va a pagar.
+    for (const el of document.querySelectorAll('#form [data-nueva]')) {
+      el.hidden = renueva || (el.hasAttribute('data-pago') && !hay);
+    }
+    $('#l-nombre').textContent = renueva ? 'Nombre y apellido' : 'Nombre completo';
+    $('#btn-enviar').textContent = renueva || hay ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
+    $('#volver0').textContent = '← Cambiar de horario';
+  }
+
+  // «Renueva aquí» (en los avisos de lista de espera) y el aviso de arriba llevan al mismo sitio.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('[data-renovar]');
+    if (a) { e.preventDefault(); entrarRenovacion(); }
+  });
+
+  /* Las alumnas que ya tienen su plan entran por aquí. */
+  function entrarRenovacion() {
+    modo = 'renovacion';
+    $('#eleccion').hidden = true;
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = true;
+    $('#s0-titulo').textContent = 'Renueva tu mensualidad';
+    $('#s0-sub').textContent = 'Elige el horario de siempre, escribe tu celular y pasas directo al pago.';
+    $('#pasos').hidden = false;
+    $('#ir-a-tiquetera').hidden = false;
+    pintarHoras();
+    ir(0);
+  }
+  function salirDeRenovacion() {
+    modo = 'nueva';
+    $('#s0-titulo').textContent = 'Tu mensualidad en Tumbao';
+    $('#s0-sub').textContent = 'Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.';
+  }
+  $('#btn-renovar').addEventListener('click', entrarRenovacion);
 
   /* ── los datos ─────────────────────────────────────────────── */
   $('#volver0').addEventListener('click', () => { $('#pasos').hidden = false; ir(0); });
@@ -1465,30 +1581,69 @@ const CONFIG = {
     ev.preventDefault();
     const nombre = $('#nombre').value.trim();
     const tel = limpiarTel($('#celular').value);
+    const renueva = modo === 'renovacion';
+    const completa = !renueva && hayPago;      // primera vez que va a pagar: pide el registro completo
     const habeas = $('#habeas').checked;
+    const nacimiento = $('#nacimiento').value;
+    const correo = $('#correo').value.trim();
+    const SALUD = ['corazon', 'pecho', 'lesion', 'embarazo', 'otra'];
+    const marca = k => { const r = document.querySelector(`input[name="s-${k}"]:checked`); return r ? r.value === '1' : null; };
 
-    for (const id of ['#nombre', '#celular']) $(id).classList.remove('mal');
+    for (const id of ['#nombre', '#celular', '#nacimiento', '#correo']) $(id).classList.remove('mal');
+    for (const q of document.querySelectorAll('.pregunta')) q.classList.remove('mal');
     if (nombre.length < 2) { $('#nombre').classList.add('mal');
       return aviso('#err1', 'Escribe tu nombre.', 'malo'); }
+    if (!renueva && completa && !/\S+\s+\S+/.test(nombre)) { $('#nombre').classList.add('mal');
+      return aviso('#err1', 'Escribe tu nombre completo, con apellido.', 'malo'); }
     if (tel.length !== 10) { $('#celular').classList.add('mal');
       return aviso('#err1', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
-    if (!habeas) return aviso('#err1', 'Falta autorizar el uso de tus datos.', 'malo');
+    if (completa) {
+      const nac = nacimiento ? new Date(nacimiento + 'T00:00:00') : null;
+      const edad = nac ? (Date.now() - nac.getTime()) / (365.25 * 864e5) : 0;
+      if (!nac || isNaN(edad) || edad < 10 || edad > 100) { $('#nacimiento').classList.add('mal');
+        return aviso('#err1', 'Escribe tu fecha de nacimiento.', 'malo'); }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { $('#correo').classList.add('mal');
+        return aviso('#err1', 'Escribe un correo válido: ahí te llega tu registro.', 'malo'); }
+      const sinResponder = SALUD.filter(k => marca(k) === null);
+      if (sinResponder.length) {
+        for (const k of sinResponder) document.querySelector(`.pregunta[data-k="${k}"]`).classList.add('mal');
+        return aviso('#err1', 'Contesta las cinco preguntas de salud (Sí o No).', 'malo');
+      }
+      if (!$('#salud-ok').checked) return aviso('#err1', 'Falta aceptar la declaración de salud.', 'malo');
+    }
+    if (!renueva && !habeas) return aviso('#err1', 'Falta autorizar el uso de tus datos.', 'malo');
 
     aviso('#err1', '');
     const btn = $('#btn-enviar');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try {
+      const salud = completa ? Object.fromEntries(SALUD.map(k => [k, marca(k)])) : undefined;
+      if (salud) salud.detalle = $('#salud-detalle').value.trim();
       const r = await fetch(CONFIG.API + '/solicitar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nombre, celular: tel, hora: horaElegida,
+          nombre, celular: tel, hora: horaElegida, modo,
           documento: $('#documento').value.trim(),
-          correo: $('#correo').value.trim(),
-          habeas: true, acepta_novedades: $('#novedades').checked, apellido2: $('#apellido2').value,
+          correo, nacimiento: nacimiento || undefined, salud, salud_ok: completa ? $('#salud-ok').checked : undefined,
+          habeas: renueva ? undefined : true,
+          acepta_novedades: renueva ? false : $('#novedades').checked, apellido2: $('#apellido2').value,
         }),
       });
       const d = await r.json();
-      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      if (!d || !d.ok) {
+        // No la encontramos como alumna: no es un callejón sin salida, es el formulario de primera vez.
+        if (d && d.error === 'NO_ENCONTRADA') {
+          modo = 'nueva'; hayPago = Number((laHora() || {}).libres) > 0; pintarHoras();
+          pintarDatos('No te encontramos como alumna con ese celular. Si es tu primera vez, completa estos datos; si ya eras alumna, escríbenos por WhatsApp.');
+          return;
+        }
+        // Se liberó un cupo mientras escribía una lista de espera: ahora sí hay compra y faltan los datos.
+        if (d && d.error === 'DATOS_INCOMPLETOS' && !completa && !renueva) {
+          hayPago = true; pintarDatos('¡Hay cupo! Completa estos datos para poder pagar.');
+          return;
+        }
+        throw new Error((d && d.mensaje) || 'no se pudo');
+      }
 
       solicitud = d;
       valorCop = Number(d.valor_cop || valorCop);
@@ -1502,17 +1657,30 @@ const CONFIG = {
     } finally {
       btn.disabled = false;
       const h = laHora();
-      btn.textContent = (h && Number(h.libres) > 0)
+      btn.textContent = (modo === 'renovacion' || (h && Number(h.libres) > 0))
         ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
     }
   });
+
+  // Las preguntas de salud: si marca «Sí» en alguna, sale el aviso de siempre seguir lo que diga su médico.
+  for (const r of document.querySelectorAll('input[name^="s-"]')) {
+    r.addEventListener('change', () => {
+      const alguna = ['corazon', 'pecho', 'lesion', 'embarazo', 'otra']
+        .some(k => { const x = document.querySelector(`input[name="s-${k}"]:checked`); return x && x.value === '1'; });
+      $('#aviso-salud').hidden = !alguna;
+      $('#salud-detalle-caja').hidden = !alguna;
+    });
+  }
 
   /* ── el pago ───────────────────────────────────────────────── */
   function pintarPago() {
     const h = laHora();
     // Horario con lista de espera pero a esta persona le toca cupo (0133): la
     // página no habla de «requisitos» a nadie (predispone, 2 oct): solo celebra.
-    $('#sub2').innerHTML = (solicitud && solicitud.por_requisitos)
+    $('#sub2').innerHTML = (solicitud && solicitud.es_renovacion)
+      ? `Te encontramos: renuevas tu mensualidad de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
+        'Transfiere y avísanos aquí mismo.'
+      : (solicitud && solicitud.por_requisitos)
       ? `¡Buenas noticias! Tienes cupo en el horario de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
         'Transfiere y avísanos aquí mismo.'
       : `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
@@ -1585,8 +1753,8 @@ const CONFIG = {
           WhatsApp si se libera un cupo de las <b>${esc(hh)}</b>.</p>
        <p><b>No pagues nada todavía.</b> No hay datos de pago para este horario:
           si transfieres, no podemos asignarte el cupo.</p>
-       <p>¿Ya eres alumno de este horario y quieres renovar? Escríbenos y te
-          ayudamos.</p>
+       <p>¿Ya eres alumna de este horario y estás renovando? <a href="#" data-renovar>Renueva aquí</a>
+          con tu celular y pasas directo al pago.</p>
        ${ofertaEspera()}`;
     const irTq = $('#espera-ir-tiq');
     if (irTq) irTq.addEventListener('click', () => {
@@ -1605,7 +1773,15 @@ const CONFIG = {
        <h2>¡Gracias! Ya nos llegó tu aviso</h2>
        <p>Estamos confirmando el pago con el banco. Te escribimos por
           WhatsApp para activarte la mensualidad de las <b>${esc(hh)}</b>.</p>
-       <p>Si tienes el comprobante a mano, mándanoslo y vamos más rápido.</p>`;
+       <p>Si tienes el comprobante a mano, mándanoslo y vamos más rápido.</p>` +
+      // 29 oct (Damián): quien viene por primera vez tiene que pasar por el registro biométrico antes de entrar.
+      (solicitud && solicitud.primera_vez
+        ? `<div class="bloque-huella"><b class="t">Tu primera visita</b>
+             Cuando vengas por primera vez, <b>acércate 10 o 15 minutos antes</b> de la clase para hacer tu
+             <b>registro biométrico</b>: te tomamos la huella y te creamos en el sistema de acceso. Así, desde ese
+             día, entras a clase poniendo el dedo.</div>`
+        : (solicitud && solicitud.es_renovacion
+          ? '<p>Sigues entrando con tu huella como siempre.</p>' : ''));
     $('#wa').textContent = 'Escribirnos por WhatsApp';
     $('#wa').href = waUrl(
       `Hola Tumbao, ya transferí la mensualidad de las ${hh}. Les mando el comprobante.`);
@@ -1650,6 +1826,8 @@ const CONFIG = {
      tiquetera y recuperar dejaron de ser "sub-modos de mensualidad" y
      pasaron a ser opciones hermanas. */
   function volverAEleccion() {
+    salirDeRenovacion();
+    pintarHoras();
     $('#tiquetera-todo').hidden = true;
     $('#recuperar-todo').hidden = true;
     $('#ir-a-tiquetera').hidden = true;
@@ -2078,7 +2256,13 @@ const CONFIG = {
     }
   });
 
-  Promise.all([cargarCupos(), cargarPaquetes()]).then(pintarEleccion);
+  // El bot manda a las alumnas con ?renovar=1: caen directo en la renovación, sin pasar por la tienda de pases.
+  Promise.all([cargarCupos(), cargarPaquetes()]).then(() => {
+    pintarEleccion();
+    let renovar = false;
+    try { renovar = /^(1|si|true)$/i.test(new URLSearchParams(location.search).get('renovar') || ''); } catch (e) {}
+    if (renovar) entrarRenovacion();
+  });
 })();
 </script>
 <script>

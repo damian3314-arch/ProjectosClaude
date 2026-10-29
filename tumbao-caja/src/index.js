@@ -1051,28 +1051,49 @@ async function pagina(request, env, ruta, origen, ctx) {
 
       const nombre = txt(b.nombre, 80);
       const habeas = b.habeas === true || b.habeas === 'true';
-      if (!(nombre.length >= 2 && tel.length === 10 && habeas)) {
+      // 29 oct: quien RENUEVA solo pone nombre y celular (ya autorizó sus datos cuando se inscribió). Quien viene
+      // por primera vez deja además correo, fecha de nacimiento, las preguntas de salud y las dos autorizaciones;
+      // esas las exige Postgres, que es quien sabe si la persona ya es alumna.
+      const modo = b.modo === 'renovacion' ? 'renovacion' : 'nueva';
+      if (!(nombre.length >= 2 && tel.length === 10 && (habeas || modo === 'renovacion'))) {
         return json({ ok: false, error: 'datos_incompletos',
           mensaje: 'Revisa el nombre, el celular y la autorización de datos.' },
           400, origen);
       }
 
+      // Solo las cinco respuestas de salud y un texto corto: nada más de lo que mande el navegador pasa a la base.
+      let salud = null;
+      if (b.salud && typeof b.salud === 'object') {
+        salud = {};
+        for (const k of ['corazon', 'pecho', 'lesion', 'embarazo', 'otra']) {
+          if (typeof b.salud[k] === 'boolean') salud[k] = b.salud[k];
+        }
+        salud.detalle = txt(b.salud.detalle, 400);
+      }
+      const nacimiento = /^\d{4}-\d{2}-\d{2}$/.test(txt(b.nacimiento, 10)) ? txt(b.nacimiento, 10) : null;
+
       // El cupo lo decide Postgres, no esta ruta ni el navegador: entre
       // que la página pintó "quedan 2" y la persona terminó de escribir
       // pueden haberse ido los dos.
-      const r = await rpc(env, 'mensualidad_solicitar', {
-        p_nombre:    nombre,
-        p_celular:   tel,
-        p_hora:      txt(b.hora, 5),
-        p_documento: txt(b.documento, 20) || null,
-        p_correo:    txt(b.correo, 120) || null,
+      const r = await rpc(env, 'mensualidad_solicitar_v2', {
+        p_nombre:     nombre,
+        p_celular:    tel,
+        p_hora:       txt(b.hora, 5),
+        p_documento:  txt(b.documento, 20) || null,
+        p_correo:     txt(b.correo, 120) || null,
+        p_modo:       modo,
+        p_nacimiento: nacimiento,
+        p_salud:      salud,
+        p_datos:      habeas,
+        p_salud_ok:   b.salud_ok === true || b.salud_ok === 'true',
       });
 
       if (!r || !r.ok) {
-        const mapa = { HORA_NO_DISPONIBLE: 409, HORA_INVALIDA: 400,
-                       CELULAR_INVALIDO: 400, NOMBRE_CORTO: 400 };
-        return json({ ok: false, error: (r && r.error) || 'desconocido',
-          mensaje: 'No pudimos guardar tus datos. Escríbenos por WhatsApp.' },
+        const mapa = { HORA_NO_DISPONIBLE: 409, HORA_INVALIDA: 400, CELULAR_INVALIDO: 400, NOMBRE_CORTO: 400,
+                       NO_ENCONTRADA: 404, DATOS_INCOMPLETOS: 422 };
+        const claro = r && (r.error === 'NO_ENCONTRADA' || r.error === 'DATOS_INCOMPLETOS');
+        return json({ ok: false, error: (r && r.error) || 'desconocido', campo: (r && r.campo) || undefined,
+          mensaje: claro ? r.mensaje : 'No pudimos guardar tus datos. Escríbenos por WhatsApp.' },
           mapa[r && r.error] || 400, origen);
       }
       await registrarNovedades(env, b, tel, 'mensualidad');

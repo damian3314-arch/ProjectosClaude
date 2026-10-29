@@ -5066,6 +5066,18 @@ const CONFIG = {
             (x.correo ? ` · ${esc(x.correo)}` : '') + `</div>` +
           (x.referencia
             ? `<div class="ag">ref ${esc(x.referencia)}</div>` : '') +
+          /* 29 oct: lo que recepción necesita para crearla en el sistema de accesos. «Primera vez» = hay que tomarle la
+             huella y crearla; «renovación» = ya está en el sistema, solo se le extiende el plan. */
+          (x.primera_vez
+            ? `<div class="ag mens-que"><b>🆕 Primera vez</b>: crearla en accesos y tomarle la huella` +
+              (x.nacimiento ? ` · nació el ${esc(String(x.nacimiento).slice(0, 10))}` : '') +
+              (x.datos_aceptados ? ' · aceptó datos' : '') + `</div>` : '') +
+          (x.es_renovacion ? `<div class="ag mens-que">🔁 Renovación: ya está en accesos</div>` : '') +
+          (x.salud && x.salud.alerta
+            ? `<div class="ag mens-que">⚠️ Marcó condición de salud: ` +
+              ['corazon:corazón o presión', 'pecho:dolor de pecho o mareos', 'lesion:lesión', 'embarazo:embarazo o posparto', 'otra:otra condición']
+                .filter(t => x.salud[t.split(':')[0]]).map(t => t.split(':')[1]).join(', ') +
+              (x.salud.detalle ? ` · «${esc(x.salud.detalle)}»` : '') + `</div>` : '') +
           (e.que ? `<div class="ag mens-que">${e.que}</div>` : '') +
         `</div>
         <div class="mens-botones">

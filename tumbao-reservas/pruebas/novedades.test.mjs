@@ -37,8 +37,8 @@ titulo('1. Las páginas');
 
 titulo('2. Lo que viaja al Worker');
 {
-  ok('reserva: manda acepta_novedades', /acepta_novedades: \$\('#novedades'\)\.checked/.test(index));
-  ok('mensualidad: manda acepta_novedades', /acepta_novedades: \$\('#novedades'\)\.checked/.test(mens));
+  ok('reserva: manda acepta_novedades', /acepta_novedades: (renueva \? false : )?\$\('#novedades'\)\.checked/.test(index));
+  ok('mensualidad: manda acepta_novedades', /acepta_novedades: (renueva \? false : )?\$\('#novedades'\)\.checked/.test(mens));
   ok('tiquetera: manda acepta_novedades', /acepta_novedades: \$\('#tiq-novedades'\)\.checked/.test(mens));
 }
 
