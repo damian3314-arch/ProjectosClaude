@@ -37,7 +37,7 @@ const QUESTIONS = {
 
 // El saludo no anuncia que es IA: la conversación fluye como un DM normal. Si la persona pregunta, se le dice la verdad (BOT_REPLY).
 const GREETING = 'Hola 👋 Soy Damián Barragán. Cuéntame en una frase qué te está quitando tiempo en tu negocio.';
-const BOT_REPLY = 'Soy el asistente de IA de Damián y lo estoy apoyando para que todo sea más rápido. Él revisa personalmente cada caso.';
+const BOT_REPLY = 'Soy Alter, el asistente de IA de Damián, y lo estoy apoyando para que todo sea más rápido. Él revisa personalmente cada caso.';
 // Mensaje predeterminado de los anuncios (enlace wa.me): no es un problema, es el saludo. Además sirve para saber que llegó desde un anuncio
 const PREFILL_RE = /^\s*hola\s+dami[aá]n[,.!]?\s+vi\s+tu\s+(anuncio|video|v[ií]deo|carrusel)/i;
 const ASKS_BOT_RE = /\b(eres|hablo con|hablando con|esto es|es esto)\b[^.?!]{0,20}\b(bot|robot|chatbot|ia|inteligencia artificial|humano|persona|real|m[aá]quina)\b/i;
