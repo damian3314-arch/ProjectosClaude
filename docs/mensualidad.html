@@ -1,0 +1,2301 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mensualidad · Tumbao</title>
+<meta name="description" content="Aparta tu mensualidad en Tumbao. Elige tu horario, mira si hay cupo y paga en un paso.">
+<meta name="theme-color" content="#0b0710">
+<link rel="preload" href="fonts/outfit-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+<meta property="og:title" content="Mensualidad · Tumbao">
+<meta property="og:description" content="Elige tu horario, mira si hay cupo y aparta tu mensualidad.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://tumbaobaila.com/img/og-tumbao.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logo de Tumbao, baila pa' sanar">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc14d'/%3E%3Cstop offset='.55' stop-color='%23ff6b35'/%3E%3Cstop offset='1' stop-color='%23ff4f7d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230d0b0f'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='url(%23g)'%3ET%3C/text%3E%3C/svg%3E">
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   CONFIGURACIÓN — lo único que hay que tocar para moverla de sitio.
+
+   Los datos de pago son los mismos que usa la página de reservas y los
+   mismos que ya se mandan por WhatsApp: si cambia la cuenta, cambia en
+   los dos sitios o la gente pagará a una cuenta vieja.
+   ───────────────────────────────────────────────────────────── */
+const CONFIG = {
+  API: 'https://tumbao-caja.damian3314.workers.dev/tumbao/mensualidad',
+  API_TIQUETERA: 'https://tumbao-caja.damian3314.workers.dev/tumbao/tiquetera',
+  WHATSAPP: '573017833550',
+  // Cuánto se espera a que el banco confirme antes de mandar a
+  // validación humana. Mismo criterio que la página de reservas.
+  MINUTOS_ESPERA_TIQ: 3,
+  // Solo para el "ahorras $X" de las tarjetas de entrada. El precio real
+  // de cada clase lo decide la clase que se reserve, no esto.
+  PRECIO_SUELTA_REF: 15000,
+  // Para decir «alrededor de $X por clase»: clases de un mes de lunes a sábado (23-26). Igual a ajustes.mensualidad_clases_mes.
+  CLASES_MES_REF: 25,
+  // Fotos de fondo de cada pase (opcional). Ruta dentro de docs/, p. ej. 'img/pase-4.jpg'. Vacío = arte gráfico.
+  // Ideal: fotos reales de la clase (4 personas bailando para la de 4, el grupo para la de 8, el salón lleno para la mensualidad).
+  FOTOS: { mensualidad: 'img/pase-mensualidad.jpg', '4': 'img/pase-4.jpg', '8': 'img/pase-8.jpg' },
+  PAGO: {
+    qr:      'img/qr-breb.png',
+    llave:   '1096803067',
+    banco:   'Bancolombia',
+    tipo:    'Ahorros',
+    cuenta:  '91289724619',
+    titular: 'Luz Alejandra Santiago García'
+  }
+};
+</script>
+
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     LA MISMA PIEL QUE LA PÁGINA DE RESERVAS.
+
+     Estas dos páginas son el mismo embudo partido en dos: de WhatsApp
+     se manda a una o a la otra según lo que quiera la persona, y unas
+     veces a las dos seguidas. Si tuvieran estilos distintos, cruzar de
+     una a otra se sentiría como salir del sitio.
+
+     Los tokens, las clases y los componentes están copiados de
+     index.html a propósito —.clase, .cupos, .btn, .monto, .datos-pago,
+     .tick— y no reinventados con otros nombres: el día que se cambie la
+     marca hay que poder buscar el mismo nombre en los dos archivos.
+     ═══════════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#0d0b0f; --bg-2:#161219; --bg-3:#1f1a24;
+    --line:#312a38; --line-2:#463c4f;
+    --tx:#f4eff6; --tx-2:#b3a7bd; --tx-3:#7d7186;
+    --hot:#ff6b35; --hot-2:#ff8f5e; --gold:#ffc14d; --ok:#4ade80; --bad:#ff6b81;
+    --r:14px;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(70rem 40rem at 50% -12rem,rgba(255,107,53,.16),transparent 65%),
+      radial-gradient(50rem 30rem at 100% 100%,rgba(255,193,77,.07),transparent 60%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:44rem;margin:0 auto;padding:1.5rem 1.1rem 4rem}
+
+  header{text-align:center;padding:1.5rem 0 1.6rem}
+  .logo{
+    font-size:clamp(2.4rem,11vw,3.6rem);font-weight:800;letter-spacing:-.03em;
+    margin:0;line-height:1;
+    background:linear-gradient(100deg,var(--gold),var(--hot) 55%,#ff4f7d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tagline{color:var(--tx-2);margin:.6rem 0 0;font-size:.98rem}
+  .tagline b{color:var(--gold);font-weight:600}
+
+  /* Los tres pasos. Se ve de entrada que esto se acaba en tres pantallas
+     y no en un formulario sin fondo. */
+  .pasos{display:flex;gap:.35rem;justify-content:center;margin:1.4rem 0 .5rem;list-style:none;padding:0;flex-wrap:wrap}
+  .pasos li{
+    display:flex;align-items:center;gap:.4rem;font-size:.76rem;color:var(--tx-3);
+    padding:.28rem .55rem;border-radius:99px;transition:.2s;
+  }
+  .pasos li[aria-current]{color:var(--tx);background:var(--bg-3)}
+  .pasos li .n{
+    width:1.3rem;height:1.3rem;border-radius:99px;background:var(--bg-3);
+    display:grid;place-items:center;font-size:.7rem;font-weight:700;flex:none;
+    border:1px solid var(--line);
+  }
+  .pasos li[aria-current] .n{background:var(--hot);border-color:var(--hot);color:#2a1206}
+  .pasos li.hecho .n{background:transparent;border-color:var(--ok);color:var(--ok)}
+
+  /* La sección que se ve entra desde abajo. Se usa `[hidden]` y no una
+     clase para poder ocultarlas desde JS con una sola propiedad. */
+  section{animation:sube .32s ease both}
+  @keyframes sube{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){section{animation:none}*{transition:none!important}}
+
+  h2{font-size:1.28rem;margin:1.4rem 0 .3rem;letter-spacing:-.015em}
+  .sub{color:var(--tx-2);font-size:.9rem;margin:0 0 1.1rem}
+
+  /* ---------- lo que incluye ---------- */
+  .plan{
+    background:linear-gradient(150deg,rgba(255,107,53,.13),rgba(255,193,77,.05));
+    border:1px solid rgba(255,107,53,.32);border-radius:var(--r);
+    padding:1.1rem;margin-bottom:1.4rem;
+  }
+  .plan .valor{
+    display:block;font-size:2.3rem;font-weight:800;line-height:1;text-align:center;
+    background:linear-gradient(100deg,var(--gold),var(--hot));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .plan .cada{display:block;text-align:center;font-size:.8rem;color:var(--tx-3);
+    text-transform:uppercase;letter-spacing:.13em;margin-top:.35rem}
+  .plan .por-clase-plan{display:block;text-align:center;font-size:.86rem;font-weight:600;color:var(--hot-2);margin-top:.35rem;line-height:1.35}
+  .plan .por-clase-plan:empty{display:none}
+  .plan ul{list-style:none;padding:0;margin:1.1rem 0 0;display:grid;gap:.5rem}
+  .plan li{display:flex;gap:.6rem;align-items:flex-start;font-size:.88rem;color:var(--tx-2)}
+  .plan li b{color:var(--tx);font-weight:600}
+  .plan .tic{color:var(--ok);flex:none;font-weight:700}
+
+  /* ---------- horarios ----------
+     Con la misma forma que la lista de clases de la página de reservas:
+     hora a la izquierda en dorado, el detalle en medio y la pastilla de
+     cupos a la derecha. Quien ya reservó una clase suelta reconoce esto
+     sin leerlo. */
+  .clases{display:grid;gap:.65rem}
+  .clase{
+    display:flex;align-items:center;gap:.9rem;width:100%;text-align:left;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:.9rem 1rem;color:inherit;font:inherit;cursor:pointer;transition:.18s;
+  }
+  .clase:hover{border-color:var(--hot);transform:translateX(3px)}
+  .clase .hr{flex:none;width:4.4rem;font-weight:700;font-size:.95rem;color:var(--gold);font-variant-numeric:tabular-nums}
+  .clase .info{flex:1;min-width:0}
+  .clase .nom{display:block;font-weight:600;font-size:.99rem}
+  .clase .meta{display:block;font-size:.79rem;color:var(--tx-3);margin-top:.1rem}
+  .cupos{flex:none;font-size:.72rem;padding:.24rem .55rem;border-radius:99px;background:var(--bg-3);color:var(--tx-2);white-space:nowrap;border:1px solid var(--line)}
+  .cupos.pocos{color:var(--gold);border-color:rgba(255,193,77,.4)}
+  .cupos.cero{color:var(--bad);border-color:rgba(255,107,129,.35)}
+  .cupos.invita{background:var(--hot);color:#1b0f08;border-color:transparent;font-weight:700}
+
+  /* ---------- formulario ---------- */
+  .resumen{
+    background:linear-gradient(150deg,rgba(255,107,53,.13),rgba(255,193,77,.05));
+    border:1px solid rgba(255,107,53,.32);border-radius:var(--r);
+    padding:.9rem 1rem;margin-bottom:1.2rem;
+  }
+  .resumen strong{display:block;font-size:1.04rem}
+  .resumen span{color:var(--tx-2);font-size:.86rem}
+  form{display:grid;gap:.9rem}
+  label{display:block;font-size:.82rem;color:var(--tx-2);margin-bottom:.32rem;font-weight:500}
+  .opt{color:var(--tx-3);font-weight:400}
+  input[type=text],input[type=tel],input[type=email]{
+    width:100%;padding:.72rem .85rem;border-radius:11px;background:var(--bg-2);
+    border:1px solid var(--line);color:var(--tx);font:inherit;transition:.16s;
+  }
+  input:focus-visible,button:focus-visible,.clase:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+  input:focus{border-color:var(--hot);background:var(--bg-3)}
+  input.mal{border-color:var(--bad)}
+  .hint{font-size:.75rem;color:var(--tx-3);margin-top:.28rem}
+  .check{display:flex;gap:.7rem;align-items:flex-start;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:.85rem}
+  .check input{margin:.15rem 0 0;width:1.15rem;height:1.15rem;accent-color:var(--hot);flex:none}
+  .check label{margin:0;font-size:.8rem;color:var(--tx-2);line-height:1.5}
+  .trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+  /* ---------- botones ---------- */
+  .btn{
+    width:100%;padding:.92rem 1rem;border:0;border-radius:var(--r);
+    background:linear-gradient(160deg,var(--hot-2),var(--hot) 45%,#e0491d);
+    color:#fff;font:inherit;font-weight:700;font-size:1.02rem;cursor:pointer;
+    box-shadow:0 8px 26px -10px rgba(255,107,53,.85);transition:.18s;
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:disabled{opacity:.55;cursor:wait;box-shadow:none}
+  .btn-ghost{
+    display:block;width:100%;padding:.78rem;border-radius:var(--r);text-align:center;
+    background:transparent;border:1px solid var(--line);color:var(--tx-2);
+    font:inherit;cursor:pointer;text-decoration:none;transition:.16s;margin-top:.7rem;
+  }
+  .btn-ghost:hover{border-color:var(--line-2);color:var(--tx)}
+
+  .aviso{border-radius:var(--r);padding:.85rem 1rem;font-size:.88rem;margin:1rem 0}
+  .aviso.malo{background:rgba(255,107,129,.1);border:1px solid rgba(255,107,129,.4);color:#ffc2cc}
+  .aviso.info{background:var(--bg-2);border:1px solid var(--line);color:var(--tx-2)}
+  .aviso a{color:var(--gold)}
+  .aviso-lleno{border-left:3px solid var(--gold);line-height:1.5}
+  .aviso-lleno b{color:var(--tx)}
+  .aviso-lleno a{font-weight:600}
+
+  /* ---------- pago ---------- */
+  .monto{
+    text-align:center;background:var(--bg-2);border:1px solid var(--line);
+    border-radius:var(--r);padding:1.1rem;margin-bottom:1rem;
+  }
+  .monto small{display:block;font-size:.74rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:.13em}
+  .monto b{display:block;font-size:2.3rem;font-weight:800;margin:.2rem 0 .1rem;
+    background:linear-gradient(100deg,var(--gold),var(--hot));
+    -webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+  .monto .ojo{font-size:.78rem;color:var(--gold)}
+
+  /* Fondo blanco para el QR: sobre el fondo oscuro muchas cámaras no lo
+     leen. Es la misma caja que usa la página de reservas. */
+  .qr-caja{text-align:center;background:#fff;border-radius:var(--r);padding:1rem;margin-bottom:.6rem}
+  .qr-caja img{width:100%;max-width:15rem;height:auto;display:block;margin:0 auto}
+
+  .datos-pago{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:1rem}
+  .fila-dato{display:flex;align-items:center;gap:.7rem;padding:.75rem .9rem;border-bottom:1px solid var(--line)}
+  .fila-dato:last-child{border-bottom:0}
+  .fila-dato .k{flex:none;width:5rem;font-size:.76rem;color:var(--tx-3)}
+  /* anywhere y no break-all: el número de cuenta se parte si hace falta,
+     pero el nombre del titular sigue partiéndose por los espacios. */
+  .fila-dato .v{flex:1;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
+  .copiar{
+    flex:none;background:var(--bg-3);border:1px solid var(--line);color:var(--tx-2);
+    border-radius:9px;padding:.35rem .6rem;font:inherit;font-size:.74rem;cursor:pointer;transition:.16s;
+  }
+  .copiar:hover{border-color:var(--hot);color:var(--tx)}
+  .copiar.listo{color:var(--ok);border-color:rgba(74,222,128,.4)}
+
+  /* ---------- resultado ---------- */
+  .ok-wrap{text-align:center;padding:1.2rem 0}
+  .tick{width:4.4rem;height:4.4rem;margin:0 auto 1.1rem;border-radius:99px;
+    background:rgba(74,222,128,.13);border:2px solid var(--ok);display:grid;place-items:center;font-size:2.1rem}
+  .tick.espera-humana{background:rgba(255,193,77,.13);border-color:var(--gold)}
+  .ok-wrap h2{margin:.2rem 0 .5rem}
+  .ok-wrap p{color:var(--tx-2);font-size:.92rem;margin:0 0 .7rem}
+  .ok-wrap p b{color:var(--tx)}
+
+  .skel{height:4.1rem;border-radius:var(--r);background:var(--bg-2);
+    background-image:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.045) 50%,transparent 70%);
+    background-size:200% 100%;animation:brillo 1.3s infinite;margin-bottom:.65rem}
+  @keyframes brillo{to{background-position:-200% 0}}
+
+  footer{text-align:center;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--line);color:var(--tx-3);font-size:.82rem}
+  footer a{color:var(--tx-2);text-decoration:none}
+  footer a:hover{color:var(--gold)}
+
+  /* ---------- la elección de entrada: mensualidad o tiquetera ----------
+     Antes la tiquetera era un enlace de texto discreto colgado encima
+     del embudo de mensualidad. Esto es lo primero que se ve ahora: tres
+     tarjetas, una decisión, sin que nadie tenga que ir a buscar la
+     segunda opción. */
+  .eleccion{display:grid;gap:.85rem;margin-top:1.3rem}
+  @media (min-width:34rem){.eleccion{grid-template-columns:1fr 1fr 1fr}}
+  .tarjeta{
+    position:relative;text-align:left;background:var(--bg-2);
+    border:1px solid var(--line);border-radius:calc(var(--r) + 2px);
+    padding:1.15rem 1.1rem;color:inherit;font:inherit;cursor:pointer;
+    display:flex;flex-direction:column;gap:.55rem;
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+    overflow:hidden;
+  }
+  /* La línea de arriba es el único toque "más cuidado": sutil, no un
+     cartel, y solo se enciende del todo al pasar el mouse. */
+  .tarjeta::before{
+    content:'';position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,var(--gold),var(--hot));
+    opacity:.5;transition:opacity .18s;
+  }
+  .tarjeta:hover,.tarjeta:focus-visible{
+    border-color:var(--line-2);transform:translateY(-3px);
+    box-shadow:0 14px 34px -16px rgba(0,0,0,.6);
+  }
+  .tarjeta:hover::before,.tarjeta:focus-visible::before{opacity:1}
+  .tarjeta .destacado{
+    position:absolute;top:.7rem;right:.7rem;font-size:.68rem;font-weight:700;
+    letter-spacing:.04em;text-transform:uppercase;color:#2a1206;
+    background:linear-gradient(100deg,var(--gold),var(--hot-2));
+    padding:.22rem .5rem;border-radius:99px;
+  }
+  .tarjeta .icono{font-size:1.5rem;line-height:1}
+  .tarjeta .titulo{font-weight:700;font-size:1.05rem}
+  .tarjeta .precio{
+    font-size:1.5rem;font-weight:800;line-height:1;
+    background:linear-gradient(100deg,var(--gold),var(--hot));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-variant-numeric:tabular-nums;
+  }
+  .tarjeta .precio-cada{font-size:.74rem;color:var(--tx-3);font-weight:600}
+  .tarjeta .ahorro{font-size:.76rem;color:var(--ok);font-weight:600}
+  .tarjeta .por-clase{font-size:.95rem;font-weight:700;color:var(--hot-2)}
+  .tarjeta .por-clase.larga{font-size:.84rem;font-weight:600;line-height:1.35}
+  .oferta-espera{margin:1.1rem 0 .4rem;padding:1rem 1.05rem;border-radius:var(--r-card,14px);text-align:left;
+    background:linear-gradient(135deg,rgba(255,107,53,.16),rgba(192,24,95,.12));box-shadow:inset 3px 0 0 var(--hot)}
+  .oferta-espera b{display:block;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.3rem}
+  .oferta-espera p{margin:0 0 .75rem;font-size:.92rem;line-height:1.45}
+  .oferta-espera .btn{margin:0}
+  .tarjeta .desc{font-size:.83rem;color:var(--tx-2);margin:0}
+  /* El aviso clave: reservar y la vigencia. Nunca en gris ni al final
+     del todo donde no se lee -- siempre con su propio color, en la
+     tarjeta misma, antes de que la persona decida comprar. */
+  .tarjeta .clave{
+    display:flex;gap:.45rem;align-items:flex-start;font-size:.78rem;
+    color:var(--gold);background:rgba(255,193,77,.08);
+    border:1px solid rgba(255,193,77,.25);border-radius:10px;
+    padding:.5rem .6rem;margin-top:.15rem;line-height:1.4;
+  }
+  .tarjeta .clave b{color:var(--tx)}
+
+  .volver-eleccion{
+    display:inline-flex;align-items:center;gap:.3rem;background:none;border:0;
+    color:var(--tx-3);font:inherit;font-size:.82rem;cursor:pointer;
+    padding:0;margin-bottom:.9rem;transition:.16s;
+  }
+  .volver-eleccion:hover{color:var(--tx)}
+
+  /* ═══════════════════════════════════════════════════════════════
+     CAPA DE DISEÑO (26 sep) - la misma en index.html y mensualidad.html
+
+     Hecha con las guías de taste-skill, redesign-skill y web-interface-
+     guidelines, y con la referencia de Spotify de awesome-design: una
+     oscuridad donde manda el contenido y UN solo acento, que se usa
+     para lo que se puede tocar, no para adornar.
+
+     Qué cambia y por qué:
+     - Tipografía: Outfit (OFL, autoalojada en fonts/). La fuente del
+       sistema se ve distinta en cada celular y no tiene carácter.
+     - Un acento: el naranja de marca. El dorado queda como un tono
+       claro del mismo naranja; el degradado se reserva para el logo.
+     - Botones píldora, sólidos, con texto oscuro: el blanco sobre
+       naranja daba 2,9:1 de contraste y no pasa WCAG AA.
+     - Tarjetas sin borde: se separan por el tono de la superficie.
+     - Sin resplandores de neón, sin texto en degradado en los montos.
+     - Formas: tarjetas 14px, campos 10px, botones y pastillas redondos.
+     Esta capa va al final a propósito: quitarla entera devuelve la
+     página a como estaba, sin tocar ninguna regla de arriba.
+     ═══════════════════════════════════════════════════════════════ */
+  @font-face{
+    font-family:'Outfit';font-style:normal;font-weight:100 900;font-display:swap;
+    src:url(fonts/outfit-latin-wght.woff2) format('woff2');
+    unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  }
+  :root{
+    --sans:'Outfit',ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --gold:#ffa27a;                 /* tono claro del mismo naranja */
+    --surface:#18141c; --surface-2:#221d27;
+    --on-hot:#1c0b03;               /* texto sobre el naranja: 7,6:1 */
+    --r-card:14px; --r-field:10px; --r-pill:999px;
+    color-scheme:dark;
+  }
+  html{-webkit-tap-highlight-color:transparent}
+  body{letter-spacing:.005em}
+  button,a,.opcion,.clase,.dia,.tarjeta,label{touch-action:manipulation}
+  h1,h2,h3{text-wrap:balance}
+  p,.sub,.des,.desc{text-wrap:pretty}
+
+  /* Un grano muy fino fijo encima del fondo: rompe lo plano sin costar
+     repintados al hacer scroll (va en un pseudo fijo, no en el fondo). */
+  body::after{
+    content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* El logo es la marca: se queda con su degradado de siempre (el único
+     texto en degradado de la página) y solo cambia de letra. */
+  .logo{
+    font-weight:800;letter-spacing:-.035em;
+    background:linear-gradient(100deg,#ffc14d,#ff6b35 55%,#ff4f7d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tagline{font-size:1rem}
+  .tagline b{font-weight:600}
+  h2{font-size:1.45rem;font-weight:700;letter-spacing:-.025em;line-height:1.2}
+  .sub{font-size:.94rem;line-height:1.5}
+
+  .sprite{position:absolute;width:0;height:0;overflow:hidden}
+  svg.ico,svg.ico-i,svg.tic,svg.icono{fill:currentColor;flex:none}
+  svg.ico-i{width:1.05em;height:1.05em;vertical-align:-.16em}
+
+  a{color:var(--hot-2);text-underline-offset:.18em}
+  footer a{color:var(--tx-2)}
+  footer a:hover{color:var(--hot-2)}
+
+  /* ---------- superficies: sin borde, el tono separa ---------- */
+  .opcion,.clase,.dia,.tarjeta,.monto,.datos-pago,.aviso.info,.check,.previa,.codigo{
+    background:var(--surface);border-color:transparent;border-radius:var(--r-card);
+  }
+  .opcion,.clase,.dia,.tarjeta{
+    transition:background-color .18s ease,transform .18s ease;
+  }
+  .opcion:hover,.clase:hover:not(:disabled),.tarjeta:hover,.dia:hover{
+    background:var(--surface-2);border-color:transparent;transform:none;
+  }
+  .opcion:active,.clase:active:not(:disabled),.tarjeta:active{transform:scale(.99)}
+  .resumen,.plan{
+    background:var(--surface);border:0;border-radius:var(--r-card);
+    box-shadow:inset 3px 0 0 var(--hot);
+  }
+  .fila-dato{border-bottom-color:rgba(255,255,255,.05)}
+
+  /* ---------- tarjetas de elección ---------- */
+  .opciones{gap:.6rem}
+  .opcion{padding:1rem 1.05rem;gap:.95rem}
+  .opcion .ico{
+    width:2.75rem;height:2.75rem;padding:.68rem;border-radius:50%;border:0;
+    background:rgba(255,107,53,.12);color:var(--hot-2);
+  }
+  .opcion .tit{font-weight:600;font-size:1.05rem;letter-spacing:-.01em}
+  .opcion .des{color:var(--tx-2);font-size:.85rem;line-height:1.45}
+
+  /* Entrada escalonada: dice "esto es lo que puedes elegir", en orden. */
+  @media (prefers-reduced-motion:no-preference){
+    .opciones .opcion,.eleccion .tarjeta{animation:entra .42s cubic-bezier(.16,1,.3,1) both}
+    .opciones .opcion:nth-child(2),.eleccion .tarjeta:nth-child(2){animation-delay:.06s}
+    .opciones .opcion:nth-child(3),.eleccion .tarjeta:nth-child(3){animation-delay:.12s}
+  }
+  @keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ---------- horarios ---------- */
+  .clase .hora,.clase .hr{color:var(--hot-2)}
+  .clase .nom{font-weight:600}
+  .dia[aria-pressed="true"]{
+    background:var(--hot);border-color:var(--hot);color:var(--on-hot);box-shadow:none;
+  }
+  .dia .num{font-weight:700}
+  .cupos{border:0;background:var(--surface-2)}
+  .cupos.pocos{background:rgba(255,162,122,.14);color:var(--gold)}
+  .cupos.cero{background:rgba(255,107,129,.12)}
+  .cupos.invita{background:var(--hot);color:#1b0f08}
+  .pasos li[aria-current] .n{color:var(--on-hot)}
+
+  /* ---------- campos ---------- */
+  input[type=text],input[type=tel],input[type=email],input[type=time],
+  .comprobante input[type="text"],.comprobante input[type="time"]{
+    border-radius:var(--r-field);background:var(--surface);
+    transition:border-color .16s ease,background-color .16s ease;
+  }
+  input:focus{background:var(--surface-2)}
+
+  /* ---------- botones ---------- */
+  .btn{
+    display:block;text-align:center;text-decoration:none;
+    border-radius:var(--r-pill);background:var(--hot);color:var(--on-hot);
+    font-weight:700;letter-spacing:.005em;box-shadow:none;
+    transition:background-color .16s ease,transform .1s ease;
+  }
+  .btn:hover:not(:disabled){filter:none;background:#ff8150}
+  .btn:active:not(:disabled){transform:translateY(1px) scale(.99)}
+  .btn:disabled{background:var(--surface-2);color:var(--tx-3);opacity:1}
+  .btn-ghost{
+    border-radius:var(--r-pill);border-color:var(--line-2);color:var(--tx);
+    transition:border-color .16s ease,background-color .16s ease;
+  }
+  .btn-ghost:hover{border-color:var(--tx-3);background:rgba(255,255,255,.03)}
+  .copiar{
+    border:0;background:var(--surface-2);border-radius:var(--r-pill);color:var(--tx);
+    padding:.4rem .75rem;transition:background-color .16s ease,color .16s ease;
+  }
+  .copiar:hover{background:#2c2632;color:var(--tx)}
+  .copiar.listo{background:rgba(74,222,128,.12)}
+
+  /* ---------- montos: un color, sin degradado ---------- */
+  .monto b,.plan .valor,.tarjeta .precio,.codigo b{
+    background:none;-webkit-background-clip:border-box;background-clip:border-box;
+    color:var(--tx);font-weight:700;letter-spacing:-.02em;
+  }
+  .codigo b{letter-spacing:.14em}
+  .codigo{border:1px dashed var(--line-2)}
+  .monto .ojo{display:inline-flex;align-items:center;gap:.35rem;color:var(--gold)}
+  .tic{width:1.05rem;height:1.05rem;color:var(--ok);margin-top:.18rem}
+  .qr-caja{border-radius:var(--r-card)}
+
+  /* ---------- avisos ---------- */
+  .aviso{border-radius:var(--r-card)}
+  .aviso.malo{border:0;background:rgba(255,107,129,.1)}
+  .aviso-qr{border:0;border-radius:var(--r-field)}
+  .aviso-qr.ojo{background:rgba(255,162,122,.1)}
+
+  /* ---------- resultado ---------- */
+  .tick{border-width:0;background:rgba(74,222,128,.13);color:var(--ok)}
+  .tick.espera-humana{background:rgba(255,162,122,.13);color:var(--gold)}
+  .tick svg.ico{width:2.1rem;height:2.1rem}
+  .barra i{background:var(--hot)}
+  .soltar{border-radius:var(--r-card);transition:border-color .18s ease,background-color .18s ease}
+  .soltar .ico{width:1.9rem;height:1.9rem;color:var(--hot-2)}
+
+  /* ---------- la burbuja y el aviso emergente ---------- */
+  #burbuja{background:var(--hot);color:var(--on-hot);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #burbuja svg.ico{width:1.6rem;height:1.6rem}
+  #promo{background:rgba(6,4,8,.78);overscroll-behavior:contain}
+  #promo .caja{background:var(--surface);border:0;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  #promo svg.ico{display:block;width:2.4rem;height:2.4rem;margin:0 auto .4rem;color:var(--hot-2)}
+  #promo h3{font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
+  .franja-promo{border:0;background:var(--surface);box-shadow:inset 3px 0 0 var(--hot);
+    border-radius:var(--r-card);transition:background-color .18s ease}
+  .franja-promo:hover{background:var(--surface-2);transform:none}
+  .franja-promo svg.ico{width:1.5rem;height:1.5rem;color:var(--hot-2)}
+  .franja-promo b{color:var(--tx)}
+  .franja{border-radius:var(--r-card)}
+  .franja-titulo{font-weight:700;letter-spacing:-.02em}
+
+  /* ---------- mensualidad: la elección ----------
+     En escritorio no son "tres tarjetas iguales": la mensualidad ocupa
+     todo el ancho arriba y las dos tiqueteras van lado a lado debajo. */
+  @media (min-width:34rem){
+    .eleccion{grid-template-columns:1fr 1fr}
+    .eleccion .tarjeta[data-elegir="mensualidad"]{grid-column:1/-1}
+  }
+  .tarjeta{padding:1.2rem 1.15rem;gap:.5rem}
+  .tarjeta::before{display:none}
+  .tarjeta .icono{width:1.6rem;height:1.6rem;color:var(--hot-2)}
+  .tarjeta .titulo{font-size:1.1rem;font-weight:600;letter-spacing:-.01em}
+  .tarjeta .precio{font-size:1.75rem}
+  .tarjeta .destacado{
+    background:var(--hot);color:var(--on-hot);border-radius:6px;
+    text-transform:none;letter-spacing:0;font-size:.72rem;padding:.2rem .5rem;
+  }
+  .tarjeta .clave{
+    margin-top:auto;border:0;border-radius:var(--r-field);
+    background:rgba(255,107,53,.1);color:var(--tx-2);font-size:.82rem;
+    align-items:flex-start;gap:.5rem;padding:.65rem .75rem;
+  }
+  .tarjeta .clave b{color:var(--tx)}
+  .tarjeta .clave svg.ico-i{color:var(--hot-2);width:1.1rem;height:1.1rem;margin-top:.05rem}
+  .volver-eleccion{color:var(--tx-2)}
+
+  /* ---------- la marca de verdad ----------
+     El logo es el archivo de la marca (la "u" pequeña, el rosado del
+     "baila pa' sanar"), no la palabra escrita con una fuente. Para el
+     fondo oscuro el rosado va un punto más claro, como en cualquier
+     versión en negativo de un logo. */
+  .marca{margin:0;line-height:0}
+  .marca img{display:block;width:min(10rem,42vw);height:auto;margin:0 auto}
+  header{padding:1.1rem 0 1.1rem}
+  .tagline{margin-top:.7rem;color:var(--tx-2)}
+
+  /* ---------- skeleton y movimiento reducido ---------- */
+  .skel{background-color:var(--surface);border-radius:var(--r-card)}
+  @media (prefers-reduced-motion:reduce){
+    .skel{animation:none}
+    .opcion,.clase,.tarjeta,.btn{transition:none}
+  }
+  /* ═══════════════════════════════════════════════════════════════
+     CAPA TUMBAO NEÓN (12 oct) - la misma en index.html y mensualidad.html
+
+     Damián: «la página dista mucho de los colores de Tumbao; quiero el
+     estilo dark de Tumbao» (el de Instagram: el salón oscuro con las
+     luces de neón moradas y fucsia) «y ese lila en todos lados no me
+     gusta» (el del anuncio).
+     La fusión:
+     - Fondo casi negro con un tinte morado, como el salón con las
+       luces apagadas. Sin superficies lilas: el morado solo es LUZ
+       (resplandores de fondo y una tira de neón detrás del logo).
+     - Dos acentos de marca: el naranja del logo y el fucsia del «Baila
+       pa' sanar». Naranja = horas y precios; fucsia = lo elegido, las
+       cejas y los enlaces; el botón principal lleva los dos.
+     - Texto oscuro sobre el botón (5,4:1 en la punta fucsia; el blanco
+       no pasa AA).
+     Va al final a propósito: quitarla entera devuelve la capa del 26 sep.
+     ═══════════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#0b0710; --bg-2:#160f1e; --bg-3:#201629;
+    --surface:#160f1e; --surface-2:#201629;
+    --line:#2e2139; --line-2:#433152;
+    --tx:#f7f2f8; --tx-2:#bdb3c5; --tx-3:#8f8598;
+    --neon:#ff2e8f; --neon-2:#ff6fb1; --violeta:#8f3dff;
+    --grad-marca:linear-gradient(100deg,var(--hot) 0%,#ff4d62 55%,var(--neon) 100%);
+  }
+  body{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(56rem 32rem at 50% -13rem,rgba(143,61,255,.40),transparent 64%),
+      radial-gradient(34rem 24rem at 112% 22rem,rgba(255,46,143,.20),transparent 62%),
+      radial-gradient(38rem 26rem at -14% 108%,rgba(255,107,53,.11),transparent 62%);
+    background-attachment:fixed;
+  }
+
+  /* La tira de neón del techo del salón, detrás del logo. */
+  header{position:relative;isolation:isolate}
+  header::before,header::after{
+    content:'';position:absolute;left:0;right:0;height:2px;z-index:-1;pointer-events:none;
+    border-radius:2px;
+  }
+  header::before{
+    top:1.5rem;transform:rotate(-7deg);
+    background:linear-gradient(90deg,transparent,rgba(170,90,255,.9) 22%,var(--neon) 62%,transparent);
+    box-shadow:0 0 14px 2px rgba(170,90,255,.55),0 0 34px 6px rgba(255,46,143,.22);
+    opacity:.75;
+  }
+  header::after{
+    top:5.4rem;transform:rotate(5deg);left:18%;right:-4%;
+    background:linear-gradient(90deg,transparent,rgba(255,46,143,.85) 40%,rgba(255,107,53,.8) 80%,transparent);
+    box-shadow:0 0 12px 2px rgba(255,46,143,.45);
+    opacity:.45;
+  }
+  @media (min-width:34rem){header::before{transform:rotate(-3deg)} header::after{transform:rotate(2.5deg)}}
+  .marca img{filter:drop-shadow(0 0 18px rgba(255,46,143,.30)) drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+  .tagline{color:var(--tx)}
+
+  /* ---------- pasos ---------- */
+  .pasos li[aria-current]{background:rgba(255,46,143,.12);color:var(--tx)}
+  .pasos li[aria-current] .n{background:var(--grad-marca);border-color:transparent;color:var(--on-hot)}
+
+  /* ---------- tarjetas: superficie oscura y borde de neón al tocar ---------- */
+  .opcion,.clase,.dia,.tarjeta,.monto,.datos-pago,.aviso.info,.check,.previa,.codigo,.grupo,.cuantos-caja{
+    background:var(--surface);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .opcion,.clase,.tarjeta{transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease}
+  .opcion:hover,.clase:hover:not(:disabled),.tarjeta:hover,.tarjeta:focus-visible{
+    background:var(--surface-2);
+    box-shadow:0 0 0 1px rgba(255,46,143,.45),0 10px 30px -14px rgba(255,46,143,.55);
+  }
+  .opcion .ico{background:rgba(255,46,143,.13);color:var(--neon-2)}
+  .tarjeta .icono{color:var(--neon-2)}
+  .tarjeta .destacado{background:var(--grad-marca);color:var(--on-hot)}
+  .tarjeta .clave{background:rgba(255,46,143,.08)}
+  .tarjeta .clave svg.ico-i{color:var(--neon-2)}
+
+  /* ---------- horarios ---------- */
+  .dia[aria-pressed="true"]{
+    background:var(--grad-marca);color:var(--on-hot);
+    box-shadow:0 8px 24px -8px rgba(255,46,143,.7);
+  }
+  .dia:hover{background:var(--surface-2)}
+
+  /* ---------- cajas con raya de marca ---------- */
+  .resumen,.plan,.franja-promo,.nueva-clase,.ok-grupo{box-shadow:inset 3px 0 0 var(--neon)}
+  .franja-promo{background:linear-gradient(135deg,rgba(255,46,143,.13),rgba(255,107,53,.06) 70%),var(--surface)}
+  .franja-promo:hover{background:linear-gradient(135deg,rgba(255,46,143,.18),rgba(255,107,53,.09) 70%),var(--surface-2)}
+  .franja-promo svg.ico{color:var(--neon-2)}
+  .oferta-tiq,.oferta-espera{
+    background:linear-gradient(135deg,rgba(255,107,53,.15),rgba(255,46,143,.14));
+    box-shadow:inset 3px 0 0 var(--neon);
+  }
+  .nueva-clase .ceja,.oferta-tiq .oferta-ceja{color:var(--neon-2)}
+  .grupo-total,.pago-solo,.cuantos-caja .grupo-total{background:linear-gradient(135deg,rgba(255,107,53,.12),rgba(255,46,143,.10))}
+  #acompanantes{border-left-color:rgba(255,46,143,.5)}
+  .franja{border-color:rgba(255,46,143,.45)}
+  .franja-ceja,.franja-boton{color:var(--neon-2)}
+
+  /* ---------- botones ---------- */
+  .btn{
+    background:var(--grad-marca);color:var(--on-hot);
+    box-shadow:0 10px 28px -12px rgba(255,46,143,.8);
+    transition:filter .16s ease,transform .1s ease,box-shadow .16s ease;
+  }
+  .btn:hover:not(:disabled){background:var(--grad-marca);filter:brightness(1.07);box-shadow:0 12px 32px -10px rgba(255,46,143,.9)}
+  .btn:disabled{background:var(--surface-2);color:var(--tx-3);box-shadow:none;filter:none}
+  .btn-ghost{border-color:rgba(255,46,143,.35)}
+  .btn-ghost:hover{border-color:var(--neon);background:rgba(255,46,143,.07)}
+  #burbuja{background:var(--grad-marca);color:var(--on-hot);box-shadow:0 8px 26px -6px rgba(255,46,143,.75)}
+  #promo{background:rgba(6,3,9,.8)}
+  #promo svg.ico{color:var(--neon-2)}
+
+  /* ---------- enlaces, foco y campos ---------- */
+  a{color:var(--neon-2)}
+  footer a{color:var(--tx-2)}
+  footer a:hover{color:var(--neon-2)}
+  input:focus-visible,button:focus-visible,.clase:focus-visible,.dia:focus-visible,.opcion:focus-visible,.tarjeta:focus-visible{outline-color:var(--neon-2)}
+  input:focus,.comprobante input:focus{border-color:var(--neon)}
+  .comprobante input:focus{outline-color:var(--neon)}
+  .check input,.check-otro input{accent-color:var(--neon)}
+  .req,.comprobante .req,.mas-correo summary::before{color:var(--neon-2)}
+  .soltar:hover,.soltar.encima{border-color:var(--neon)}
+  .soltar .ico{color:var(--neon-2)}
+
+  /* ---------- espera y resultado ---------- */
+  .anillo{border-top-color:var(--neon)}
+  .barra i{background:var(--grad-marca)}
+  .codigo{border-color:rgba(255,46,143,.4)}
+  .codigo b{color:var(--neon-2);text-shadow:0 0 18px rgba(255,46,143,.45)}
+  @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
+
+  /* ═══ PASES (25 oct) ═════════════════════════════════════════════
+     Las tarjetas de compra como objetos: proporción de tarjeta física
+     (1,586), arte propio (cintas que se mueven como una falda al girar),
+     el número grande del pase y un brillo que la recorre cuando queda al
+     frente. Movimiento solo con transform y opacidad, curva fuerte de
+     salida, y nada se mueve si la persona pidió menos movimiento.
+     Las fotos: CONFIG.FOTOS. Si un pase tiene foto, va de fondo con un
+     velo oscuro para que el texto se lea. */
+  :root{--ease-salida:cubic-bezier(0.23,1,0.32,1)}
+  .el-titulo{font-size:1.7rem;letter-spacing:-.035em;margin:.4rem 0 .3rem}
+  .el-sub{margin:0 0 1.2rem}
+  .pases{
+    display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:.8rem;
+    overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
+    margin:0 -1rem;padding:.5rem 8% 1.2rem;-webkit-overflow-scrolling:touch;
+  }
+  .pases::-webkit-scrollbar{display:none}
+  @media (min-width:34rem){.pases{grid-auto-columns:20rem;padding-inline:calc(50% - 10rem)}}
+  .pase{
+    position:relative;isolation:isolate;overflow:hidden;scroll-snap-align:center;
+    aspect-ratio:1.586;border-radius:20px;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;
+    color:#fff;background:linear-gradient(150deg,#1b1410 0%,#0b0806 70%);
+    box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 18px 36px -20px rgba(0,0,0,.9);
+    transform:scale(.94);opacity:.62;
+    transition:transform 280ms var(--ease-salida),opacity 280ms var(--ease-salida),box-shadow 280ms ease;
+  }
+  .pase.activo{transform:none;opacity:1;box-shadow:0 1px 0 rgba(255,255,255,.1) inset,0 22px 44px -18px color-mix(in srgb,var(--hot) 55%,transparent)}
+  .pase:active{transform:scale(.97)}
+  .pase:focus-visible{outline:2px solid var(--hot-2);outline-offset:3px}
+  .pase-skel{background:var(--bg-2);opacity:.5;animation:none}
+  /* el pase protagonista (mensualidad): la tarjeta encendida */
+  .pase.pase-mensualidad{color:#1a0a02;background:linear-gradient(150deg,var(--gold) 0%,var(--hot) 48%,color-mix(in srgb,var(--hot) 70%,#000) 100%)}
+  .pase .foto{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .pase .foto::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,.45) 60%,rgba(0,0,0,.15) 100%)}
+  .pase.con-foto{color:#fff}
+  .pase.con-foto .cinta{opacity:.45}
+  .pase.con-foto .num{color:rgba(255,255,255,.06)}
+  /* arte: cintas */
+  .pase .arte{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+  .pase .cinta{fill:none;stroke-linecap:round;stroke-dasharray:420 900;stroke-dashoffset:0}
+  .pase .cinta.c1{stroke:var(--hot);stroke-width:14;opacity:.9}
+  .pase .cinta.c2{stroke:var(--gold);stroke-width:6;opacity:.75}
+  .pase .cinta.c3{stroke:var(--hot-2);stroke-width:2.5;opacity:.6}
+  .pase.pase-mensualidad .cinta.c1{stroke:#1a0a02;opacity:.16}
+  .pase.pase-mensualidad .cinta.c2{stroke:#fff;opacity:.35}
+  .pase.pase-mensualidad .cinta.c3{stroke:#1a0a02;opacity:.25}
+  .pase.activo .cinta{animation:cinta 9s linear infinite}
+  .pase.activo .cinta.c2{animation-duration:12s}
+  .pase.activo .cinta.c3{animation-duration:7s}
+  @keyframes cinta{to{stroke-dashoffset:-1320}}
+  /* el número grande del pase, como relieve */
+  .pase .num{
+    position:absolute;right:1rem;bottom:-1.1rem;z-index:0;font-size:7.6rem;font-weight:900;line-height:1;letter-spacing:-.06em;
+    color:rgba(255,255,255,.07);pointer-events:none;
+  }
+  .pase.pase-mensualidad .num{font-size:5.2rem;bottom:-.3rem;color:rgba(26,10,2,.1)}
+  /* contenido */
+  .pase .cont{position:absolute;inset:0;z-index:1;padding:1rem 1.1rem;display:flex;flex-direction:column}
+  .pase .top{display:flex;justify-content:space-between;align-items:center}
+  .pase .marca-p{font-size:.6rem;font-weight:800;letter-spacing:.26em;opacity:.8}
+  .pase .chip{width:2rem;height:1.45rem;border-radius:.35rem;opacity:.85;
+    background:linear-gradient(135deg,#f6d38a,#c99540);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .pase .chip::before{content:"";display:block;margin:.33rem .3rem;height:.75rem;border:1px solid rgba(0,0,0,.35);border-radius:.2rem}
+  .pase .nom{margin-top:.55rem;font-size:.82rem;font-weight:700;opacity:.85}
+  .pase .cant{font-size:1.75rem;line-height:1;font-weight:800;letter-spacing:-.04em;margin-top:.1rem}
+  .pase .pie{margin-top:auto;display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
+  .pase .precio-p{font-size:1.4rem;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .pase .xc{font-size:.74rem;font-weight:600;opacity:.8}
+  .pase .sello{position:absolute;z-index:2;top:2.75rem;right:1.1rem;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:.25rem .5rem;border-radius:99px;color:#1a0a02;background:var(--gold)}
+  /* brillo que cruza el pase cuando queda al frente */
+  .pase::after{content:"";position:absolute;inset:-20% auto -20% -60%;width:40%;z-index:1;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:translateX(0) skewX(-12deg);opacity:0}
+  .pase.brilla::after{animation:brillo 900ms var(--ease-salida) 120ms 1}
+  @keyframes brillo{0%{opacity:1;transform:translateX(0) skewX(-12deg)}100%{opacity:0;transform:translateX(420%) skewX(-12deg)}}
+  /* pager */
+  .puntos-pager{display:flex;justify-content:center;gap:.4rem;margin:0 0 1.2rem}
+  .puntos-pager i{width:.42rem;height:.42rem;border-radius:99px;background:var(--line-2);transition:transform 200ms var(--ease-salida),background-color 200ms ease}
+  .puntos-pager i.on{background:var(--hot);transform:scaleX(2.2)}
+  /* el botón de comprar, pegado a los pases */
+  .cta-pase{margin:0 0 .3rem}
+  .cta-pase .btn{width:100%;margin:0;transition:transform 160ms var(--ease-salida),filter 160ms ease}
+  .cta-pase .btn:active{transform:scale(.97)}
+  .cta-pase .btn.cambio{animation:cta-cambio 260ms var(--ease-salida)}
+  @keyframes cta-cambio{from{transform:scale(.97);opacity:.6}to{transform:none;opacity:1}}
+  .cta-pase .pista{margin:.6rem 0 0;text-align:center;font-size:.78rem;color:var(--tx-3)}
+  /* lo que incluye el pase al frente: su propia caja, con aire */
+  .detalle{margin-top:1.9rem}
+  .detalle .det{padding:1.2rem 1.15rem 1.15rem;border-radius:18px;border:1px solid var(--line);background:var(--surface,var(--bg-2));
+    transition:opacity 180ms ease,filter 180ms ease}
+  .detalle .det.cambia{opacity:0;filter:blur(2px)}
+  .detalle .ceja-d{display:block;font-size:.66rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--tx-3);margin-bottom:.35rem}
+  .detalle h3{margin:0 0 .25rem;font-size:1.15rem;letter-spacing:-.02em}
+  .detalle .linea{margin:0 0 1rem;color:var(--tx-2);font-size:.9rem;line-height:1.45}
+  .detalle ul{list-style:none;margin:0;padding:0;display:grid;gap:.8rem}
+  .detalle li{position:relative;padding-left:1.75rem;font-size:.9rem;line-height:1.45;color:var(--tx-2)}
+  .detalle li::before{content:"";position:absolute;left:0;top:.05rem;width:1.15rem;height:1.15rem;border-radius:50%;
+    background:color-mix(in srgb,var(--hot) 16%,transparent)}
+  .detalle li::after{content:"";position:absolute;left:.36rem;top:.36rem;width:.42rem;height:.24rem;
+    border-left:2px solid var(--hot-2);border-bottom:2px solid var(--hot-2);transform:rotate(-45deg)}
+  .detalle li b{color:var(--tx)}
+  .detalle li .extra-li{color:var(--tx)}
+  /* preguntas frecuentes: cómodas de tocar */
+  .faq{margin-top:2.4rem}
+  .faq h3{font-size:1.05rem;margin:0 0 .6rem;letter-spacing:-.01em}
+  .faq details{border-top:1px solid var(--line)}
+  .faq details:last-of-type{border-bottom:1px solid var(--line)}
+  .faq summary{list-style:none;cursor:pointer;padding:1.05rem 2rem 1.05rem 0;position:relative;font-size:.94rem;font-weight:600;color:var(--tx);line-height:1.35}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"";position:absolute;right:.35rem;top:50%;width:.55rem;height:.55rem;margin-top:-.4rem;
+    border-right:2px solid var(--tx-3);border-bottom:2px solid var(--tx-3);transform:rotate(45deg);transition:transform 200ms var(--ease-salida)}
+  .faq details[open] summary::after{transform:rotate(225deg);margin-top:-.1rem}
+  .faq details p{margin:0 0 1.1rem;font-size:.9rem;line-height:1.55;color:var(--tx-2)}
+  .faq details p b{color:var(--tx)}
+  @media (prefers-reduced-motion:reduce){
+    .pase,.puntos-pager i,.detalle .det{transition:none}
+    .pase.activo .cinta,.pase.brilla::after,.cta-pase .btn.cambio{animation:none}
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     HALLOWEEN · del 22 al 31 de octubre de 2026 (Damián, 22 oct)
+     Capa encima del tema oscuro de siempre. Se enciende sola con la
+     fecha (script de <head>, hora de Bogotá) y vuelve sola al tema
+     normal. ?halloween=1 la fuerza, ?halloween=0 la quita. Quitar
+     este bloque entero devuelve la página de antes.
+
+     Movimiento: solo transform y opacidad, curvas fuertes, nada que
+     el cliente tenga que esperar para usar la página. Lo ambiental
+     (murciélagos, niebla, parpadeo) es lento y se apaga con
+     prefers-reduced-motion.
+     ═══════════════════════════════════════════════════════════════ */
+  html.halloween{
+    --h-ease:cubic-bezier(0.23,1,0.32,1);
+    --bg:#050505; --bg-2:#0e0b09; --bg-3:#171210;
+    --surface:#0e0b09; --surface-2:#171210;
+    --line:#2a1f17; --line-2:#4a3322;
+    --tx:#fbf6f0; --tx-2:#cbbfb1; --tx-3:#8f8272;
+    --hot:#ff7a1f; --hot-2:#ffa14f; --gold:#ffb347;
+    --neon:#ff7a1f; --neon-2:#ffa14f; --violeta:#e8590c;
+    --slime:#ffa14f; --on-hot:#1a0a02;
+    --grad-marca:linear-gradient(100deg,#ffa14f 0%,#ff7a1f 55%,#e8590c 100%);
+  }
+  html.halloween body{
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(60rem 28rem at 50% -12rem,rgba(255,122,31,.30),transparent 66%),
+      radial-gradient(30rem 22rem at 110% 105%,rgba(255,106,0,.12),transparent 62%);
+    background-attachment:fixed;
+  }
+  /* viñeta: los bordes se oscurecen y la atención se va al centro */
+  html.halloween body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(130% 90% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  /* las tarjetas de opciones: borde de brasa al tocar */
+  html.halloween .opcion{transition:border-color 160ms ease,transform 160ms var(--h-ease),box-shadow 160ms ease}
+  html.halloween .opcion:active{transform:scale(.985)}
+  @media (hover:hover) and (pointer:fine){
+    html.halloween .opcion:hover{border-color:var(--hot);box-shadow:0 0 0 1px rgba(255,122,31,.35),0 12px 30px -14px rgba(255,122,31,.55)}
+  }
+
+  /* ── la franja: la escena ─────────────────────────────────────── */
+  .fr-escena,.fr-cuenta{display:none}
+  .fr-pie{display:contents}
+  html.halloween .franja{
+    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
+    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,122,31,.55); border-radius:18px;
+    background-image:linear-gradient(165deg,#1d1209 0%,#0a0705 62%,#050505 100%)!important;
+    box-shadow:0 18px 40px -18px rgba(255,122,31,.5), inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
+    opacity:0; transform:translateY(10px) scale(.985);
+    animation:h-entra 520ms var(--h-ease) 80ms forwards;
+  }
+  @keyframes h-entra{to{opacity:1;transform:none}}
+  html.halloween .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
+  /* luna llena con su resplandor */
+  .fr-luna{
+    position:absolute; top:-2.2rem; right:-1.6rem; width:9.4rem; height:9.4rem; border-radius:50%;
+    background:
+      radial-gradient(circle at 34% 36%, rgba(0,0,0,.16) 0 9%, transparent 10%),
+      radial-gradient(circle at 62% 58%, rgba(0,0,0,.12) 0 12%, transparent 13%),
+      radial-gradient(circle at 48% 24%, rgba(0,0,0,.10) 0 6%, transparent 7%),
+      radial-gradient(circle at 40% 38%, #fff3d6 0%, #ffd9a0 58%, #ffb467 100%);
+    box-shadow:0 0 0 .6rem rgba(255,180,103,.08), 0 0 4.5rem 1.2rem rgba(255,150,60,.38);
+    opacity:.95;
+  }
+  .fr-niebla{
+    position:absolute; left:-20%; right:-20%; bottom:-1.4rem; height:6rem;
+    background:radial-gradient(60% 100% at 30% 100%, rgba(255,122,31,.30), transparent 70%),
+               radial-gradient(50% 100% at 78% 100%, rgba(255,106,0,.20), transparent 70%);
+    filter:blur(10px); animation:h-niebla 14s ease-in-out infinite alternate;
+  }
+  @keyframes h-niebla{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
+  /* murciélagos: cruzan despacio por delante de la luna */
+  .fr-m{position:absolute;width:1.7rem;height:.85rem;color:#05030a;fill:currentColor;will-change:transform;animation:h-vuelo linear infinite}
+  .fr-m1{top:1.6rem;left:-3rem;animation-duration:15s}
+  .fr-m2{top:3.1rem;left:-3rem;width:1.15rem;height:.6rem;animation-duration:21s;animation-delay:-8s}
+  .fr-m3{top:.9rem;left:-3rem;width:.95rem;height:.5rem;animation-duration:18s;animation-delay:-13s}
+  @keyframes h-vuelo{
+    0%{transform:translate(0,0) rotate(-4deg)} 25%{transform:translate(9rem,.7rem) rotate(3deg)}
+    50%{transform:translate(18rem,-.5rem) rotate(-3deg)} 75%{transform:translate(27rem,.8rem) rotate(4deg)}
+    100%{transform:translate(36rem,0) rotate(-2deg)}
+  }
+  html.halloween .franja-ceja{color:var(--hot-2);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,161,79,.4)}
+  html.halloween .franja-titulo{
+    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:11ch;
+    background:linear-gradient(180deg,#fff 0%,#ffd9b0 55%,#ff9a4a 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 16px rgba(255,122,31,.45));
+    animation:h-parpadeo 7s steps(1,end) infinite;
+  }
+  @keyframes h-parpadeo{0%,92%,100%{opacity:1}93%{opacity:.55}94%{opacity:1}96%{opacity:.7}97%{opacity:1}}
+  html.halloween .franja-linea{color:rgba(255,246,236,.82);max-width:24rem;margin-top:.45rem}
+  html.halloween .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
+  /* el botón de verdad: pastilla de brasa con luz propia */
+  html.halloween .franja-boton{
+    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; letter-spacing:.01em;
+    color:#1c0b03; background:linear-gradient(180deg,#ffb35e 0%,#ff7a1f 100%);
+    box-shadow:0 8px 22px -6px rgba(255,122,31,.75), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform 160ms var(--h-ease), box-shadow 160ms ease;
+  }
+  html.halloween .franja:active .franja-boton{transform:scale(.97)}
+  @media (hover:hover) and (pointer:fine){
+    html.halloween .franja:hover .franja-boton{transform:translateY(-1px);box-shadow:0 12px 26px -6px rgba(255,122,31,.9), inset 0 1px 0 rgba(255,255,255,.5)}
+  }
+  html.halloween .fr-cuenta{
+    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px;
+    font-size:.78rem; font-weight:700; letter-spacing:.02em; color:var(--hot-2);
+    border:1px solid rgba(255,161,79,.45); background:rgba(255,122,31,.08);
+  }
+  .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:h-latido 2.4s ease-in-out infinite}
+  @keyframes h-latido{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+  @media (max-width:380px){html.halloween .franja-titulo{font-size:1.7rem}.fr-luna{width:8rem;height:8rem}}
+  @media (prefers-reduced-motion:reduce){
+    html.halloween .franja{animation:none;opacity:1;transform:none}
+    .fr-m,.fr-niebla,.fr-cuenta::before,html.halloween .franja-titulo{animation:none}
+    .fr-m{display:none}
+  }
+
+  /* ── Halloween en negro y naranja: lo rosa y violeta de la capa neón pasa a naranja ── */
+  html.halloween header::before{background:linear-gradient(90deg,transparent,rgba(255,161,79,.9) 22%,#ff7a1f 62%,transparent);
+    box-shadow:0 0 14px 2px rgba(255,122,31,.5),0 0 34px 6px rgba(255,106,0,.2)}
+  html.halloween header::after{background:linear-gradient(90deg,transparent,rgba(255,122,31,.85) 40%,rgba(255,179,71,.8) 80%,transparent);
+    box-shadow:0 0 12px 2px rgba(255,122,31,.4)}
+  html.halloween .marca img{filter:drop-shadow(0 0 18px rgba(255,122,31,.35)) drop-shadow(0 2px 10px rgba(0,0,0,.7))}
+  html.halloween .pasos li[aria-current]{background:rgba(255,122,31,.12)}
+  html.halloween .opcion:hover,html.halloween .clase:hover:not(:disabled),html.halloween .tarjeta:hover,html.halloween .tarjeta:focus-visible{
+    box-shadow:0 0 0 1px rgba(255,122,31,.45),0 10px 30px -14px rgba(255,122,31,.5)}
+  html.halloween .opcion .ico{background:rgba(255,122,31,.13)}
+  html.halloween .tarjeta .clave{background:rgba(255,122,31,.08)}
+  html.halloween .dia[aria-pressed="true"]{box-shadow:0 8px 24px -8px rgba(255,122,31,.7)}
+  html.halloween .franja-promo{background:linear-gradient(135deg,rgba(255,122,31,.14),rgba(255,106,0,.05) 70%),var(--surface)}
+  html.halloween .franja-promo:hover{background:linear-gradient(135deg,rgba(255,122,31,.2),rgba(255,106,0,.08) 70%),var(--surface-2)}
+  html.halloween .oferta-tiq,html.halloween .oferta-espera{background:linear-gradient(135deg,rgba(255,122,31,.15),rgba(255,106,0,.08))}
+  html.halloween .grupo-total,html.halloween .pago-solo,html.halloween .cuantos-caja .grupo-total{background:linear-gradient(135deg,rgba(255,122,31,.12),rgba(255,106,0,.06))}
+  html.halloween #acompanantes{border-left-color:rgba(255,122,31,.5)}
+  html.halloween .btn{box-shadow:0 10px 28px -12px rgba(255,122,31,.8)}
+  html.halloween .btn:hover:not(:disabled){box-shadow:0 12px 32px -10px rgba(255,122,31,.9)}
+  html.halloween .btn:disabled{box-shadow:none}
+  html.halloween .btn-ghost{border-color:rgba(255,122,31,.35)}
+  html.halloween .btn-ghost:hover{background:rgba(255,122,31,.07)}
+  html.halloween #burbuja{box-shadow:0 8px 26px -6px rgba(255,122,31,.7)}
+  html.halloween .codigo{border-color:rgba(255,122,31,.4)}
+  html.halloween .codigo b{text-shadow:0 0 18px rgba(255,122,31,.45)}
+  html.halloween .tarjeta .destacado,html.halloween .btn{color:var(--on-hot)}
+
+  /* ---------- 29 oct: renovar y registro de primera vez ---------- */
+  .renovar-caja{display:flex;align-items:center;gap:.9rem;justify-content:space-between;margin:0 0 1.1rem;
+    padding:.8rem .95rem;border-radius:var(--r);background:var(--bg-2);border:1px solid var(--line-2)}
+  .renovar-caja b{display:block;font-size:.95rem;color:var(--tx)}
+  .renovar-caja span{display:block;font-size:.8rem;color:var(--tx-2);margin-top:.1rem}
+  .renovar-caja button{flex:none;padding:.62rem .9rem;border-radius:999px;border:1px solid var(--hot);background:transparent;
+    color:var(--hot-2);font:inherit;font-weight:700;font-size:.85rem;cursor:pointer}
+  .renovar-caja button:hover{background:rgba(255,122,31,.12)}
+  @media (max-width:420px){.renovar-caja{flex-direction:column;align-items:stretch;text-align:center}}
+  input[type=date],textarea{width:100%;padding:.72rem .85rem;border-radius:11px;background:var(--bg-2);
+    border:1px solid var(--line);color:var(--tx);font:inherit;transition:.16s;color-scheme:dark}
+  textarea{resize:vertical;min-height:4.2rem}
+  input[type=date]:focus,textarea:focus{border-color:var(--hot);background:var(--bg-3);outline:none}
+  input[type=date].mal,.pregunta.mal{border-color:var(--bad)}
+  .salud{border:1px solid var(--line);border-radius:var(--r);padding:.9rem;display:grid;gap:.8rem;margin:0;min-width:0}
+  .salud legend{padding:0 .4rem;font-weight:700;font-size:.9rem;color:var(--tx)}
+  .pregunta{display:grid;gap:.45rem;padding:.2rem 0;border-radius:10px;border:1px solid transparent}
+  .pregunta > span{font-size:.84rem;color:var(--tx-2);line-height:1.45}
+  .sn{display:flex;gap:.6rem}
+  .sn label{margin:0;flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;padding:.55rem;border-radius:10px;
+    background:var(--bg-2);border:1px solid var(--line);color:var(--tx);cursor:pointer;font-size:.88rem}
+  .sn input{accent-color:var(--hot);width:1rem;height:1rem;margin:0}
+  .sn label:has(input:checked){border-color:var(--hot);background:rgba(255,122,31,.12)}
+  .aviso-salud{margin:0;border-left:3px solid var(--gold);line-height:1.5}
+  .bloque-huella{margin-top:1rem;padding:.9rem 1rem;border-radius:var(--r);background:rgba(255,122,31,.1);
+    border:1px solid rgba(255,122,31,.4);text-align:left;line-height:1.5}
+  .bloque-huella b.t{display:block;font-size:1rem;margin-bottom:.2rem;color:var(--hot-2)}
+  [data-nueva][hidden],[data-pago][hidden]{display:none}
+  .cupos-vivos{margin:.2rem 0 0;text-align:center;font-size:.8rem;color:var(--tx-2);display:flex;flex-wrap:wrap;gap:.35rem .5rem;justify-content:center;align-items:center}
+  .cupos-vivos[hidden]{display:none}
+  .cupos-vivos b{width:100%;color:var(--tx);font-weight:600}
+  .cupos-vivos .cv{padding:.25rem .65rem;border-radius:999px;background:var(--bg-2);border:1px solid var(--line)}
+  .cupos-vivos .cv.pocos{border-color:var(--hot);color:var(--hot-2)}
+  .cupos-vivos .cv.lleno{color:var(--tx-3)}
+</style>
+<script>
+/* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
+(function(){try{
+  var q=(location.search.match(/[?&]halloween=(\d)/)||[])[1];
+  var d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota'}).format(new Date());
+  if(q==='1'||(q!=='0'&&d>='2026-10-22'&&d<='2026-10-31'))document.documentElement.classList.add('halloween');
+}catch(e){}})();
+</script>
+</head>
+<body>
+<!-- Íconos: Phosphor Icons (regular), MIT, https://phosphoricons.com.
+     Se incrustan como <symbol> para no cargar una librería entera por
+     trece glifos; se pintan con currentColor. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="ph-calendar-check" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-38.34-85.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35A8,8,0,0,1,169.66,122.34Z"/></symbol>
+  <symbol id="ph-ticket" viewBox="0 0 256 256"><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></symbol>
+  <symbol id="ph-barcode" viewBox="0 0 256 256"><path d="M232,48V88a8,8,0,0,1-16,0V56H184a8,8,0,0,1,0-16h40A8,8,0,0,1,232,48ZM72,200H40V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H72a8,8,0,0,0,0-16Zm152-40a8,8,0,0,0-8,8v32H184a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,224,160ZM32,96a8,8,0,0,0,8-8V56H72a8,8,0,0,0,0-16H32a8,8,0,0,0-8,8V88A8,8,0,0,0,32,96ZM80,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,80,80Zm104,88V88a8,8,0,0,0-16,0v80a8,8,0,0,0,16,0ZM144,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,144,80Zm-32,0a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,112,80Z"/></symbol>
+  <symbol id="ph-chat-circle-dots" viewBox="0 0 256 256"><path d="M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128ZM84,116a12,12,0,1,0,12,12A12,12,0,0,0,84,116Zm88,0a12,12,0,1,0,12,12A12,12,0,0,0,172,116Zm60,12A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Zm-16,0A88,88,0,1,0,51.81,172.06a8,8,0,0,1,.66,6.54L40,216,77.4,203.53a7.85,7.85,0,0,1,2.53-.42,8,8,0,0,1,4,1.08A88,88,0,0,0,216,128Z"/></symbol>
+  <symbol id="ph-camera" viewBox="0 0 256 256"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"/></symbol>
+  <symbol id="ph-lock-simple" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Z"/></symbol>
+  <symbol id="ph-warning" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol>
+  <symbol id="ph-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+  <symbol id="ph-hourglass-medium" viewBox="0 0 256 256"><path d="M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.6A16.05,16.05,0,0,0,200,75.64ZM72,40H184V75.64L178.23,80H77.33L72,76Zm56,78L98.67,96h58.4Zm56,98H72V180l48-36v24a8,8,0,0,0,16,0V144.08l48,36.28Z"/></symbol>
+  <symbol id="ph-clock" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></symbol>
+  <symbol id="ph-arrow-right" viewBox="0 0 256 256"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+  <symbol id="ph-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+  <symbol id="ph-note-pencil" viewBox="0 0 256 256"><path d="M229.66,58.34l-32-32a8,8,0,0,0-11.32,0l-96,96A8,8,0,0,0,88,128v32a8,8,0,0,0,8,8h32a8,8,0,0,0,5.66-2.34l96-96A8,8,0,0,0,229.66,58.34ZM124.69,152H104V131.31l64-64L188.69,88ZM200,76.69,179.31,56,192,43.31,212.69,64ZM224,128v80a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h80a8,8,0,0,1,0,16H48V208H208V128a8,8,0,0,1,16,0Z"/></symbol>
+</svg>
+<div class="wrap">
+
+<header>
+  <h1 class="marca"><img src="img/logo-tumbao.png" alt="Tumbao, baila pa' sanar" width="521" height="196" fetchpriority="high"></h1>
+  <p class="tagline">Mensualidad y tiquetera</p>
+</header>
+
+<!-- ═══════ elegir · el pase ═══════
+     (25 oct, Damián) «Esto es una página para vender: la gente no lee».
+     Arriba, los PASES: tarjetas que se sienten como un producto físico
+     (un pase, una gift card), una al lado de la otra, que se deslizan.
+     Debajo, lo esencial del pase que está a la vista y UN botón. Lo
+     demás —cómo se reserva, cuánto dura, cómo se paga— va en las
+     preguntas frecuentes, al final. Dos o tres pantallazos y listo. -->
+<section id="eleccion">
+  <!-- 29 oct (Damián): el bot manda a las alumnas a esta página y se quedaban perdidas. Quien YA es alumna o está
+       renovando entra por aquí: solo nombre y celular, y directo al pago. -->
+  <div class="renovar-caja" id="renovar-caja">
+    <div><b>¿Ya eres alumna de Tumbao?</b><span>Si estás renovando tu plan, entra por aquí: más rápido.</span></div>
+    <button type="button" id="btn-renovar">Renovar mi mensualidad</button>
+  </div>
+  <h2 class="el-titulo">Elige tu pase</h2>
+  <p class="sub el-sub">Desliza para ver las opciones.</p>
+  <div class="pases" id="tarjetas-eleccion" role="listbox" aria-label="Pases de Tumbao">
+    <div class="pase pase-skel"></div><div class="pase pase-skel"></div>
+  </div>
+  <div class="puntos-pager" id="pager" aria-hidden="true"></div>
+  <!-- 25 oct (Damián): el botón de comprar va PEGADO a los pases. Tocar un pase lo elige; tocarlo otra vez (o el
+       botón) arranca la compra. Lo que incluye va debajo, en su propia caja. -->
+  <div class="cta-pase" id="cta-pase"></div>
+  <!-- 29 oct: la urgencia honesta —los cupos reales de mensualidad ahora mismo—, sin descuentos ni «últimas horas». -->
+  <p class="cupos-vivos" id="cupos-vivos" hidden></p>
+  <div class="detalle" id="detalle" aria-live="polite"></div>
+
+  <div class="faq" id="faq"></div>
+
+  <p class="sub" style="margin-top:1.2rem;text-align:center">
+    ¿Ya compraste una tiquetera y perdiste el código?
+    <a href="#" id="link-recuperar-2">Recupéralo aquí</a>
+  </p>
+</section>
+
+<!-- 0098: la alternativa a mensualidad, sin mezclarse con su embudo.
+     Vive en secciones propias (#st0.. ) para no arriesgar el flujo de
+     mensualidad, que es el que hoy trae la plata. -->
+<p class="sub" id="ir-a-tiquetera" style="text-align:center;margin:0 0 1.2rem" hidden>
+  ¿Buscas algo más flexible? <a href="#" id="link-tiquetera">Compra una tiquetera</a> ·
+  <a href="#" id="link-recuperar">¿Perdiste tu código?</a>
+</p>
+
+<ol class="pasos" id="pasos" hidden>
+  <li data-paso="0" aria-current="step"><span class="n">1</span>Horario</li>
+  <li data-paso="1"><span class="n">2</span>Tus datos</li>
+  <li data-paso="2"><span class="n">3</span>Pago</li>
+</ol>
+
+<!-- ═══════ 0 · qué es y qué horario ═══════ -->
+<section id="s0" hidden>
+  <button type="button" class="volver-eleccion" id="volver-eleccion-mens">← Cambiar de opción</button>
+  <h2 id="s0-titulo">Tu mensualidad en Tumbao</h2>
+  <p class="sub" id="s0-sub">Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.</p>
+
+  <!-- Se llena solo cuando hay horarios sin cupo (pintarHoras). Va ARRIBA,
+       antes del precio: quien lee «$125.000 al mes» tiene que saber ya que
+       en esos horarios no se puede comprar. -->
+  <div class="aviso info aviso-lleno" id="aviso-lleno" hidden></div>
+
+  <div class="plan">
+    <b class="valor" id="precio">$125.000</b>
+    <span class="cada">al mes · un horario fijo</span>
+    <span class="por-clase-plan" id="plan-por-clase"></span>
+    <ul>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>Entras a todas tus clases de <b>lunes a sábado</b>, sin domingos ni festivos.</span></li>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>De lunes a viernes <b>no reservas</b>: solo llegas y entras en tu horario.</span></li>
+      <li><svg class="tic" aria-hidden="true" focusable="false"><use href="#ph-check"/></svg><span>El <b>sábado</b> sí se aparta cupo.</span></li>
+    </ul>
+  </div>
+
+  <h2>¿Qué horario quieres?</h2>
+  <p class="sub">Cada horario tiene cupo limitado. Esto es lo que hay ahora mismo.</p>
+  <div class="clases" id="horas">
+    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+  </div>
+  <div id="err0"></div>
+</section>
+
+<!-- ═══════ 1 · datos ═══════ -->
+<section id="s1" hidden>
+  <h2 id="t1">¿Quién eres?</h2>
+  <p class="sub" id="sub1"></p>
+  <div class="resumen" id="resumen"></div>
+
+  <form id="form" novalidate autocomplete="on">
+    <div class="trampa" aria-hidden="true">
+      <label for="apellido2">No llenes esto</label>
+      <input id="apellido2" name="apellido2" type="text" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div>
+      <label for="nombre" id="l-nombre">Nombre completo</label>
+      <input id="nombre" type="text" autocomplete="name" placeholder="María Fernanda Ruiz">
+      <p class="hint" id="h-nombre" data-nueva>Con tu apellido, como aparece en tu documento.</p>
+    </div>
+    <div>
+      <label for="celular">Celular (WhatsApp)</label>
+      <input id="celular" type="tel" inputmode="numeric" autocomplete="tel-national"
+             placeholder="3001234567" maxlength="12">
+      <p class="hint" id="h-celular">Por ahí te confirmamos.</p>
+    </div>
+    <!-- Solo para quien viene por primera vez. Sin estos datos el sistema de accesos no la crea. -->
+    <div data-nueva data-pago>
+      <label for="nacimiento">Fecha de nacimiento</label>
+      <input id="nacimiento" type="date" autocomplete="bday" min="1925-01-01">
+    </div>
+    <div data-nueva>
+      <label for="documento">Documento <span class="opt">(opcional)</span></label>
+      <input id="documento" type="text" inputmode="numeric" placeholder="1098765432" maxlength="20">
+    </div>
+    <div data-nueva data-pago>
+      <label for="correo" id="l-correo">Correo</label>
+      <input id="correo" type="email" autocomplete="email" placeholder="maria@correo.com">
+    </div>
+
+    <fieldset class="salud" id="bloque-salud" data-nueva data-pago>
+      <legend>Tu salud</legend>
+      <p class="hint" style="margin:0">Cinco preguntas rápidas, para cuidarte en clase. Contesta con sinceridad.</p>
+      <div class="pregunta" data-k="corazon"><span>¿Algún médico te ha dicho que tienes una condición del corazón o la presión alta?</span>
+        <div class="sn"><label><input type="radio" name="s-corazon" value="0"> No</label><label><input type="radio" name="s-corazon" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="pecho"><span>¿Sientes dolor en el pecho, mareos o pierdes el equilibrio cuando haces ejercicio?</span>
+        <div class="sn"><label><input type="radio" name="s-pecho" value="0"> No</label><label><input type="radio" name="s-pecho" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="lesion"><span>¿Tienes alguna lesión o dolor en huesos, articulaciones o espalda que el baile pueda empeorar?</span>
+        <div class="sn"><label><input type="radio" name="s-lesion" value="0"> No</label><label><input type="radio" name="s-lesion" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="embarazo"><span>¿Estás en embarazo o en posparto reciente?</span>
+        <div class="sn"><label><input type="radio" name="s-embarazo" value="0"> No</label><label><input type="radio" name="s-embarazo" value="1"> Sí</label></div></div>
+      <div class="pregunta" data-k="otra"><span>¿Tienes alguna otra condición de salud, o tomas medicación, que limite la actividad física?</span>
+        <div class="sn"><label><input type="radio" name="s-otra" value="0"> No</label><label><input type="radio" name="s-otra" value="1"> Sí</label></div></div>
+      <div class="aviso info aviso-salud" id="aviso-salud" hidden>
+        Gracias por contarnos. <b>Recomendamos siempre que la actividad física se haga siguiendo las
+        recomendaciones médicas que hayas recibido</b> de tu médico, sobre todo si tienes una condición especial.
+      </div>
+      <div id="salud-detalle-caja" hidden>
+        <label for="salud-detalle">Si quieres, cuéntanos cuál <span class="opt">(opcional)</span></label>
+        <textarea id="salud-detalle" maxlength="400" placeholder="Ej: operación de rodilla hace dos años"></textarea>
+      </div>
+    </fieldset>
+    <div class="check" data-nueva data-pago>
+      <input id="salud-ok" type="checkbox">
+      <label for="salud-ok">Declaro que lo que contesté sobre mi salud es verdad, que me siento en condiciones de
+        hacer actividad física y que la hago bajo mi propia responsabilidad.</label>
+    </div>
+
+    <div class="check" data-nueva>
+      <input id="habeas" type="checkbox">
+      <label for="habeas" id="l-habeas">Autorizo a Tumbao a guardar y usar mis datos personales —incluida mi huella
+        dactilar, que se registra para controlar el ingreso a las clases— para gestionar mi mensualidad y
+        contactarme por WhatsApp. Puedo pedir que los borren cuando quiera
+        (<a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a>).</label>
+    </div>
+    <div class="check" data-nueva>
+      <input id="novedades" type="checkbox">
+      <label for="novedades">Quiero recibir novedades y promociones de Tumbao por
+        WhatsApp <span class="opt">(opcional)</span></label>
+    </div>
+
+    <button class="btn" type="submit" id="btn-enviar">Continuar</button>
+    <button class="btn-ghost" type="button" id="volver0">← Cambiar de horario</button>
+  </form>
+  <div id="err1"></div>
+</section>
+
+<!-- ═══════ 2 · pagar ═══════ -->
+<section id="s2" hidden>
+  <h2>¡Tienes cupo! Falta el pago</h2>
+  <p class="sub" id="sub2"></p>
+
+  <div class="monto">
+    <small>Mensualidad</small>
+    <b id="monto">$125.000</b>
+    <span class="ojo">Transfiere exactamente este valor</span>
+  </div>
+
+  <div class="qr-caja"><img id="qr" alt="Código QR para pagar" width="560" height="560" loading="lazy"></div>
+  <!-- El QR es estático: NO lleva el monto dentro. Sin decirlo, la gente
+       escanea y envía cualquier valor. -->
+  <p class="hint" style="text-align:center;margin:0 0 1rem">
+    El QR no trae el valor: escríbelo tú al pagar.
+  </p>
+
+  <div class="datos-pago">
+    <div class="fila-dato">
+      <span class="k">Llave Bre-B</span>
+      <span class="v" id="d-llave"></span>
+      <button class="copiar" type="button" data-copiar="d-llave">Copiar</button>
+    </div>
+    <div class="fila-dato">
+      <span class="k">Banco</span>
+      <span class="v" id="d-banco"></span>
+    </div>
+    <div class="fila-dato">
+      <span class="k">Cuenta</span>
+      <span class="v" id="d-cuenta"></span>
+      <button class="copiar" type="button" data-copiar="d-cuenta">Copiar</button>
+    </div>
+    <div class="fila-dato">
+      <span class="k">Titular</span>
+      <span class="v" id="d-titular"></span>
+    </div>
+  </div>
+
+  <div>
+    <label for="referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
+    <input id="referencia" type="text" placeholder="Ej: M12621896" maxlength="60">
+    <p class="hint">Si nos la dejas, encontramos tu pago más rápido.</p>
+  </div>
+
+  <button class="btn" type="button" id="btn-pague" style="margin-top:1rem">Ya transferí</button>
+  <div id="err2"></div>
+</section>
+
+<!-- ═══════ 3 · listo ═══════ -->
+<section id="s3" hidden>
+  <div class="ok-wrap" id="final"></div>
+  <a class="btn-ghost" id="wa" href="#" target="_blank" rel="noopener">Escribirnos por WhatsApp</a>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TIQUETERA (0098) — flujo aparte, mismo mecanismo de pago que una
+     clase suelta: se compra, se avisa "ya pagué", y la página pregunta
+     sola hasta que el banco confirma o se acaba el tiempo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="tiquetera-todo" hidden>
+  <ol class="pasos" id="pasos-tiq">
+    <li data-paso="0" aria-current="step"><span class="n">1</span>Paquete</li>
+    <li data-paso="1"><span class="n">2</span>Tus datos</li>
+    <li data-paso="2"><span class="n">3</span>Pago</li>
+  </ol>
+
+  <!-- ── st0 · elegir paquete ── -->
+  <section id="st0">
+    <h2>Tiquetera Tumbao</h2>
+    <p class="sub">Paga tus clases por adelantado y resérvalas cuando quieras, en
+      cualquier horario, con tu código.</p>
+    <div class="clases" id="tiq-paquetes"><div class="skel"></div><div class="skel"></div></div>
+    <div id="err-t0"></div>
+    <p class="sub" style="text-align:center;margin-top:1.2rem">
+      <a href="#" id="volver-mensualidad-0">← Cambiar de opción</a>
+    </p>
+  </section>
+
+  <!-- ── st1 · datos ── -->
+  <section id="st1" hidden>
+    <h2>¿Quién eres?</h2>
+    <p class="sub">Con esto activamos tu tiquetera apenas confirmemos el pago.</p>
+    <div class="resumen" id="tiq-resumen"></div>
+    <form id="form-tiq" novalidate autocomplete="on">
+      <div class="trampa" aria-hidden="true">
+        <label for="tiq-apellido2">No llenes esto</label>
+        <input id="tiq-apellido2" type="text" tabindex="-1" autocomplete="off">
+      </div>
+      <div>
+        <label for="tiq-nombre">Nombre y apellido</label>
+        <input id="tiq-nombre" type="text" autocomplete="name" placeholder="María Fernanda Ruiz">
+      </div>
+      <div>
+        <label for="tiq-celular">Celular (WhatsApp)</label>
+        <input id="tiq-celular" type="tel" inputmode="numeric" autocomplete="tel-national"
+               placeholder="3001234567" maxlength="12">
+        <p class="hint">Ahí te mandamos tu código para guardarlo.</p>
+      </div>
+      <div class="check">
+        <input id="tiq-habeas" type="checkbox">
+        <label for="tiq-habeas">Autorizo a Tumbao a guardar y usar mis datos para
+          gestionar mi tiquetera y contactarme por WhatsApp.</label>
+      </div>
+      <div class="check">
+        <input id="tiq-novedades" type="checkbox">
+        <label for="tiq-novedades">Quiero recibir novedades y promociones de Tumbao por
+          WhatsApp <span class="opt">(opcional)</span></label>
+      </div>
+      <button class="btn" type="submit" id="tiq-btn-enviar">Continuar al pago</button>
+      <button class="btn-ghost" type="button" id="tiq-volver0">← Cambiar de paquete</button>
+    </form>
+    <div id="err-t1"></div>
+  </section>
+
+  <!-- ── st2 · pagar ── -->
+  <section id="st2" hidden>
+    <h2>Falta el pago</h2>
+    <p class="sub" id="tiq-sub2"></p>
+    <div class="monto">
+      <small>Tiquetera</small>
+      <b id="tiq-monto">$52.000</b>
+      <span class="ojo">Transfiere exactamente este valor</span>
+    </div>
+    <div class="qr-caja"><img id="tiq-qr" alt="Código QR para pagar" width="560" height="560" loading="lazy"></div>
+    <p class="hint" style="text-align:center;margin:0 0 1rem">El QR no trae el valor: escríbelo tú al pagar.</p>
+    <div class="datos-pago">
+      <div class="fila-dato"><span class="k">Llave Bre-B</span><span class="v" id="tiq-d-llave"></span>
+        <button class="copiar" type="button" data-copiar="tiq-d-llave">Copiar</button></div>
+      <div class="fila-dato"><span class="k">Banco</span><span class="v" id="tiq-d-banco"></span></div>
+      <div class="fila-dato"><span class="k">Cuenta</span><span class="v" id="tiq-d-cuenta"></span>
+        <button class="copiar" type="button" data-copiar="tiq-d-cuenta">Copiar</button></div>
+      <div class="fila-dato"><span class="k">Titular</span><span class="v" id="tiq-d-titular"></span></div>
+    </div>
+    <div>
+      <label for="tiq-referencia">Referencia del comprobante <span class="opt">(opcional)</span></label>
+      <input id="tiq-referencia" type="text" placeholder="Ej: M12621896" maxlength="60">
+    </div>
+    <button class="btn" type="button" id="tiq-btn-pague" style="margin-top:1rem">Ya transferí</button>
+    <div id="err-t2"></div>
+  </section>
+
+  <!-- ── st3 · esperando / listo ── -->
+  <section id="st3" hidden>
+    <div id="tiq-espera">
+      <h2>Confirmando con el banco…</h2>
+      <p class="sub" id="tiq-espera-sub">Esto tarda uno o dos minutos. No cierres esta pantalla.</p>
+    </div>
+    <div class="ok-wrap" id="tiq-final" hidden></div>
+    <a class="btn-ghost" id="tiq-wa" href="#" target="_blank" rel="noopener" hidden>Escribirnos por WhatsApp</a>
+  </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     RECUPERAR CÓDIGO (0098) — por celular, igual de simple que buscar
+     una mensualidad: el celular ya identifica a la clienta.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="recuperar-todo" hidden>
+  <section id="sr0">
+    <h2>¿Perdiste tu código?</h2>
+    <p class="sub">Escribe el celular con el que compraste tu tiquetera.</p>
+    <form id="form-recuperar" novalidate>
+      <div>
+        <label for="rec-celular">Celular</label>
+        <input id="rec-celular" type="tel" inputmode="numeric" placeholder="3001234567" maxlength="12">
+      </div>
+      <button class="btn" type="submit" id="rec-btn">Buscar</button>
+      <button class="btn-ghost" type="button" id="rec-volver">← Volver</button>
+    </form>
+    <div id="err-r0"></div>
+    <div id="rec-resultado"></div>
+  </section>
+</div>
+
+<footer>
+  ¿Dudas? <a id="wa2" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a><br>
+  ¿Solo quieres una clase suelta? <a href="/">Resérvala aquí</a>
+</footer>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const pesos = n => '$' + Number(n || 0).toLocaleString('es-CO');
+  // Íconos del sprite de Phosphor (arriba del <body>). Se pintan con
+  // currentColor, así que toman el color de donde se pongan.
+  const icono = n => `<svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-${n}"/></svg>`;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g,
+    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  // Lo que se sabe de la persona mientras avanza por los pasos.
+  let horas = [];          // los cupos que devolvió el servidor
+  let horaElegida = null;  // 'HH:MM'
+  let valorCop = 125000;
+  let solicitud = null;    // { id, estado }
+  // 29 oct: «nueva» = primera vez (registro completo) · «renovacion» = ya es alumna (nombre, celular y a pagar).
+  let modo = 'nueva';
+  let hayPago = true;      // el horario elegido se puede pagar (si no, lista de espera sin datos de salud)
+
+  const waUrl = (texto) =>
+    `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(texto)}`;
+  $('#wa2').href = waUrl('Hola Tumbao, quiero información sobre la mensualidad.');
+
+  const aviso = (donde, texto, clase) => {
+    $(donde).innerHTML = texto
+      ? `<div class="aviso ${clase || 'malo'}">${texto}</div>` : '';
+  };
+
+  const laHora = () => horas.find(x => x.hora === horaElegida) || null;
+
+  /* Cambia de pantalla y mueve los tres pasos de arriba. El paso 3 (el
+     final) no tiene su propia pastilla: es el mismo "Pago" ya cumplido,
+     y una cuarta haría que la barra creciera al llegar al final. */
+  const ir = (n) => {
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = true;
+    $('#s' + n).hidden = false;
+    for (const li of $('#pasos').children) {
+      const i = Number(li.dataset.paso);
+      li.classList.toggle('hecho', i < n);
+      if (i === Math.min(n, 2)) li.setAttribute('aria-current', 'step');
+      else li.removeAttribute('aria-current');
+      li.querySelector('.n').textContent = i < n ? '✓' : String(i + 1);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  /* ── los cupos ─────────────────────────────────────────────────
+     Es lo primero que se pinta y lo que decide todo lo demás. Si esto
+     falla no se puede seguir: mandar a alguien a pagar sin saber si hay
+     cupo es exactamente el problema que la página vino a resolver. */
+  async function cargarCupos() {
+    try {
+      const r = await fetch(CONFIG.API, { method: 'GET' });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error('sin datos');
+      horas = d.horas || [];
+      valorCop = Number(d.valor_cop || 125000);
+      { const e = document.getElementById('plan-por-clase'); if (e) e.textContent = textoPorClasePlan(); }
+      $('#precio').textContent = pesos(valorCop);
+      $('#monto').textContent = pesos(valorCop);
+      pintarHoras();
+      pintarCuposVivos();
+    } catch (e) {
+      $('#horas').innerHTML = '';
+      aviso('#err0',
+        'No pudimos leer los cupos en este momento. ' +
+        `<a href="${waUrl('Hola Tumbao, quiero mensualidad pero la página no cargó los cupos.')}" ` +
+        'target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y te decimos.', 'malo');
+    }
+  }
+
+  /* Debajo del botón de comprar: cuántos cupos de mensualidad hay AHORA en cada horario (los de la base, no inventados).
+     Quien lee «quedan 3» decide más rápido que quien lee «hay cupo». Un horario lleno se dice como lista de espera. */
+  function pintarCuposVivos() {
+    const el = $('#cupos-vivos');
+    if (!el || !horas.length) return;
+    const trozos = horas.map(h => {
+      const n = Number(h.libres);
+      if (!(n > 0)) return `<span class="cv lleno">${esc(h.etiqueta)} · lista de espera</span>`;
+      return `<span class="cv${n <= 5 ? ' pocos' : ''}">${esc(h.etiqueta)} · ${n === 1 ? '1 cupo' : n + ' cupos'}</span>`;
+    });
+    el.innerHTML = '<b>Cupos de mensualidad ahora:</b> ' + trozos.join('');
+    el.hidden = false;
+  }
+
+  /* Los horarios sin cupo no se pueden comprar: solo lista de espera. La
+     gente lo entendía como «otra forma de pagar», así que esto se dice
+     en tres sitios —arriba, en la tarjeta de entrada y antes del
+     formulario— y con la misma frase: no hay nada que pagar. Quien ya es
+     alumno y quiere renovar no usa esta página: pide los datos por chat,
+     para que recepción compruebe quién tiene mensualidad. */
+  const horasSinCupo = () => horas.filter(h => !(Number(h.libres) > 0));
+  const unirHoras = (hs) => hs.map(h => h.etiqueta).join(' y ');
+  const waRenovar = (hh) => waUrl(hh
+    ? `Hola Tumbao, soy alumno de la mensualidad de las ${hh} y quiero renovar.`
+    : 'Hola Tumbao, soy alumno de la mensualidad y quiero renovar.');
+
+  function pintarAvisoLleno() {
+    const cerradas = horasSinCupo();
+    const caja = $('#aviso-lleno');
+    if (!cerradas.length) { caja.hidden = true; caja.innerHTML = ''; return; }
+    const uno = cerradas.length === 1;
+    // Antes decía «lleno / no se puede comprar» y la gente leía eso y se iba.
+    // Ahora invita a apuntarse (2 oct): la lista es gratis y es la puerta a
+    // la mensualidad, que se asigna a los clientes que llevan más tiempo.
+    caja.innerHTML =
+      `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
+      `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo. ` +
+      'Apuntarte es gratis: <b>no hay nada que pagar</b>. ' +
+      '¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>: tu cupo es tuyo.';
+    caja.hidden = false;
+  }
+
+  function pintarHoras() {
+    pintarAvisoLleno();
+    if (!horas.length) {
+      $('#horas').innerHTML =
+        '<p class="sub">No hay horarios de mensualidad configurados.</p>';
+      return;
+    }
+    $('#horas').innerHTML = horas.map(h => {
+      const n = Number(h.libres);
+      const libre = n > 0;
+      /* La pastilla, corta como en la lista de clases de la página de
+         reservas ("3 cupos"). Decía "Quedan 5 cupos" y era tan ancha que
+         empujaba el texto del medio a dos líneas y dejaba las tres filas
+         de alturas distintas.
+
+         El número exacto se queda —"1 cupo" mueve mucho más que "hay
+         cupo"— con su concordancia, y la urgencia la pone el color: de
+         tres para abajo la pastilla se vuelve dorada. */
+      // Quien renueva ya tiene su cupo en ese horario: no ve «cupos» ni «lista de espera», ve «Renovar».
+      const renueva = modo === 'renovacion';
+      const pastilla = renueva ? 'Renovar' : libre
+        ? (n === 1 ? '1 cupo' : `${n} cupos`)
+        : 'Apuntarme';
+      /* El renglón del medio decía "Plan mensualidad" en las tres filas:
+         tres veces lo mismo, y encima partido en dos líneas porque no
+         cabía al lado de la hora y la pastilla. Lo que de verdad hace
+         falta ahí es qué cubre —o qué pasa si está lleno—, que cabe en
+         una línea y no se repite en balde. */
+      return `<button type="button" class="clase hora" data-hora="${esc(h.hora)}">
+          <span class="hr">${esc(h.etiqueta)}</span>
+          <span class="info">
+            <span class="nom">${renueva ? 'Tu horario de siempre' : libre ? 'Lunes a sábado' : 'Lista de espera'}</span>
+            <span class="meta">${renueva ? 'Pagas y sigues bailando' : libre ? 'Sin domingos ni festivos' : 'Sin pago · te avisamos'}</span>
+          </span>
+          <span class="cupos ${renueva ? '' : libre ? (n <= 3 ? 'pocos' : '') : 'invita'}">${pastilla}</span>
+        </button>`;
+    }).join('');
+
+    for (const b of $('#horas').querySelectorAll('.hora')) {
+      b.addEventListener('click', () => {
+        horaElegida = b.dataset.hora;
+        const h = laHora();
+        // Quien renueva ya tiene su cupo: siempre va al pago. El servidor confirma que sí es alumna.
+        hayPago = modo === 'renovacion' || Number(h.libres) > 0;
+        pintarDatos();
+        aviso('#err1', '');
+        ir(1);
+      });
+    }
+  }
+
+  /* Pinta la pantalla de datos según el caso: renovación (corta), primera vez con pago (completa, con salud) o
+     lista de espera (nombre, celular y autorización: sin preguntas de salud hasta que haya cupo). */
+  function pintarDatos(aviso1) {
+    const h = laHora();
+    if (!h) return;
+    const renueva = modo === 'renovacion';
+    const hay = hayPago;
+    // La barra «Horario · Datos · Pago» promete un paso de pago: en la lista de espera no existe, así que no se enseña.
+    $('#pasos').hidden = !hay;
+    $('#t1').textContent = renueva ? 'Renueva tu mensualidad' : hay ? '¿Quién eres?' : 'Apúntate a la lista de espera';
+    // Se dice ANTES de pedir los datos si va a poder pagar o no. Que alguien llene el formulario creyendo que compra
+    // y termine en una lista de espera es la peor forma de enterarse.
+    $('#resumen').innerHTML = hay
+      ? `<strong>${renueva ? 'Renovación' : 'Plan mensualidad'} · ${esc(h.etiqueta)}</strong>` +
+        `<span>${pesos(valorCop)} al mes</span>`
+      : `<strong>Lista de espera · ${esc(h.etiqueta)}</strong>` +
+        '<span>Sin pago</span>';
+    $('#sub1').innerHTML = (aviso1 ? `<b>${esc(aviso1)}</b><br><br>` : '') + (renueva
+      ? 'Escribe tu nombre y el celular con el que te inscribiste: te encontramos y pasas directo al pago.'
+      : hay
+        ? 'Es tu primera vez en Tumbao: con estos datos te creamos en el sistema de acceso y te apartamos el cupo mientras pagas.'
+        : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
+          'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
+          '<b>No tienes que pagar nada ahora.</b> ' +
+          '<br><br>¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>.');
+    // Qué campos se ven: nada de registro para quien renueva; salud y nacimiento solo si de verdad va a pagar.
+    for (const el of document.querySelectorAll('#form [data-nueva]')) {
+      el.hidden = renueva || (el.hasAttribute('data-pago') && !hay);
+    }
+    $('#l-nombre').textContent = renueva ? 'Nombre y apellido' : 'Nombre completo';
+    $('#btn-enviar').textContent = renueva || hay ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
+    $('#volver0').textContent = '← Cambiar de horario';
+  }
+
+  // «Renueva aquí» (en los avisos de lista de espera) y el aviso de arriba llevan al mismo sitio.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('[data-renovar]');
+    if (a) { e.preventDefault(); entrarRenovacion(); }
+  });
+
+  /* Las alumnas que ya tienen su plan entran por aquí. */
+  function entrarRenovacion() {
+    modo = 'renovacion';
+    $('#eleccion').hidden = true;
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = true;
+    $('#s0-titulo').textContent = 'Renueva tu mensualidad';
+    $('#s0-sub').textContent = 'Elige el horario de siempre, escribe tu celular y pasas directo al pago.';
+    $('#pasos').hidden = false;
+    $('#ir-a-tiquetera').hidden = false;
+    pintarHoras();
+    ir(0);
+  }
+  function salirDeRenovacion() {
+    modo = 'nueva';
+    $('#s0-titulo').textContent = 'Tu mensualidad en Tumbao';
+    $('#s0-sub').textContent = 'Un horario fijo, todas tus clases del mes. Elige el tuyo y mira si hay cupo.';
+  }
+  $('#btn-renovar').addEventListener('click', entrarRenovacion);
+
+  /* ── los datos ─────────────────────────────────────────────── */
+  $('#volver0').addEventListener('click', () => { $('#pasos').hidden = false; ir(0); });
+
+  const limpiarTel = v => {
+    let t = String(v || '').replace(/\D/g, '');
+    if (t.length === 12 && t.startsWith('57')) t = t.slice(2);
+    return t;
+  };
+
+  $('#form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nombre = $('#nombre').value.trim();
+    const tel = limpiarTel($('#celular').value);
+    const renueva = modo === 'renovacion';
+    const completa = !renueva && hayPago;      // primera vez que va a pagar: pide el registro completo
+    const habeas = $('#habeas').checked;
+    const nacimiento = $('#nacimiento').value;
+    const correo = $('#correo').value.trim();
+    const SALUD = ['corazon', 'pecho', 'lesion', 'embarazo', 'otra'];
+    const marca = k => { const r = document.querySelector(`input[name="s-${k}"]:checked`); return r ? r.value === '1' : null; };
+
+    for (const id of ['#nombre', '#celular', '#nacimiento', '#correo']) $(id).classList.remove('mal');
+    for (const q of document.querySelectorAll('.pregunta')) q.classList.remove('mal');
+    if (nombre.length < 2) { $('#nombre').classList.add('mal');
+      return aviso('#err1', 'Escribe tu nombre.', 'malo'); }
+    if (!renueva && completa && !/\S+\s+\S+/.test(nombre)) { $('#nombre').classList.add('mal');
+      return aviso('#err1', 'Escribe tu nombre completo, con apellido.', 'malo'); }
+    if (tel.length !== 10) { $('#celular').classList.add('mal');
+      return aviso('#err1', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
+    if (completa) {
+      const nac = nacimiento ? new Date(nacimiento + 'T00:00:00') : null;
+      const edad = nac ? (Date.now() - nac.getTime()) / (365.25 * 864e5) : 0;
+      if (!nac || isNaN(edad) || edad < 10 || edad > 100) { $('#nacimiento').classList.add('mal');
+        return aviso('#err1', 'Escribe tu fecha de nacimiento.', 'malo'); }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { $('#correo').classList.add('mal');
+        return aviso('#err1', 'Escribe un correo válido: ahí te llega tu registro.', 'malo'); }
+      const sinResponder = SALUD.filter(k => marca(k) === null);
+      if (sinResponder.length) {
+        for (const k of sinResponder) document.querySelector(`.pregunta[data-k="${k}"]`).classList.add('mal');
+        return aviso('#err1', 'Contesta las cinco preguntas de salud (Sí o No).', 'malo');
+      }
+      if (!$('#salud-ok').checked) return aviso('#err1', 'Falta aceptar la declaración de salud.', 'malo');
+    }
+    if (!renueva && !habeas) return aviso('#err1', 'Falta autorizar el uso de tus datos.', 'malo');
+
+    aviso('#err1', '');
+    const btn = $('#btn-enviar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const salud = completa ? Object.fromEntries(SALUD.map(k => [k, marca(k)])) : undefined;
+      if (salud) salud.detalle = $('#salud-detalle').value.trim();
+      const r = await fetch(CONFIG.API + '/solicitar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, celular: tel, hora: horaElegida, modo,
+          documento: $('#documento').value.trim(),
+          correo, nacimiento: nacimiento || undefined, salud, salud_ok: completa ? $('#salud-ok').checked : undefined,
+          habeas: renueva ? undefined : true,
+          acepta_novedades: renueva ? false : $('#novedades').checked, apellido2: $('#apellido2').value,
+        }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) {
+        // No la encontramos como alumna: no es un callejón sin salida, es el formulario de primera vez.
+        if (d && d.error === 'NO_ENCONTRADA') {
+          modo = 'nueva'; hayPago = Number((laHora() || {}).libres) > 0; pintarHoras();
+          pintarDatos('No te encontramos como alumna con ese celular. Si es tu primera vez, completa estos datos; si ya eras alumna, escríbenos por WhatsApp.');
+          return;
+        }
+        // Se liberó un cupo mientras escribía una lista de espera: ahora sí hay compra y faltan los datos.
+        if (d && d.error === 'DATOS_INCOMPLETOS' && !completa && !renueva) {
+          hayPago = true; pintarDatos('¡Hay cupo! Completa estos datos para poder pagar.');
+          return;
+        }
+        throw new Error((d && d.mensaje) || 'no se pudo');
+      }
+
+      solicitud = d;
+      valorCop = Number(d.valor_cop || valorCop);
+      // El estado lo decide el servidor, no lo que la página pintó hace
+      // un minuto: los cupos pueden haberse ido mientras escribía.
+      if (d.estado === 'esperando_pago') { pintarPago(); ir(2); }
+      else { pintarEspera(); ir(3); }
+    } catch (e) {
+      aviso('#err1', (e && e.message) ||
+        'No pudimos guardar tus datos. Inténtalo otra vez.', 'malo');
+    } finally {
+      btn.disabled = false;
+      const h = laHora();
+      btn.textContent = (modo === 'renovacion' || (h && Number(h.libres) > 0))
+        ? 'Continuar al pago' : 'Apuntarme a la lista de espera';
+    }
+  });
+
+  // Las preguntas de salud: si marca «Sí» en alguna, sale el aviso de siempre seguir lo que diga su médico.
+  for (const r of document.querySelectorAll('input[name^="s-"]')) {
+    r.addEventListener('change', () => {
+      const alguna = ['corazon', 'pecho', 'lesion', 'embarazo', 'otra']
+        .some(k => { const x = document.querySelector(`input[name="s-${k}"]:checked`); return x && x.value === '1'; });
+      $('#aviso-salud').hidden = !alguna;
+      $('#salud-detalle-caja').hidden = !alguna;
+    });
+  }
+
+  /* ── el pago ───────────────────────────────────────────────── */
+  function pintarPago() {
+    const h = laHora();
+    // Horario con lista de espera pero a esta persona le toca cupo (0133): la
+    // página no habla de «requisitos» a nadie (predispone, 2 oct): solo celebra.
+    $('#sub2').innerHTML = (solicitud && solicitud.es_renovacion)
+      ? `Te encontramos: renuevas tu mensualidad de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
+        'Transfiere y avísanos aquí mismo.'
+      : (solicitud && solicitud.por_requisitos)
+      ? `¡Buenas noticias! Tienes cupo en el horario de las <b>${esc(h ? h.etiqueta : '')}</b>. ` +
+        'Transfiere y avísanos aquí mismo.'
+      : `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
+        '<b>24 horas</b>. Transfiere y avísanos aquí mismo.';
+    $('#monto').textContent = pesos(valorCop);
+    $('#d-llave').textContent = CONFIG.PAGO.llave;
+    $('#d-banco').textContent = CONFIG.PAGO.banco + ' · ' + CONFIG.PAGO.tipo;
+    $('#d-cuenta').textContent = CONFIG.PAGO.cuenta;
+    $('#d-titular').textContent = CONFIG.PAGO.titular;
+    $('#qr').src = CONFIG.PAGO.qr;
+  }
+
+  for (const b of document.querySelectorAll('.copiar')) {
+    b.addEventListener('click', async () => {
+      const t = $('#' + b.dataset.copiar).textContent;
+      try {
+        await navigator.clipboard.writeText(t);
+        b.textContent = '¡Listo!'; b.classList.add('listo');
+      } catch (e) { b.textContent = t; }   // sin permiso, al menos se ve
+      setTimeout(() => { b.textContent = 'Copiar'; b.classList.remove('listo'); }, 1800);
+    });
+  }
+
+  $('#btn-pague').addEventListener('click', async () => {
+    if (!solicitud) return;
+    const btn = $('#btn-pague');
+    btn.disabled = true; btn.textContent = 'Avisando…';
+    try {
+      const r = await fetch(CONFIG.API + '/pague', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: solicitud.id,
+                               referencia: $('#referencia').value.trim() }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      pintarPagado(); ir(3);
+    } catch (e) {
+      aviso('#err2', (e && e.message) ||
+        'No pudimos registrar tu aviso. Escríbenos por WhatsApp.', 'malo');
+      btn.disabled = false; btn.textContent = 'Ya transferí';
+    }
+  });
+
+  /* ── los finales ───────────────────────────────────────────── */
+  /* Mientras espera su cupo, quien quedó en la lista ya está interesado en
+     bailar con nosotros: se le ofrece venir ya con tiquetera (2 oct), con
+     la cuenta real. Sin paquetes cargados, no se muestra nada. */
+  function ofertaEspera() {
+    const mejor = (tiqPaquetes || [])
+      .filter(p => Number(p.clases) > 0 && Number(p.precio_cop) > 0)
+      .sort((a, b) => a.precio_cop / a.clases - b.precio_cop / b.clases)[0];
+    if (!mejor) return '';
+    const porClase = Math.round(mejor.precio_cop / mejor.clases);
+    return `<div class="oferta-espera">
+        <b>Mientras te avisamos, baila desde ya</b>
+        <p>Con la tiquetera de ${esc(String(mejor.clases))} clases (${pesos(mejor.precio_cop)}) cada clase te sale a
+           <b style="display:inline">${pesos(porClase)}</b> y la usas cuando quieras durante ${esc(String(mejor.vigencia_dias))} días.</p>
+        <button type="button" class="btn" id="espera-ir-tiq" data-clave="${esc(mejor.clave)}">Quiero mi tiquetera</button>
+      </div>`;
+  }
+
+  function pintarEspera() {
+    const h = laHora();
+    const hh = h ? h.etiqueta : 'ese horario';
+    $('#pasos').hidden = true;   // sin paso de pago, sin barra que lo prometa
+    $('#final').innerHTML =
+      `<div class="tick espera-humana">${icono('note-pencil')}</div>
+       <h2>Quedaste en la lista</h2>
+       <p><b>Esto es solo una lista de espera, no una compra.</b> Te escribimos por
+          WhatsApp si se libera un cupo de las <b>${esc(hh)}</b>.</p>
+       <p><b>No pagues nada todavía.</b> No hay datos de pago para este horario:
+          si transfieres, no podemos asignarte el cupo.</p>
+       <p>¿Ya eres alumna de este horario y estás renovando? <a href="#" data-renovar>Renueva aquí</a>
+          con tu celular y pasas directo al pago.</p>
+       ${ofertaEspera()}`;
+    const irTq = $('#espera-ir-tiq');
+    if (irTq) irTq.addEventListener('click', () => {
+      $('#eleccion').hidden = true;
+      elegirTiqueteraDirecta(irTq.dataset.clave);
+    });
+    $('#wa').textContent = 'Ya soy alumno y quiero renovar';
+    $('#wa').href = waRenovar(hh);
+  }
+
+  function pintarPagado() {
+    const h = laHora();
+    const hh = h ? h.etiqueta : '';
+    $('#final').innerHTML =
+      `<div class="tick">${icono('check')}</div>
+       <h2>¡Gracias! Ya nos llegó tu aviso</h2>
+       <p>Estamos confirmando el pago con el banco. Te escribimos por
+          WhatsApp para activarte la mensualidad de las <b>${esc(hh)}</b>.</p>
+       <p>Si tienes el comprobante a mano, mándanoslo y vamos más rápido.</p>` +
+      // 29 oct (Damián): quien viene por primera vez tiene que pasar por el registro biométrico antes de entrar.
+      (solicitud && solicitud.primera_vez
+        ? `<div class="bloque-huella"><b class="t">Tu primera visita</b>
+             Cuando vengas por primera vez, <b>acércate 10 o 15 minutos antes</b> de la clase para hacer tu
+             <b>registro biométrico</b>: te tomamos la huella y te creamos en el sistema de acceso. Así, desde ese
+             día, entras a clase poniendo el dedo.</div>`
+        : (solicitud && solicitud.es_renovacion
+          ? '<p>Sigues entrando con tu huella como siempre.</p>' : ''));
+    $('#wa').textContent = 'Escribirnos por WhatsApp';
+    $('#wa').href = waUrl(
+      `Hola Tumbao, ya transferí la mensualidad de las ${hh}. Les mando el comprobante.`);
+  }
+
+  /* ═══════════════ tiquetera (0098) ═══════════════
+     Flujo aparte, para no arriesgar el de mensualidad. Mismo mecanismo
+     de pago que una clase suelta: se compra, se avisa, y la página
+     pregunta sola. */
+  let tiqPaquetes = [];
+  let tiqPaqueteElegido = null;
+  let tiqCompra = null;      // { id, codigo, precio_cop, clases, vence_el }
+  let tiqTemporizador = null;
+  let tiqSondeo = null;
+
+  const irTiq = (n) => {
+    for (const s of ['#st0', '#st1', '#st2', '#st3']) $(s).hidden = true;
+    $('#st' + n).hidden = false;
+    for (const li of $('#pasos-tiq').children) {
+      const i = Number(li.dataset.paso);
+      li.classList.toggle('hecho', i < n);
+      if (i === Math.min(n, 2)) li.setAttribute('aria-current', 'step');
+      else li.removeAttribute('aria-current');
+      li.querySelector('.n').textContent = i < n ? '✓' : String(i + 1);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  function mostrarTiquetera(mostrar) {
+    $('#ir-a-tiquetera').hidden = mostrar;
+    $('#pasos').hidden = mostrar;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = mostrar || $(s).hidden;
+    $('#tiquetera-todo').hidden = !mostrar;
+    if (mostrar) { irTiq(0); if (!tiqPaquetes.length) cargarPaquetes(); }
+  }
+  $('#link-tiquetera').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarTiquetera(true); ir(0);
+  });
+
+  /* ── la elección de entrada: mensualidad o tiquetera ──────────────
+     Vuelve a la pantalla de las tres tarjetas desde cualquier sitio: la
+     tiquetera y recuperar dejaron de ser "sub-modos de mensualidad" y
+     pasaron a ser opciones hermanas. */
+  function volverAEleccion() {
+    salirDeRenovacion();
+    pintarHoras();
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = true;
+    $('#ir-a-tiquetera').hidden = true;
+    $('#pasos').hidden = true;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = true;
+    $('#eleccion').hidden = false;
+  }
+  $('#volver-eleccion-mens').addEventListener('click', volverAEleccion);
+  $('#volver-mensualidad-0').addEventListener('click', (e) => {
+    e.preventDefault(); volverAEleccion();
+  });
+
+  /* Se eligió una tiquetera concreta desde su tarjeta -- el paquete ya
+     está decidido, así que se salta la lista (st0) y se va directo a
+     pedir los datos. */
+  function elegirTiqueteraDirecta(clave) {
+    mostrarTiquetera(true);
+    tiqPaqueteElegido = tiqPaquetes.find(p => p.clave === clave) || null;
+    if (!tiqPaqueteElegido) { irTiq(0); return; }
+    $('#tiq-resumen').innerHTML =
+      `<strong>Tiquetera de ${esc(String(tiqPaqueteElegido.clases))} clases</strong>` +
+      `<span>${pesos(tiqPaqueteElegido.precio_cop)} · vigente ` +
+      `${esc(String(tiqPaqueteElegido.vigencia_dias))} días</span>`;
+    aviso('#err-t1', '');
+    irTiq(1);
+  }
+
+  /* «Alrededor de $5.000 por clase»: la cuenta que convence, dicha como cuenta y no como descuento. Siempre «alrededor de»
+     porque el número de clases cambia de un mes a otro (23 a 26). Sale del valor que manda el sistema. */
+  const porClasePlan = () => Math.round(valorCop / CONFIG.CLASES_MES_REF / 100) * 100;
+  const textoPorClasePlan = () =>
+    `Alrededor de ${pesos(porClasePlan())} por clase si vienes a todas (la suelta cuesta ${pesos(CONFIG.PRECIO_SUELTA_REF)})`;
+
+  // 26 oct: la campaña de clases adicionales por constancia se desmontó (la dueña no la aprobó). No se ofrece en ninguna parte.
+
+  /* ═══ Los pases ═══
+     Cada producto es una tarjeta (un pase). Se deslizan; el que queda al
+     frente se ilumina y abajo aparece lo esencial de ese pase y un solo
+     botón. Las dudas van en las preguntas frecuentes, al final. */
+  const ARTE = `<svg class="arte" viewBox="0 0 320 202" preserveAspectRatio="none" aria-hidden="true">
+      <path class="cinta c1" d="M-30 170 C 60 120, 110 210, 190 140 S 300 40, 360 80"/>
+      <path class="cinta c2" d="M-20 120 C 70 60, 140 170, 220 100 S 320 10, 360 30"/>
+      <path class="cinta c3" d="M-10 200 C 80 150, 150 230, 240 170 S 330 110, 370 140"/>
+    </svg>`;
+
+  function listaDePases() {
+    const pases = [{
+      tipo: 'mensualidad', nombre: 'Mensualidad', cant: 'Todo el mes', num: 'MES',
+      precio: valorCop, xc: `≈ ${pesos(porClasePlan())} por clase`,
+      linea: 'Tu horario fijo de lunes a sábado.',
+      puntos: [
+        'De lunes a viernes <b>no reservas</b>: llegas a tu horario y entras.',
+        'Los sábados, <b>Rumba terapia</b> incluida (se aparta el cupo).',
+        `Sale a <b>≈ ${pesos(porClasePlan())} por clase</b> si vienes a todas (la suelta vale ${pesos(CONFIG.PRECIO_SUELTA_REF)}).`,
+        cuposTxt(),
+      ].filter(Boolean),
+      cta: `Quiero la mensualidad · ${pesos(valorCop)}`, foto: CONFIG.FOTOS.mensualidad,
+    }];
+    // Orden (Damián, 25 oct): mensualidad, la de 8 clases y luego la de 4.
+    for (const p of [...tiqPaquetes].sort((a, b) => Number(b.clases) - Number(a.clases))) {
+      const clases = Number(p.clases) || 0, precio = Number(p.precio_cop) || 0;
+      const ahorro = Math.max(clases * CONFIG.PRECIO_SUELTA_REF - precio, 0);
+      pases.push({
+        tipo: 'tq', clave: p.clave, nombre: 'Tiquetera', cant: `${clases} clases`, num: String(clases),
+        precio, xc: `${pesos(Math.round(precio / (clases || 1)))} por clase`, sello: clases >= 8 ? 'Mejor precio' : '',
+        linea: clases >= 8 ? 'Para venir dos veces por semana, sin horario fijo.' : 'Para empezar o venir una vez por semana.',
+        puntos: [
+          'Úsala en <b>cualquier horario</b>: reservas cada clase en la página con tu código.',
+          `Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.`,
+          ahorro > 0 ? `Ahorras <b>${pesos(ahorro)}</b> frente a pagar clase suelta.` : '',
+        ].filter(Boolean),
+        cta: `Quiero la de ${clases} clases · ${pesos(precio)}`, foto: CONFIG.FOTOS[String(clases)] || '',
+      });
+    }
+    return pases;
+  }
+
+  // Cupos de la mensualidad, en una línea (9 oct: «9 cupos» mueve más que «hay cupo»).
+  function cuposTxt() {
+    if (!horas.length) return '';
+    const partes = horas.map(h => Number(h.libres) > 0
+      ? `${h.etiqueta}: <b>${Number(h.libres)} ${Number(h.libres) === 1 ? 'cupo' : 'cupos'}</b>`
+      : `${h.etiqueta}: lista de espera`);
+    return 'Cupos hoy · ' + partes.join(' · ');
+  }
+
+  function htmlPase(p, i) {
+    return `
+      <button type="button" class="pase ${p.tipo === 'mensualidad' ? 'pase-mensualidad' : 'pase-tq'}${p.foto ? ' con-foto' : ''}"
+              data-i="${i}" data-pase="${p.tipo}" data-clave="${esc(p.clave || '')}" role="option" aria-label="${esc(p.nombre)} ${esc(p.cant)}, ${pesos(p.precio)}">
+        ${p.foto ? `<span class="foto" style="background-image:url('${esc(p.foto)}')"></span>` : ''}
+        ${ARTE}
+        <span class="num" aria-hidden="true">${esc(p.num)}</span>
+        ${p.sello ? `<span class="sello">${esc(p.sello)}</span>` : ''}
+        <span class="cont">
+          <span class="top"><span class="marca-p">TUMBAO · PASE</span><span class="chip" aria-hidden="true"></span></span>
+          <span class="nom">${esc(p.nombre)}</span>
+          <span class="cant">${esc(p.cant)}</span>
+          <span class="pie"><b class="precio-p">${pesos(p.precio)}</b><span class="xc">${p.xc}</span></span>
+        </span>
+      </button>`;
+  }
+
+  let pasesActuales = [];
+  let paseActivo = -1;
+
+  // Arranca la compra del pase que está al frente: mensualidad o la tiquetera de siempre.
+  function comprarPase(p) {
+    $('#eleccion').hidden = true;
+    if (p.tipo === 'mensualidad') {
+      $('#pasos').hidden = false;
+      $('#ir-a-tiquetera').hidden = false;
+      ir(0);
+    } else {
+      elegirTiqueteraDirecta(p.clave);
+    }
+  }
+
+  function mostrarDetalle(i, animar) {
+    const p = pasesActuales[i];
+    if (!p || i === paseActivo) return;
+    const primero = paseActivo === -1;
+    paseActivo = i;
+    const cajas = $('#tarjetas-eleccion').querySelectorAll('.pase');
+    cajas.forEach((c, k) => { c.classList.toggle('activo', k === i); c.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+    const caja = cajas[i];
+    if (caja && animar !== false) { caja.classList.remove('brilla'); void caja.offsetWidth; caja.classList.add('brilla'); }
+    $('#pager').querySelectorAll('i').forEach((d, k) => d.classList.toggle('on', k === i));
+
+    // El botón, pegado a los pases: dice qué pase está elegido y su precio.
+    $('#cta-pase').innerHTML = `
+      <button type="button" class="btn${primero ? '' : ' cambio'}" id="btn-pase" data-elegir="${p.tipo === 'mensualidad' ? 'mensualidad' : 'tq'}" data-clave="${esc(p.clave || '')}">${esc(p.cta)}</button>
+      <p class="pista">Desliza para ver los otros pases · toca el pase elegido para comprarlo</p>`;
+    $('#btn-pase').addEventListener('click', () => comprarPase(p));
+
+    const html = `
+      <div class="det">
+        <span class="ceja-d">Lo que incluye</span>
+        <h3>${esc(p.nombre)} · ${esc(p.cant)}</h3>
+        <p class="linea">${esc(p.linea)}</p>
+        <ul>${p.puntos.map(t => `<li>${t}</li>`).join('')}</ul>
+      </div>`;
+    const viejo = $('#detalle .det');
+    const poner = () => { $('#detalle').innerHTML = html; };
+    if (viejo && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      viejo.classList.add('cambia');
+      setTimeout(poner, 160);
+    } else poner();
+  }
+
+  function pintarFaq() {
+    const preguntas = [
+      ['¿Qué diferencia hay entre la mensualidad y la tiquetera?',
+       'La <b>mensualidad</b> es tu horario fijo todo el mes: de lunes a viernes llegas y entras, sin reservar, y los sábados tienes la Rumba terapia. La <b>tiquetera</b> es un paquete de clases para usar en el horario que quieras: reservas cada clase en la página.'],
+      ['¿Cómo reservo mis clases con la tiquetera?',
+       'Entra a <a href="https://tumbaobaila.com">tumbaobaila.com</a>, elige <b>Tengo tiquetera</b>, escribe tu código y aparta la clase. Cada reserva descuenta una clase.'],
+      ['¿Cuánto me dura?',
+       'La mensualidad, el mes. La tiquetera, <b>30 días</b> desde la compra.'],
+      ['¿Cómo pago?',
+       'Por transferencia, desde aquí mismo: eliges tu pase, dejas tus datos y te mostramos los datos de pago. Apenas confirmamos el pago queda activo (con la tiquetera te llega tu código).'],
+    ];
+    preguntas.push(['¿Tengo más dudas?',
+      `Escríbenos por <a href="${waUrl('Hola Tumbao, tengo una duda sobre los pases.')}" target="_blank" rel="noopener">WhatsApp</a> y te ayudamos.`]);
+    $('#faq').innerHTML = '<h3>Preguntas frecuentes</h3>' +
+      preguntas.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('');
+  }
+
+  function pintarEleccion() {
+    pasesActuales = listaDePases();
+    paseActivo = -1;
+    const cont = $('#tarjetas-eleccion');
+    cont.innerHTML = pasesActuales.map(htmlPase).join('');
+    $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
+    const cajas = [...cont.querySelectorAll('.pase')];
+    cajas.forEach((c, i) => c.addEventListener('click', () => {
+      // Tocar el pase que ya está elegido arranca la compra; tocar otro lo trae al frente y lo elige.
+      if (i === paseActivo) { comprarPase(pasesActuales[i]); return; }
+      c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      mostrarDetalle(i);
+    }));
+    // El pase que queda al centro al deslizar es el activo.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((ents) => {
+        for (const e of ents) if (e.isIntersecting && e.intersectionRatio > 0.6) mostrarDetalle(Number(e.target.dataset.i));
+      }, { root: cont, threshold: [0.6] });
+      cajas.forEach(c => io.observe(c));
+    }
+    mostrarDetalle(0, false);
+    pintarFaq();
+  }
+
+  async function cargarPaquetes() {
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/paquetes');
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error('sin datos');
+      tiqPaquetes = d.paquetes || [];
+      pintarPaquetes();
+    } catch (e) {
+      $('#tiq-paquetes').innerHTML = '';
+      aviso('#err-t0',
+        'No pudimos leer los paquetes. ' +
+        `<a href="${waUrl('Hola Tumbao, quiero comprar una tiquetera pero la página no cargó.')}" ` +
+        'target="_blank" rel="noopener">Escríbenos por WhatsApp</a>.', 'malo');
+    }
+  }
+
+  function pintarPaquetes() {
+    $('#tiq-paquetes').innerHTML = tiqPaquetes.map(p => `
+      <button type="button" class="clase hora" data-clave="${esc(p.clave)}">
+        <span class="hr">${esc(String(p.clases))} clases</span>
+        <span class="info">
+          <span class="nom">${pesos(p.precio_cop)}</span>
+          <span class="meta">Vigente ${esc(String(p.vigencia_dias))} días · ${
+            pesos(Math.round(p.precio_cop / p.clases))} por clase</span>
+        </span>
+      </button>`).join('');
+    for (const b of $('#tiq-paquetes').querySelectorAll('.hora')) {
+      b.addEventListener('click', () => {
+        tiqPaqueteElegido = tiqPaquetes.find(p => p.clave === b.dataset.clave);
+        $('#tiq-resumen').innerHTML =
+          `<strong>Tiquetera de ${esc(String(tiqPaqueteElegido.clases))} clases</strong>` +
+          `<span>${pesos(tiqPaqueteElegido.precio_cop)} · vigente ${esc(String(tiqPaqueteElegido.vigencia_dias))} días</span>`;
+        aviso('#err-t1', '');
+        irTiq(1);
+      });
+    }
+  }
+
+  $('#tiq-volver0').addEventListener('click', () => irTiq(0));
+
+  $('#form-tiq').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if ((document.getElementById('tiq-apellido2').value || '').trim() !== '') return;
+    const nombre = $('#tiq-nombre').value.trim();
+    const tel = limpiarTel($('#tiq-celular').value);
+    const habeas = $('#tiq-habeas').checked;
+
+    for (const id of ['#tiq-nombre', '#tiq-celular']) $(id).classList.remove('mal');
+    if (nombre.length < 2) { $('#tiq-nombre').classList.add('mal');
+      return aviso('#err-t1', 'Escribe tu nombre.', 'malo'); }
+    if (tel.length !== 10) { $('#tiq-celular').classList.add('mal');
+      return aviso('#err-t1', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
+    if (!habeas) return aviso('#err-t1', 'Falta autorizar el uso de tus datos.', 'malo');
+    if (!tiqPaqueteElegido) return irTiq(0);
+
+    aviso('#err-t1', '');
+    const btn = $('#tiq-btn-enviar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/comprar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre, celular: tel, paquete: tiqPaqueteElegido.clave,
+          habeas: true, acepta_novedades: $('#tiq-novedades').checked, apellido2: $('#tiq-apellido2').value,
+        }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      tiqCompra = d;
+      pintarPagoTiq();
+      irTiq(2);
+    } catch (e) {
+      aviso('#err-t1', (e && e.message) ||
+        'No pudimos iniciar la compra. Inténtalo otra vez.', 'malo');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Continuar al pago';
+    }
+  });
+
+  function pintarPagoTiq() {
+    $('#tiq-sub2').innerHTML =
+      `Tu tiquetera de <b>${esc(String(tiqCompra.clases))} clases</b> te espera. Transfiere y avísanos aquí mismo.`;
+    $('#tiq-monto').textContent = pesos(tiqCompra.precio_cop);
+    $('#tiq-d-llave').textContent = CONFIG.PAGO.llave;
+    $('#tiq-d-banco').textContent = CONFIG.PAGO.banco + ' · ' + CONFIG.PAGO.tipo;
+    $('#tiq-d-cuenta').textContent = CONFIG.PAGO.cuenta;
+    $('#tiq-d-titular').textContent = CONFIG.PAGO.titular;
+    $('#tiq-qr').src = CONFIG.PAGO.qr;
+  }
+
+  $('#tiq-btn-pague').addEventListener('click', async () => {
+    if (!tiqCompra) return;
+    const btn = $('#tiq-btn-pague');
+    btn.disabled = true; btn.textContent = 'Avisando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/pague', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: tiqCompra.codigo,
+                               referencia: $('#tiq-referencia').value.trim() }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'no se pudo');
+      irTiq(3);
+      arrancarEsperaTiq();
+    } catch (e) {
+      aviso('#err-t2', (e && e.message) ||
+        'No pudimos registrar tu aviso. Escríbenos por WhatsApp.', 'malo');
+      btn.disabled = false; btn.textContent = 'Ya transferí';
+    }
+  });
+
+  // Sondeo simple, a intervalo fijo -- el volumen de tiquetera es bajo,
+  // así que no hace falta el calendario de espaciado que usa la página
+  // de reservas para clase suelta (ahí sí importa cada llamada: son
+  // muchísimas más al día).
+  function arrancarEsperaTiq() {
+    const total = CONFIG.MINUTOS_ESPERA_TIQ * 60;
+    let transcurrido = 0;
+    consultarTiq(false);
+    tiqSondeo = setInterval(() => {
+      transcurrido += 5;
+      if (transcurrido >= total) { detenerEsperaTiq(); consultarTiq(true); return; }
+      consultarTiq(false);
+    }, 5000);
+  }
+
+  function detenerEsperaTiq() {
+    clearInterval(tiqSondeo); tiqSondeo = null;
+  }
+
+  async function consultarTiq(vencido) {
+    if (!tiqCompra) return;
+    try {
+      const url = `${CONFIG.API_TIQUETERA}/estado?codigo=${encodeURIComponent(tiqCompra.codigo)}${vencido ? '&vencido=1' : ''}`;
+      const r = await fetch(url);
+      const d = await r.json().catch(() => ({}));
+      if (!d || !d.ok) return;
+      if (d.estado === 'confirmada' || d.estado === 'pendiente_validacion' || d.estado === 'expirada') {
+        detenerEsperaTiq();
+        mostrarResultadoTiq(d);
+      }
+    } catch (e) { console.warn('[tumbao] tiquetera estado:', e); }
+  }
+
+  function mostrarResultadoTiq(d) {
+    $('#tiq-espera').hidden = true;
+    $('#tiq-final').hidden = false;
+    const confirmada = d.estado === 'confirmada';
+    const pendiente = d.estado === 'pendiente_validacion';
+    const guardarUrl = 'https://wa.me/?text=' +
+      encodeURIComponent(`Mi código de tiquetera Tumbao: ${d.codigo}`);
+
+    if (confirmada) {
+      $('#tiq-final').innerHTML =
+        `<div class="tick">${icono('check')}</div>
+         <h2>¡Listo! Tu tiquetera está activa</h2>
+         <p>Código: <b style="font-size:1.3em;letter-spacing:.05em">${esc(d.codigo)}</b></p>
+         <p>Tienes <b>${esc(String(tiqCompra.clases))} clases</b>. Resérvalas cuando
+            quieras en la <a href="/">página de reservas</a>, eligiendo
+            "Tengo tiquetera" y escribiendo este código.</p>
+         <p><a href="${guardarUrl}" target="_blank" rel="noopener">Guardar el código en WhatsApp</a></p>`;
+      $('#tiq-wa').hidden = true;
+    } else {
+      /* 0112 · Damián: si el pago no se comprobó solo, NO se entrega el
+         código hasta que la persona mande el soporte y recepción vea que
+         la plata entró. Al validarla, el código le llega por WhatsApp.
+         Por eso aquí no se muestra: se identifica con su nombre y celular. */
+      const quien = `${$('#tiq-nombre').value.trim()} · celular ${limpiarTel($('#tiq-celular').value)}`;
+      $('#tiq-final').innerHTML = pendiente
+        ? `<div class="tick espera-humana">${icono('hourglass-medium')}</div>
+           <h2>Recibimos tu aviso de pago</h2>
+           <p>Todavía no vemos la transferencia en el banco. Mándanos el comprobante por
+              WhatsApp: apenas confirmemos que la plata entró, activamos tu tiquetera y
+              <b>te llega tu código por WhatsApp</b>.</p>`
+        : `<div class="tick espera-humana">!</div>
+           <h2>Todavía no vemos tu pago</h2>
+           <p>Si ya transferiste, mándanos el comprobante por WhatsApp. Apenas confirmemos
+              que la plata entró, activamos tu tiquetera y <b>te llega tu código por WhatsApp</b>.</p>`;
+      $('#tiq-wa').hidden = false;
+      $('#tiq-wa').href = waUrl(
+        `Hola Tumbao, ya transferí mi tiquetera de ${tiqCompra.clases} clases (${quien}). ` +
+        `Les mando el comprobante.`);
+    }
+  }
+
+  /* ═══════════════ recuperar código (0098) ═══════════════ */
+  function mostrarRecuperar(mostrar) {
+    $('#ir-a-tiquetera').hidden = mostrar;
+    $('#pasos').hidden = mostrar;
+    for (const s of ['#s0', '#s1', '#s2', '#s3']) $(s).hidden = mostrar || $(s).hidden;
+    $('#tiquetera-todo').hidden = true;
+    $('#recuperar-todo').hidden = !mostrar;
+  }
+  $('#link-recuperar').addEventListener('click', (e) => {
+    e.preventDefault(); mostrarRecuperar(true);
+  });
+  $('#link-recuperar-2').addEventListener('click', (e) => {
+    e.preventDefault();
+    $('#eleccion').hidden = true;
+    $('#recuperar-todo').hidden = false;
+  });
+  $('#rec-volver').addEventListener('click', (e) => {
+    e.preventDefault(); volverAEleccion();
+  });
+
+  $('#form-recuperar').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const tel = limpiarTel($('#rec-celular').value);
+    $('#rec-celular').classList.remove('mal');
+    if (tel.length !== 10) { $('#rec-celular').classList.add('mal');
+      return aviso('#err-r0', 'El celular son 10 dígitos, sin espacios.', 'malo'); }
+    aviso('#err-r0', ''); $('#rec-resultado').innerHTML = '';
+    const btn = $('#rec-btn');
+    btn.disabled = true; btn.textContent = 'Buscando…';
+    try {
+      const r = await fetch(CONFIG.API_TIQUETERA + '/recuperar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celular: tel }),
+      });
+      const d = await r.json();
+      if (!d || !d.ok) throw new Error((d && d.mensaje) || 'No encontramos una tiquetera activa con ese celular.');
+      $('#rec-resultado').innerHTML = d.tiqueteras.map(t => {
+        const guardarUrl = 'https://wa.me/?text=' +
+          encodeURIComponent(`Mi código de tiquetera Tumbao: ${t.codigo}`);
+        return `<div class="ok-wrap">
+          <p>Código: <b style="font-size:1.3em;letter-spacing:.05em">${esc(t.codigo)}</b></p>
+          <p>Te quedan <b>${esc(String(t.clases_restantes))} clases</b>, vence el ${esc(t.vence_el)}.</p>
+          <p><a href="${guardarUrl}" target="_blank" rel="noopener">Guardar el código en WhatsApp</a></p>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      aviso('#err-r0', (e && e.message) || 'No pudimos buscar tu tiquetera.', 'malo');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Buscar';
+    }
+  });
+
+  // El bot manda a las alumnas con ?renovar=1: caen directo en la renovación, sin pasar por la tienda de pases.
+  Promise.all([cargarCupos(), cargarPaquetes()]).then(() => {
+    pintarEleccion();
+    let renovar = false;
+    try { renovar = /^(1|si|true)$/i.test(new URLSearchParams(location.search).get('renovar') || ''); } catch (e) {}
+    if (renovar) entrarRenovacion();
+  });
+})();
+</script>
+<script>
+/* Seguimiento de la conversación de ventas: el enlace que manda el asistente por WhatsApp lleva ?r=<número de
+   conversación>. Solo se avisa que la página se abrió; no se guarda nada de quien la abre. */
+(function(){try{
+  var r=new URLSearchParams(location.search).get('r');
+  if(!/^\d{1,9}$/.test(r||'')) return;
+  fetch('https://tumbao-caja.damian3314.workers.dev/tumbao/visita',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({r:r}),keepalive:true}).catch(function(){});
+}catch(e){}})();
+</script>
+</body>
+</html>
