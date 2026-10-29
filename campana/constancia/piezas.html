@@ -83,6 +83,7 @@ const P8 = { foto: 'pase-8.jpg', nom: 'Tiquetera', cant: '8 clases', precio: '$9
 const P4 = { foto: 'pase-4.jpg', nom: 'Tiquetera', cant: '4 clases', precio: '$52.000', xc: '$13.000 por clase' };
 const PM = { foto: 'pase-mensualidad.jpg', nom: 'Mensualidad', cant: 'Todo el mes', precio: '$125.000', xc: '≈ $5.000 por clase' };
 const WEB = '<span class="web">tumbaobaila.com/mensualidad</span>';
+const WA = '<span class="web">Escríbenos por WhatsApp</span>';
 const LETRA = '<p class="letra">Clases adicionales al completar todas las clases de tu tiquetera: 1 con la de 4 y 2 con la de 8. Valen 30 días. Aplica a todas las tiqueteras.</p>';
 
 const PIEZAS = {
@@ -117,6 +118,16 @@ const PIEZAS = {
         <div class="pases" style="top:300px">${pase({ ...P4, mas: '+1 clase' })}</div>
         <div class="cont"><span class="ceja">Esta semana · constancia</span><h2>Completa tus 4 clases<br>y te sumamos <em style="font-style:normal;color:var(--naranja)">1 más</em></h2>${WEB}</div></div>`,
 
+  // ── 29 oct · «Noviembre se baila»: anuncios que abren WhatsApp (sin ofertas: solo la mensualidad y la tiquetera con sus precios de siempre) ──
+  r1: `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="">
+        <div class="cont"><span class="ceja">Barrancabermeja · Tumbao</span><h1>Noviembre<br><em>se baila.</em></h1>
+        <p class="sub">Mensualidad <b>$125.000</b>: todas tus clases de lunes a sábado, a <b>≈ $5.000 cada una</b>.</p>${WA}</div></div>`,
+  r2: `<div class="pieza"><div class="resplandor"></div><img class="logo" src="logo-tumbao.png" alt="">
+        <div class="cont" style="top:230px;bottom:auto"><span class="ceja">Tú eliges cómo bailar</span><h2>Elige cómo<br>bailar noviembre</h2></div>
+        <div class="pases" style="top:500px">${pase(PM)}</div>
+        <div class="cont" style="bottom:70px"><p class="sub" style="margin-top:0">También tiquetera de <b>4 y 8 clases</b>.</p>${WA}</div></div>`,
+
   // ── Historias (1080 × 1920) ─────────────────────────────────────────────
   h1: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div>
         <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
@@ -127,6 +138,11 @@ const PIEZAS = {
         <div class="cont" style="bottom:260px"><span class="ceja">🎃 Jueves 29 de octubre</span><h1>Clases de<br><em>Halloween</em></h1>
         <p class="sub">Una clase para soltarse, reír y bailar en Tumbao. Aparta tu cupo desde hoy: los cupos se llenan.</p>
         <span class="web">tumbaobaila.com</span></div></div>`,
+  r3: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
+        <div class="pases" style="top:520px">${pase(PM)}</div>
+        <div class="cont" style="bottom:240px"><span class="ceja">Arranca noviembre</span><h1>Bailemos<br><em>noviembre.</em></h1>
+        <p class="sub">Todas tus clases de lunes a sábado. Escríbenos y te ayudamos a elegir tu horario.</p>${WA}</div></div>`,
   h3: `<div class="pieza historia"><div class="resplandor"></div>
         <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
         <div class="pases" style="top:620px">${pase(PM)}</div>
