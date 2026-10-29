@@ -39,6 +39,7 @@ import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUC
 import { esRespuestaAutomatica, esImagenDeChat, RESPUESTA_IMAGEN_VENTAS, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
+import { INSTRUCCIONES_SALIDAS, CATEGORIAS_SALIDA, esLuego, interpretarSalida, textoPreguntaSalida, textoSalidaRegistrada, textoSalidaDescartada, aclaracionesSeguidas } from './salidas.js';
 import { esRedes, INSTRUCCIONES_REDES, PLAN_CONTENIDO, guardarRespuestaRedes, RESPUESTA_REDES_SEGURA } from './redes.js';
 import { repiteMensaje, INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, esProblemaDePago, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
@@ -403,6 +404,12 @@ const ADMIN = {
   /* TESORERÍA. Las tres rutas del módulo de plata del negocio.
      `FECHA()` devuelve null si no viene: sin rango, Postgres contesta el
      mes en curso hasta hoy, que es lo que se mira al abrir la pestaña. */
+  // 0190 · La meta del mes (cuánto falta por vender), quién ya tiene plan (fuera del ranking) y cambiar la meta.
+  'meta-mes': { fn: 'admin_meta_mes', args: () => ({}) },
+  'planes-vigentes': { fn: 'admin_telefonos_con_plan', args: () => ({}) },
+  'meta-fijar': { fn: 'admin_meta_fijar',
+                args: (b) => (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.mes || '')) && Number.isFinite(+b.cop)
+                  ? { p_mes: String(b.mes), p_cop: Math.trunc(+b.cop) } : { _error: 'META_INVALIDA' }) },
   'tesoreria': { fn: 'admin_tesoreria',
                 args: (b) => ({ p_desde: FECHA(b.desde), p_hasta: FECHA(b.hasta) }) },
   'gastos-lista': { fn: 'admin_gastos_lista',
@@ -3658,6 +3665,65 @@ async function informeWA(request, env, origen) {
   return json({ ok: true, ...res }, 200, origen);
 }
 
+/* 0190 · La respuesta de Tania a la pregunta de una salida del banco. El modelo solo interpreta la frase; el valor, el día y la
+ * categoría válida los exige la base. Siempre termina con algo claro para ella: lo registrado, la siguiente, o por qué no. */
+async function atenderSalida(env, m, q) {
+  const sigPregunta = async () => {
+    const sig = await rpc(env, 'salida_siguiente_por_preguntar', {}).catch(() => null);
+    if (!sig || !sig.id || sig.id === q.id) return '';
+    await rpc(env, 'salida_abrir_pregunta', { p_id: sig.id }).catch(() => {});
+    return '\n\n' + textoPreguntaSalida(sig, 0);
+  };
+  const quedan = (r) => Number(r && r.quedan != null ? r.quedan : 0);
+
+  if (esLuego(m.texto)) {
+    await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {});
+    return 'Sin problema, la dejo pendiente 👌 Te la vuelvo a preguntar otro día.';
+  }
+  // Tres respuestas seguidas sin poder clasificar: se deja para después en vez de dar vueltas.
+  if (aclaracionesSeguidas(m.historial) >= 3) {
+    await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {});
+    return 'No quiero cansarte con esta 🙏 La dejo pendiente: recepción la clasifica desde el panel.';
+  }
+
+  let j = null;
+  if (env.OPENAI_API_KEY) {
+    const entrada = JSON.stringify({
+      salida: { cuando: q.cuando, cuenta: q.cuenta_destino || null, destinatario: q.destinatario || null },
+      sugerencia: q.sugerencia || null,
+      categorias: Object.keys(CATEGORIAS_SALIDA),
+      mensajes_recientes: (Array.isArray(m.historial) ? m.historial : []).slice(-4)
+        .map((h) => `${h.direccion === 'saliente' ? 'Timba' : 'Tania'}: ${String(h.texto || '').slice(0, 300)}`),
+      respuesta_de_tania: String(m.texto || '').slice(0, 500),
+    });
+    j = leerJSON(await redactar(env, INSTRUCCIONES_SALIDAS, entrada, 'low').catch((e) => { console.log('salidas', e && e.message); return ''; }));
+  }
+  const it = interpretarSalida(j);
+
+  if (it.accion === 'clasificar') {
+    const r = await rpc(env, 'salida_clasificar_timba',
+      { p_id: q.id, p_categoria: it.categoria, p_concepto: it.concepto, p_a_quien: it.a_quien || null });
+    if (!r || r.ok !== true) {
+      console.log('salida clasificar', JSON.stringify(r));
+      return 'No pude registrarla 😕 La dejo pendiente para que recepción la clasifique desde el panel.';
+    }
+    if (r.ya_estaba) return 'Esa ya estaba clasificada 👍' + await sigPregunta();
+    const sig = await sigPregunta();
+    return textoSalidaRegistrada(q, it, sig ? 1 : quedan(r)) + sig;
+  }
+  if (it.accion === 'descartar') {
+    const r = await rpc(env, 'salida_descartar_timba', { p_id: q.id, p_nota: it.motivo });
+    if (!r || r.ok !== true) return 'No pude descartarla 😕 La dejo pendiente para que recepción la revise.';
+    const sig = await sigPregunta();
+    return textoSalidaDescartada(q, it, sig ? 1 : quedan(r)) + sig;
+  }
+  if (it.accion === 'luego') {
+    await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {});
+    return 'Sin problema, la dejo pendiente 👌 Te la vuelvo a preguntar otro día.';
+  }
+  return it.mensaje;
+}
+
 async function agenteWA(request, env, origen) {
   let b = {};
   try { b = await request.json(); } catch (_) {}
@@ -3668,6 +3734,7 @@ async function agenteWA(request, env, origen) {
   try {
     await marcarLeido(env, m.wa_msg_id).catch(() => {});
     let respuesta;
+    let salidaAbierta = null;
     if (m.texto && /^\s*ver\s+resumen\s*$/i.test(m.texto)) {
       const inf = await rpc(env, 'wa_informe_pendiente', { p_tel: m.telefono });
       // 0161: un toque entrega también las notas que esperan (hasta 8), una por mensaje: antes era una cosa por toque.
@@ -3679,6 +3746,9 @@ async function agenteWA(request, env, origen) {
         : 'No tengo resúmenes pendientes 👌 Pregúntame lo que necesites de Tumbao.';
     } else if (m.tipo !== 'text' || !m.texto) {
       respuesta = 'Por ahora solo entiendo mensajes de texto 🙏 Escríbeme tu pregunta.';
+    } else if ((salidaAbierta = await rpc(env, 'salida_pregunta_actual', { p_tel: m.telefono }).catch(() => null)) && salidaAbierta.id) {
+      // 0190 · Tania contesta a qué corresponde una salida del banco: lo registra Timba (apagado hasta que Damián confirme su número).
+      respuesta = await atenderSalida(env, m, salidaAbierta);
     } else if (esPedidoDeDetalle(m.texto) && env.OPENAI_API_KEY) {
       // 0160: «detalle» = el informe completo, ahora. Mañana si todavía no son las 3 pm; si no, el del día.
       await responderYGuardar(env, m.telefono, 'Dame un momento y te armo el detalle 🙌');

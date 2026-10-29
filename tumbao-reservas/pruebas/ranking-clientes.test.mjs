@@ -139,12 +139,13 @@ let t = await txt();
 
 /* ═══════════ 1. sale solo, junto a las tarjetas ═══════════ */
 
-ok('el ranking se pinta al abrir el resumen, sin tocar nada',
-   await p.locator('.cliente-fila').count() === 5,
+// 29 oct: el panel pide 30 y quita a quienes ya tienen plan; de las cinco de la prueba, una es afiliada y se va: quedan cuatro.
+ok('el ranking se pinta al abrir el resumen, sin tocar nada (sin quien ya tiene plan)',
+   await p.locator('.cliente-fila').count() === 4,
    await p.locator('.cliente-fila').count() + ' filas');
 ok('arranca pidiendo los últimos 90 días',
    pedidos.length >= 1 && pedidos[0].dias === 90, JSON.stringify(pedidos[0]));
-ok('y pide cinco, los que pidió', pedidos[0].limite === 5,
+ok('y pide más de las que muestra (30), para que al quitar a quienes tienen plan la lista siga llena', pedidos[0].limite === 30,
    JSON.stringify(pedidos[0]));
 
 /* ═══════════ 2. SOLO VALORES, cuatro por fila ═══════════
@@ -173,13 +174,10 @@ ok('sin la coletilla «en sueltas» en cada renglón',
    Es la diferencia entre una clienta a la que venderle una mensualidad y
    una a la que ya se le vendió. La marca se queda, en una palabra. */
 
-ok('quien ya es afiliada lleva su marca',
-   await p.locator('.tiene-plan').count() === 1, 'María Fernanda ya compró plan');
-// innerText pega la marca al nombre —«vidalesplan»— porque el espacio lo
-// pone el CSS; se mira el elemento, no el texto corrido.
-ok('y cabe en una palabra',
-   (await p.locator('.tiene-plan').innerText()).trim() === 'plan' &&
-   !/ya tiene plan/.test(t), t);
+// 29 oct (Damián): «si esa gente ya pagó mensualidad, ya no es necesario tenerla ahí». Quien ya tiene plan NO sale: el sistema
+// la sigue conociendo, pero la lista es para a quién venderle.
+ok('quien ya es afiliada NO aparece en la lista',
+   await p.locator('.tiene-plan').count() === 0 && !/Maria fernanda Bernal/i.test(t), t);
 
 /* ═══════════ 4. EL AVISO, reducido a un asterisco ═══════════
    Ludys tiene dos escrituras con errata que la regla no junta. El
@@ -188,10 +186,10 @@ ok('y cabe en una palabra',
 
 ok('quien comparte teléfono lleva un asterisco',
    await p.locator('.cliente-fila .marca').count() === 4,
-   'cuatro de las cinco lo comparten');
-ok('quien no lo comparte, no lo lleva',
-   await p.locator('.cliente-fila').nth(2).locator('.marca').count() === 0,
-   'María Fernanda tiene una sola ficha');
+   'las cuatro que quedan lo comparten');
+ok('todas las que quedan lo comparten, así que todas llevan la marca',
+   await p.locator('.cliente-fila').count() === 4 && await p.locator('.cliente-fila .marca').count() === 4,
+   'quien tenía una sola ficha era la afiliada, que ya no sale: las cuatro que quedan comparten teléfono');
 ok('el porqué sigue en el title, para quien lo busque',
    /otras fichas/.test(await p.getAttribute('.cliente-fila .marca', 'title') || ''),
    await p.getAttribute('.cliente-fila .marca', 'title'));

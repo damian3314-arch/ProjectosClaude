@@ -118,6 +118,9 @@ await p.addInitScript(() => {
 await p.goto('http://localhost:8133/', { waitUntil: 'load' });
 await p.waitForTimeout(600);
 await irASeccion(p, 'tab-tesoreria');
+await p.waitForTimeout(300);
+// 29 oct (Damián): la tesorería nace cerrada y se abre con un toque.
+if (await p.locator('#tes-abrir').isVisible()) await p.click('#tes-abrir');
 await p.waitForTimeout(600);
 
 const txt = async (sel) => (await p.locator(sel).innerText()).replace(/\s+/g, ' ');
@@ -261,9 +264,10 @@ ok('y en buen castellano', !/no se ve descontados/.test(t),
      'si esto desaparece, el resumen volvió a llevar su propia cuenta');
   ok('«Queda» sale de la utilidad del servidor',
      /pMes\.utilidad_cop != null \? pMes\.utilidad_cop/.test(fuente));
-  ok('y «Salidas del mes» también',
-     /pesos\(salioMes\)/.test(fuente),
-     'antes ponía mes.egreso_cop, que es solo la caja menor');
+  // 29 oct (Damián): lo que sale y «queda» ya NO se pinta en el resumen: vive en la Tesorería, cerrada hasta que se toque. La cuenta
+  // compartida (plata_mes) sigue siendo la misma, así que si un día se vuelve a mostrar no puede contradecir a la tesorería.
+  ok('el resumen ya no pinta salidas ni lo que «queda» (solo la Tesorería, abierta a propósito)',
+     !/pesos\(salioMes\)/.test(fuente) && !/tarjeta\('Queda'/.test(fuente));
 
   /* La fórmula vieja puede quedarse SOLO como respaldo, detrás del `:`
      de un ternario, para que un panel nuevo contra un servidor viejo no

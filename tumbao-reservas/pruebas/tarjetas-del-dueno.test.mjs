@@ -115,7 +115,8 @@ ok('y las tarjetas ya están pintadas sin tocar nada',
 
 const cifras = await p.locator('#fichas-resumen .ficha:not(.detalle)').count();
 const plegados = await p.locator('#fichas-resumen details.detalle').count();
-ok('son cuatro tarjetas de cifra', cifras === 4, `${cifras} tarjetas`);
+// 29 oct (Damián): «Queda» y las salidas salieron del resumen: la plata que sale se mira en la Tesorería, que se abre con un toque.
+ok('son tres tarjetas de cifra: hoy, semana y mes', cifras === 3, `${cifras} tarjetas`);
 ok('y un solo desplegable con el resto', plegados === 1, `${plegados} desplegables`);
 
 const txt = () => p.locator('#fichas-resumen').innerText()
@@ -172,7 +173,7 @@ ok('la semana, que sí es comparable, no lleva ese aviso',
 
 /* ═══════════ 4. entró menos salió, y las salidas ═══════════ */
 
-ok('dice lo que queda del mes', /\$6\.440\.000/.test(t));
+ok('NO dice lo que queda del mes: eso vive en la Tesorería (29 oct)', !/\$6\.440\.000/.test(t) && !/queda/i.test(t), t);
 ok('sin la resta escrita al lado', !/\$6\.560\.000 − \$120\.000/.test(t), t);
 ok('sin la explicación de qué no cuenta como gasto',
    !/no es un gasto/.test(t) && !/cambiando de sitio/.test(t), t);
@@ -187,9 +188,8 @@ let d = await txt();
 
 ok('abriendo el detalle vuelven las personas', /34/.test(d), d.slice(0, 200));
 ok('y las mensualidades del mes', /Mensualidades del mes/i.test(d), d);
-ok('las salidas se desglosan por concepto', /Profesores/i.test(d), d);
-ok('con su total, para poder cuadrarlo',
-   /Salidas del mes \$120\.000/i.test(d), d);
+ok('ni siquiera dentro del detalle se muestran las salidas (29 oct): solo en la Tesorería',
+   !/Profesores/i.test(d) && !/Salidas del mes/i.test(d), d);
 ok('sin decir cuántas salidas ni de qué caja', !/del cajón/.test(d), d);
 
 await p.click('#fichas-resumen details.detalle summary');
@@ -256,8 +256,8 @@ ok('pintada distinto de una subida', bajas === 1, `${bajas} en rojo`);
 // creerse un total que le llega aparte. La resta ya no se escribe en la
 // cara, así que se comprueba contra las dos puntas: la del mes arriba y
 // la de salidas dentro del detalle.
-ok('la tarjeta hace la resta ella misma, no se cree un total de fuera',
-   /\$1\.170\.000/.test(t) && /\$1\.050\.000/.test(t) && !/\$6\.440\.000/.test(t),
+ok('el mes se pinta con lo que entró; no se cree ningún total «queda» de fuera',
+   /\$1\.170\.000/.test(t) && !/\$6\.440\.000/.test(t),
    t.slice(0, 300));
 
 /* ═══════════ 8. la cajera no ve la plata del negocio ═══════════

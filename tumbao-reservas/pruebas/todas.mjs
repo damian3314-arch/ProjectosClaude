@@ -67,6 +67,8 @@ const SUITES = [
   'halloween-29',
   'campana-constancia',
   'campana-rescate-mes',
+  'salidas-timba',
+  'panel-meta-y-limpieza',
   'ventas-whatsapp',
   'novedades',
   'informes-tranqui',
