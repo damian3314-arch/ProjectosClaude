@@ -262,11 +262,12 @@ export async function rescueSend(env) {
 }
 
 async function sendTemplate(env, phone, name, param) {
+  const params = (Array.isArray(param) ? param : [param]).map(x => ({ type: 'text', text: String(x).replace(/\s*\n\s*/g, ' ').slice(0, 200) }));
   try {
     const res = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/messages`, {
       method: 'POST',
       headers: { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: String(param).slice(0, 60) }] }] } }),
+      body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: params.length ? [{ type: 'body', parameters: params }] : [] } }),
       signal: AbortSignal.timeout(10000),
     });
     const body = await res.json().catch(() => ({}));
@@ -282,3 +283,53 @@ export async function alertReply(env, h, row, text) {
   const c = { env, h, row };
   return onAfterDone({ ...c, inb: { text } });
 }
+
+/* ---------- Bandeja de salida: el servidor envía lo que la rutina de HubSpot dejó en `outbox` ----------
+ * Cada hora en punto, de 9 am a 7 pm (Bogotá), sale lo que ya toca (send_after vencido, estado 'queued'), con tope diario (OUTBOX_PER_DAY, 5 por
+ * defecto mientras el número nuevo "se calienta") y sin escribirle a quien pidió la baja ni a quien ya recibió un mensaje en los últimos 7 días.
+ * Al salir, el lead queda registrado en loggro_leads (estado 'sent') y, si responde, lo atiende Alter. Se apaga con OUTBOX_ENVIOS = 'off'.
+ */
+export const OUTBOX = { from: 9, to: 19, perDay: 5 };
+
+export async function outboxSend(env) {
+  if (env.OUTBOX_ENVIOS === 'off' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  const bogota = new Date(Date.now() - 5 * 3600e3);
+  const hour = bogota.getUTCHours();
+  if (hour < OUTBOX.from || hour >= OUTBOX.to) return { sent: 0, reason: 'hora' };
+  const dayStart = `${bogota.toISOString().slice(0, 10)} 05:00:00`;
+  const done = await env.DB.prepare("SELECT COUNT(*) AS n FROM outbox WHERE status = 'sent' AND kind != 'recordatorio' AND sent_at >= ?").bind(dayStart).first();
+  const cap = Number(env.OUTBOX_PER_DAY) > 0 ? Number(env.OUTBOX_PER_DAY) : OUTBOX.perDay;
+  let budget = cap - (done?.n || 0);
+  const rows = (await env.DB.prepare(`SELECT * FROM outbox WHERE status = 'queued' AND send_after <= datetime('now') ORDER BY CASE kind WHEN 'recordatorio' THEN 0 ELSE 1 END, send_after, id LIMIT 20`).all()).results || [];
+  let sent = 0;
+  for (const r of rows) {
+    const reminder = r.kind === 'recordatorio';
+    const mark = (status, error) => env.DB.prepare("UPDATE outbox SET status = ?, error = ? WHERE id = ?").bind(status, error || null, r.id).run();
+    if (r.expires_at && r.expires_at < sqlTime(Date.now())) { await mark('skipped', 'vencido'); continue; }
+    const lead = await env.DB.prepare('SELECT state, sent_at FROM loggro_leads WHERE phone = ?').bind(r.phone).first();
+    if (lead?.state === 'optout') { await mark('skipped', 'pidió la baja'); continue; }
+    if (!reminder && lead?.sent_at && lead.sent_at > sqlTime(Date.now() - 7 * 86400e3)) { await mark('skipped', 'ya recibió un mensaje en los últimos 7 días'); continue; }
+    if (!reminder && budget <= 0) continue; // tope diario alcanzado: queda para mañana
+    let params = []; try { params = JSON.parse(r.params || '[]'); } catch { /* sin parámetros */ }
+    const res = await sendTemplate(env, r.phone, r.template, params);
+    if (res.ok) {
+      await env.DB.prepare("UPDATE outbox SET status = 'sent', sent_at = ?, wamid = ? WHERE id = ?").bind(sqlTime(Date.now()), res.wamid || null, r.id).run();
+      if (!reminder) {
+        // Queda registrado para que Alter atienda la respuesta; el recordatorio no cambia el estado de una conversación en curso
+        await env.DB.prepare("INSERT OR IGNORE INTO loggro_leads (phone, deal_id, contact_id, name, state) VALUES (?, ?, ?, ?, 'sent')").bind(r.phone, r.deal_id || null, r.contact_id || null, r.name || null).run();
+        await env.DB.prepare("UPDATE loggro_leads SET state = CASE WHEN state IN ('optout', 'done', 'agent') THEN state ELSE 'sent' END, campaign = ?, wamid = ?, sent_at = datetime('now'), deal_id = COALESCE(?, deal_id), contact_id = COALESCE(?, contact_id), updated_at = datetime('now') WHERE phone = ?")
+          .bind(r.kind, res.wamid || null, r.deal_id || null, r.contact_id || null, r.phone).run();
+        await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('outbox', 'outbox_sent')").run().catch(() => {});
+        budget--;
+      }
+      sent++;
+    } else if (BAD_NUMBER_CODES.has(res.code)) {
+      await mark('failed', `no se pudo entregar (${res.code})`);
+    } else {
+      // Plantilla sin aprobar, límite de Meta o error: se detiene y se reintenta en la siguiente hora
+      return { sent, reason: STOP_CODES.has(res.code) ? `meta ${res.code}` : `error ${res.code || res.status}` };
+    }
+  }
+  return { sent, reason: 'ok' };
+}
+const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
