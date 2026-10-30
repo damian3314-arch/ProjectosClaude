@@ -12,7 +12,7 @@
  *  - Mensajes automáticos de otros negocios no se contestan.
  */
 
-import { systemPrompt, CAMPAIGN_CONTEXT, PRODUCTS, ALLOWED_LINKS, AGENDA_URL } from './kb.js';
+import { systemPrompt, playbookText, CAMPAIGN_CONTEXT, PRODUCTS, ALLOWED_LINKS, AGENDA_URL } from './kb.js';
 import { alertHotLead, alertReply } from './loggro.js';
 
 const HISTORY = 16;           // mensajes que ve la IA en cada turno
@@ -40,8 +40,14 @@ const SCHEMA = {
       meeting_pref: STR,
       facts: {
         type: 'object', additionalProperties: false,
-        required: ['contact_name', 'business_type', 'city', 'size', 'current_system', 'pain', 'timeline', 'phone'],
-        properties: { contact_name: STR, business_type: STR, city: STR, size: STR, current_system: STR, pain: STR, timeline: STR, phone: STR },
+        required: ['contact_name', 'business_type', 'city', 'size', 'current_system', 'pain', 'timeline', 'phone', 'frente', 'budget', 'timing', 'decider'],
+        properties: {
+          contact_name: STR, business_type: STR, city: STR, size: STR, current_system: STR, pain: STR, timeline: STR, phone: STR,
+          frente: { type: ['string', 'null'], enum: ['nomina', 'software', 'ia', 'procesos', 'datos', 'otro', null] },
+          budget: { type: ['string', 'null'], enum: ['b1', 'b2', 'b3', null] },
+          timing: { type: ['string', 'null'], enum: ['now', 'month', 'later', null] },
+          decider: { type: ['string', 'null'], enum: ['solo', 'with', 'other', null] },
+        },
       },
       summary: { type: 'string' },
       handoff_reason: STR,
@@ -149,6 +155,7 @@ async function callModel(c, chat, history) {
     products: chat.product || '',
     slotsText: await freeSlots(env),
     phoneKnown: !!c.inb.from,
+    playbook: c.source === 'loggro' ? playbookText(chat.product) : '',
   }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -183,11 +190,21 @@ async function freeSlots(_env) { return ''; }
 /* ---------- Guardado y avisos ---------- */
 const HOT_STAGES = new Set(['wants_demo', 'wants_quote']);
 
+// Calificación de HolaDami: con las cuatro respuestas se calcula la prioridad igual que en el formulario de la página
+export function qualify(h, facts, stage) {
+  const complete = !!(facts.budget && facts.timing && facts.decider);
+  const score = complete ? h.scoreLead({ budget: facts.budget, timing: facts.timing, decider: facts.decider, intent: facts.frente && facts.frente !== 'otro' ? facts.frente : null }) : null;
+  // Caliente = prioridad A, o pidió hablar con Damián
+  const hot = (score?.tier === 'A') || stage === 'wants_demo';
+  return { complete, score, hot };
+}
+
 async function persist(c, chat, out, { product, videosSent, agendaSent }) {
   const { env } = c;
   const facts = { ...safeJson(chat.facts), ...Object.fromEntries(Object.entries(out.facts || {}).filter(([, v]) => v)) };
   if (facts.phone) { const p = c.h.normalizePhone(String(facts.phone)); if (p) facts.phone = p; else delete facts.phone; }
-  const hot = out.hot || HOT_STAGES.has(out.stage) || !!chat.hot;
+  const q = c.source === 'loggro' ? null : qualify(c.h, facts, out.stage);
+  const hot = q ? (q.hot || !!chat.hot) : (out.hot || HOT_STAGES.has(out.stage) || !!chat.hot);
   const pref = out.meeting_pref ? c.h.clean(out.meeting_pref, 120) : chat.meeting_pref || null;
   const summary = c.h.clean([out.summary, pref ? `Prefiere para la demo: ${pref}.` : '', out.handoff_reason ? `Para Damián: ${out.handoff_reason}.` : ''].filter(Boolean).join(' '), 600);
   const newlyHot = hot && !chat.hot;
@@ -197,9 +214,9 @@ async function persist(c, chat, out, { product, videosSent, agendaSent }) {
     .bind(out.stage, hot ? 1 : 0, product, JSON.stringify(facts), summary, pref, [...videosSent].join(','), agendaSent, c.key).run();
 
   c.factsJson = JSON.stringify(facts);
-  if (c.source === 'web') return persistWeb(c, chat, { out, hot, facts, summary, newlyHot });
+  if (c.source === 'web') return persistWeb(c, chat, { out, hot, facts, summary, newlyHot, q });
   if (c.source === 'loggro') return persistLoggro(c, { out, hot, product, summary, newlyHot, prefChanged });
-  return persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot });
+  return persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot, q });
 }
 
 // El estado 'done' + summary es lo que la rutina horaria convierte en nota del negocio en HubSpot
@@ -220,34 +237,43 @@ async function persistLoggro(c, { out, hot, product, summary, newlyHot, prefChan
   else if (hot && row.alerted_at) await alertReply(env, c.h, c.row, c.inb.text);
 }
 
-// HolaDami: se guarda en `leads` (panel de administración) igual que el formulario de la página
-async function persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot }) {
+// HolaDami: se guarda en `leads` (panel de administración) igual que el formulario de la página; solo la prioridad A le avisa a Damián
+async function persistHoladami(c, chat, { out, hot, product, summary, facts, newlyHot, q }) {
   const { env } = c;
   const st = c.st || {};
   await env.DB.prepare("UPDATE wa_sessions SET state = ?, name = COALESCE(name, ?), updated_at = datetime('now') WHERE id = ?")
     .bind(out.stage === 'optout' ? 'optout' : 'agent', c.h.clean(facts.contact_name || c.inb.name, 80) || null, c.key).run();
   const phone = c.inb.from ? c.h.normalizePhone(c.inb.from) : facts.phone || null;
-  const qualified = hot || (facts.business_type && facts.pain);
+  const qualified = hot || q.complete || (facts.business_type && facts.pain);
   if (!qualified || !phone || out.stage === 'optout') return;
-  const tier = hot ? 'A' : 'B';
+  const fields = leadFields(q, hot, facts);
   if (!st.lead_id) {
     const sessionId = `wa:${c.key}`.slice(0, 64);
     const ad = await env.DB.prepare("SELECT utm FROM events WHERE session_id = ? AND type = 'wa_ad' ORDER BY id DESC LIMIT 1").bind(sessionId).first().catch(() => null);
-    const loggro = !!product;
     const lead = {
       id: crypto.randomUUID(), session_id: sessionId, name: c.h.clean(facts.contact_name || c.inb.name, 80) || 'Contacto de WhatsApp', phone,
-      intent: loggro ? 'software' : null, problem: c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500),
-      budget: null, timing: null, decider: null, points: hot ? 22 : 14, tier, action: 'contact', calendar: loggro ? 'loggro' : 'personal', utm: ad?.utm || null, page: 'whatsapp',
+      intent: facts.frente && facts.frente !== 'otro' ? facts.frente : (product ? 'software' : null),
+      problem: c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500),
+      ...fields, calendar: product ? 'loggro' : 'personal', utm: ad?.utm || null, page: 'whatsapp',
     };
     await c.h.persistLead(env, c.ctx, lead, null);
     await env.DB.prepare('UPDATE wa_sessions SET lead_id = ?, phone = ? WHERE id = ?').bind(lead.id, phone, c.key).run();
     c.st = { ...st, lead_id: lead.id };
     return;
   }
-  if (newlyHot) {
-    await env.DB.prepare("UPDATE leads SET tier = 'A', points = MAX(points, 22), action = 'contact', problem = ? WHERE id = ?").bind(c.h.clean(summary, 1500), st.lead_id).run();
-    await c.h.alertMessage(env, `🔥 ${c.h.clean(facts.contact_name || c.inb.name, 40) || 'Un lead'} (+${phone}) quiere avanzar. ${summary} Escríbele: https://wa.me/${phone}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+  // El lead ya existía: se actualiza con lo nuevo (por ejemplo cuando terminó las preguntas) y se avisa solo si subió a prioridad A
+  const prev = await env.DB.prepare('SELECT tier FROM leads WHERE id = ?').bind(st.lead_id).first();
+  await env.DB.prepare('UPDATE leads SET budget = ?, timing = ?, decider = ?, points = ?, tier = ?, action = ?, problem = ? WHERE id = ?')
+    .bind(fields.budget, fields.timing, fields.decider, fields.points, fields.tier, fields.action, c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500), st.lead_id).run();
+  if (fields.tier === 'A' && prev?.tier !== 'A') {
+    await c.h.alertMessage(env, `🔥 HolaDami: ${c.h.clean(facts.contact_name || c.inb.name, 40) || 'Un lead'} (+${phone}) es prioridad A. ${summary} Escríbele: https://wa.me/${phone}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
   }
+}
+
+// Prioridad y respuestas del cuestionario para la tabla de leads
+function leadFields(q, hot, facts) {
+  if (q?.score) return { budget: facts.budget, timing: facts.timing, decider: facts.decider, points: q.score.points, tier: hot ? 'A' : q.score.tier, action: (hot || q.score.tier !== 'C') ? 'contact' : 'nurture' };
+  return { budget: facts.budget || null, timing: facts.timing || null, decider: facts.decider || null, points: hot ? 22 : 14, tier: hot ? 'A' : 'B', action: 'contact' };
 }
 
 // Damián escribió a mano desde la bandeja o el celular: el agente se calla 24 h para no pisarlo
@@ -294,12 +320,14 @@ export async function webContact(env, h, ctx, { sessionId, name, phone, utm }) {
   const chat = await env.DB.prepare('SELECT * FROM agent_chats WHERE chat_key = ?').bind(key).first();
   const facts = safeJson(chat?.facts);
   if (facts.lead_id) return facts.lead_id;
-  const tier = chat?.hot ? 'A' : (facts.business_type && facts.pain) ? 'B' : 'C';
+  const q = qualify(h, facts, chat?.stage);
+  const f = (q.score || chat?.hot || (facts.business_type && facts.pain)) ? leadFields(q, !!chat?.hot || q.hot, facts) : { budget: null, timing: null, decider: null, points: 6, tier: 'C', action: 'nurture' };
+  const tier = f.tier;
   const loggro = !!chat?.product;
   const lead = {
     id: crypto.randomUUID(), session_id: key, name, phone,
-    intent: loggro ? 'software' : null, problem: h.clean([facts.business_type, facts.pain, chat?.summary].filter(Boolean).join(' · ') || 'Dejó sus datos en el chat de la página', 1500),
-    budget: null, timing: null, decider: null, points: tier === 'A' ? 22 : tier === 'B' ? 14 : 6, tier, action: tier === 'C' ? 'nurture' : 'contact', calendar: loggro ? 'loggro' : 'personal',
+    intent: facts.frente && facts.frente !== 'otro' ? facts.frente : (loggro ? 'software' : null), problem: h.clean([facts.business_type, facts.pain, chat?.summary].filter(Boolean).join(' · ') || 'Dejó sus datos en el chat de la página', 1500),
+    budget: f.budget, timing: f.timing, decider: f.decider, points: f.points, tier, action: f.action, calendar: loggro ? 'loggro' : 'personal',
     utm: utm || null, page: 'web-chat',
   };
   await h.persistLead(env, ctx, lead, null);
@@ -309,10 +337,15 @@ export async function webContact(env, h, ctx, { sessionId, name, phone, utm }) {
   return lead.id;
 }
 
-async function persistWeb(c, chat, { out, hot, facts, summary, newlyHot }) {
+async function persistWeb(c, chat, { out, hot, facts, summary, q }) {
   const { env } = c;
-  if (facts.lead_id && newlyHot) {
-    await env.DB.prepare("UPDATE leads SET tier = 'A', points = MAX(points, 22), action = 'contact', problem = ? WHERE id = ?").bind(c.h.clean(summary, 1500), facts.lead_id).run();
-    await c.h.alertMessage(env, `🔥 ${c.h.clean(facts.contact_name, 40) || 'Un lead del chat'} quiere avanzar. ${summary} Está en el panel de administración.`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+  if (!facts.lead_id) return;
+  // El lead ya dejó sus datos: se actualiza con lo que siga contando y se avisa solo si sube a prioridad A
+  const f = leadFields(q, hot, facts);
+  const prev = await env.DB.prepare('SELECT tier, phone FROM leads WHERE id = ?').bind(facts.lead_id).first();
+  await env.DB.prepare('UPDATE leads SET budget = ?, timing = ?, decider = ?, points = ?, tier = ?, action = ?, problem = ? WHERE id = ?')
+    .bind(f.budget, f.timing, f.decider, f.points, f.tier, f.action, c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500), facts.lead_id).run();
+  if (f.tier === 'A' && prev?.tier !== 'A') {
+    await c.h.alertMessage(env, `🔥 HolaDami (chat de la página): ${c.h.clean(facts.contact_name, 40) || 'Un lead'}${prev?.phone ? ` +${prev.phone}` : ''} es prioridad A. ${summary}${prev?.phone ? ` Escríbele: https://wa.me/${prev.phone}` : ''}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
   }
 }
