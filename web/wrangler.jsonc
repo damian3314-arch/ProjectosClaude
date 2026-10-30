@@ -22,6 +22,8 @@
   // Valores públicos. Las claves (OPENAI_API_KEY, KAPSO_API_KEY, ADMIN_TOKEN, IP_SALT) y OWNER_WHATSAPP (tu número personal, el repo es público) van como secretos.
   "vars": {
     "OPENAI_MODEL": "gpt-4o-mini",
+    "AGENT_MODEL": "gpt-6.1-terra",   // el cerebro de Alter (conversa y califica); si la cuenta no lo tiene, cae a OPENAI_MODEL. Más barato: "gpt-6-luna"
+    "AGENT_REASONING": "low",         // none | low | medium | high: más razonamiento = más lento y más caro
     "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
     "KAPSO_PHONE_NUMBER_ID": "1424669820725157",
     "KAPSO_SENDER_NUMBER": "573015373964",   // el número del bot: los avisos nunca se envían a este mismo número

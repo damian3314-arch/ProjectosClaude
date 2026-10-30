@@ -157,18 +157,24 @@ async function callModel(c, chat, history) {
     phoneKnown: !!c.inb.from,
     playbook: c.source === 'loggro' ? playbookText(chat.product) : '',
   }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const messages = [{ role: 'system', content: sys }, ...history.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))];
+  // Modelos nuevos (gpt-5, gpt-6, o…) razonan: no aceptan temperature y usan max_completion_tokens. Los anteriores (gpt-4o…) siguen como antes.
+  const call = model => fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(30000),
     headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: env.AGENT_MODEL || env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature: 0.6,
-      max_tokens: 700,
-      messages: [{ role: 'system', content: sys }, ...history.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))],
-      response_format: { type: 'json_schema', json_schema: SCHEMA },
+      model, messages, response_format: { type: 'json_schema', json_schema: SCHEMA },
+      ...(/^(gpt-[5-9]|o\d)/.test(model) ? { max_completion_tokens: 2500, reasoning_effort: env.AGENT_REASONING || 'low' } : { temperature: 0.6, max_tokens: 700 }),
     }),
   });
+  const fallback = env.OPENAI_MODEL || 'gpt-4o-mini';
+  let res = await call(env.AGENT_MODEL || fallback);
+  // Si la cuenta de OpenAI no tiene acceso al modelo (o lo retiraron), se atiende igual con el modelo de respaldo
+  if (!res.ok && [400, 403, 404].includes(res.status) && (env.AGENT_MODEL || fallback) !== fallback) {
+    console.error('agente: modelo no disponible, uso el de respaldo', res.status);
+    res = await call(fallback);
+  }
   if (!res.ok) throw new Error(`openai ${res.status}`);
   const data = await res.json();
   const out = JSON.parse(data?.choices?.[0]?.message?.content || 'null');
