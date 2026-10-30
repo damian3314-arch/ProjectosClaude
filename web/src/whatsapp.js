@@ -101,6 +101,7 @@ function parseInbound(p) {
   const m = p?.message;
   if (!m || !m.id) return null;
   if (m.kapso?.direction === 'outbound') return null;
+  if (m.kapso?.origin === 'history_sync') return null; // historial importado al conectar la coexistencia: nunca se contesta
   let text = '', buttonId = '';
   if (m.type === 'text') text = m.text?.body || '';
   else if (m.type === 'interactive') {
@@ -147,6 +148,13 @@ async function handleInbound(env, ctx, h, payload) {
   if (inb.from) {
     const lg = await env.DB.prepare('SELECT * FROM loggro_leads WHERE phone = ?').bind(inb.from).first().catch(() => null);
     if (lg) return handleLoggroInbound(env, ctx, h, inb, lg);
+  }
+
+  // El número está en coexistencia: también recibe los chats personales y de negocio de Damián (clientes, proveedores, bots de Tumbao).
+  // El agente solo atiende a quien llega por HolaDami (anuncio o mensaje de la página) o ya está en conversación con él. Al resto no responde ni lo guarda.
+  if (env.AGENT_ALLOWLIST !== 'off') {
+    const known = await env.DB.prepare('SELECT 1 FROM wa_sessions WHERE id = ?').bind(key).first();
+    if (!known && !(inb.ad || PREFILL_RE.test(inb.text) || /holadami|\balter\b/i.test(inb.text))) return;
   }
 
   await env.DB.prepare('INSERT OR IGNORE INTO wa_sessions (id) VALUES (?)').bind(key).run();
