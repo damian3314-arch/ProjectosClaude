@@ -527,8 +527,20 @@ async function ownerMessage(env, text) {
   // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
   // Primero texto libre (no cuesta si la ventana de 24 h está abierta); la plantilla solo si esa ventana está cerrada
   if (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) return true;
-  if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
-  return tg;
+  return (await queueAlert(env, dest, text)) || tg;
+}
+
+// Ventana de 24 h cerrada: el aviso se guarda y se le manda una plantilla corta de utilidad ("tienes avisos pendientes", con un botón).
+// Cuando Damián la toca (o escribe cualquier cosa al número), los avisos completos salen como texto libre. Una plantilla por ventana, no una por aviso.
+async function queueAlert(env, dest, text) {
+  const key = dest.to || dest.recipient;
+  if (!key || !env.DB) return false;
+  await env.DB.prepare('INSERT INTO alert_queue (dest, text) VALUES (?, ?)').bind(key, text.slice(0, 1500)).run();
+  const recent = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'alert_open' AND created_at > datetime('now', '-20 hours')").bind(`alert:${key}`.slice(0, 64)).first();
+  if (recent) return true; // ya se le avisó que hay avisos pendientes; los verá al responder
+  const sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'template', template: { name: env.ALERT_OPEN_TEMPLATE || 'avisos_pendientes', language: { code: env.KAPSO_TEMPLATE_LANG || 'es' } } });
+  if (sent) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'alert_open')").bind(`alert:${key}`.slice(0, 64)).run().catch(() => {});
+  return sent;
 }
 
 const selfNumber = env => String(env.KAPSO_SENDER_NUMBER || '').replace(/\D/g, '');
@@ -561,7 +573,7 @@ async function alertMessage(env, text, templateName) {
   for (const dest of dests) {
     // Texto libre primero (gratis con la ventana abierta); plantilla solo si la ventana está cerrada
     let sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
-    if (!sent && templateName) sent = await sendWhatsApp(env, template(dest, templateName, env.KAPSO_TEMPLATE_LANG, [text]));
+    if (!sent) sent = await queueAlert(env, dest, text);
     ok = ok || sent;
   }
   return ok || tg;

@@ -87,6 +87,18 @@ async function onSent(env, body) {
   }
 }
 
+// Entrega, ya con la ventana abierta, los avisos que quedaron esperando (guardados con su teléfono o con su BSUID)
+async function flushAlerts(env, h, keys) {
+  const marks = keys.map(() => '?').join(',');
+  const rows = (await env.DB.prepare(`SELECT id, dest, text FROM alert_queue WHERE dest IN (${marks}) AND sent_at IS NULL ORDER BY id LIMIT 15`).bind(...keys.map(String)).all().catch(() => ({ results: [] }))).results || [];
+  for (const r of rows) {
+    const dest = /^\d+$/.test(r.dest) ? { to: r.dest } : { recipient: r.dest };
+    if (await h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: r.text.slice(0, 1024), preview_url: false } })) {
+      await env.DB.prepare("UPDATE alert_queue SET sent_at = datetime('now') WHERE id = ?").bind(r.id).run();
+    } else break;
+  }
+}
+
 async function validSignature(secret, raw, signature) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -144,7 +156,11 @@ async function handleInbound(env, ctx, h, payload) {
 
   // Damián no entra al formulario: si él escribe (por ejemplo su "hola" diario para abrir la ventana), el agente calla
   const ownerPhone = String(env.OWNER_WHATSAPP || '').replace(/\D/g, '');
-  if ((ownerPhone && inb.from === ownerPhone) || (env.OWNER_BSUID && inb.userId === String(env.OWNER_BSUID).trim())) return;
+  const workPhone = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
+  if ((ownerPhone && inb.from === ownerPhone) || (workPhone && inb.from === workPhone) || (env.OWNER_BSUID && inb.userId === String(env.OWNER_BSUID).trim())) {
+    // Damián escribió (por ejemplo tocó "Ver avisos"): se le entregan los avisos que estaban esperando y el agente calla
+    return flushAlerts(env, h, [inb.from, inb.userId].filter(Boolean));
+  }
 
   // Si es un lead de Loggro al que Damián le escribió el primer mensaje, lo atiende el flujo de Loggro, nunca el de HolaDami
   if (inb.from) {

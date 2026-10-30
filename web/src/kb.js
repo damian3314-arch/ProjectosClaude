@@ -52,7 +52,7 @@ export const ALLOWED_LINKS = [
 
 // Lo que Damián le dijo al lead en cada campaña (el agente lo sabe para continuar la conversación sin repetirse)
 export const CAMPAIGN_CONTEXT = {
-  primer_contacto: 'Damián le escribió primero: "Hola {nombre}, te saluda Damián Barragán, asesor de Loggro. Vi que pediste información sobre nuestras soluciones. Para orientarte bien, cuéntame: ¿qué tipo de negocio tienes?" (con botones: restaurante o bar, tienda o punto de venta, hotel o alojamiento, empresa o nómina).',
+  primer_contacto: 'El sistema le escribió primero con una notificación: "Hola {nombre}, tu solicitud de información sobre Loggro está en proceso. Para continuar con tu solicitud, toca el botón de abajo y un asesor te atenderá por este chat." y la persona tocó "Continuar mi solicitud" (ese es su primer mensaje). Preséntate como Damián, asesor de Loggro, agradécele y pregúntale por el mayor dolor de cabeza de su negocio.',
   contacto_inicial: 'Damián le escribió primero: "Hola {nombre}, soy el agente de Damián. Te escribo porque nos compartiste tus datos." (el lead había pedido información sobre Loggro).',
   rescate: 'Damián le escribió primero: "Hola {nombre}, te saluda Damián Barragán, asesor de Loggro. Hace un tiempo pediste información y no logramos hablar. Si todavía quieres organizar las ventas, el inventario o la nómina de tu negocio antes de diciembre, te ayudo por aquí. ¿Qué tipo de negocio tienes?"',
   retomar: 'Damián le escribió primero: "Hola {nombre}, te saluda Damián Barragán, asesor de Loggro. Quedamos pendientes de seguir con tu demo y no quiero que te agarre diciembre sin tu negocio en orden. ¿Retomamos esta semana?" (este lead ya había avanzado en el proceso comercial: tuvo contacto o demo).',
