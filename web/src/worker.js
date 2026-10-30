@@ -63,7 +63,11 @@ export default {
   },
   async scheduled(event, env, ctx) {
     // Cada 5 minutos: seguimiento a quien dejó la conversación a medias. Lo demás corre cada hora en punto.
-    if (event.cron === '*/5 * * * *') return ctx.waitUntil(nudgeIdle(env, agentHelpers()).catch(err => console.error('nudge', err?.message || 'desconocido')));
+    if (event.cron === '*/5 * * * *') {
+      ctx.waitUntil(nudgeIdle(env, agentHelpers()).catch(err => console.error('nudge', err?.message || 'desconocido')));
+      // La bandeja también sale aquí: lo que la rutina de HubSpot deja listo no espera a la hora en punto (el horario y el tope diario se respetan igual)
+      return ctx.waitUntil(outboxSend(env).then(r => r.sent && console.log('bandeja', JSON.stringify(r))).catch(err => console.error('bandeja', err?.message || 'desconocido')));
+    }
     ctx.waitUntil(ownerPush(env).catch(err => console.error('ownerPush', err?.message || 'desconocido')));
     ctx.waitUntil(rescueSend(env).then(r => r.sent && console.log('rescate', JSON.stringify(r))).catch(err => console.error('rescate', err?.message || 'desconocido')));
     ctx.waitUntil(outboxSend(env).then(r => r.sent && console.log('bandeja', JSON.stringify(r))).catch(err => console.error('bandeja', err?.message || 'desconocido')));
@@ -521,8 +525,10 @@ async function ownerMessage(env, text) {
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
   if (dest.to && dest.to === selfNumber(env)) return tg; // WhatsApp no deja que un número se escriba a sí mismo
   // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
+  // Primero texto libre (no cuesta si la ventana de 24 h está abierta); la plantilla solo si esa ventana está cerrada
+  if (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) return true;
   if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
-  return (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) || tg;
+  return tg;
 }
 
 const selfNumber = env => String(env.KAPSO_SENDER_NUMBER || '').replace(/\D/g, '');
@@ -553,9 +559,9 @@ async function alertMessage(env, text, templateName) {
   for (let i = dests.length - 1; i >= 0; i--) if (dests[i].to && dests[i].to === selfNumber(env)) dests.splice(i, 1); // nunca al propio número remitente
   let ok = false;
   for (const dest of dests) {
-    let sent = false;
-    if (templateName) sent = await sendWhatsApp(env, template(dest, templateName, env.KAPSO_TEMPLATE_LANG, [text]));
-    if (!sent) sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
+    // Texto libre primero (gratis con la ventana abierta); plantilla solo si la ventana está cerrada
+    let sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
+    if (!sent && templateName) sent = await sendWhatsApp(env, template(dest, templateName, env.KAPSO_TEMPLATE_LANG, [text]));
     ok = ok || sent;
   }
   return ok || tg;

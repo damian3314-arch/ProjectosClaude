@@ -289,6 +289,8 @@ export async function alertReply(env, h, row, text) {
  * defecto mientras el número nuevo "se calienta") y sin escribirle a quien pidió la baja ni a quien ya recibió un mensaje en los últimos 7 días.
  * Al salir, el lead queda registrado en loggro_leads (estado 'sent') y, si responde, lo atiende Alter. Se apaga con OUTBOX_ENVIOS = 'off'.
  */
+// Permite cambiar la plantilla que se usa sin tocar la rutina: OUTBOX_ALIAS = {"loggro_primer_contacto":"loggro_solicitud_info"}
+function templateAlias(env, name) { try { return JSON.parse(env.OUTBOX_ALIAS || '{}')[name] || name; } catch { return name; } }
 export const OUTBOX = { from: 9, to: 19, perDay: 5 };
 
 export async function outboxSend(env) {
@@ -311,7 +313,7 @@ export async function outboxSend(env) {
     if (!reminder && lead?.sent_at && lead.sent_at > sqlTime(Date.now() - 7 * 86400e3)) { await mark('skipped', 'ya recibió un mensaje en los últimos 7 días'); continue; }
     if (!reminder && budget <= 0) continue; // tope diario alcanzado: queda para mañana
     let params = []; try { params = JSON.parse(r.params || '[]'); } catch { /* sin parámetros */ }
-    const res = await sendTemplate(env, r.phone, r.template, params);
+    const res = await sendTemplate(env, r.phone, templateAlias(env, r.template), params);
     if (res.ok) {
       await env.DB.prepare("UPDATE outbox SET status = 'sent', sent_at = ?, wamid = ? WHERE id = ?").bind(sqlTime(Date.now()), res.wamid || null, r.id).run();
       if (!reminder) {

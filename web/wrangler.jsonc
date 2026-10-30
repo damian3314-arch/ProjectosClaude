@@ -32,6 +32,8 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
+    "OUTBOX_PER_DAY": "5",   // tope diario de primeros mensajes por plantilla mientras el número nuevo se calienta
+    "OUTBOX_ALIAS": "",      // p. ej. {"loggro_primer_contacto":"loggro_solicitud_info"} para cambiar de plantilla sin tocar la rutina
     "RESCATE_ENVIOS": "off",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "AGENT_V2": "on",   // agente conversacional (chat como Damián); "off" vuelve al flujo de botones
     "BOOKING_URL_LOGGRO": "",
