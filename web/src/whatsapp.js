@@ -83,7 +83,17 @@ async function onSent(env, body) {
     const origin = String(m?.kapso?.origin || '');
     if (!m || !origin || origin === 'cloud_api') continue; // lo que envía el propio agente o las plantillas no cuenta
     const to = String(m.to || p.conversation?.phone_number || p.conversation?.contact_phone || '').replace(/\D/g, '');
-    if (to) await pauseForHuman(env, to);
+    if (!to) continue;
+    // Si Damián le escribe a mano el primer mensaje a un lead que estaba en la bandeja, cuenta como enviado y NO se pausa a Alter:
+    // así Alter atiende la respuesta de ese lead. En cualquier otro chat, lo que Damián escribe a mano pausa a Alter 24 h.
+    const q = await env.DB.prepare("SELECT id, deal_id, contact_id, name FROM outbox WHERE phone = ? AND status = 'queued' AND kind != 'recordatorio' ORDER BY id LIMIT 1").bind(to).first().catch(() => null);
+    if (q) {
+      await env.DB.prepare("UPDATE outbox SET status = 'sent', template = 'manual', sent_at = ?, wamid = ?, error = 'enviado a mano desde la app' WHERE id = ?").bind(sqlTime(Date.now()), String(m.id || ''), q.id).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO loggro_leads (phone, deal_id, contact_id, name, state) VALUES (?, ?, ?, ?, 'sent')").bind(to, q.deal_id || null, q.contact_id || null, q.name || null).run();
+      await env.DB.prepare("UPDATE loggro_leads SET state = CASE WHEN state IN ('optout', 'done', 'agent') THEN state ELSE 'sent' END, campaign = 'primer_contacto', sent_at = datetime('now'), deal_id = COALESCE(?, deal_id), contact_id = COALESCE(?, contact_id), updated_at = datetime('now') WHERE phone = ?").bind(q.deal_id || null, q.contact_id || null, to).run();
+      continue;
+    }
+    await pauseForHuman(env, to);
   }
 }
 
