@@ -41,6 +41,8 @@ const BOT_REPLY = 'Soy Alter, el asistente de IA de Damián, y lo estoy apoyando
 // Mensaje predeterminado de los anuncios (enlace wa.me): no es un problema, es el saludo. Además sirve para saber que llegó desde un anuncio
 const PREFILL_RE = /^\s*hola\s+dami[aá]n[,.!]?\s+vi\s+tu\s+(anuncio|video|v[ií]deo|carrusel)/i;
 const ASKS_BOT_RE = /\b(eres|hablo con|hablando con|esto es|es esto)\b[^.?!]{0,20}\b(bot|robot|chatbot|ia|inteligencia artificial|humano|persona|real|m[aá]quina)\b/i;
+// Mensajes con los que alguien llega por HolaDami (anuncio, página o la presentación de Alter): el mensaje del anuncio y variantes
+const FROM_HOLADAMI_RE = /vi\s+tu\s+(anuncio|video|v[ií]deo|carrusel|publicaci[oó]n|post)|holadami|\balter\b|qu[eé]\s+me\s+quita\s+tiempo|diagn[oó]stico\s+(gratis|sin\s+costo)/i;
 const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero)\s*[.!]*\s*$/i;
 const GREETING_RE = /^\s*(hola|holi|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|hi|hello|buen d[ií]a|informaci[oó]n|info)\b[\s,.!¡?¿a-záéíóúñ]{0,25}$/i;
 
@@ -153,8 +155,9 @@ async function handleInbound(env, ctx, h, payload) {
   // El número está en coexistencia: también recibe los chats personales y de negocio de Damián (clientes, proveedores, bots de Tumbao).
   // El agente solo atiende a quien llega por HolaDami (anuncio o mensaje de la página) o ya está en conversación con él. Al resto no responde ni lo guarda.
   if (env.AGENT_ALLOWLIST !== 'off') {
-    const known = await env.DB.prepare('SELECT 1 FROM wa_sessions WHERE id = ?').bind(key).first();
-    if (!known && !(inb.ad || PREFILL_RE.test(inb.text) || /holadami|\balter\b/i.test(inb.text))) return;
+    // "Ya en conversación" = habló con el agente en los últimos 3 días (un contacto viejo que reaparece con un "hola" no cuenta)
+    const known = await env.DB.prepare("SELECT 1 FROM wa_sessions WHERE id = ? AND state != 'new' AND updated_at > datetime('now', '-3 days')").bind(key).first();
+    if (!known && !(inb.ad || FROM_HOLADAMI_RE.test(inb.text))) return;
   }
 
   await env.DB.prepare('INSERT OR IGNORE INTO wa_sessions (id) VALUES (?)').bind(key).run();
