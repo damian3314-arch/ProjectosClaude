@@ -518,10 +518,13 @@ async function ownerMessage(env, text) {
   // WhatsApp ya puede identificar a Damián solo por un ID de usuario (BSUID, sin teléfono): la ventana de 24 h queda abierta para ese ID,
   // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
+  if (dest.to && dest.to === selfNumber(env)) return tg; // WhatsApp no deja que un número se escriba a sí mismo
   // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
   if (env.KAPSO_NOTIFY_TEMPLATE && await sendWhatsApp(env, template(dest, env.KAPSO_NOTIFY_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [text]))) return true;
   return (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) || tg;
 }
+
+const selfNumber = env => String(env.KAPSO_SENDER_NUMBER || '').replace(/\D/g, '');
 
 // Canal de avisos que no depende de WhatsApp: un bot de Telegram propio (TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID como secretos)
 async function telegram(env, text) {
@@ -546,6 +549,7 @@ async function alertMessage(env, text, templateName) {
   else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
   const work = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
   if (work) dests.push({ to: work });
+  for (let i = dests.length - 1; i >= 0; i--) if (dests[i].to && dests[i].to === selfNumber(env)) dests.splice(i, 1); // nunca al propio número remitente
   let ok = false;
   for (const dest of dests) {
     let sent = false;

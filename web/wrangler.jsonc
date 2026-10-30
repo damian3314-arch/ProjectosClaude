@@ -24,6 +24,7 @@
     "OPENAI_MODEL": "gpt-4o-mini",
     "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
     "KAPSO_PHONE_NUMBER_ID": "1424669820725157",
+    "KAPSO_SENDER_NUMBER": "573015373964",   // el número del bot: los avisos nunca se envían a este mismo número
     "KAPSO_NOTIFY_TEMPLATE": "aviso_lead",
     "KAPSO_LOGGRO_ALERT_TEMPLATE": "aviso_lead",   // utilidad (más barata que aviso_loggro, que Meta pasó a marketing)
     "KAPSO_LEAD_TEMPLATE": "",
