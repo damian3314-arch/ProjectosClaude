@@ -73,14 +73,14 @@ export async function agentTurn(c) {
   if (!content) return;
 
   const chat = await loadChat(c);
-  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', c.h.clean(content, 1500)).run();
-  const mine = (await env.DB.prepare("SELECT MAX(id) AS id FROM agent_log WHERE chat_key = ? AND role = 'user'").bind(key).first())?.id;
-
+  // Si Damián tomó la conversación a mano, el agente ni contesta ni guarda lo que se escriben: son mensajes entre ellos, no del agente
   if (chat.paused_until && chat.paused_until > sqlTime(Date.now())) {
-    // Damián tomó la conversación a mano: el agente solo avisa si se trata de un lead caliente (como antes)
     if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
     return;
   }
+  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', c.h.clean(content, 1500)).run();
+  const mine = (await env.DB.prepare("SELECT MAX(id) AS id FROM agent_log WHERE chat_key = ? AND role = 'user'").bind(key).first())?.id;
+
   const today = (await env.DB.prepare("SELECT COUNT(*) AS n FROM agent_log WHERE chat_key = ? AND role = 'user' AND created_at > datetime('now', '-1 day')").bind(key).first())?.n || 0;
   if (today > MAX_USER_PER_DAY) return;
 
@@ -286,7 +286,10 @@ function leadFields(q, hot, facts) {
 export async function pauseForHuman(env, phone) {
   const key = String(phone || '');
   if (!key) return;
-  await env.DB.prepare("UPDATE agent_chats SET paused_until = ? WHERE chat_key = ?").bind(sqlTime(Date.now() + PAUSE_HOURS * 3600e3), key).run();
+  // En una conversación con un lead de Loggro, 24 h; en cualquier otra (un contacto personal o de otro negocio que Alter no debía atender), 7 días
+  const lead = await env.DB.prepare('SELECT 1 FROM loggro_leads WHERE phone = ?').bind(key).first().catch(() => null);
+  const hours = lead ? PAUSE_HOURS : 24 * 7;
+  await env.DB.prepare("UPDATE agent_chats SET paused_until = ? WHERE chat_key = ?").bind(sqlTime(Date.now() + hours * 3600e3), key).run();
 }
 
 
