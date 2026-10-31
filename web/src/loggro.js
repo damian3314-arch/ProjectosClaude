@@ -60,7 +60,7 @@ export async function handleLoggroInbound(env, ctx, h, inb, row) {
 
   if (STOP_RE.test(inb.text)) {
     await save(c, { state: 'optout' });
-    return sendText(c, 'Listo, no te escribo más. Si más adelante lo necesitas, escríbeme cuando quieras.');
+    return sendText(c, 'Listo, no te escribo más. Soy Alter, el asistente de Damián. Si más adelante lo necesitas, escríbele cuando quieras.');
   }
 
   // Agente conversacional: atiende cualquier etapa como un chat de persona. Si está apagado, siguen los botones de abajo.
