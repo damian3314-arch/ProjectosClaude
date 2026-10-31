@@ -352,6 +352,9 @@ export async function outboxSend(env) {
     if (!reminder && lead?.sent_at && lead.sent_at > sqlTime(Date.now() - 7 * 86400e3)) { await mark('skipped', 'ya recibió un mensaje en los últimos 7 días'); continue; }
     if (!reminder && (budget <= 0 || firsts >= perRun)) continue; // tope diario alcanzado (queda para mañana) o ya salieron los de esta revisión (el resto, en la próxima)
     let params = []; try { params = JSON.parse(r.params || '[]'); } catch { /* sin parámetros */ }
+    // Reserva la fila antes de enviar: el cron de cada hora y el de cada 5 minutos coinciden en el minuto 0 y, sin esto, los dos mandaban el mismo mensaje
+    const claim = await env.DB.prepare("UPDATE outbox SET status = 'sending' WHERE id = ? AND status = 'queued'").bind(r.id).run();
+    if (!claim.meta?.changes) continue;
     const res = await sendTemplate(env, r.phone, templateAlias(env, r.template), params);
     if (res.ok) {
       await env.DB.prepare("UPDATE outbox SET status = 'sent', sent_at = ?, wamid = ? WHERE id = ?").bind(sqlTime(Date.now()), res.wamid || null, r.id).run();
@@ -367,7 +370,8 @@ export async function outboxSend(env) {
     } else if (BAD_NUMBER_CODES.has(res.code)) {
       await mark('failed', `no se pudo entregar (${res.code})`);
     } else {
-      // Plantilla sin aprobar, límite de Meta o error: se detiene y se reintenta en la siguiente hora
+      // Plantilla sin aprobar, límite de Meta o error: la fila vuelve a la cola, se detiene y se reintenta en la siguiente hora
+      await mark('queued');
       return { sent, reason: STOP_CODES.has(res.code) ? `meta ${res.code}` : `error ${res.code || res.status}` };
     }
   }
