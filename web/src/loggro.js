@@ -285,13 +285,13 @@ export async function alertReply(env, h, row, text) {
 }
 
 /* ---------- Bandeja de salida: el servidor envía lo que la rutina de HubSpot dejó en `outbox` ----------
- * Cada hora en punto, de 9 am a 7 pm (Bogotá), sale lo que ya toca (send_after vencido, estado 'queued'), con tope diario (OUTBOX_PER_DAY, 5 por
+ * Cada 5 minutos, de 8 am a 7 pm (Bogotá), sale (de a pocos) lo que ya toca (send_after vencido, estado 'queued'), con tope diario (OUTBOX_PER_DAY, 5 por
  * defecto mientras el número nuevo "se calienta") y sin escribirle a quien pidió la baja ni a quien ya recibió un mensaje en los últimos 7 días.
  * Al salir, el lead queda registrado en loggro_leads (estado 'sent') y, si responde, lo atiende Alter. Se apaga con OUTBOX_ENVIOS = 'off'.
  */
 // Permite cambiar la plantilla que se usa sin tocar la rutina: OUTBOX_ALIAS = {"loggro_primer_contacto":"loggro_solicitud_info"}
 function templateAlias(env, name) { try { return JSON.parse(env.OUTBOX_ALIAS || '{}')[name] || name; } catch { return name; } }
-export const OUTBOX = { from: 9, to: 19, perDay: 5 };
+export const OUTBOX = { from: 8, to: 19, perDay: 5, perRun: 4 }; // perRun: cada revisión (cada 5 min) envía pocos, para que salgan escalonados
 
 export async function outboxSend(env) {
   if (env.OUTBOX_ENVIOS === 'off' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
@@ -302,8 +302,9 @@ export async function outboxSend(env) {
   const done = await env.DB.prepare("SELECT COUNT(*) AS n FROM outbox WHERE status = 'sent' AND kind != 'recordatorio' AND sent_at >= ?").bind(dayStart).first();
   const cap = Number(env.OUTBOX_PER_DAY) > 0 ? Number(env.OUTBOX_PER_DAY) : OUTBOX.perDay;
   let budget = cap - (done?.n || 0);
-  const rows = (await env.DB.prepare(`SELECT * FROM outbox WHERE status = 'queued' AND send_after <= datetime('now') ORDER BY CASE kind WHEN 'recordatorio' THEN 0 ELSE 1 END, send_after, id LIMIT 20`).all()).results || [];
-  let sent = 0;
+  const rows = (await env.DB.prepare(`SELECT * FROM outbox WHERE status = 'queued' AND send_after <= datetime('now') ORDER BY CASE kind WHEN 'recordatorio' THEN 0 ELSE 1 END, send_after, id LIMIT 40`).all()).results || [];
+  let sent = 0, firsts = 0;
+  const perRun = Number(env.OUTBOX_PER_RUN) > 0 ? Number(env.OUTBOX_PER_RUN) : OUTBOX.perRun;
   for (const r of rows) {
     const reminder = r.kind === 'recordatorio';
     const mark = (status, error) => env.DB.prepare("UPDATE outbox SET status = ?, error = ? WHERE id = ?").bind(status, error || null, r.id).run();
@@ -311,7 +312,7 @@ export async function outboxSend(env) {
     const lead = await env.DB.prepare('SELECT state, sent_at FROM loggro_leads WHERE phone = ?').bind(r.phone).first();
     if (lead?.state === 'optout') { await mark('skipped', 'pidió la baja'); continue; }
     if (!reminder && lead?.sent_at && lead.sent_at > sqlTime(Date.now() - 7 * 86400e3)) { await mark('skipped', 'ya recibió un mensaje en los últimos 7 días'); continue; }
-    if (!reminder && budget <= 0) continue; // tope diario alcanzado: queda para mañana
+    if (!reminder && (budget <= 0 || firsts >= perRun)) continue; // tope diario alcanzado (queda para mañana) o ya salieron los de esta revisión (el resto, en la próxima)
     let params = []; try { params = JSON.parse(r.params || '[]'); } catch { /* sin parámetros */ }
     const res = await sendTemplate(env, r.phone, templateAlias(env, r.template), params);
     if (res.ok) {
@@ -322,7 +323,7 @@ export async function outboxSend(env) {
         await env.DB.prepare("UPDATE loggro_leads SET state = CASE WHEN state IN ('optout', 'done', 'agent') THEN state ELSE 'sent' END, campaign = ?, wamid = ?, sent_at = datetime('now'), deal_id = COALESCE(?, deal_id), contact_id = COALESCE(?, contact_id), updated_at = datetime('now') WHERE phone = ?")
           .bind(r.kind, res.wamid || null, r.deal_id || null, r.contact_id || null, r.phone).run();
         await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('outbox', 'outbox_sent')").run().catch(() => {});
-        budget--;
+        budget--; firsts++;
       }
       sent++;
     } else if (BAD_NUMBER_CODES.has(res.code)) {
