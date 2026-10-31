@@ -18,7 +18,7 @@
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
 import { webTurn, webContact } from './agent.js';
-import { sendHotAlert, rescueSend, outboxSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
+import { sendHotAlert, dailyReport, rescueSend, outboxSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -68,6 +68,7 @@ export default {
       // La bandeja también sale aquí: lo que la rutina de HubSpot deja listo no espera a la hora en punto (el horario y el tope diario se respetan igual)
       return ctx.waitUntil(outboxSend(env).then(r => r.sent && console.log('bandeja', JSON.stringify(r))).catch(err => console.error('bandeja', err?.message || 'desconocido')));
     }
+    if (new Date(Date.now() - BOGOTA_MS).getUTCHours() === 19) ctx.waitUntil(dailyReport(env, agentHelpers()).catch(err => console.error('reporte', err?.message || 'desconocido')));
     ctx.waitUntil(ownerPush(env).catch(err => console.error('ownerPush', err?.message || 'desconocido')));
     ctx.waitUntil(rescueSend(env).then(r => r.sent && console.log('rescate', JSON.stringify(r))).catch(err => console.error('rescate', err?.message || 'desconocido')));
     ctx.waitUntil(outboxSend(env).then(r => r.sent && console.log('bandeja', JSON.stringify(r))).catch(err => console.error('bandeja', err?.message || 'desconocido')));

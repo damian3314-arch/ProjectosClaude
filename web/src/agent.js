@@ -27,7 +27,7 @@ const SCHEMA = {
   strict: true,
   schema: {
     type: 'object', additionalProperties: false,
-    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'ask_contact', 'meeting_pref', 'facts', 'summary', 'handoff_reason'],
+    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'ask_contact', 'meeting_pref', 'follow_up', 'facts', 'summary', 'handoff_reason'],
     properties: {
       messages: { type: 'array', maxItems: 3, items: { type: 'string' } },
       stage: { type: 'string', enum: STAGES },
@@ -38,6 +38,7 @@ const SCHEMA = {
       is_auto_reply: { type: 'boolean' },
       ask_contact: { type: 'boolean' },
       meeting_pref: STR,
+      follow_up: STR,
       facts: {
         type: 'object', additionalProperties: false,
         required: ['contact_name', 'business_type', 'city', 'size', 'current_system', 'pain', 'timeline', 'phone', 'frente', 'budget', 'timing', 'decider'],
@@ -105,9 +106,12 @@ export async function agentTurn(c) {
 
   const messages = out.messages.map(m => sanitize(c.h, m)).filter(Boolean).slice(0, 3);
   const extra = [];
-  const product = PRODUCT_IDS.includes(out.product) && PRODUCTS[out.product] ? out.product : (chat.product || null);
+  // Los perdidos que se retoman son del equipo POS: si no se sabe el producto, es POS (así el video prometido siempre sale)
+  const product = PRODUCT_IDS.includes(out.product) && PRODUCTS[out.product] ? out.product : (chat.product || (c.source === 'loggro' && campaignOf(c.row) === 'retomar' ? 'pos' : null));
   const videosSent = new Set((chat.videos_sent || '').split(',').filter(Boolean));
-  if (out.send_video && product && !videosSent.has(product)) {
+  // Si el mensaje promete un video, el enlace sale sí o sí
+  const promisesVideo = messages.some(m => /\bvideo\b/i.test(m));
+  if ((out.send_video || promisesVideo) && product && !videosSent.has(product)) {
     extra.push(`Te dejo un video corto de ${PRODUCTS[product].name} para que lo veas cuando puedas 👇\n${PRODUCTS[product].video}`);
     videosSent.add(product);
   }
@@ -210,7 +214,9 @@ async function persist(c, chat, out, { product, videosSent, agendaSent }) {
   const facts = { ...safeJson(chat.facts), ...Object.fromEntries(Object.entries(out.facts || {}).filter(([, v]) => v)) };
   if (facts.phone) { const p = c.h.normalizePhone(String(facts.phone)); if (p) facts.phone = p; else delete facts.phone; }
   const q = c.source === 'loggro' ? null : qualify(c.h, facts, out.stage);
-  const hot = q ? (q.hot || !!chat.hot) : (out.hot || HOT_STAGES.has(out.stage) || !!chat.hot);
+  let hot = q ? (q.hot || !!chat.hot) : (out.hot || HOT_STAGES.has(out.stage) || !!chat.hot);
+  // "Escríbeme la otra semana" / "no me interesa" nunca es un lead para llamar hoy (aunque antes haya tocado "Sí, agendemos")
+  if (c.source === 'loggro' && ['not_now', 'not_fit', 'optout'].includes(out.stage)) hot = false;
   const pref = out.meeting_pref ? c.h.clean(out.meeting_pref, 120) : chat.meeting_pref || null;
   const summary = c.h.clean([out.summary, pref ? `Prefiere para la demo: ${pref}.` : '', out.handoff_reason ? `Para Damián: ${out.handoff_reason}.` : ''].filter(Boolean).join(' '), 600);
   const newlyHot = hot && !chat.hot;
@@ -234,10 +240,12 @@ async function persistLoggro(c, { out, hot, product, summary, newlyHot, prefChan
   const reAlert = newlyHot || (hot && prefChanged);
   const facts = safeJson(c.factsJson);
   // Etapa sugerida para el negocio en HubSpot (la aplica la rutina horaria): nunca "demo agendada" hasta que exista la reunión
-  const nextStage = out.stage === 'optout' || out.stage === 'not_fit' ? 'perdido' : hot ? 'demo_pendiente' : (facts.business_type && facts.pain) ? 'necesidades' : null;
-  await env.DB.prepare(`UPDATE loggro_leads SET next_stage = COALESCE(?, next_stage), state = ?, hot = ?, product = COALESCE(?, product), summary = ?, synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
+  // Quien respondió pidiendo retomar más adelante pasa a "necesidades identificadas" con fecha de seguimiento
+  const nextStage = out.stage === 'optout' || out.stage === 'not_fit' ? 'perdido' : hot ? 'demo_pendiente' : (out.stage === 'not_now' || (facts.business_type && facts.pain)) ? 'necesidades' : null;
+  const followUp = out.stage === 'not_now' && /^\d{4}-\d{2}-\d{2}$/.test(out.follow_up || '') ? out.follow_up : null;
+  await env.DB.prepare(`UPDATE loggro_leads SET next_stage = COALESCE(?, next_stage), state = ?, hot = ?, product = COALESCE(?, product), summary = ?, follow_up = COALESCE(?, follow_up), synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
       alerted_at = CASE WHEN ? THEN NULL ELSE alerted_at END, updated_at = datetime('now') WHERE phone = ?`)
-    .bind(nextStage, state, hot ? 1 : 0, product, summary, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
+    .bind(nextStage, state, hot ? 1 : 0, product, summary, followUp, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
   c.row = { ...row, state, hot: hot ? 1 : 0, summary, alerted_at: reAlert ? null : row.alerted_at };
   if (reAlert) await alertHotLead(env, c.h, c.row);
   else if (hot && row.alerted_at) await alertReply(env, c.h, c.row, c.inb.text);

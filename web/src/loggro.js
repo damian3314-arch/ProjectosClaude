@@ -192,11 +192,49 @@ async function maybeAlert(c) {
   }
 }
 
-export function hotAlertText(row) {
-  return `🔥 Lead de Loggro listo para llamar: ${row.name || 'Sin nombre'} +${row.phone}. ${row.summary || ''} Llámalo: https://wa.me/${row.phone}`.replace(/\s+/g, ' ').trim();
+// Aviso para llamar YA: lleva el contexto completo (de dónde viene, qué pasó, qué dijo y qué le contestó Alter) para que Damián decida sin abrir nada
+export function hotAlertText(row, ctx = {}) {
+  const origen = row.campaign === 'retomar' ? 'negocio perdido de tu equipo POS que retomamos hoy' : row.campaign === 'rescate' ? 'rescate de leads viejos' : 'lead nuevo de HubSpot';
+  const say = (t, n) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  return [
+    `🔥 Llámalo ahora: ${row.name || 'Sin nombre'} +${row.phone}`,
+    `Origen: ${origen}.`,
+    row.summary && `Qué pasó: ${say(row.summary, 320)}`,
+    ctx.lastUser && `Escribió: «${say(ctx.lastUser, 160)}»`,
+    ctx.lastBot && `Alter le dijo: «${say(ctx.lastBot, 140)}»`,
+    `Ya quedó registrado en HubSpot. Llama o escribe: https://wa.me/${row.phone}`,
+  ].filter(Boolean).join('\n');
 }
-export function sendHotAlert(env, h, row) {
-  return h.alertMessage(env, hotAlertText(row), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+export async function sendHotAlert(env, h, row) {
+  const msgs = ((await env.DB.prepare('SELECT role, content FROM agent_log WHERE chat_key = ? ORDER BY id DESC LIMIT 6').bind(row.phone).all().catch(() => ({ results: [] }))).results) || [];
+  const ctx = { lastUser: msgs.find(m => m.role === 'user')?.content, lastBot: msgs.find(m => m.role === 'assistant' && !m.content.startsWith('http') && !m.content.startsWith('Y esta es mi agenda'))?.content };
+  return h.alertMessage(env, hotAlertText(row, ctx), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+}
+
+// Reporte del día para Damián (lo envía el cron de las 7 pm, una sola vez): qué salió, quién contestó, a quién llamar y a quién retomar
+export async function dailyReport(env, h) {
+  const bogota = new Date(Date.now() - 5 * 3600e3);
+  const day = bogota.toISOString().slice(0, 10);
+  const dayStart = `${day} 05:00:00`;
+  const done = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = 'reporte' AND type = 'daily_report' AND created_at >= ?").bind(dayStart).first();
+  if (done) return false;
+  const q = async (sql, ...b) => ((await env.DB.prepare(sql).bind(...b).all().catch(() => ({ results: [] }))).results) || [];
+  const sent = await q("SELECT kind, COUNT(*) n FROM outbox WHERE status = 'sent' AND kind != 'recordatorio' AND sent_at >= ? GROUP BY kind", dayStart);
+  const n = k => sent.find(r => r.kind === k)?.n || 0;
+  const replied = await q("SELECT l.name, l.phone, l.state, l.hot, l.follow_up, l.summary FROM loggro_leads l WHERE l.phone IN (SELECT DISTINCT chat_key FROM agent_log WHERE role = 'user' AND created_at >= ?) ORDER BY l.hot DESC, l.updated_at DESC LIMIT 20", dayStart);
+  const hot = replied.filter(r => r.hot);
+  const later = replied.filter(r => !r.hot && r.follow_up);
+  const baja = replied.filter(r => r.state === 'optout');
+  const queued = (await q("SELECT COUNT(*) n FROM outbox WHERE status = 'queued'"))[0]?.n || 0;
+  const say = (t, k) => String(t || '').replace(/\s+/g, ' ').slice(0, k);
+  const text = [
+    `📊 Cierre del día (${day}): enviamos ${n('primer_contacto') + n('retomar')} mensajes (${n('primer_contacto')} leads nuevos, ${n('retomar')} perdidos POS). Respondieron ${replied.length}, bajas ${baja.length}. En cola para el próximo día hábil: ${queued}.`,
+    hot.length ? `🔥 Para llamar: ${hot.map(r => `${r.name || 'Sin nombre'} +${r.phone} (${say(r.summary, 90)})`).join(' | ')}` : 'Nadie para llamar de urgencia.',
+    later.length ? `🗓 Pidieron que los retomemos: ${later.map(r => `${r.name || 'Sin nombre'} el ${r.follow_up}`).join(', ')}.` : '',
+    `Todo quedó registrado en HubSpot.`,
+  ].filter(Boolean).join('\n');
+  await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'daily_report')").run().catch(() => {});
+  return h.alertMessage(env, text, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
 function buildSummary(row, P) {
