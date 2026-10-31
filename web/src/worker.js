@@ -536,9 +536,15 @@ async function queueAlert(env, dest, text) {
   const key = dest.to || dest.recipient;
   if (!key || !env.DB) return false;
   await env.DB.prepare('INSERT INTO alert_queue (dest, text) VALUES (?, ?)').bind(key, text.slice(0, 1500)).run();
-  const recent = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'alert_open' AND created_at > datetime('now', '-20 hours')").bind(`alert:${key}`.slice(0, 64)).first();
-  if (recent) return true; // ya se le avisó que hay avisos pendientes; los verá al responder
-  const sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'template', template: { name: env.ALERT_OPEN_TEMPLATE || 'avisos_pendientes', language: { code: env.KAPSO_TEMPLATE_LANG || 'es' } } });
+  // Con ALERT_OPEN_TEXT = 'on' la plantilla de utilidad lleva el resumen del aviso (una por aviso, cuesta poco); si no, una sola plantilla corta por ventana
+  const withText = env.ALERT_OPEN_TEXT === 'on';
+  if (!withText) {
+    const recent = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'alert_open' AND created_at > datetime('now', '-20 hours')").bind(`alert:${key}`.slice(0, 64)).first();
+    if (recent) return true; // ya se le avisó que hay avisos pendientes; los verá al responder
+  }
+  const tpl = { name: env.ALERT_OPEN_TEMPLATE || 'avisos_pendientes', language: { code: env.KAPSO_TEMPLATE_LANG || 'es' } };
+  if (withText) tpl.components = [{ type: 'body', parameters: [{ type: 'text', text: text.replace(/\s*\n\s*/g, ' · ').replace(/https?:\/\/\S+/g, '').slice(0, 220) }] }];
+  const sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'template', template: tpl });
   if (sent) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'alert_open')").bind(`alert:${key}`.slice(0, 64)).run().catch(() => {});
   return sent;
 }

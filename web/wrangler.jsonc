@@ -33,7 +33,9 @@
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
     "OUTBOX_PER_DAY": "5",   // tope diario de primeros mensajes por plantilla mientras el número nuevo se calienta
-    "OUTBOX_ALIAS": "",      // p. ej. {"loggro_primer_contacto":"loggro_solicitud_info"} para cambiar de plantilla sin tocar la rutina
+    "OUTBOX_ALIAS": "{\"loggro_primer_contacto\":\"solicitud_loggro_en_proceso\"}",      // p. ej. {"loggro_primer_contacto":"loggro_solicitud_info"} para cambiar de plantilla sin tocar la rutina
+    "ALERT_OPEN_TEMPLATE": "alerta_nueva_solicitud",   // plantilla de utilidad aprobada: avisa a Damián cuando su ventana de 24 h está cerrada
+    "ALERT_OPEN_TEXT": "on",                          // la plantilla lleva el resumen del aviso
     "RESCATE_ENVIOS": "off",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "AGENT_V2": "on",   // agente conversacional (chat como Damián); "off" vuelve al flujo de botones
     "BOOKING_URL_LOGGRO": "",
