@@ -27,7 +27,7 @@ ok('Halloween terminó: Timba ya no habla de la temporada (pasó a Navidad)', [I
 titulo('4. La página navideña')
 for (const [n, h] of [['index', html], ['mensualidad', mens]]) {
   ok(`${n}: la capa se enciende sola del 1 nov al 6 ene y se puede forzar o quitar`,
-     /d>='2026-11-01'&&d<='2027-01-06'/.test(h) && /navidad=\(\\d\)/.test(h) && /html\.navidad\{/.test(h));
+     /d>='2026-11-01'&&d<='2027-01-06'/.test(h) && /navidad=\(\\d\)/.test(h) && /html\.navidad::before/.test(h));
   ok(`${n}: guirnalda de luces y nada de Halloween`, /class="guirnalda"/.test(h) && !/halloween|fr-luna|fr-m1/i.test(h));
   ok(`${n}: respeta a quien pide menos movimiento`, /prefers-reduced-motion:reduce\)\{\s*html\.navidad::after/.test(h));
 }
