@@ -219,7 +219,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   ok('el aviso no habla de requisitos', !/requisito/i.test(aviso), aviso);
   ok('no dice «lleno» ni «no se puede comprar»: no espanta', !/lleno|no se puede comprar/i.test(aviso), aviso);
   ok('y que no hay nada que pagar', /no hay nada que pagar/.test(aviso), aviso);
-  ok('la alumna que renueva tiene su entrada en la página (29 oct), no en el chat',
+  ok('quien renueva tiene su entrada en la página (29 oct), no en el chat',
      (await p.locator('#aviso-lleno a[data-renovar]').count()) === 1 && /Renueva aquí/.test(aviso), aviso);
 
   // Las filas.
@@ -239,7 +239,7 @@ const llenar = async (p, { nombre = 'María Ruiz', celular = '3001234567',
   const sub = await p.locator('#sub1').innerText();
   ok('el formulario explica que es una lista', /tiene lista de espera/.test(sub), sub);
   ok('y que no se paga nada', /No tienes que pagar nada ahora/.test(sub), sub);
-  ok('y manda a la alumna que renueva a la renovación de la página', /ya eres alumna y estás renovando/i.test(sub) && (await p.locator('#sub1 [data-renovar]').count()) === 1, sub);
+  ok('y manda a quien renueva a la renovación de la página', /ya bailas con nosotros y estás renovando/i.test(sub) && (await p.locator('#sub1 [data-renovar]').count()) === 1, sub);
   const boton = await p.locator('#btn-enviar').textContent();
   ok('el botón dice que es apuntarse a la lista', /Apuntarme a la lista de espera/.test(boton), boton);
   ok('y no habla de pagar', !/pag/i.test(boton), boton);

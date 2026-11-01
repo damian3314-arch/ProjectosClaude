@@ -139,7 +139,7 @@ begin
 
   if p_modo = 'renovacion' and not v_conocida then
     return jsonb_build_object('ok', false, 'error', 'NO_ENCONTRADA',
-      'mensaje', 'No te encontramos como alumna con ese celular. Si es tu primera vez, completa tus datos.');
+      'mensaje', 'No te encontramos con ese celular. Si es tu primera vez, completa tus datos.');
   end if;
 
   v_primera := not v_conocida;

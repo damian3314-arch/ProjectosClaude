@@ -6,8 +6,8 @@
  *     sistema de accesos no la crea), acepta el tratamiento de datos y contesta unas preguntas de salud. Si marca algo,
  *     la página le recuerda seguir lo que diga su médico. Al terminar se le dice que llegue 10 o 15 minutos antes de su
  *     primera clase al registro biométrico (la huella).
- *   · Quien ya es alumna y renueva entra por una opción clara: solo nombre y celular, sin salud ni autorizaciones, y pasa
- *     al pago. El bot manda a las alumnas con ?renovar=1.
+ *   · Quien ya baila con Tumbao y renueva entra por una opción clara: solo nombre y celular, sin salud ni autorizaciones, y pasa
+ *     al pago. El bot manda a quien renueva con ?renovar=1.
  *
  * El API se simula, igual que en mensualidad-pagina.test.mjs.
  *
@@ -58,12 +58,12 @@ const solicitudes = p => p.evaluate(() => window.__llamadas.filter(l => l.url.en
 const visible = (p, s) => p.locator(s).isVisible();
 const SALUD = ['corazon', 'pecho', 'lesion', 'embarazo', 'otra'];
 
-titulo('1. La entrada para quien ya es alumna');
+titulo('1. La entrada para quien ya baila con Tumbao');
 {
   const { p, errs } = await abrir({ entrar: false });
   await p.waitForSelector('#btn-renovar', { timeout: 10000 });
   ok('arriba de los pases hay una opción clara para renovar', await visible(p, '#renovar-caja') && /Renovar mi mensualidad/.test(await p.locator('#btn-renovar').innerText()));
-  ok('y dice «¿Ya eres alumna de Tumbao?»', /Ya eres alumna de Tumbao/.test(await p.locator('#renovar-caja').innerText()));
+  ok('y dice «¿Ya bailas con Tumbao?»', /Ya bailas con Tumbao/.test(await p.locator('#renovar-caja').innerText()));
 
   await p.click('#btn-renovar');
   await p.waitForSelector('.hora', { timeout: 5000 });
@@ -95,7 +95,7 @@ titulo('1. La entrada para quien ya es alumna');
   await p.close();
 }
 
-titulo('2. El bot manda a las alumnas con ?renovar=1');
+titulo('2. El bot manda a quien renueva con ?renovar=1');
 {
   const { p } = await abrir({ url: PAGINA + '?renovar=1', entrar: false });
   await p.waitForSelector('.hora', { timeout: 10000 });
@@ -106,7 +106,7 @@ titulo('2. El bot manda a las alumnas con ?renovar=1');
 titulo('3. Renueva pero no la encontramos');
 {
   const { p } = await abrir({ entrar: false, respuestas: [
-    { ok: false, error: 'NO_ENCONTRADA', mensaje: 'No te encontramos como alumna con ese celular. Si es tu primera vez, completa tus datos.' }] });
+    { ok: false, error: 'NO_ENCONTRADA', mensaje: 'No te encontramos con ese celular. Si es tu primera vez, completa tus datos.' }] });
   await p.waitForSelector('#btn-renovar', { timeout: 10000 });
   await p.click('#btn-renovar');
   await p.waitForSelector('.hora', { timeout: 5000 });
@@ -116,7 +116,7 @@ titulo('3. Renueva pero no la encontramos');
   await p.click('#btn-enviar');
   await p.waitForSelector('#nacimiento', { state: 'visible', timeout: 5000 });
   ok('no queda en un callejón: se abre el formulario de primera vez', await visible(p, '#bloque-salud') && await visible(p, '#habeas'));
-  ok('lo explica', /No te encontramos como alumna/.test(await p.locator('#sub1').innerText()));
+  ok('lo explica', /No te encontramos con ese celular/.test(await p.locator('#sub1').innerText()));
   ok('y conserva lo que ya escribió', (await p.inputValue('#nombre')) === 'Camila Torres Ríos' && (await p.inputValue('#celular')) === '3009998877');
   await p.close();
 }

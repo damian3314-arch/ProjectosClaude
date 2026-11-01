@@ -998,7 +998,7 @@ const CONFIG = {
   </section>
   <div class="ticker" aria-hidden="true"><span>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b></span><span>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b></span></div>
   <div class="renovar-caja" id="renovar-caja">
-    <div><b>¿Ya eres alumna de Tumbao?</b><span>Si estás renovando tu plan, entra por aquí: más rápido.</span></div>
+    <div><b>¿Ya bailas con Tumbao?</b><span>Si estás renovando tu plan, entra por aquí: más rápido.</span></div>
     <button type="button" id="btn-renovar">Renovar mi mensualidad</button>
   </div>
   <h2 class="el-titulo">Elige tu pase</h2>
@@ -1021,7 +1021,7 @@ const CONFIG = {
     <div class="dolor-lista">
       <div class="dolor-card"><p class="yo">«Me inscribí con toda y a las 3 semanas ya no iba.»</p><p class="tu">Aquí no es una rutina: es <span>una rumba</span>. La hora se pasa volando y quieres volver.</p></div>
       <div class="dolor-card"><p class="yo">«No tengo tiempo para organizarme.»</p><p class="tu">Horario fijo —7 am, 6 pm o 7 pm—. <span>Llegas y entras</span>, sin reservar ni pensar.</p></div>
-      <div class="dolor-card"><p class="yo">«Llego cargada de estrés (y de pena).»</p><p class="tu">Baila pa' sanar: <span>sales liviana</span>. Y si nunca has bailado, aquí se empieza desde cero.</p></div>
+      <div class="dolor-card"><p class="yo">«Llego con la cabeza llena de estrés (y de pena).»</p><p class="tu">Baila pa' sanar: <span>sales con la cabeza liviana</span>. Y si nunca has bailado, aquí se empieza desde cero.</p></div>
     </div>
   </section>
   <section class="ruta rv" id="ruta">
@@ -1469,7 +1469,7 @@ const CONFIG = {
       `<b>${uno ? 'El horario de las' : 'Los horarios de'} ${esc(unirHoras(cerradas))} ` +
       `${uno ? 'tiene' : 'tienen'} lista de espera.</b> Apúntate y te avisamos apenas se libere un cupo. ` +
       'Apuntarte es gratis: <b>no hay nada que pagar</b>. ' +
-      '¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>: tu cupo es tuyo.';
+      '¿Ya bailas con nosotros y estás renovando? <a href="#" data-renovar>Renueva aquí</a>: tu cupo es tuyo.';
     caja.hidden = false;
   }
 
@@ -1548,7 +1548,7 @@ const CONFIG = {
         : `El horario de las <b>${esc(h.etiqueta)}</b> tiene lista de espera. ` +
           'Déjanos tus datos y te escribimos apenas se libere un cupo. ' +
           '<b>No tienes que pagar nada ahora.</b> ' +
-          '<br><br>¿Ya eres alumna y estás renovando? <a href="#" data-renovar>Renueva aquí</a>.');
+          '<br><br>¿Ya bailas con nosotros y estás renovando? <a href="#" data-renovar>Renueva aquí</a>.');
     // Qué campos se ven: nada de registro para quien renueva; salud y nacimiento solo si de verdad va a pagar.
     for (const el of document.querySelectorAll('#form [data-nueva]')) {
       el.hidden = renueva || (el.hasAttribute('data-pago') && !hay);
@@ -1650,7 +1650,7 @@ const CONFIG = {
         // No la encontramos como alumna: no es un callejón sin salida, es el formulario de primera vez.
         if (d && d.error === 'NO_ENCONTRADA') {
           modo = 'nueva'; hayPago = Number((laHora() || {}).libres) > 0; pintarHoras();
-          pintarDatos('No te encontramos como alumna con ese celular. Si es tu primera vez, completa estos datos; si ya eras alumna, escríbenos por WhatsApp.');
+          pintarDatos('No te encontramos con ese celular. Si es tu primera vez, completa estos datos; si ya bailabas con nosotros, escríbenos por WhatsApp.');
           return;
         }
         // Se liberó un cupo mientras escribía una lista de espera: ahora sí hay compra y faltan los datos.
@@ -1769,7 +1769,7 @@ const CONFIG = {
           WhatsApp si se libera un cupo de las <b>${esc(hh)}</b>.</p>
        <p><b>No pagues nada todavía.</b> No hay datos de pago para este horario:
           si transfieres, no podemos asignarte el cupo.</p>
-       <p>¿Ya eres alumna de este horario y estás renovando? <a href="#" data-renovar>Renueva aquí</a>
+       <p>¿Ya bailas en este horario y estás renovando? <a href="#" data-renovar>Renueva aquí</a>
           con tu celular y pasas directo al pago.</p>
        ${ofertaEspera()}`;
     const irTq = $('#espera-ir-tiq');
