@@ -851,112 +851,116 @@ const CONFIG = {
   .cupos-vivos .cv.pocos{border-color:var(--hot);color:var(--hot-2)}
   .cupos-vivos .cv.lleno{color:var(--tx-3)}
 
-  /* ═══ NAVIDAD 2026 · 1 nov a 6 ene (Damián, 1 nov) ═══
-     Diseño propio: verde bosque profundo con rojo y dorado, guirnalda de luces arriba, árbol en la franja y nieve suave.
-     Se enciende sola por fecha (script de <head>, hora de Bogotá). ?navidad=1 la fuerza, ?navidad=0 la quita.
-     Solo transform y opacidad; todo lo que se mueve se apaga con prefers-reduced-motion. */
-  .guirnalda,.fr-escena,.fr-cuenta{display:none}
-  .fr-pie{display:contents}
+  /* ═══ NAVIDAD 2026 · 1 nov a 6 ene — diseño moderno ═══
+     Abeto casi negro, marfil, arándano y champán. Luces de hada finas arriba, un fondo con luces desenfocadas (bokeh), nieve
+     mínima y superficies de vidrio con filo champán. Sin dibujos infantiles. Se enciende por fecha (script de <head>, hora de
+     Bogotá): ?navidad=1 la fuerza, ?navidad=0 la quita. Solo transform y opacidad; lo que se mueve se apaga con reduced-motion. */
+  .guirnalda{display:none}
   html.navidad{
     --nv-ease:cubic-bezier(0.23,1,0.32,1);
-    --bg:#050a07; --bg-2:#0a130d; --bg-3:#102018;
-    --surface:#0a130d; --surface-2:#102018;
-    --line:#1c3626; --line-2:#2f5a40;
-    --tx:#fbf7ef; --tx-2:#c6d3c8; --tx-3:#869a8b;
-    --hot:#e5383b; --hot-2:#ff7b7f; --gold:#ffd166;
-    --neon:#e5383b; --neon-2:#ffd166; --violeta:#1f9d55;
-    --slime:#4ade80; --on-hot:#fff;
-    --grad-marca:linear-gradient(100deg,#ffd166 0%,#ff5a5f 50%,#c1121f 100%);
+    --bg:#060f0b; --bg-2:#0b1913; --bg-3:#12241b;
+    --surface:#0c1a14; --surface-2:#13261c;
+    --line:#1b3226; --line-2:#2c4a39;
+    --tx:#f8f3e9; --tx-2:#c8d0c4; --tx-3:#8a9a8e;
+    --hot:#d7263d; --hot-2:#ff9aa2; --gold:#f3d9a4;
+    --neon:#d7263d; --neon-2:#f3d9a4; --violeta:#2f7d55;
+    --slime:#86efac; --on-hot:#fff;
+    --grad-marca:linear-gradient(100deg,#e63946 0%,#b3122b 100%);
   }
   html.navidad body{
     background-color:var(--bg);
     background-image:
-      radial-gradient(52rem 24rem at 50% -10rem,rgba(229,56,59,.28),transparent 66%),
-      radial-gradient(34rem 24rem at 108% 104%,rgba(31,157,85,.22),transparent 62%),
-      radial-gradient(26rem 18rem at -10% 60%,rgba(255,209,102,.07),transparent 64%);
+      radial-gradient(46rem 22rem at 50% -9rem,rgba(215,38,61,.22),transparent 68%),
+      radial-gradient(32rem 22rem at 105% 100%,rgba(47,125,85,.20),transparent 64%);
     background-attachment:fixed;
   }
-  /* nieve: puntos que bajan lento por detrás del contenido */
-  html.navidad body::after{
-    content:""; position:fixed; left:0; right:0; top:-100%; height:200%; z-index:-1; pointer-events:none; opacity:.55;
+  /* luces desenfocadas arriba (bokeh) y nieve mínima, detrás de todo */
+  html.navidad::before{
+    content:""; position:fixed; left:0; right:0; top:0; height:15rem; z-index:-1; pointer-events:none; opacity:.9;
+    background:
+      radial-gradient(circle 2.6rem at 12% 30%,rgba(243,217,164,.20),transparent 70%),
+      radial-gradient(circle 2rem at 34% 12%,rgba(255,154,162,.16),transparent 70%),
+      radial-gradient(circle 3rem at 62% 34%,rgba(243,217,164,.14),transparent 70%),
+      radial-gradient(circle 2.2rem at 86% 16%,rgba(134,239,172,.12),transparent 70%);
+  }
+  html.navidad::after{
+    content:""; position:fixed; left:0; right:0; top:-100%; height:200%; z-index:-1; pointer-events:none; opacity:.5;
     background-image:
-      radial-gradient(2px 2px at 12% 20%,#fff 60%,transparent 62%),radial-gradient(3px 3px at 32% 70%,#fff 60%,transparent 62%),
-      radial-gradient(1.5px 1.5px at 55% 35%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 74% 82%,#fff 60%,transparent 62%),
-      radial-gradient(3px 3px at 90% 48%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 44% 8%,#fff 60%,transparent 62%);
-    background-size:340px 340px; animation:nv-cae 40s linear infinite;
+      radial-gradient(1.6px 1.6px at 12% 20%,#fff 60%,transparent 62%),radial-gradient(2.2px 2.2px at 32% 70%,#fff 60%,transparent 62%),
+      radial-gradient(1.4px 1.4px at 55% 35%,#fff 60%,transparent 62%),radial-gradient(1.8px 1.8px at 74% 82%,#fff 60%,transparent 62%),
+      radial-gradient(2.2px 2.2px at 90% 48%,#fff 60%,transparent 62%),radial-gradient(1.4px 1.4px at 44% 8%,#fff 60%,transparent 62%);
+    background-size:360px 360px; animation:nv-cae 48s linear infinite;
   }
   @keyframes nv-cae{to{transform:translateY(50%)}}
-  /* guirnalda de luces: un cable que cuelga y bombillos de tres colores que se alternan */
-  html.navidad .guirnalda{display:block;position:absolute;left:0;right:0;top:0;height:34px;z-index:5;pointer-events:none;overflow:hidden}
+  /* luces de hada: un hilo fino con bombillos pequeños de luz cálida que titilan por turnos */
+  html.navidad .guirnalda{display:block;position:absolute;left:0;right:0;top:0;height:30px;z-index:5;pointer-events:none;overflow:hidden}
   html.navidad .guirnalda::before{
     content:""; position:absolute; inset:0;
-    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='34' viewBox='0 0 96 34'%3E%3Cpath d='M0 2 Q48 22 96 2' fill='none' stroke='%23183024' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x 0 0/96px 34px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='30' viewBox='0 0 72 30'%3E%3Cpath d='M0 1.5 Q36 17 72 1.5' fill='none' stroke='%23f3d9a4' stroke-opacity='.35' stroke-width='1'/%3E%3C/svg%3E") repeat-x 0 0/72px 30px;
   }
-  html.navidad .guirnalda i{position:absolute;inset:0;background-repeat:repeat-x;background-size:96px 34px}
+  html.navidad .guirnalda i{position:absolute;inset:0;background-repeat:repeat-x;background-size:72px 30px}
   html.navidad .guirnalda .a{
-    background-image:radial-gradient(circle 4.5px at 14px 11px,#ff4d5a 55%,transparent 70%),radial-gradient(circle 4.5px at 82px 11px,#ffd166 55%,transparent 70%);
-    filter:drop-shadow(0 0 5px rgba(255,77,90,.8)); animation:nv-luz 2.6s ease-in-out infinite;
+    background-image:radial-gradient(circle 2.6px at 18px 9.5px,#fff3d2 50%,transparent 70%),radial-gradient(circle 2.6px at 54px 9.5px,#fff3d2 50%,transparent 70%);
+    filter:drop-shadow(0 0 4px rgba(255,214,140,.95)); animation:nv-luz 3.2s ease-in-out infinite;
   }
   html.navidad .guirnalda .b{
-    background-image:radial-gradient(circle 4.5px at 48px 15px,#4ade80 55%,transparent 70%),radial-gradient(circle 4px at 31px 14px,#7cc6ff 55%,transparent 70%),radial-gradient(circle 4px at 65px 14px,#ff4d5a 55%,transparent 70%);
-    filter:drop-shadow(0 0 5px rgba(74,222,128,.8)); animation:nv-luz 2.6s ease-in-out -1.3s infinite;
+    background-image:radial-gradient(circle 2.6px at 36px 12px,#ffd9a0 50%,transparent 70%),radial-gradient(circle 2.2px at 0 1.5px,#ffd9a0 50%,transparent 70%);
+    filter:drop-shadow(0 0 4px rgba(255,190,110,.95)); animation:nv-luz 3.2s ease-in-out -1.6s infinite;
   }
-  @keyframes nv-luz{0%,100%{opacity:1}50%{opacity:.35}}
-  html.navidad body{padding-top:30px}
-  /* la marca, las tarjetas y los botones con el rojo y el dorado de la fecha */
-  html.navidad .marca img{filter:drop-shadow(0 0 18px rgba(229,56,59,.35)) drop-shadow(0 2px 10px rgba(0,0,0,.7))}
-  html.navidad .pasos li[aria-current]{background:rgba(229,56,59,.14)}
-  html.navidad .btn{box-shadow:0 10px 28px -12px rgba(229,56,59,.85)}
-  html.navidad .btn:disabled{box-shadow:none}
-  html.navidad .btn-ghost{border-color:rgba(255,209,102,.35)}
-  html.navidad .opcion{transition:border-color 160ms ease,transform 160ms var(--nv-ease),box-shadow 160ms ease}
-  html.navidad .opcion:active{transform:scale(.985)}
-  
+  @keyframes nv-luz{0%,100%{opacity:1}50%{opacity:.3}}
+  html.navidad body{padding-top:26px}
+  /* el logo: sin las rayas de neón, solo un filo champán */
+  html.navidad header::before,html.navidad header::after{
+    background:linear-gradient(90deg,transparent,rgba(243,217,164,.5),transparent)!important;box-shadow:none!important;
+    height:1px!important;opacity:.7;transform:none!important;filter:none!important;
+  }
+  html.navidad .marca img{filter:drop-shadow(0 2px 14px rgba(0,0,0,.6))}
+  /* superficies de vidrio con filo champán */
+  html.navidad .opcion,html.navidad .tarjeta,html.navidad .clase,html.navidad .dia,html.navidad .franja-promo,
+  html.navidad .renovar-caja,html.navidad .detalle,html.navidad .previa,html.navidad .monto,html.navidad .datos-pago,html.navidad .oferta-tiq,html.navidad .oferta-espera{
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--surface)!important;
+    border:1px solid rgba(243,217,164,.14)!important; border-radius:20px!important;
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 18px 36px -24px rgba(0,0,0,.8)!important;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  html.navidad .franja-promo{box-shadow:0 1px 0 rgba(255,255,255,.06) inset,3px 0 0 var(--hot) inset!important}
+  html.navidad .opcion,html.navidad .clase{transition:border-color 180ms ease,transform 180ms var(--nv-ease),box-shadow 180ms ease}
+  html.navidad .opcion:active,html.navidad .clase:active{transform:scale(.985)}
   @media (hover:hover) and (pointer:fine){
-    html.navidad .opcion:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,209,102,.3),0 12px 30px -14px rgba(255,209,102,.4)}
+    html.navidad .opcion:hover,html.navidad .clase:hover:not(:disabled),html.navidad .tarjeta:hover{border-color:rgba(243,217,164,.45)!important}
   }
-  html.navidad .franja-promo{background:linear-gradient(135deg,rgba(229,56,59,.16),rgba(31,157,85,.10) 80%),var(--surface);border-color:rgba(255,209,102,.3)}
-  /* la franja: tarjeta roja y verde con el árbol */
-  html.navidad .franja{
-    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
-    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,209,102,.55); border-radius:18px;
-    background-image:linear-gradient(160deg,#6b0f1a 0%,#2b0a10 38%,#0a2216 100%)!important;
-    box-shadow:0 18px 40px -18px rgba(229,56,59,.55), inset 0 1px 0 rgba(255,255,255,.1);
-    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
-    opacity:0; transform:translateY(10px) scale(.985); animation:nv-entra 520ms var(--nv-ease) 80ms forwards;
+  html.navidad .opcion .ico{
+    background:linear-gradient(150deg,#f8e6bd,#e0b86a)!important;color:#0b2418!important;border-radius:14px!important;
+    box-shadow:0 8px 18px -10px rgba(224,184,106,.7)!important;
   }
-  @keyframes nv-entra{to{opacity:1;transform:none}}
-  html.navidad .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
-  .fr-arbol{position:absolute;right:.6rem;bottom:.2rem;width:8.4rem;height:auto}
-  .fr-arbol .luz{animation:nv-luz 2.2s ease-in-out infinite}
-  .fr-arbol .luz:nth-of-type(2n){animation-delay:-.7s}.fr-arbol .luz:nth-of-type(3n){animation-delay:-1.4s}
-  .fr-nieve{position:absolute;inset:-100% 0 0 0;height:200%;opacity:.8;
-    background-image:radial-gradient(2px 2px at 10% 20%,#fff 60%,transparent 62%),radial-gradient(2.5px 2.5px at 40% 60%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 70% 30%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 88% 80%,#fff 60%,transparent 62%);
-    background-size:220px 220px; animation:nv-cae 18s linear infinite}
-  html.navidad .franja-ceja{color:var(--gold);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,209,102,.4)}
-  html.navidad .franja-titulo{
-    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:9ch;
-    background:linear-gradient(180deg,#fff 0%,#ffe9b8 50%,#ffd166 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 14px rgba(0,0,0,.45));
+  html.navidad .pasos li[aria-current]{background:rgba(243,217,164,.1)}
+  html.navidad .pasos li[aria-current] .n{background:var(--grad-marca);color:#fff}
+  /* botones: pastilla arándano con luz champán por dentro */
+  html.navidad .btn{
+    background:linear-gradient(180deg,#e63946 0%,#b3122b 100%)!important;color:#fff!important;border:0;
+    box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 14px 28px -14px rgba(215,38,61,.9)!important;
   }
-  html.navidad .franja-linea{color:rgba(255,248,238,.88);max-width:15rem;margin-top:.45rem}
-  html.navidad .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
-  html.navidad .franja-boton{
-    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; color:#fff;
-    background:linear-gradient(180deg,#ff5a5f 0%,#c1121f 100%);
-    box-shadow:0 8px 22px -6px rgba(229,56,59,.8), inset 0 1px 0 rgba(255,255,255,.35);
-    transition:transform 160ms var(--nv-ease), box-shadow 160ms ease;
-  }
-  html.navidad .franja:active .franja-boton{transform:scale(.97)}
-  html.navidad .fr-cuenta{
-    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px; font-size:.78rem; font-weight:700;
-    color:var(--gold); border:1px solid rgba(255,209,102,.45); background:rgba(255,209,102,.08);
-  }
-  html.navidad .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:nv-luz 2.4s ease-in-out infinite}
-  @media (max-width:380px){html.navidad .franja-titulo{font-size:1.7rem}.fr-arbol{width:7rem}}
+  html.navidad .btn:disabled{background:var(--bg-3)!important;color:var(--tx-3)!important;box-shadow:none!important}
+  html.navidad .btn-ghost{background:transparent!important;border:1px solid rgba(243,217,164,.4)!important;color:var(--gold)!important;box-shadow:none!important}
+  html.navidad .btn-ghost:hover{background:rgba(243,217,164,.08)!important}
+  html.navidad .renovar-caja button{border-color:rgba(243,217,164,.5);color:var(--gold)}
+  html.navidad .renovar-caja button:hover{background:rgba(243,217,164,.08)}
+  html.navidad a{color:var(--gold)}
+  html.navidad #burbuja{background:linear-gradient(180deg,#e63946,#b3122b);box-shadow:0 10px 24px -8px rgba(215,38,61,.8)}
+  html.navidad .codigo{border-color:rgba(243,217,164,.4)}
+  html.navidad .codigo b{color:var(--gold);text-shadow:0 0 18px rgba(243,217,164,.35)}
+  html.navidad .campana-chip{color:var(--tx-3)}
+  html.navidad .campana-chip b{color:var(--gold)}
+  /* los pases: la foto se calma (menos magenta) y todo se tiñe de abeto */
+  html.navidad .pase .foto{filter:saturate(.6) sepia(.28) brightness(.95)}
+  html.navidad .pase .foto::after{background:linear-gradient(90deg,rgba(3,14,9,.88) 0%,rgba(3,14,9,.5) 62%,rgba(3,14,9,.2) 100%)}
+  html.navidad .pase{box-shadow:0 1px 0 rgba(243,217,164,.18) inset}
+  html.navidad .pase.activo{box-shadow:0 1px 0 rgba(243,217,164,.3) inset,0 24px 44px -20px rgba(215,38,61,.55)}
+  html.navidad .pase.pase-mensualidad{color:#fff;background:linear-gradient(150deg,#1d5a3c 0%,#0f3a27 58%,#08211a 100%)}
+  html.navidad .pase .cinta.c1{stroke:var(--hot)}html.navidad .pase .cinta.c2{stroke:var(--gold)}html.navidad .pase .cinta.c3{stroke:#fff}
+  html.navidad .extra-li{color:var(--gold)}
   @media (prefers-reduced-motion:reduce){
-    html.navidad body::after,.fr-nieve,.guirnalda i,.fr-arbol .luz,html.navidad .fr-cuenta::before{animation:none}
-    html.navidad .franja{animation:none;opacity:1;transform:none}
+    html.navidad::after,html.navidad .guirnalda i{animation:none}
   }
 </style>
 <script>
