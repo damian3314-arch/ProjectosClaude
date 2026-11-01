@@ -707,6 +707,7 @@ const CONFIG = {
     background:var(--surface,var(--bg-2));border:1px solid var(--line-2);
   }
   .campana-chip b{color:var(--tx)}
+  .campana-chip{background:none!important;border:0!important;padding:0!important;margin:-.6rem 0 1rem!important;font-size:.82rem;color:var(--tx-3)}
   .pases{
     display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:.8rem;
     overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
@@ -914,7 +915,7 @@ const CONFIG = {
   @media (hover:hover) and (pointer:fine){
     html.navidad .opcion:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,209,102,.3),0 12px 30px -14px rgba(255,209,102,.4)}
   }
-  html.navidad .franja-promo,html.navidad .campana-chip{background:linear-gradient(135deg,rgba(229,56,59,.16),rgba(31,157,85,.10) 80%),var(--surface);border-color:rgba(255,209,102,.3)}
+  html.navidad .franja-promo{background:linear-gradient(135deg,rgba(229,56,59,.16),rgba(31,157,85,.10) 80%),var(--surface);border-color:rgba(255,209,102,.3)}
   /* la franja: tarjeta roja y verde con el árbol */
   html.navidad .franja{
     position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
@@ -2007,7 +2008,7 @@ const CONFIG = {
     paseActivo = -1;
     const camp = campanaActiva() && tiqPaquetes.length;
     $('#campana').hidden = !camp;
-    $('#campana').hidden = true; // 1 nov: sin banner de Navidad arriba de los pases (Damián)
+    if (camp) $('#campana').innerHTML = '✨ Cumple todas las clases de tu tiquetera y recibe una <b>recompensa por tu constancia</b>.';
     const cont = $('#tarjetas-eleccion');
     cont.innerHTML = pasesActuales.map(htmlPase).join('');
     $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
