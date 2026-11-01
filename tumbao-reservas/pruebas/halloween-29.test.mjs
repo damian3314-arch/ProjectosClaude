@@ -15,7 +15,7 @@ const html = readFileSync(new URL('../../docs/index.html', import.meta.url), 'ut
 const franja = html.slice(html.indexOf('FRANJA: {'), html.indexOf('NUEVA: {'));
 
 titulo('1. La franja de la página');
-ok('la franja pasó de Halloween a Navidad', /activo:\s+true/.test(franja) && /Navidad/.test(franja) && /premio por tu constancia/.test(franja));
+ok('la franja de campaña quedó apagada (Damián, 1 nov)', /activo:\s+false/.test(franja) && /Navidad/.test(franja) && /premio por tu constancia/.test(franja));
 ok('la franja cuenta los días hasta Navidad y se apaga sola', /fecha:\s+'2026-12-24'/.test(franja) && /if \(dias < 0\) return;/.test(html));
 ok('lleva a la página de tiqueteras', /enlace:\s+'mensualidad\.html'/.test(franja));
 ok('está arriba, antes de «¿Cómo vienes?»', html.indexOf('id="franja"') < html.indexOf('<h2 id="t0">'));

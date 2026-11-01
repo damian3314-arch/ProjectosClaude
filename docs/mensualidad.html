@@ -2007,7 +2007,7 @@ const CONFIG = {
     paseActivo = -1;
     const camp = campanaActiva() && tiqPaquetes.length;
     $('#campana').hidden = !camp;
-    if (camp) $('#campana').innerHTML = '🎄 Navidad en Tumbao: cumple tus clases y gánate un <b>premio por tu constancia</b> (1 clase con la tiquetera de 4, 2 con la de 8).';
+    $('#campana').hidden = true; // 1 nov: sin banner de Navidad arriba de los pases (Damián)
     const cont = $('#tarjetas-eleccion');
     cont.innerHTML = pasesActuales.map(htmlPase).join('');
     $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
