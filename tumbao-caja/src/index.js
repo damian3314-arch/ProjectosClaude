@@ -1275,6 +1275,31 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 1 nov: Navidad en Tumbao. La dueña aprobó las clases de obsequio por constancia (1 con la tiquetera de 4, 2 con la de 8).
+    // Sin descuentos. SOLO se crea en Meta (gratis). Enviarla cuesta (marketing) y escribe a clientes reales: la autoriza Damián.
+    name: 'navidad_tiquetera',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🎄\n\n' +
+          'Esta Navidad baila con constancia: cumple todas las clases de tu tiquetera y recibe clases de obsequio como premio ' +
+          '(1 con la tiquetera de 4 clases, 2 con la de 8). Mira las opciones 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver tiqueteras', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 29 oct: «rescatar el mes». Dos mensajes, uno para quien baila seguido y otro para el resto de la base. Sin descuento, regalo
     // ni promoción (la dueña no los autoriza): solo la mensualidad y las tiqueteras con sus precios de siempre. Se crean en Meta
     // (gratis); enviarlas cuesta (marketing) y escribe a clientes reales: lo autoriza Damián (campana_rescate_mes, 0189).

@@ -37,6 +37,11 @@ const CONFIG = {
   PRECIO_SUELTA_REF: 15000,
   // Para decir «alrededor de $X por clase»: clases de un mes de lunes a sábado (23-26). Igual a ajustes.mensualidad_clases_mes.
   CLASES_MES_REF: 25,
+  /* Clases de obsequio por constancia (la dueña lo aprobó el 1 nov): quien cumple TODAS las clases de su tiquetera recibe clases de
+     obsequio como premio. Solo tiquetera. Sin fecha de fin: `hasta` solo existe para apagarla a mano. */
+  CAMPANA: { activa: true, desde: '2026-11-01', hasta: '2027-12-31' },
+  // Clases adicionales al completar la tiquetera (Damián, 25 oct): 1 en la de 4 clases, 2 en la de 8. Aplica a todas, nuevas o viejas.
+  EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
   // Fotos de fondo de cada pase (opcional). Ruta dentro de docs/, p. ej. 'img/pase-4.jpg'. Vacío = arte gráfico.
   // Ideal: fotos reales de la clase (4 personas bailando para la de 4, el grupo para la de 8, el salón lleno para la mensualidad).
   FOTOS: { mensualidad: 'img/pase-mensualidad.jpg', '4': 'img/pase-4.jpg', '8': 'img/pase-8.jpg' },
@@ -697,6 +702,11 @@ const CONFIG = {
   :root{--ease-salida:cubic-bezier(0.23,1,0.32,1)}
   .el-titulo{font-size:1.7rem;letter-spacing:-.035em;margin:.4rem 0 .3rem}
   .el-sub{margin:0 0 1.2rem}
+  .campana-chip{
+    margin:0 0 1.3rem;padding:.7rem .9rem;border-radius:14px;font-size:.85rem;line-height:1.45;color:var(--tx-2);
+    background:var(--surface,var(--bg-2));border:1px solid var(--line-2);
+  }
+  .campana-chip b{color:var(--tx)}
   .pases{
     display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:.8rem;
     overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;
@@ -986,6 +996,34 @@ const CONFIG = {
   .cupos-vivos .cv{padding:.25rem .65rem;border-radius:999px;background:var(--bg-2);border:1px solid var(--line)}
   .cupos-vivos .cv.pocos{border-color:var(--hot);color:var(--hot-2)}
   .cupos-vivos .cv.lleno{color:var(--tx-3)}
+
+  /* ═══ NAVIDAD 2026 · 1 nov a 6 ene (Damián, 1 nov) ═══
+     Capa de color y nieve suave encima del tema de siempre. Se enciende sola por fecha (script de <head>, hora de Bogotá).
+     ?navidad=1 la fuerza, ?navidad=0 la quita. Quitar este bloque devuelve la página de antes. Solo transform: la nieve cae
+     lenta, queda detrás del contenido y se apaga con prefers-reduced-motion. */
+  html.navidad{
+    --hot:#e5383b; --hot-2:#ff7b7f; --gold:#ffd166;
+    --neon:#e5383b; --neon-2:#ff8fa3; --violeta:#1f9d55;
+    --on-hot:#fff;
+    --grad-marca:linear-gradient(100deg,#ffd166 0%,#ff5a5f 48%,#c1121f 100%);
+  }
+  html.navidad body{
+    background-image:
+      radial-gradient(56rem 26rem at 50% -12rem,rgba(229,56,59,.26),transparent 66%),
+      radial-gradient(34rem 22rem at 105% 105%,rgba(31,157,85,.16),transparent 62%);
+    background-attachment:fixed;
+  }
+  html.navidad body::after{
+    content:""; position:fixed; left:0; right:0; top:-100%; height:200%; z-index:-1; pointer-events:none; opacity:.5;
+    background-image:
+      radial-gradient(2px 2px at 12% 20%,#fff 60%,transparent 62%),radial-gradient(2.5px 2.5px at 32% 70%,#fff 60%,transparent 62%),
+      radial-gradient(1.5px 1.5px at 55% 35%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 74% 82%,#fff 60%,transparent 62%),
+      radial-gradient(2.5px 2.5px at 90% 48%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 44% 8%,#fff 60%,transparent 62%);
+    background-size:340px 340px; animation:nv-cae 38s linear infinite;
+  }
+  @keyframes nv-cae{to{transform:translateY(50%)}}
+  @media (prefers-reduced-motion:reduce){html.navidad body::after{animation:none}}
+  html.navidad .btn{box-shadow:0 10px 28px -12px rgba(229,56,59,.8)}
 </style>
 <script>
 /* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
@@ -993,6 +1031,14 @@ const CONFIG = {
   var q=(location.search.match(/[?&]halloween=(\d)/)||[])[1];
   var d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota'}).format(new Date());
   if(q==='1'||(q!=='0'&&d>='2026-10-22'&&d<='2026-10-31'))document.documentElement.classList.add('halloween');
+}catch(e){}})();
+</script>
+<script>
+/* Navidad 2026: la capa navideña se enciende sola del 1 de noviembre al 6 de enero (hora de Bogotá). ?navidad=1 la fuerza, ?navidad=0 la quita. */
+(function(){try{
+  var q=(location.search.match(/[?&]navidad=(\d)/)||[])[1];
+  var d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota'}).format(new Date());
+  if(q==='1'||(q!=='0'&&d>='2026-11-01'&&d<='2027-01-06'))document.documentElement.classList.add('navidad');
 }catch(e){}})();
 </script>
 </head>
@@ -1038,6 +1084,7 @@ const CONFIG = {
   </div>
   <h2 class="el-titulo">Elige tu pase</h2>
   <p class="sub el-sub">Desliza para ver las opciones.</p>
+  <p class="campana-chip" id="campana" hidden></p>
   <div class="pases" id="tarjetas-eleccion" role="listbox" aria-label="Pases de Tumbao">
     <div class="pase pase-skel"></div><div class="pase pase-skel"></div>
   </div>
@@ -1884,7 +1931,13 @@ const CONFIG = {
   const textoPorClasePlan = () =>
     `Alrededor de ${pesos(porClasePlan())} por clase si vienes a todas (la suelta cuesta ${pesos(CONFIG.PRECIO_SUELTA_REF)})`;
 
-  // 26 oct: la campaña de clases adicionales por constancia se desmontó (la dueña no la aprobó). No se ofrece en ninguna parte.
+  /* La campaña de constancia: activa solo entre `desde` y `hasta` (hora de Bogotá). */
+  const hoyBogota = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const campanaActiva = () => {
+    const c = CONFIG.CAMPANA, h = hoyBogota();
+    return !!(c && c.activa && h >= c.desde && h <= c.hasta);
+  };
+  const extraTxt = (clases) => { const n = CONFIG.EXTRA(clases); return `${n} ${n === 1 ? 'clase de obsequio' : 'clases de obsequio'}`; };
 
   /* ═══ Los pases ═══
      Cada producto es una tarjeta (un pase). Se deslizan; el que queda al
@@ -1897,6 +1950,7 @@ const CONFIG = {
     </svg>`;
 
   function listaDePases() {
+    const camp = campanaActiva();
     const pases = [{
       tipo: 'mensualidad', nombre: 'Mensualidad', cant: 'Todo el mes', num: 'MES',
       precio: valorCop, xc: `≈ ${pesos(porClasePlan())} por clase`,
@@ -1921,6 +1975,7 @@ const CONFIG = {
           'Úsala en <b>cualquier horario</b>: reservas cada clase en la página con tu código.',
           `Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.`,
           ahorro > 0 ? `Ahorras <b>${pesos(ahorro)}</b> frente a pagar clase suelta.` : '',
+          camp ? `<span class="extra-li">Completa tus ${clases} clases y recibe <b>${extraTxt(clases)}</b> como premio por tu constancia.</span>` : '',
         ].filter(Boolean),
         cta: `Quiero la de ${clases} clases · ${pesos(precio)}`, foto: CONFIG.FOTOS[String(clases)] || '',
       });
@@ -2002,6 +2057,7 @@ const CONFIG = {
   }
 
   function pintarFaq() {
+    const camp = campanaActiva();
     const preguntas = [
       ['¿Qué diferencia hay entre la mensualidad y la tiquetera?',
        'La <b>mensualidad</b> es tu horario fijo todo el mes: de lunes a viernes llegas y entras, sin reservar, y los sábados tienes la Rumba terapia. La <b>tiquetera</b> es un paquete de clases para usar en el horario que quieras: reservas cada clase en la página.'],
@@ -2012,6 +2068,8 @@ const CONFIG = {
       ['¿Cómo pago?',
        'Por transferencia, desde aquí mismo: eliges tu pase, dejas tus datos y te mostramos los datos de pago. Apenas confirmamos el pago queda activo (con la tiquetera te llega tu código).'],
     ];
+    if (camp) preguntas.push(['¿Cómo gano las clases de obsequio?',
+      'Cuando completas <b>todas</b> las clases de tu tiquetera, como premio por tu constancia te obsequiamos: <b>1 clase</b> con la tiquetera de 4 y <b>2 clases</b> con la de 8. Te avisamos por WhatsApp y valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.']);
     preguntas.push(['¿Tengo más dudas?',
       `Escríbenos por <a href="${waUrl('Hola Tumbao, tengo una duda sobre los pases.')}" target="_blank" rel="noopener">WhatsApp</a> y te ayudamos.`]);
     $('#faq').innerHTML = '<h3>Preguntas frecuentes</h3>' +
@@ -2021,6 +2079,9 @@ const CONFIG = {
   function pintarEleccion() {
     pasesActuales = listaDePases();
     paseActivo = -1;
+    const camp = campanaActiva() && tiqPaquetes.length;
+    $('#campana').hidden = !camp;
+    if (camp) $('#campana').innerHTML = '🎄 Navidad en Tumbao: cumple tus clases y gánate <b>clases de obsequio</b> (1 con la tiquetera de 4, 2 con la de 8).';
     const cont = $('#tarjetas-eleccion');
     cont.innerHTML = pasesActuales.map(htmlPase).join('');
     $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');
