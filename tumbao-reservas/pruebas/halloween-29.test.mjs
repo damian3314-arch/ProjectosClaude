@@ -18,7 +18,7 @@ titulo('1. La franja de la página');
 ok('la franja de campaña quedó apagada (Damián, 1 nov)', /activo:\s+false/.test(franja) && /Navidad/.test(franja) && /premio por tu constancia/.test(franja));
 ok('la franja cuenta los días hasta Navidad y se apaga sola', /fecha:\s+'2026-12-24'/.test(franja) && /if \(dias < 0\) return;/.test(html));
 ok('lleva a la página de tiqueteras', /enlace:\s+'mensualidad\.html'/.test(franja));
-ok('está arriba, antes de «¿Cómo vienes?»', html.indexOf('id="franja"') < html.indexOf('<h2 id="t0">'));
+ok('el bloque de la franja ya no está en la página', !/id="franja"/.test(html));
 ok('no promete rebajas, regalos ni sorpresas', !/(descuento|rebaja|regalo|gratis|sorpresa|disfraz|2x1)/i.test(franja));
 
 titulo('2. Timba');
@@ -31,7 +31,7 @@ for (const [n, h] of [['index', html], ['mensualidad', mens]]) {
   ok(`${n}: guirnalda de luces y nada de Halloween`, /class="guirnalda"/.test(h) && !/halloween|fr-luna|fr-m1/i.test(h));
   ok(`${n}: respeta a quien pide menos movimiento`, /prefers-reduced-motion:reduce\)\{\s*html\.navidad body::after/.test(h));
 }
-ok('index: la franja trae el árbol de Navidad', /class="fr-arbol"/.test(html));
+ok('index: sin árbol ni tarjeta de campaña', !/fr-arbol|class="franja"/.test(html));
 ok('nunca se habla de obsequio ni regalo en las páginas', !/obsequio|regalo/i.test(html.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')) && !/obsequio|regalo/i.test(mens.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')));
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);

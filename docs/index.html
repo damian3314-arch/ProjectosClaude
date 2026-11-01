@@ -1058,47 +1058,8 @@ const CONFIG = {
     html.navidad .opcion:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,209,102,.3),0 12px 30px -14px rgba(255,209,102,.4)}
   }
   html.navidad .franja-promo,html.navidad .campana-chip{background:linear-gradient(135deg,rgba(229,56,59,.16),rgba(31,157,85,.10) 80%),var(--surface);border-color:rgba(255,209,102,.3)}
-  /* la franja: tarjeta roja y verde con el árbol */
-  html.navidad .franja{
-    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
-    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,209,102,.55); border-radius:18px;
-    background-image:linear-gradient(160deg,#6b0f1a 0%,#2b0a10 38%,#0a2216 100%)!important;
-    box-shadow:0 18px 40px -18px rgba(229,56,59,.55), inset 0 1px 0 rgba(255,255,255,.1);
-    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
-    opacity:0; transform:translateY(10px) scale(.985); animation:nv-entra 520ms var(--nv-ease) 80ms forwards;
-  }
-  @keyframes nv-entra{to{opacity:1;transform:none}}
-  html.navidad .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
-  .fr-arbol{position:absolute;right:.6rem;bottom:.2rem;width:8.4rem;height:auto}
-  .fr-arbol .luz{animation:nv-luz 2.2s ease-in-out infinite}
-  .fr-arbol .luz:nth-of-type(2n){animation-delay:-.7s}.fr-arbol .luz:nth-of-type(3n){animation-delay:-1.4s}
-  .fr-nieve{position:absolute;inset:-100% 0 0 0;height:200%;opacity:.8;
-    background-image:radial-gradient(2px 2px at 10% 20%,#fff 60%,transparent 62%),radial-gradient(2.5px 2.5px at 40% 60%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 70% 30%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 88% 80%,#fff 60%,transparent 62%);
-    background-size:220px 220px; animation:nv-cae 18s linear infinite}
-  html.navidad .franja-ceja{color:var(--gold);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,209,102,.4)}
-  html.navidad .franja-titulo{
-    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:9ch;
-    background:linear-gradient(180deg,#fff 0%,#ffe9b8 50%,#ffd166 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 14px rgba(0,0,0,.45));
-  }
-  html.navidad .franja-linea{color:rgba(255,248,238,.88);max-width:15rem;margin-top:.45rem}
-  html.navidad .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
-  html.navidad .franja-boton{
-    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; color:#fff;
-    background:linear-gradient(180deg,#ff5a5f 0%,#c1121f 100%);
-    box-shadow:0 8px 22px -6px rgba(229,56,59,.8), inset 0 1px 0 rgba(255,255,255,.35);
-    transition:transform 160ms var(--nv-ease), box-shadow 160ms ease;
-  }
-  html.navidad .franja:active .franja-boton{transform:scale(.97)}
-  html.navidad .fr-cuenta{
-    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px; font-size:.78rem; font-weight:700;
-    color:var(--gold); border:1px solid rgba(255,209,102,.45); background:rgba(255,209,102,.08);
-  }
-  html.navidad .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:nv-luz 2.4s ease-in-out infinite}
-  @media (max-width:380px){html.navidad .franja-titulo{font-size:1.7rem}.fr-arbol{width:7rem}}
   @media (prefers-reduced-motion:reduce){
-    html.navidad body::after,.fr-nieve,.guirnalda i,.fr-arbol .luz,html.navidad .fr-cuenta::before{animation:none}
-    html.navidad .franja{animation:none;opacity:1;transform:none}
+    html.navidad body::after,.guirnalda i{animation:none}
   }
 </style>
 <script>
@@ -1166,29 +1127,6 @@ const CONFIG = {
 
   <!-- ═══════ 0 · ¿Cómo vienes? ═══════ -->
   <section id="s0" class="on" aria-labelledby="t0">
-    <!-- La franja de campaña. Nace oculta y la enciende CONFIG, no un
-         comentario borrado a mano: así encenderla y apagarla es una línea
-         y no una edición del HTML con prisa. -->
-    <a class="franja" id="franja" hidden>
-      <span class="fr-escena" aria-hidden="true">
-        <span class="fr-nieve"></span>
-        <svg class="fr-arbol" viewBox="0 0 120 150" aria-hidden="true">
-          <polygon points="60,6 64,18 77,18 67,26 71,38 60,31 49,38 53,26 43,18 56,18" fill="#ffd166"/>
-          <polygon points="60,22 92,64 28,64" fill="#1f9d55"/><polygon points="60,44 100,96 20,96" fill="#178a49"/><polygon points="60,70 108,128 12,128" fill="#0f7a3d"/>
-          <rect x="52" y="128" width="16" height="16" rx="2" fill="#6b3a1f"/>
-          <circle class="luz" cx="52" cy="48" r="3.4" fill="#ff4d5a"/><circle class="luz" cx="68" cy="58" r="3.4" fill="#ffd166"/><circle class="luz" cx="44" cy="80" r="3.4" fill="#7cc6ff"/>
-          <circle class="luz" cx="72" cy="88" r="3.4" fill="#ff4d5a"/><circle class="luz" cx="58" cy="104" r="3.4" fill="#ffd166"/><circle class="luz" cx="34" cy="116" r="3.4" fill="#ff4d5a"/>
-          <circle class="luz" cx="86" cy="114" r="3.4" fill="#7cc6ff"/><circle class="luz" cx="62" cy="122" r="3.4" fill="#4ade80"/>
-        </svg>
-      </span>
-      <span class="franja-ceja" id="franja-ceja"></span>
-      <b class="franja-titulo" id="franja-titulo"></b>
-      <span class="franja-linea" id="franja-linea"></span>
-      <span class="fr-pie">
-        <span class="franja-boton" id="franja-boton"></span>
-        <span class="fr-cuenta" id="franja-cuenta"></span>
-      </span>
-    </a>
     <h2 id="t0">¿Cómo vienes?</h2>
     <p class="sub">De esto depende si te pedimos el soporte de pago.</p>
     <div class="opciones">
