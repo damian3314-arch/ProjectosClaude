@@ -1426,6 +1426,13 @@ const CONFIG = {
 
   /* Debajo del botón de comprar: cuántos cupos de mensualidad hay AHORA en cada horario (los de la base, no inventados).
      Quien lee «quedan 3» decide más rápido que quien lee «hay cupo». Un horario lleno se dice como lista de espera. */
+  // Los cupos son de la mensualidad: con una tiquetera a la vista confunden, así que solo se muestran con ese pase.
+  function cuposSoloEnMensualidad() {
+    const el = $('#cupos-vivos');
+    if (!el) return;
+    const p = (typeof pasesActuales !== 'undefined' && typeof paseActivo !== 'undefined') ? pasesActuales[paseActivo] : null;
+    el.hidden = !(p && p.tipo === 'mensualidad') || !horas.length;
+  }
   function pintarCuposVivos() {
     const el = $('#cupos-vivos');
     if (!el || !horas.length) return;
@@ -1435,7 +1442,7 @@ const CONFIG = {
       return `<span class="cv${n <= 5 ? ' pocos' : ''}">${esc(h.etiqueta)} · ${n === 1 ? '1 cupo' : n + ' cupos'}</span>`;
     });
     el.innerHTML = '<b>Cupos de mensualidad ahora:</b> ' + trozos.join('');
-    el.hidden = false;
+    cuposSoloEnMensualidad();
   }
 
   /* Los horarios sin cupo no se pueden comprar: solo lista de espera. La
@@ -1968,6 +1975,7 @@ const CONFIG = {
     if (!p || i === paseActivo) return;
     const primero = paseActivo === -1;
     paseActivo = i;
+    cuposSoloEnMensualidad();
     const cajas = $('#tarjetas-eleccion').querySelectorAll('.pase');
     cajas.forEach((c, k) => { c.classList.toggle('activo', k === i); c.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
     const caja = cajas[i];
