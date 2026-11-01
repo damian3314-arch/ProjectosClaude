@@ -1275,7 +1275,7 @@ const PLANTILLAS_WA = [
     ],
   },
   {
-    // 1 nov: Navidad en Tumbao. La dueña aprobó las clases de obsequio por constancia (1 con la tiquetera de 4, 2 con la de 8).
+    // 1 nov: Navidad en Tumbao. La dueña aprobó el premio por constancia (1 con la tiquetera de 4, 2 con la de 8).
     // Sin descuentos. SOLO se crea en Meta (gratis). Enviarla cuesta (marketing) y escribe a clientes reales: la autoriza Damián.
     name: 'navidad_tiquetera',
     language: 'es',
@@ -1285,7 +1285,7 @@ const PLANTILLAS_WA = [
         type: 'BODY',
         text:
           'Hola {{1}} 🎄\n\n' +
-          'Esta Navidad baila con constancia: cumple todas las clases de tu tiquetera y recibe clases de obsequio como premio ' +
+          'Esta Navidad baila con constancia: cumple todas las clases de tu tiquetera y recibe un premio por tu constancia ' +
           '(1 con la tiquetera de 4 clases, 2 con la de 8). Mira las opciones 👇',
         example: { body_text: [['Laura']] },
       },

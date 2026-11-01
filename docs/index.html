@@ -76,14 +76,14 @@ const CONFIG = {
      un día cambia el defecto, esta franja seguiría preguntando lo que
      aquí prometió. */
   FRANJA: {
-    // 22 oct (Damián): la campaña de escucha deja su lugar a Halloween.
+    // 1 nov (Damián): franja de Navidad.
     // `fecha` (AAAA-MM-DD): la franja cuenta los días que faltan y se
     // apaga sola pasado ese día. `accion: 'suelta'` lleva directo a
     // reservar una clase. Solo se promete lo que Damián ya autorizó.
     activo:  true,
     ceja:    '🎄 Navidad en Tumbao',
     titulo:  'Baila tu Navidad',
-    linea:   'Cumple todas las clases de tu tiquetera y gánate clases de obsequio: 1 con la de 4, 2 con la de 8.',
+    linea:   'Cumple todas las clases de tu tiquetera y gánate un premio por tu constancia: 1 clase con la de 4, 2 clases con la de 8.',
     boton:   'Ver tiqueteras',
     fecha:   '2026-12-24',
     enlace:  'mensualidad.html',
@@ -985,154 +985,7 @@ const CONFIG = {
   .codigo b{color:var(--neon-2);text-shadow:0 0 18px rgba(255,46,143,.45)}
   @media (prefers-reduced-motion:reduce){.opcion,.clase,.tarjeta,.btn{transition:none}}
 
-  /* ═══════════════════════════════════════════════════════════════
-     HALLOWEEN · del 22 al 31 de octubre de 2026 (Damián, 22 oct)
-     Capa encima del tema oscuro de siempre. Se enciende sola con la
-     fecha (script de <head>, hora de Bogotá) y vuelve sola al tema
-     normal. ?halloween=1 la fuerza, ?halloween=0 la quita. Quitar
-     este bloque entero devuelve la página de antes.
-
-     Movimiento: solo transform y opacidad, curvas fuertes, nada que
-     el cliente tenga que esperar para usar la página. Lo ambiental
-     (murciélagos, niebla, parpadeo) es lento y se apaga con
-     prefers-reduced-motion.
-     ═══════════════════════════════════════════════════════════════ */
-  html.halloween{
-    --h-ease:cubic-bezier(0.23,1,0.32,1);
-    --bg:#050505; --bg-2:#0e0b09; --bg-3:#171210;
-    --surface:#0e0b09; --surface-2:#171210;
-    --line:#2a1f17; --line-2:#4a3322;
-    --tx:#fbf6f0; --tx-2:#cbbfb1; --tx-3:#8f8272;
-    --hot:#ff7a1f; --hot-2:#ffa14f; --gold:#ffb347;
-    --neon:#ff7a1f; --neon-2:#ffa14f; --violeta:#e8590c;
-    --slime:#ffa14f; --on-hot:#1a0a02;
-    --grad-marca:linear-gradient(100deg,#ffa14f 0%,#ff7a1f 55%,#e8590c 100%);
-  }
-  html.halloween body{
-    background-color:var(--bg);
-    background-image:
-      radial-gradient(60rem 28rem at 50% -12rem,rgba(255,122,31,.30),transparent 66%),
-      radial-gradient(30rem 22rem at 110% 105%,rgba(255,106,0,.12),transparent 62%);
-    background-attachment:fixed;
-  }
-  /* viñeta: los bordes se oscurecen y la atención se va al centro */
-  html.halloween body::before{
-    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
-    background:radial-gradient(130% 90% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
-  }
-  /* las tarjetas de opciones: borde de brasa al tocar */
-  html.halloween .opcion{transition:border-color 160ms ease,transform 160ms var(--h-ease),box-shadow 160ms ease}
-  html.halloween .opcion:active{transform:scale(.985)}
-  @media (hover:hover) and (pointer:fine){
-    html.halloween .opcion:hover{border-color:var(--hot);box-shadow:0 0 0 1px rgba(255,122,31,.35),0 12px 30px -14px rgba(255,122,31,.55)}
-  }
-
-  /* ── la franja: la escena ─────────────────────────────────────── */
-  .fr-escena,.fr-cuenta{display:none}
-  .fr-pie{display:contents}
-  html.halloween .franja{
-    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
-    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,122,31,.55); border-radius:18px;
-    background-image:linear-gradient(165deg,#1d1209 0%,#0a0705 62%,#050505 100%)!important;
-    box-shadow:0 18px 40px -18px rgba(255,122,31,.5), inset 0 1px 0 rgba(255,255,255,.06);
-    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
-    opacity:0; transform:translateY(10px) scale(.985);
-    animation:h-entra 520ms var(--h-ease) 80ms forwards;
-  }
-  @keyframes h-entra{to{opacity:1;transform:none}}
-  html.halloween .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
-  /* luna llena con su resplandor */
-  .fr-luna{
-    position:absolute; top:-2.2rem; right:-1.6rem; width:9.4rem; height:9.4rem; border-radius:50%;
-    background:
-      radial-gradient(circle at 34% 36%, rgba(0,0,0,.16) 0 9%, transparent 10%),
-      radial-gradient(circle at 62% 58%, rgba(0,0,0,.12) 0 12%, transparent 13%),
-      radial-gradient(circle at 48% 24%, rgba(0,0,0,.10) 0 6%, transparent 7%),
-      radial-gradient(circle at 40% 38%, #fff3d6 0%, #ffd9a0 58%, #ffb467 100%);
-    box-shadow:0 0 0 .6rem rgba(255,180,103,.08), 0 0 4.5rem 1.2rem rgba(255,150,60,.38);
-    opacity:.95;
-  }
-  .fr-niebla{
-    position:absolute; left:-20%; right:-20%; bottom:-1.4rem; height:6rem;
-    background:radial-gradient(60% 100% at 30% 100%, rgba(255,122,31,.30), transparent 70%),
-               radial-gradient(50% 100% at 78% 100%, rgba(255,106,0,.20), transparent 70%);
-    filter:blur(10px); animation:h-niebla 14s ease-in-out infinite alternate;
-  }
-  @keyframes h-niebla{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
-  /* murciélagos: cruzan despacio por delante de la luna */
-  .fr-m{position:absolute;width:1.7rem;height:.85rem;color:#05030a;fill:currentColor;will-change:transform;animation:h-vuelo linear infinite}
-  .fr-m1{top:1.6rem;left:-3rem;animation-duration:15s}
-  .fr-m2{top:3.1rem;left:-3rem;width:1.15rem;height:.6rem;animation-duration:21s;animation-delay:-8s}
-  .fr-m3{top:.9rem;left:-3rem;width:.95rem;height:.5rem;animation-duration:18s;animation-delay:-13s}
-  @keyframes h-vuelo{
-    0%{transform:translate(0,0) rotate(-4deg)} 25%{transform:translate(9rem,.7rem) rotate(3deg)}
-    50%{transform:translate(18rem,-.5rem) rotate(-3deg)} 75%{transform:translate(27rem,.8rem) rotate(4deg)}
-    100%{transform:translate(36rem,0) rotate(-2deg)}
-  }
-  html.halloween .franja-ceja{color:var(--hot-2);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,161,79,.4)}
-  html.halloween .franja-titulo{
-    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:11ch;
-    background:linear-gradient(180deg,#fff 0%,#ffd9b0 55%,#ff9a4a 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 2px 16px rgba(255,122,31,.45));
-    animation:h-parpadeo 7s steps(1,end) infinite;
-  }
-  @keyframes h-parpadeo{0%,92%,100%{opacity:1}93%{opacity:.55}94%{opacity:1}96%{opacity:.7}97%{opacity:1}}
-  html.halloween .franja-linea{color:rgba(255,246,236,.82);max-width:24rem;margin-top:.45rem}
-  html.halloween .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
-  /* el botón de verdad: pastilla de brasa con luz propia */
-  html.halloween .franja-boton{
-    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; letter-spacing:.01em;
-    color:#1c0b03; background:linear-gradient(180deg,#ffb35e 0%,#ff7a1f 100%);
-    box-shadow:0 8px 22px -6px rgba(255,122,31,.75), inset 0 1px 0 rgba(255,255,255,.5);
-    transition:transform 160ms var(--h-ease), box-shadow 160ms ease;
-  }
-  html.halloween .franja:active .franja-boton{transform:scale(.97)}
-  @media (hover:hover) and (pointer:fine){
-    html.halloween .franja:hover .franja-boton{transform:translateY(-1px);box-shadow:0 12px 26px -6px rgba(255,122,31,.9), inset 0 1px 0 rgba(255,255,255,.5)}
-  }
-  html.halloween .fr-cuenta{
-    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px;
-    font-size:.78rem; font-weight:700; letter-spacing:.02em; color:var(--hot-2);
-    border:1px solid rgba(255,161,79,.45); background:rgba(255,122,31,.08);
-  }
-  .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:h-latido 2.4s ease-in-out infinite}
-  @keyframes h-latido{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
-  @media (max-width:380px){html.halloween .franja-titulo{font-size:1.7rem}.fr-luna{width:8rem;height:8rem}}
-  @media (prefers-reduced-motion:reduce){
-    html.halloween .franja{animation:none;opacity:1;transform:none}
-    .fr-m,.fr-niebla,.fr-cuenta::before,html.halloween .franja-titulo{animation:none}
-    .fr-m{display:none}
-  }
-
-  /* ── Halloween en negro y naranja: lo rosa y violeta de la capa neón pasa a naranja ── */
-  html.halloween header::before{background:linear-gradient(90deg,transparent,rgba(255,161,79,.9) 22%,#ff7a1f 62%,transparent);
-    box-shadow:0 0 14px 2px rgba(255,122,31,.5),0 0 34px 6px rgba(255,106,0,.2)}
-  html.halloween header::after{background:linear-gradient(90deg,transparent,rgba(255,122,31,.85) 40%,rgba(255,179,71,.8) 80%,transparent);
-    box-shadow:0 0 12px 2px rgba(255,122,31,.4)}
-  html.halloween .marca img{filter:drop-shadow(0 0 18px rgba(255,122,31,.35)) drop-shadow(0 2px 10px rgba(0,0,0,.7))}
-  html.halloween .pasos li[aria-current]{background:rgba(255,122,31,.12)}
-  html.halloween .opcion:hover,html.halloween .clase:hover:not(:disabled),html.halloween .tarjeta:hover,html.halloween .tarjeta:focus-visible{
-    box-shadow:0 0 0 1px rgba(255,122,31,.45),0 10px 30px -14px rgba(255,122,31,.5)}
-  html.halloween .opcion .ico{background:rgba(255,122,31,.13)}
-  html.halloween .tarjeta .clave{background:rgba(255,122,31,.08)}
-  html.halloween .dia[aria-pressed="true"]{box-shadow:0 8px 24px -8px rgba(255,122,31,.7)}
-  html.halloween .franja-promo{background:linear-gradient(135deg,rgba(255,122,31,.14),rgba(255,106,0,.05) 70%),var(--surface)}
-  html.halloween .franja-promo:hover{background:linear-gradient(135deg,rgba(255,122,31,.2),rgba(255,106,0,.08) 70%),var(--surface-2)}
-  html.halloween .oferta-tiq,html.halloween .oferta-espera{background:linear-gradient(135deg,rgba(255,122,31,.15),rgba(255,106,0,.08))}
-  html.halloween .grupo-total,html.halloween .pago-solo,html.halloween .cuantos-caja .grupo-total{background:linear-gradient(135deg,rgba(255,122,31,.12),rgba(255,106,0,.06))}
-  html.halloween #acompanantes{border-left-color:rgba(255,122,31,.5)}
-  html.halloween .btn{box-shadow:0 10px 28px -12px rgba(255,122,31,.8)}
-  html.halloween .btn:hover:not(:disabled){box-shadow:0 12px 32px -10px rgba(255,122,31,.9)}
-  html.halloween .btn:disabled{box-shadow:none}
-  html.halloween .btn-ghost{border-color:rgba(255,122,31,.35)}
-  html.halloween .btn-ghost:hover{background:rgba(255,122,31,.07)}
-  html.halloween #burbuja{box-shadow:0 8px 26px -6px rgba(255,122,31,.7)}
-  html.halloween .codigo{border-color:rgba(255,122,31,.4)}
-  html.halloween .codigo b{text-shadow:0 0 18px rgba(255,122,31,.45)}
-  html.halloween .tarjeta .destacado,html.halloween .btn{color:var(--on-hot)}
-
-  /* ═══ Toque de los pases en la principal (25 oct) ═════════════════
+    /* ═══ Toque de los pases en la principal (25 oct) ═════════════════
      Damián: «no recarguemos la página de reservas, con un toque a los
      íconos es suficiente». Solo el ícono de cada opción toma el color y
      la forma de los pases; el resto queda como estaba. */
@@ -1141,41 +994,113 @@ const CONFIG = {
     box-shadow:0 8px 18px -10px color-mix(in srgb,var(--hot) 80%,transparent)}
 
   /* ═══ NAVIDAD 2026 · 1 nov a 6 ene (Damián, 1 nov) ═══
-     Capa de color y nieve suave encima del tema de siempre. Se enciende sola por fecha (script de <head>, hora de Bogotá).
-     ?navidad=1 la fuerza, ?navidad=0 la quita. Quitar este bloque devuelve la página de antes. Solo transform: la nieve cae
-     lenta, queda detrás del contenido y se apaga con prefers-reduced-motion. */
+     Diseño propio: verde bosque profundo con rojo y dorado, guirnalda de luces arriba, árbol en la franja y nieve suave.
+     Se enciende sola por fecha (script de <head>, hora de Bogotá). ?navidad=1 la fuerza, ?navidad=0 la quita.
+     Solo transform y opacidad; todo lo que se mueve se apaga con prefers-reduced-motion. */
+  .guirnalda,.fr-escena,.fr-cuenta{display:none}
+  .fr-pie{display:contents}
   html.navidad{
+    --nv-ease:cubic-bezier(0.23,1,0.32,1);
+    --bg:#050a07; --bg-2:#0a130d; --bg-3:#102018;
+    --surface:#0a130d; --surface-2:#102018;
+    --line:#1c3626; --line-2:#2f5a40;
+    --tx:#fbf7ef; --tx-2:#c6d3c8; --tx-3:#869a8b;
     --hot:#e5383b; --hot-2:#ff7b7f; --gold:#ffd166;
-    --neon:#e5383b; --neon-2:#ff8fa3; --violeta:#1f9d55;
-    --on-hot:#fff;
-    --grad-marca:linear-gradient(100deg,#ffd166 0%,#ff5a5f 48%,#c1121f 100%);
+    --neon:#e5383b; --neon-2:#ffd166; --violeta:#1f9d55;
+    --slime:#4ade80; --on-hot:#fff;
+    --grad-marca:linear-gradient(100deg,#ffd166 0%,#ff5a5f 50%,#c1121f 100%);
   }
   html.navidad body{
+    background-color:var(--bg);
     background-image:
-      radial-gradient(56rem 26rem at 50% -12rem,rgba(229,56,59,.26),transparent 66%),
-      radial-gradient(34rem 22rem at 105% 105%,rgba(31,157,85,.16),transparent 62%);
+      radial-gradient(52rem 24rem at 50% -10rem,rgba(229,56,59,.28),transparent 66%),
+      radial-gradient(34rem 24rem at 108% 104%,rgba(31,157,85,.22),transparent 62%),
+      radial-gradient(26rem 18rem at -10% 60%,rgba(255,209,102,.07),transparent 64%);
     background-attachment:fixed;
   }
+  /* nieve: puntos que bajan lento por detrás del contenido */
   html.navidad body::after{
-    content:""; position:fixed; left:0; right:0; top:-100%; height:200%; z-index:-1; pointer-events:none; opacity:.5;
+    content:""; position:fixed; left:0; right:0; top:-100%; height:200%; z-index:-1; pointer-events:none; opacity:.55;
     background-image:
-      radial-gradient(2px 2px at 12% 20%,#fff 60%,transparent 62%),radial-gradient(2.5px 2.5px at 32% 70%,#fff 60%,transparent 62%),
+      radial-gradient(2px 2px at 12% 20%,#fff 60%,transparent 62%),radial-gradient(3px 3px at 32% 70%,#fff 60%,transparent 62%),
       radial-gradient(1.5px 1.5px at 55% 35%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 74% 82%,#fff 60%,transparent 62%),
-      radial-gradient(2.5px 2.5px at 90% 48%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 44% 8%,#fff 60%,transparent 62%);
-    background-size:340px 340px; animation:nv-cae 38s linear infinite;
+      radial-gradient(3px 3px at 90% 48%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 44% 8%,#fff 60%,transparent 62%);
+    background-size:340px 340px; animation:nv-cae 40s linear infinite;
   }
   @keyframes nv-cae{to{transform:translateY(50%)}}
-  @media (prefers-reduced-motion:reduce){html.navidad body::after{animation:none}}
-  html.navidad .btn{box-shadow:0 10px 28px -12px rgba(229,56,59,.8)}
+  /* guirnalda de luces: un cable que cuelga y bombillos de tres colores que se alternan */
+  html.navidad .guirnalda{display:block;position:absolute;left:0;right:0;top:0;height:34px;z-index:5;pointer-events:none;overflow:hidden}
+  html.navidad .guirnalda::before{
+    content:""; position:absolute; inset:0;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='34' viewBox='0 0 96 34'%3E%3Cpath d='M0 2 Q48 22 96 2' fill='none' stroke='%23183024' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x 0 0/96px 34px;
+  }
+  html.navidad .guirnalda i{position:absolute;inset:0;background-repeat:repeat-x;background-size:96px 34px}
+  html.navidad .guirnalda .a{
+    background-image:radial-gradient(circle 4.5px at 14px 11px,#ff4d5a 55%,transparent 70%),radial-gradient(circle 4.5px at 82px 11px,#ffd166 55%,transparent 70%);
+    filter:drop-shadow(0 0 5px rgba(255,77,90,.8)); animation:nv-luz 2.6s ease-in-out infinite;
+  }
+  html.navidad .guirnalda .b{
+    background-image:radial-gradient(circle 4.5px at 48px 15px,#4ade80 55%,transparent 70%),radial-gradient(circle 4px at 31px 14px,#7cc6ff 55%,transparent 70%),radial-gradient(circle 4px at 65px 14px,#ff4d5a 55%,transparent 70%);
+    filter:drop-shadow(0 0 5px rgba(74,222,128,.8)); animation:nv-luz 2.6s ease-in-out -1.3s infinite;
+  }
+  @keyframes nv-luz{0%,100%{opacity:1}50%{opacity:.35}}
+  html.navidad body{padding-top:30px}
+  /* la marca, las tarjetas y los botones con el rojo y el dorado de la fecha */
+  html.navidad .marca img{filter:drop-shadow(0 0 18px rgba(229,56,59,.35)) drop-shadow(0 2px 10px rgba(0,0,0,.7))}
+  html.navidad .pasos li[aria-current]{background:rgba(229,56,59,.14)}
+  html.navidad .btn{box-shadow:0 10px 28px -12px rgba(229,56,59,.85)}
+  html.navidad .btn:disabled{box-shadow:none}
+  html.navidad .btn-ghost{border-color:rgba(255,209,102,.35)}
+  html.navidad .opcion{transition:border-color 160ms ease,transform 160ms var(--nv-ease),box-shadow 160ms ease}
+  html.navidad .opcion:active{transform:scale(.985)}
+  
+  @media (hover:hover) and (pointer:fine){
+    html.navidad .opcion:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,209,102,.3),0 12px 30px -14px rgba(255,209,102,.4)}
+  }
+  html.navidad .franja-promo,html.navidad .campana-chip{background:linear-gradient(135deg,rgba(229,56,59,.16),rgba(31,157,85,.10) 80%),var(--surface);border-color:rgba(255,209,102,.3)}
+  /* la franja: tarjeta roja y verde con el árbol */
+  html.navidad .franja{
+    position:relative; isolation:isolate; overflow:hidden; min-height:12.6rem;
+    padding:1.15rem 1.15rem 1.05rem; border:1px solid rgba(255,209,102,.55); border-radius:18px;
+    background-image:linear-gradient(160deg,#6b0f1a 0%,#2b0a10 38%,#0a2216 100%)!important;
+    box-shadow:0 18px 40px -18px rgba(229,56,59,.55), inset 0 1px 0 rgba(255,255,255,.1);
+    display:flex; flex-direction:column; justify-content:flex-end; gap:.1rem;
+    opacity:0; transform:translateY(10px) scale(.985); animation:nv-entra 520ms var(--nv-ease) 80ms forwards;
+  }
+  @keyframes nv-entra{to{opacity:1;transform:none}}
+  html.navidad .fr-escena{display:block;position:absolute;inset:0;z-index:-1;pointer-events:none}
+  .fr-arbol{position:absolute;right:.6rem;bottom:.2rem;width:8.4rem;height:auto}
+  .fr-arbol .luz{animation:nv-luz 2.2s ease-in-out infinite}
+  .fr-arbol .luz:nth-of-type(2n){animation-delay:-.7s}.fr-arbol .luz:nth-of-type(3n){animation-delay:-1.4s}
+  .fr-nieve{position:absolute;inset:-100% 0 0 0;height:200%;opacity:.8;
+    background-image:radial-gradient(2px 2px at 10% 20%,#fff 60%,transparent 62%),radial-gradient(2.5px 2.5px at 40% 60%,#fff 60%,transparent 62%),radial-gradient(1.5px 1.5px at 70% 30%,#fff 60%,transparent 62%),radial-gradient(2px 2px at 88% 80%,#fff 60%,transparent 62%);
+    background-size:220px 220px; animation:nv-cae 18s linear infinite}
+  html.navidad .franja-ceja{color:var(--gold);letter-spacing:.2em;margin-bottom:.3rem;text-shadow:0 0 14px rgba(255,209,102,.4)}
+  html.navidad .franja-titulo{
+    font-size:2rem; line-height:1.02; font-weight:800; letter-spacing:-.035em; max-width:9ch;
+    background:linear-gradient(180deg,#fff 0%,#ffe9b8 50%,#ffd166 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 14px rgba(0,0,0,.45));
+  }
+  html.navidad .franja-linea{color:rgba(255,248,238,.88);max-width:15rem;margin-top:.45rem}
+  html.navidad .fr-pie{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:.85rem}
+  html.navidad .franja-boton{
+    margin:0; border:0; padding:.7rem 1.15rem; border-radius:999px; font-size:.9rem; font-weight:800; color:#fff;
+    background:linear-gradient(180deg,#ff5a5f 0%,#c1121f 100%);
+    box-shadow:0 8px 22px -6px rgba(229,56,59,.8), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform 160ms var(--nv-ease), box-shadow 160ms ease;
+  }
+  html.navidad .franja:active .franja-boton{transform:scale(.97)}
+  html.navidad .fr-cuenta{
+    display:inline-flex;align-items:center;gap:.45rem; padding:.42rem .75rem; border-radius:999px; font-size:.78rem; font-weight:700;
+    color:var(--gold); border:1px solid rgba(255,209,102,.45); background:rgba(255,209,102,.08);
+  }
+  html.navidad .fr-cuenta::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--slime);box-shadow:0 0 10px var(--slime);animation:nv-luz 2.4s ease-in-out infinite}
+  @media (max-width:380px){html.navidad .franja-titulo{font-size:1.7rem}.fr-arbol{width:7rem}}
+  @media (prefers-reduced-motion:reduce){
+    html.navidad body::after,.fr-nieve,.guirnalda i,.fr-arbol .luz,html.navidad .fr-cuenta::before{animation:none}
+    html.navidad .franja{animation:none;opacity:1;transform:none}
+  }
 </style>
-<script>
-/* Halloween 2026: la capa oscura se enciende sola del 22 al 31 de octubre (hora de Bogotá). ?halloween=1 la fuerza, ?halloween=0 la quita. */
-(function(){try{
-  var q=(location.search.match(/[?&]halloween=(\d)/)||[])[1];
-  var d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota'}).format(new Date());
-  if(q==='1'||(q!=='0'&&d>='2026-10-22'&&d<='2026-10-31'))document.documentElement.classList.add('halloween');
-}catch(e){}})();
-</script>
 <script>
 /* Navidad 2026: la capa navideña se enciende sola del 1 de noviembre al 6 de enero (hora de Bogotá). ?navidad=1 la fuerza, ?navidad=0 la quita. */
 (function(){try{
@@ -1186,6 +1111,7 @@ const CONFIG = {
 </script>
 </head>
 <body>
+<div class="guirnalda" aria-hidden="true"><i class="a"></i><i class="b"></i></div>
 <!-- Íconos: Phosphor Icons (regular), MIT, https://phosphoricons.com.
      Se incrustan como <symbol> para no cargar una librería entera por
      trece glifos; se pintan con currentColor. -->
@@ -1245,9 +1171,15 @@ const CONFIG = {
          y no una edición del HTML con prisa. -->
     <a class="franja" id="franja" hidden>
       <span class="fr-escena" aria-hidden="true">
-        <span class="fr-luna"></span>
-        <svg class="fr-m fr-m1" viewBox="0 0 64 32" aria-hidden="true"><path d="M32 8.5c-1.6 0-2.6 1.6-3.2 3.6C25.7 8.9 20.6 7.6 14 9.2c2.6 1.7 3.6 4.2 3.7 6.4C13.3 14.3 8 15.4 2 19.2c5.2-.5 8.4 1 10.4 3.6 1.6-2.2 4.8-3.4 8.4-1.6 1.1 3 3.2 5.1 6 5.1 1.4 0 2.4-.7 3.2-1.9.8 1.2 1.8 1.9 3.2 1.9 2.8 0 4.9-2.1 6-5.1 3.6-1.8 6.8-.6 8.4 1.6 2-2.6 5.2-4.1 10.4-3.6-6-3.8-11.3-4.9-15.7-3.6.1-2.2 1.1-4.7 3.7-6.4-6.6-1.6-11.7-.3-14.8 2.9-.6-2-1.6-3.6-3.2-3.6z"/></svg><svg class="fr-m fr-m2" viewBox="0 0 64 32" aria-hidden="true"><path d="M32 8.5c-1.6 0-2.6 1.6-3.2 3.6C25.7 8.9 20.6 7.6 14 9.2c2.6 1.7 3.6 4.2 3.7 6.4C13.3 14.3 8 15.4 2 19.2c5.2-.5 8.4 1 10.4 3.6 1.6-2.2 4.8-3.4 8.4-1.6 1.1 3 3.2 5.1 6 5.1 1.4 0 2.4-.7 3.2-1.9.8 1.2 1.8 1.9 3.2 1.9 2.8 0 4.9-2.1 6-5.1 3.6-1.8 6.8-.6 8.4 1.6 2-2.6 5.2-4.1 10.4-3.6-6-3.8-11.3-4.9-15.7-3.6.1-2.2 1.1-4.7 3.7-6.4-6.6-1.6-11.7-.3-14.8 2.9-.6-2-1.6-3.6-3.2-3.6z"/></svg><svg class="fr-m fr-m3" viewBox="0 0 64 32" aria-hidden="true"><path d="M32 8.5c-1.6 0-2.6 1.6-3.2 3.6C25.7 8.9 20.6 7.6 14 9.2c2.6 1.7 3.6 4.2 3.7 6.4C13.3 14.3 8 15.4 2 19.2c5.2-.5 8.4 1 10.4 3.6 1.6-2.2 4.8-3.4 8.4-1.6 1.1 3 3.2 5.1 6 5.1 1.4 0 2.4-.7 3.2-1.9.8 1.2 1.8 1.9 3.2 1.9 2.8 0 4.9-2.1 6-5.1 3.6-1.8 6.8-.6 8.4 1.6 2-2.6 5.2-4.1 10.4-3.6-6-3.8-11.3-4.9-15.7-3.6.1-2.2 1.1-4.7 3.7-6.4-6.6-1.6-11.7-.3-14.8 2.9-.6-2-1.6-3.6-3.2-3.6z"/></svg>
-        <span class="fr-niebla"></span>
+        <span class="fr-nieve"></span>
+        <svg class="fr-arbol" viewBox="0 0 120 150" aria-hidden="true">
+          <polygon points="60,6 64,18 77,18 67,26 71,38 60,31 49,38 53,26 43,18 56,18" fill="#ffd166"/>
+          <polygon points="60,22 92,64 28,64" fill="#1f9d55"/><polygon points="60,44 100,96 20,96" fill="#178a49"/><polygon points="60,70 108,128 12,128" fill="#0f7a3d"/>
+          <rect x="52" y="128" width="16" height="16" rx="2" fill="#6b3a1f"/>
+          <circle class="luz" cx="52" cy="48" r="3.4" fill="#ff4d5a"/><circle class="luz" cx="68" cy="58" r="3.4" fill="#ffd166"/><circle class="luz" cx="44" cy="80" r="3.4" fill="#7cc6ff"/>
+          <circle class="luz" cx="72" cy="88" r="3.4" fill="#ff4d5a"/><circle class="luz" cx="58" cy="104" r="3.4" fill="#ffd166"/><circle class="luz" cx="34" cy="116" r="3.4" fill="#ff4d5a"/>
+          <circle class="luz" cx="86" cy="114" r="3.4" fill="#7cc6ff"/><circle class="luz" cx="62" cy="122" r="3.4" fill="#4ade80"/>
+        </svg>
       </span>
       <span class="franja-ceja" id="franja-ceja"></span>
       <b class="franja-titulo" id="franja-titulo"></b>
@@ -1686,7 +1618,7 @@ const CONFIG = {
       const dias = Math.round((Date.parse(a.fecha + 'T12:00:00-05:00') - Date.parse(hoyBogota() + 'T12:00:00-05:00')) / 86400000);
       if (dias < 0) return;
       const falta = dias === 0 ? '¡es hoy!' : dias === 1 ? 'mañana' : `faltan ${dias} días`;
-      if (document.documentElement.classList.contains('halloween')) $('#franja-cuenta').textContent = falta;
+      if (document.documentElement.classList.contains('navidad')) $('#franja-cuenta').textContent = falta;
       else ceja += ' · ' + falta;
     }
     const caja = $('#franja');

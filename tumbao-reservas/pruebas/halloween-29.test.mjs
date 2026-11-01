@@ -15,21 +15,24 @@ const html = readFileSync(new URL('../../docs/index.html', import.meta.url), 'ut
 const franja = html.slice(html.indexOf('FRANJA: {'), html.indexOf('NUEVA: {'));
 
 titulo('1. La franja de la página');
-ok('la franja pasó de Halloween a Navidad', /activo:\s+true/.test(franja) && /Navidad/.test(franja) && /clases de obsequio/.test(franja));
+ok('la franja pasó de Halloween a Navidad', /activo:\s+true/.test(franja) && /Navidad/.test(franja) && /premio por tu constancia/.test(franja));
 ok('la franja cuenta los días hasta Navidad y se apaga sola', /fecha:\s+'2026-12-24'/.test(franja) && /if \(dias < 0\) return;/.test(html));
-ok('lleva directo a reservar una clase', /accion:\s+'suelta'/.test(franja) && /a\.accion === 'suelta'/.test(html));
+ok('lleva a la página de tiqueteras', /enlace:\s+'mensualidad\.html'/.test(franja));
 ok('está arriba, antes de «¿Cómo vienes?»', html.indexOf('id="franja"') < html.indexOf('<h2 id="t0">'));
 ok('no promete rebajas, regalos ni sorpresas', !/(descuento|rebaja|regalo|gratis|sorpresa|disfraz|2x1)/i.test(franja));
 
 titulo('2. Timba');
 ok('Halloween terminó: Timba ya no habla de la temporada (pasó a Navidad)', [INSTRUCCIONES_VENTAS, INSTRUCCIONES_ASISTENTE].every(t => !/TEMPORADA DE HALLOWEEN/.test(t) && /TEMPORADA DE NAVIDAD/.test(t)));
 
-titulo('4. La página oscura de Halloween')
+titulo('4. La página navideña')
 for (const [n, h] of [['index', html], ['mensualidad', mens]]) {
-  ok(`${n}: la capa se enciende sola del 22 al 31 de octubre y se puede forzar o quitar`,
-     /d>='2026-10-22'&&d<='2026-10-31'/.test(h) && /halloween=\(\\d\)/.test(h) && /html\.halloween\{/.test(h));
-  ok(`${n}: respeta a quien pide menos movimiento`, /prefers-reduced-motion:reduce\)\{\s*html\.halloween \.franja\{animation:none/.test(h));
+  ok(`${n}: la capa se enciende sola del 1 nov al 6 ene y se puede forzar o quitar`,
+     /d>='2026-11-01'&&d<='2027-01-06'/.test(h) && /navidad=\(\\d\)/.test(h) && /html\.navidad\{/.test(h));
+  ok(`${n}: guirnalda de luces y nada de Halloween`, /class="guirnalda"/.test(h) && !/halloween|fr-luna|fr-m1/i.test(h));
+  ok(`${n}: respeta a quien pide menos movimiento`, /prefers-reduced-motion:reduce\)\{\s*html\.navidad body::after/.test(h));
 }
+ok('index: la franja trae el árbol de Navidad', /class="fr-arbol"/.test(html));
+ok('nunca se habla de obsequio ni regalo en las páginas', !/obsequio|regalo/i.test(html.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')) && !/obsequio|regalo/i.test(mens.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')));
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);
