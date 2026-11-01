@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Recomienda a alguien · holadami.com</title>
+<meta name="description" content="¿Conoces a alguien que necesite una página, un sistema o una automatización? Recomiéndalo: tu referido será recompensado.">
+<meta name="theme-color" content="#07080d">
+<!-- Página de referidos de holadami.com. Va sola, sin librerías: se sube tal cual a holadami.com/referidos.
+     El formulario arma un mensaje de WhatsApp para Damián con los datos (nada se guarda en un servidor).
+     Cambia WHATSAPP si los referidos deben llegar a otro número. `?ref=tumbao` dice quién envió a la persona. -->
+<style>
+  :root{--bg:#07080d;--s:#0f1119;--s2:#161926;--line:#242838;--tx:#f5f6fb;--tx2:#aeb3c7;--tx3:#7b8199;--a:#7c5cff;--b:#00d4a8;--r:20px;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif}
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;color-scheme:dark}
+  body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.5;
+    background-image:radial-gradient(48rem 24rem at 80% -8rem,rgba(124,92,255,.28),transparent 66%),radial-gradient(36rem 22rem at -10% 40%,rgba(0,212,168,.14),transparent 64%);background-attachment:fixed}
+  .wrap{max-width:34rem;margin:0 auto;padding:1.4rem 1rem 3rem}
+  .marca{display:flex;align-items:center;gap:.5rem;font-weight:800;letter-spacing:-.03em;font-size:1.15rem;text-decoration:none;color:var(--tx)}
+  .marca i{width:.7rem;height:.7rem;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 14px var(--b)}
+  .chip{display:inline-block;margin:2rem 0 .8rem;padding:.4rem .8rem;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:.74rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--b)}
+  h1{margin:0 0 .8rem;font-size:clamp(2.2rem,10.5vw,3.3rem);line-height:.98;letter-spacing:-.05em;font-weight:800;text-wrap:balance}
+  h1 span{background:linear-gradient(100deg,#a592ff,var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{margin:0 0 1.4rem;color:var(--tx2);font-size:1.05rem}
+  .pasos{list-style:none;margin:0 0 2rem;padding:0;display:grid;gap:.7rem;counter-reset:p}
+  .pasos li{counter-increment:p;position:relative;padding:.95rem 1rem .95rem 3.3rem;border-radius:var(--r);background:var(--s);border:1px solid var(--line)}
+  .pasos li::before{content:counter(p);position:absolute;left:1rem;top:.9rem;width:1.7rem;height:1.7rem;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.9rem;color:#07080d;background:linear-gradient(135deg,var(--a),var(--b))}
+  .pasos b{display:block}.pasos span{color:var(--tx2);font-size:.92rem}
+  .que{margin:0 0 2rem;padding:1rem;border-radius:var(--r);border:1px solid var(--line);background:var(--s)}
+  .que b{display:block;margin-bottom:.4rem}.que ul{margin:0;padding-left:1.1rem;color:var(--tx2);font-size:.93rem}.que li{margin:.2rem 0}
+  form{padding:1.2rem 1rem;border-radius:24px;background:linear-gradient(180deg,var(--s2),var(--s));border:1px solid #30364e;display:grid;gap:.9rem}
+  form h2{margin:0;font-size:1.3rem;letter-spacing:-.03em}
+  label{display:grid;gap:.35rem;font-size:.84rem;color:var(--tx2);font-weight:600}
+  input,textarea{width:100%;padding:.8rem .9rem;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit;font-size:1rem}
+  input:focus,textarea:focus{outline:none;border-color:var(--a);box-shadow:0 0 0 3px rgba(124,92,255,.25)}
+  textarea{min-height:5rem;resize:vertical}
+  fieldset{margin:0;padding:0;border:0;display:grid;gap:.9rem}
+  legend{padding:0;margin-bottom:.2rem;font-weight:800;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--b)}
+  .ok{display:flex;gap:.6rem;align-items:flex-start;font-size:.84rem;color:var(--tx2);font-weight:400}
+  .ok input{width:1.15rem;height:1.15rem;margin-top:.15rem;accent-color:var(--a);flex:none}
+  button{border:0;border-radius:999px;padding:1rem 1.2rem;font:inherit;font-weight:800;font-size:1.02rem;color:#07080d;cursor:pointer;background:linear-gradient(100deg,#a592ff,var(--b));box-shadow:0 14px 30px -14px rgba(0,212,168,.7);transition:transform .16s ease}
+  button:active{transform:scale(.98)}
+  .mal{border-color:#ff6b81!important}
+  .nota{margin:0;font-size:.78rem;color:var(--tx3);text-align:center}
+  .oculto{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  footer{margin-top:2rem;text-align:center;font-size:.8rem;color:var(--tx3)}
+  footer a{color:var(--tx2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="marca" href="/"><i></i>holadami.com</a>
+
+  <span class="chip">Programa de referidos</span>
+  <h1>Recomienda a alguien. <span>Tu referido será recompensado.</span></h1>
+  <p class="lead">¿Conoces a alguien con un negocio que necesite una página como la de Tumbao, un sistema, una automatización o un asistente de WhatsApp? Cuéntanos quién es. Si trabajamos juntos, te lo agradecemos con una recompensa.</p>
+
+  <ol class="pasos">
+    <li><b>Nos cuentas quién es</b><span>Un nombre y cómo contactarlo. Toma un minuto.</span></li>
+    <li><b>Hablamos con esa persona</b><span>Le explico, sin presión, qué se puede mejorar en su negocio.</span></li>
+    <li><b>Tú recibes tu recompensa</b><span>Si deciden trabajar con nosotros, te avisamos y te la entregamos.</span></li>
+  </ol>
+
+  <div class="que">
+    <b>¿Qué tipo de proyectos?</b>
+    <ul>
+      <li>Páginas web y de reservas que venden</li>
+      <li>Sistemas a la medida y paneles de control</li>
+      <li>Automatizaciones y asistentes de WhatsApp</li>
+      <li>Facturación, caja y reportes automáticos</li>
+    </ul>
+  </div>
+
+  <form id="f" novalidate>
+    <h2>Refiere a alguien</h2>
+    <fieldset>
+      <legend>Tus datos</legend>
+      <label>Tu nombre<input name="yo" autocomplete="name" required></label>
+      <label>Tu WhatsApp o correo (para avisarte)<input name="yo_contacto" autocomplete="tel" required></label>
+    </fieldset>
+    <fieldset>
+      <legend>La persona que recomiendas</legend>
+      <label>Nombre de la persona o del negocio<input name="ref_nombre" required></label>
+      <label>Su WhatsApp o correo<input name="ref_contacto" required></label>
+      <label>¿Qué crees que necesita? (opcional)<textarea name="necesita" placeholder="Ej.: una página para reservas, facturar más fácil, un bot de WhatsApp…"></textarea></label>
+    </fieldset>
+    <label class="ok"><input type="checkbox" name="ok" required><span>Esta persona sabe, o está de acuerdo, en que la contacten para hablarle de esto.</span></label>
+    <div class="oculto" aria-hidden="true"><label>No llenar<input name="web" tabindex="-1" autocomplete="off"></label></div>
+    <button type="submit">Enviar mi referido</button>
+    <p class="nota">Se abre WhatsApp con tu mensaje listo: solo tienes que enviarlo.</p>
+  </form>
+
+  <footer>© holadami.com · Desarrollo a la medida · <a href="/">Volver al inicio</a></footer>
+</div>
+<script>
+(function(){
+  // A quién le llegan los referidos (WhatsApp, solo dígitos con el 57 adelante).
+  var WHATSAPP = '573015373964';
+  var ref = (new URLSearchParams(location.search).get('ref') || '').slice(0,40);
+  var f = document.getElementById('f');
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (f.web.value) return;                       // trampa para robots
+    var malos = 0;
+    ['yo','yo_contacto','ref_nombre','ref_contacto'].forEach(function(n){
+      var el = f[n], v = el.value.trim(); el.classList.toggle('mal', !v); if (!v) malos++;
+    });
+    if (!f.ok.checked) malos++;
+    if (malos) { (f.querySelector('.mal') || f.ok).focus(); return; }
+    var l = [
+      'Hola Damián, quiero referir a alguien 🙌',
+      '',
+      'Lo refiere: ' + f.yo.value.trim() + ' (' + f.yo_contacto.value.trim() + ')',
+      'Persona o negocio: ' + f.ref_nombre.value.trim(),
+      'Contacto: ' + f.ref_contacto.value.trim()
+    ];
+    if (f.necesita.value.trim()) l.push('Necesita: ' + f.necesita.value.trim());
+    if (ref) l.push('Origen: ' + ref);
+    l.push('La persona está de acuerdo en que la contacten.');
+    location.href = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(l.join('\n'));
+  });
+})();
+</script>
+</body>
+</html>

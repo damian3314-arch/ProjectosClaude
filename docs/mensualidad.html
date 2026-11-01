@@ -264,10 +264,14 @@ const CONFIG = {
   footer a{color:var(--tx-2);text-decoration:none}
   footer a:hover{color:var(--gold)}
 
-  .credito{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:1.1rem auto 0;padding:.6rem .9rem;max-width:22rem;border-radius:999px;
+  .credito{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;margin:1.1rem auto 0;padding:.7rem 1rem;max-width:23rem;border-radius:18px;
     border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--tx-2);font-size:.78rem;text-decoration:none!important;line-height:1.3;transition:border-color .18s ease,background .18s ease}
   .credito b{color:var(--tx);font-weight:700}
-  .credito .ir{color:#ff6fb1;font-weight:700;white-space:nowrap}
+  .credito .c2{color:var(--tx-3);font-size:.74rem}
+  .credito .c2 b{color:#ff6fb1}
+  .hecho-por{margin:1.4rem 0 0;text-align:center;font-size:.72rem;color:var(--tx-3)}
+  #tiq-final[hidden] + .hecho-por{display:none}
+  .hecho-por a{color:var(--tx-2);text-decoration:underline;text-underline-offset:.18em}
   .credito:hover{border-color:#ff6fb1;background:rgba(255,111,177,.08)}
   footer{padding-bottom:5.5rem}
 
@@ -1230,6 +1234,7 @@ const CONFIG = {
 <!-- ═══════ 3 · listo ═══════ -->
 <section id="s3" hidden>
   <div class="ok-wrap" id="final"></div>
+  <p class="hecho-por">Esta página fue desarrollada a la medida por <a href="https://holadami.com/?utm_source=tumbao&utm_medium=pagina&utm_campaign=referidos&ref=tumbao" target="_blank" rel="noopener">holadami.com</a></p>
   <a class="btn-ghost" id="wa" href="#" target="_blank" rel="noopener">Escribirnos por WhatsApp</a>
 </section>
 
@@ -1327,6 +1332,7 @@ const CONFIG = {
       <p class="sub" id="tiq-espera-sub">Esto tarda uno o dos minutos. No cierres esta pantalla.</p>
     </div>
     <div class="ok-wrap" id="tiq-final" hidden></div>
+    <p class="hecho-por">Esta página fue desarrollada a la medida por <a href="https://holadami.com/?utm_source=tumbao&utm_medium=pagina&utm_campaign=referidos&ref=tumbao" target="_blank" rel="noopener">holadami.com</a></p>
     <a class="btn-ghost" id="tiq-wa" href="#" target="_blank" rel="noopener" hidden>Escribirnos por WhatsApp</a>
   </section>
 </div>
@@ -1355,7 +1361,7 @@ const CONFIG = {
 <footer>
   ¿Dudas? <a id="wa2" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a><br>
   ¿Solo quieres una clase suelta? <a href="/">Resérvala aquí</a>
-  <a class="credito" href="https://holadami.com" target="_blank" rel="noopener"><span>Página hecha por <b>holadami.com</b></span><span class="ir">¿Quieres una para tu negocio? →</span></a>
+  <a class="credito" href="https://holadami.com/?utm_source=tumbao&utm_medium=pagina&utm_campaign=referidos&ref=tumbao" target="_blank" rel="noopener"><span class="c1">Página hecha a la medida por <b>holadami.com</b></span><span class="c2">¿Conoces a alguien que necesite algo así? Recomiéndalo: <b>tu referido será recompensado</b> →</span></a>
 </footer>
 
 </div>

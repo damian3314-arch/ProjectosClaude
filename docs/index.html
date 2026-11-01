@@ -564,10 +564,13 @@ const CONFIG = {
   footer a{color:var(--tx-2);text-decoration:none}
   footer a:hover{color:var(--gold)}
 
-  .credito{display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;margin:1.1rem auto 0;padding:.6rem .9rem;max-width:22rem;border-radius:999px;
+  .credito{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;margin:1.1rem auto 0;padding:.7rem 1rem;max-width:23rem;border-radius:18px;
     border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--tx-2);font-size:.78rem;text-decoration:none!important;line-height:1.3;transition:border-color .18s ease,background .18s ease}
   .credito b{color:var(--tx);font-weight:700}
-  .credito .ir{color:#ff6fb1;font-weight:700;white-space:nowrap}
+  .credito .c2{color:var(--tx-3);font-size:.74rem}
+  .credito .c2 b{color:#ff6fb1}
+  .hecho-por{margin:1.4rem 0 0;text-align:center;font-size:.72rem;color:var(--tx-3)}
+  .hecho-por a{color:var(--tx-2);text-decoration:underline;text-underline-offset:.18em}
   .credito:hover{border-color:#ff6fb1;background:rgba(255,111,177,.08)}
   .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
@@ -1424,6 +1427,7 @@ const CONFIG = {
         <p id="oferta-tiq-txt">Con la mensualidad o la tiquetera cada clase te sale más barata.</p>
         <a class="btn" id="oferta-tiq-ir" href="mensualidad.html">Ver mensualidad y tiquetera</a>
       </div>
+      <p class="hecho-por">Esta página fue desarrollada a la medida por <a href="https://holadami.com/?utm_source=tumbao&utm_medium=pagina&utm_campaign=referidos&ref=tumbao" target="_blank" rel="noopener">holadami.com</a></p>
 
       <a class="btn-ghost" id="ok-wa" href="#" style="margin-bottom:.6rem">Escribirnos por WhatsApp</a>
       <button class="btn-ghost" type="button" id="otra">Reservar otra clase</button>
@@ -1433,7 +1437,7 @@ const CONFIG = {
   <footer>
     <p><a id="f-ig" href="#" target="_blank" rel="noopener">Instagram</a><span id="f-wa-caja"> · <a id="f-wa" href="#" target="_blank" rel="noopener">WhatsApp</a></span> · <a href="privacidad.html">Privacidad</a></p>
     <p style="margin-top:.4rem;opacity:.6">Tumbao · Colombia</p>
-    <a class="credito" href="https://holadami.com" target="_blank" rel="noopener"><span>Página hecha por <b>holadami.com</b></span><span class="ir">¿Quieres una para tu negocio? →</span></a>
+    <a class="credito" href="https://holadami.com/?utm_source=tumbao&utm_medium=pagina&utm_campaign=referidos&ref=tumbao" target="_blank" rel="noopener"><span class="c1">Página hecha a la medida por <b>holadami.com</b></span><span class="c2">¿Conoces a alguien que necesite algo así? Recomiéndalo: <b>tu referido será recompensado</b> →</span></a>
   </footer>
 </div>
 
