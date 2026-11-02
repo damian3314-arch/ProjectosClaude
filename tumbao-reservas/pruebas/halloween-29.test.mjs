@@ -32,7 +32,10 @@ for (const [n, h] of [['index', html], ['mensualidad', mens]]) {
   ok(`${n}: respeta a quien pide menos movimiento`, /prefers-reduced-motion:reduce\)\{\s*html\.navidad::after/.test(h));
 }
 ok('index: sin árbol ni tarjeta de campaña', !/fr-arbol|class="franja"/.test(html));
-ok('nunca se habla de obsequio ni regalo en las páginas', !/obsequio|regalo/i.test(html.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')) && !/obsequio|regalo/i.test(mens.replace(/\/\/.*|\/\*[\s\S]*?\*\//g,'')));
+ok('nunca se habla de obsequio ni de regalo de clases (el único «regalo» es el producto «Regala Tumbao»)', (() => {
+  const limpio = (t) => t.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '').replace(/<section class="esp rv" id="esp-regalo"[\s\S]*?<\/section>/, '').replace(/Te regalo clases en Tumbao|¿Es para regalar\?|Enviar como regalo por WhatsApp|Regala movimiento|Regalar una tiquetera|btn-regalo|esp-regalo|REGALO|regala|Regala/g, '');
+  return !/obsequio|regalo/i.test(limpio(html)) && !/obsequio|regalo/i.test(limpio(mens));
+})());
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

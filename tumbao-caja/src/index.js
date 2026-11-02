@@ -1103,6 +1103,12 @@ async function pagina(request, env, ruta, origen, ctx) {
           mensaje: claro ? r.mensaje : 'No pudimos guardar tus datos. Escríbenos por WhatsApp.' },
           mapa[r && r.error] || 400, origen);
       }
+      // 2 nov: mensualidad de enero pagada desde diciembre. La página manda `inicio` (AAAA-MM-DD, entre el 15 dic y el 28 feb);
+      // la base lo valida y recepción lo ve en el panel para registrar a la persona con esa fecha de inicio.
+      const inicio = txt(b.inicio, 10);
+      if (r.id && /^\d{4}-\d{2}-\d{2}$/.test(inicio)) {
+        await rpc(env, 'mensualidad_fijar_inicio', { p_id: r.id, p_inicio: inicio }).catch(() => null);
+      }
       await registrarNovedades(env, b, tel, 'mensualidad');
       return json(r, 200, origen);
     }

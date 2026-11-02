@@ -5176,6 +5176,7 @@ const CONFIG = {
               (x.nacimiento ? ` · nació el ${esc(String(x.nacimiento).slice(0, 10))}` : '') +
               (x.datos_aceptados ? ' · aceptó datos' : '') + `</div>` : '') +
           (x.es_renovacion ? `<div class="ag mens-que">🔁 Renovación: ya está en accesos</div>` : '') +
+          (x.inicio_deseado ? `<div class="ag mens-que"><b>📅 Empieza el ${esc(String(x.inicio_deseado).slice(0, 10).split('-').reverse().join('/'))}</b>: registrarla con esa fecha de inicio</div>` : '') +
           (x.salud && x.salud.alerta
             ? `<div class="ag mens-que">⚠️ Marcó condición de salud: ` +
               ['corazon:corazón o presión', 'pecho:dolor de pecho o mareos', 'lesion:lesión', 'embarazo:embarazo o posparto', 'otra:otra condición']
