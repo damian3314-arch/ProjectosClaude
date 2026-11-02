@@ -1281,6 +1281,53 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 2 nov: plantilla con IMAGEN en el encabezado (prueba de conversión). Misma idea que la campaña de redes. La imagen de muestra se sube a Meta
+    // desde asegurarPlantillas y la que se envía sale de IMAGEN_PLANTILLA. SOLO se crea en Meta (gratis); enviarla cuesta (marketing).
+    name: 'rumbo_2027_imagen',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      { type: 'HEADER', format: 'IMAGE', _url: 'https://tumbaobaila.com/img/campana/feed-1-no-empieces-en-enero.jpg' },
+      {
+        type: 'BODY',
+        text: 'Hola {{1}} 👋 Faltan pocos días para 2027. Llega con el hábito ya hecho: elige tu pase y empieza hoy bailando 💃',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver pases', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    // 2 nov: versión con imagen de tiquetera_frecuentes para comparar (A/B) cuál convierte más. Sin descuentos: «premiamos tu constancia».
+    name: 'tiquetera_premio_imagen',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      { type: 'HEADER', format: 'IMAGE', _url: 'https://tumbaobaila.com/img/campana/feed-3-premiamos-tu-constancia.jpg' },
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 💃 Cumple todas las clases de tu tiquetera y premiamos tu constancia: 1 clase más con la de 4 y 2 clases más con la de 8. ' +
+          'Tú eliges cuándo bailar durante 30 días.',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver tiqueteras', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov (Damián): reemplaza a pase_constancia y pase_constancia_2, que dicen «clase de regalo». Una sola plantilla para las dos tiqueteras:
     // {{3}} es «1 clase más» o «2 clases más». Cuando Meta la apruebe se enciende con ajustes.wa_pase_plantilla_nueva = 'premiamos_constancia' (0195).
     name: 'premiamos_constancia',
@@ -1918,6 +1965,30 @@ const cabecerasWA = (env) => ({
   'Content-Type': 'application/json',
 });
 
+/* 2 nov · plantillas con imagen en el encabezado. Meta pide una muestra subida por su «carga reanudable»: se descarga la imagen pública
+ * (`_url`), se sube con el id de la app y el identificador que devuelve (`h`) va en example.header_handle. `_url` no viaja a Meta. */
+async function conMuestraDeImagen(env, plantilla) {
+  const comps = [];
+  for (const c of plantilla.components) {
+    if (c.type !== 'HEADER' || !c._url) { comps.push(c); continue; }
+    if (!env.WHATSAPP_APP_ID) throw new Error('falta WHATSAPP_APP_ID');
+    const img = await fetch(c._url);
+    if (!img.ok) throw new Error('no se pudo leer ' + c._url + ' (' + img.status + ')');
+    const bytes = await img.arrayBuffer();
+    const auth = { Authorization: `OAuth ${env.WHATSAPP_TOKEN}` };
+    const ini = await (await fetch(
+      `${GRAPH}/${env.WHATSAPP_APP_ID}/uploads?file_length=${bytes.byteLength}&file_type=image%2Fjpeg&file_name=muestra.jpg`,
+      { method: 'POST', headers: auth })).json();
+    if (!ini || !ini.id) throw new Error((ini && ini.error && ini.error.message) || 'sin sesión de carga');
+    const sub = await (await fetch(`${GRAPH}/${ini.id}`,
+      { method: 'POST', headers: { ...auth, file_offset: '0' }, body: bytes })).json();
+    if (!sub || !sub.h) throw new Error((sub && sub.error && sub.error.message) || 'sin identificador de la muestra');
+    const { _url, ...resto } = c;
+    comps.push({ ...resto, example: { header_handle: [sub.h] } });
+  }
+  return { ...plantilla, components: comps };
+}
+
 async function asegurarPlantillas(env) {
   if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
   const H = cabecerasWA(env);
@@ -1933,8 +2004,13 @@ async function asegurarPlantillas(env) {
                  motivo: ya.rejected_reason && ya.rejected_reason !== 'NONE' ? ya.rejected_reason : null });
       continue;
     }
+    let cuerpo = p;
+    try { cuerpo = await conMuestraDeImagen(env, p); } catch (e) {
+      out.push({ nombre: p.name, creada: false, error: 'imagen de muestra: ' + (e && e.message) });
+      continue;
+    }
     const c = await (await fetch(`${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates`,
-      { method: 'POST', headers: H, body: JSON.stringify(p) })).json();
+      { method: 'POST', headers: H, body: JSON.stringify(cuerpo) })).json();
     out.push({ nombre: p.name, creada: !c.error, estado: c.status || null,
                categoria: c.category || null,
                error: c.error ? (c.error.error_user_msg || c.error.message) : null });
@@ -1986,6 +2062,19 @@ async function activarRecordatorioTiquetera(env) {
   return { ok: true, estado: (r && r.estado) || null, categoria: t.category };
 }
 
+/* 2 nov · plantillas con imagen en el encabezado: la imagen que se manda en cada envío (pública, en la página). */
+const IMAGEN_PLANTILLA = {
+  rumbo_2027_imagen: 'https://tumbaobaila.com/img/campana/feed-1-no-empieces-en-enero.jpg',
+  tiquetera_premio_imagen: 'https://tumbaobaila.com/img/campana/feed-3-premiamos-tu-constancia.jpg',
+};
+/* 2 nov · cuando alguien RESPONDE a una venta, Timba le comparte (una sola vez, dentro de la ventana gratis de 24 h) la imagen de la campaña
+ * que va con su interés: así ve los pases sin tener que leer. */
+const IMAGEN_RESPUESTA = {
+  mensualidad: ['https://tumbaobaila.com/img/campana/carrusel-3-dos-formas.jpg', 'Así son nuestros pases 💃 La mensualidad y la tiquetera.'],
+  tiquetera: ['https://tumbaobaila.com/img/campana/feed-3-premiamos-tu-constancia.jpg', 'Tu tiquetera, tu hábito: premiamos tu constancia 💃'],
+  reactivar: ['https://tumbaobaila.com/img/campana/feed-1-no-empieces-en-enero.jpg', 'Llega a 2027 con el hábito ya hecho 💃'],
+};
+
 let ultimoDespacho = 0;
 async function despacharAvisos(env) {
   if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return { ok: false, error: 'SIN_CONFIG' };
@@ -2007,9 +2096,11 @@ async function despacharAvisos(env) {
           template: {
             name: a.plantilla,
             language: { code: a.idioma || 'es' },
-            components: vars.length
-              ? [{ type: 'body', parameters: vars.map((t) => ({ type: 'text', text: String(t) })) }]
-              : [],
+            components: [
+              ...(IMAGEN_PLANTILLA[a.plantilla]
+                ? [{ type: 'header', parameters: [{ type: 'image', image: { link: IMAGEN_PLANTILLA[a.plantilla] } }] }] : []),
+              ...(vars.length ? [{ type: 'body', parameters: vars.map((t) => ({ type: 'text', text: String(t) })) }] : []),
+            ],
           },
         }),
       });
@@ -2952,6 +3043,12 @@ async function ventasWA(request, env, origen) {
     // recepción de una vez, con el mensaje ya escrito.
     if (pasar) respuesta = conRecepcion(respuesta, { nombre: chat.nombre || perfil.nombre, motivo: motivo || (j && j.resumen) || '' });
     await responderYGuardar(env, m.telefono, conEnlaceDeChat(respuesta, chat.id).slice(0, 1200));
+    // 2 nov: primera respuesta de la persona → además del texto, la imagen de la campaña (si no pidió salir ni pasa a recepción).
+    if (Number(chat.turnos || 0) === 0 && !pasar && resultado !== 'no_interesado') {
+      const clave = String(chat.objetivo || '').startsWith('mensualidad') ? 'mensualidad' : (chat.objetivo || '');
+      const img = IMAGEN_RESPUESTA[clave];
+      if (img) await enviarImagenWA(env, m.telefono, img[0], img[1]).catch((e) => console.log('imagen de respuesta', e && e.message));
+    }
     await rpc(env, 'ventas_turno', {
       p_chat: chat.id, p_mensaje: m.id, p_texto_entrante: entrante, p_cerrar: cerrar,
       p_resultado: resultado || null, p_interes: (j && j.interes) || null, p_resumen: (j && j.resumen) || null,
