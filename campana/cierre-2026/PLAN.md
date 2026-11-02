@@ -29,7 +29,7 @@
 ## 3. Las 6 palancas, en orden de retorno
 
 1. **Renovaciones (la más barata y la más grande).** Seguimiento uno a uno de los 34 que vencen y de los 13 recién vencidos: aviso automático (ya existe), llamada de recepción el día del vencimiento y botón «Renovar» (ya está). Objetivo: de ~55 % a 75-80 % de renovación = +9 a +12 mensualidades (≈ $1,1-1,5 M).
-2. **Frecuentes sin plan → tiquetera.** A las 76 personas con 3+ clases: mensaje por WhatsApp (plantilla `tiquetera_frecuentes`, ya aprobada) con la cuenta: 4 clases $52.000, 8 clases $96.000, y el premio por constancia. Costo: 76 × $46 ≈ **$3.500**. Objetivo: 25 tiqueteras (≈ $1,5 M) y 8-10 mensualidades.
+2. **Frecuentes sin plan → tiquetera.** A las 76 personas con 3+ clases: mensaje por WhatsApp (plantilla `tiquetera_frecuentes`, ya aprobada) con la cuenta: 4 clases $52.000, 8 clases $96.000, y «premiamos tu constancia». Costo: 76 × $46 ≈ **$3.500**. Objetivo: 25 tiqueteras (≈ $1,5 M) y 8-10 mensualidades.
 3. **Llenar 7 am y 7 pm.** 26 cupos libres. Mensaje distinto por horario («empieza el día bailando», «cierra el día bailando») a quien ya viene a clase suelta a esa hora. Objetivo: +15 mensualidades (≈ $1,9 M).
 4. **Anuncios que sí se miden.** Instalar el píxel de Meta y los eventos de compra, y repetir con las piezas nuevas («Rumbo a 2027»). Sin eso se gasta a ciegas. Presupuesto sugerido: $20.000 diarios por 30 días ($600.000) — *pendiente de tu aprobación*.
 5. **Timba al público correcto.** Cambiar de la lista fría («reactivar») a los frecuentes sin plan y a quienes abrieron la página de mensualidad. Mismo volumen y mismo costo, mejor intención.
@@ -38,7 +38,7 @@
 ## 4. Calendario
 
 **Semana 1 · 2-8 nov — Arrancar**
-- Páginas nuevas y premio por constancia ya publicados.
+- Páginas nuevas y «premiamos tu constancia» ya publicados.
 - Llamadas a los 13 recién vencidos y a los 6 que vencen esta semana.
 - Piezas «Rumbo a 2027» en redes (p1 hoy, p2 historia mañana).
 - WhatsApp a los 76 frecuentes (con tu visto bueno).
@@ -65,7 +65,7 @@
 ## 5. Piezas gráficas (ya hechas, en `campana/2027/salida/`)
 1. `feed-1-no-empieces-en-enero.jpg` (4:5) — el gancho.
 2. `historia-2-lo-has-intentado.jpg` (9:16) — el dolor y la respuesta.
-3. `feed-3-tu-constancia-tiene-premio.jpg` (4:5) — premio por constancia (tiquetera 4 → 1 clase, 8 → 2 clases).
+3. `feed-3-premiamos-tu-constancia.jpg` (4:5) — premiamos tu constancia (tiquetera 4 → 1 clase, 8 → 2 clases).
 4. `historia-4-rumbo-a-2027.jpg` (9:16) — cuenta regresiva + precios.
 La cuenta regresiva se recalcula sola cada vez que se saca el archivo (`node campana/2027/sacar.mjs`).
 
@@ -82,8 +82,8 @@ La cuenta regresiva se recalcula sola cada vez que se saca el archivo (`node cam
 **V2 · «Lo has intentado» (20 s, historia / reel)**
 Tres frases escritas en pantalla y tachadas una a una: «A las 3 semanas ya no iba» → «Aquí es una rumba, no una rutina»; «No tengo tiempo» → «Horario fijo: llegas y entras»; «Llego con la cabeza llena de estrés» → «Baila pa' sanar». Detrás, tomas reales de baile.
 
-**V3 · «Tu constancia tiene premio» (12 s)**
-Animación sencilla de 4 círculos que se llenan con cada clase y, al quinto, un destello: «Completa tu tiquetera y gana un premio por tu constancia». Se puede hacer con las piezas (sin grabar nada).
+**V3 · «Premiamos tu constancia» (12 s)**
+Animación sencilla de 4 círculos que se llenan con cada clase y, al quinto, un destello: «Completa tu tiquetera y premiamos tu constancia». Se puede hacer con las piezas (sin grabar nada).
 
 **V4 · Testimonios (15 s cada uno, 5 personas)**
 Pregunta única, grabada de frente: «¿Qué cambió en ti desde que bailas en Tumbao?». Pide una frase corta. Mujeres y hombres. Subtítulos grandes.

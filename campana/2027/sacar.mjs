@@ -3,7 +3,7 @@ import { chromium } from '../../tumbao-reservas/node_modules/playwright-core/ind
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const NOMBRES = { p1: 'feed-1-no-empieces-en-enero', p2: 'historia-2-lo-has-intentado', p3: 'feed-3-tu-constancia-tiene-premio', p4: 'historia-4-rumbo-a-2027' };
+const NOMBRES = { p1: 'feed-1-no-empieces-en-enero', p2: 'historia-2-lo-has-intentado', p3: 'feed-3-premiamos-tu-constancia', p4: 'historia-4-rumbo-a-2027' };
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
 const pg = await nav.newPage({ viewport: { width: 1080, height: 1920 } });
 for (const id of Object.keys(NOMBRES)) {

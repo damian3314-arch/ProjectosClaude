@@ -38,7 +38,7 @@ const CONFIG = {
   // Para decir «alrededor de $X por clase»: clases de un mes de lunes a sábado (23-26). Igual a ajustes.mensualidad_clases_mes.
   CLASES_MES_REF: 25,
   /* Premio por constancia (la dueña lo aprobó el 1 nov): quien cumple TODAS las clases de su tiquetera recibe clases
-     como premio. Solo tiquetera. Sin fecha de fin: `hasta` solo existe para apagarla a mano. */
+     más como premio. Solo tiquetera. Sin fecha de fin: `hasta` solo existe para apagarla a mano. */
   CAMPANA: { activa: true, desde: '2026-11-01', hasta: '2027-12-31' },
   // Clases adicionales al completar la tiquetera (Damián, 25 oct): 1 en la de 4 clases, 2 en la de 8. Aplica a todas, nuevas o viejas.
   EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
@@ -1890,7 +1890,7 @@ const CONFIG = {
     const c = CONFIG.CAMPANA, h = hoyBogota();
     return !!(c && c.activa && h >= c.desde && h <= c.hasta);
   };
-  const extraTxt = (clases) => { const n = CONFIG.EXTRA(clases); return `${n} ${n === 1 ? 'clase como premio' : 'clases como premio'}`; };
+  const extraTxt = (clases) => { const n = CONFIG.EXTRA(clases); return `${n} ${n === 1 ? 'clase más' : 'clases más'}`; };
 
   /* ═══ Los pases ═══
      Cada producto es una tarjeta (un pase). Se deslizan; el que queda al
@@ -1928,7 +1928,7 @@ const CONFIG = {
           'Úsala en <b>cualquier horario</b>: reservas cada clase en la página con tu código.',
           `Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.`,
           ahorro > 0 ? `Ahorras <b>${pesos(ahorro)}</b> frente a pagar clase suelta.` : '',
-          camp ? `<span class="extra-li">Completa tus ${clases} clases y recibe <b>${extraTxt(clases)}</b> por tu constancia.</span>` : '',
+          camp ? `<span class="extra-li">Completa tus ${clases} clases y <b>premiamos tu constancia</b> con ${extraTxt(clases)}.</span>` : '',
         ].filter(Boolean),
         cta: `Quiero la de ${clases} clases · ${pesos(precio)}`, foto: CONFIG.FOTOS[String(clases)] || '',
       });
@@ -2022,8 +2022,8 @@ const CONFIG = {
       ['¿Cómo pago?',
        'Por transferencia, desde aquí mismo: eliges tu pase, dejas tus datos y te mostramos los datos de pago. Apenas confirmamos el pago queda activo (con la tiquetera te llega tu código).'],
     ];
-    if (camp) preguntas.push(['¿Cómo gano el premio por constancia?',
-      'Cuando completas <b>todas</b> las clases de tu tiquetera, como premio por tu constancia te damos: <b>1 clase</b> con la tiquetera de 4 y <b>2 clases</b> con la de 8. Te avisamos por WhatsApp y valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.']);
+    if (camp) preguntas.push(['¿Cómo premian mi constancia?',
+      'Cuando completas <b>todas</b> las clases de tu tiquetera, <b>premiamos tu constancia</b>: 1 clase más con la tiquetera de 4 y 2 clases más con la de 8. Te avisamos por WhatsApp y valen 30 días. Aplica a todas las tiqueteras, nuevas o ya compradas.']);
     preguntas.push(['¿Tengo más dudas?',
       `Escríbenos por <a href="${waUrl('Hola Tumbao, tengo una duda sobre los pases.')}" target="_blank" rel="noopener">WhatsApp</a> y te ayudamos.`]);
     $('#faq').innerHTML = '<h3>Preguntas frecuentes</h3>' +
@@ -2035,7 +2035,7 @@ const CONFIG = {
     paseActivo = -1;
     const camp = campanaActiva() && tiqPaquetes.length;
     $('#campana').hidden = !camp;
-    if (camp) $('#campana').innerHTML = '✨ Cumple todas las clases de tu tiquetera y recibe una <b>recompensa por tu constancia</b>.';
+    if (camp) $('#campana').innerHTML = '✨ Cumple todas las clases de tu tiquetera y <b>premiamos tu constancia</b>.';
     const cont = $('#tarjetas-eleccion');
     cont.innerHTML = pasesActuales.map(htmlPase).join('');
     $('#pager').innerHTML = pasesActuales.map(() => '<i></i>').join('');

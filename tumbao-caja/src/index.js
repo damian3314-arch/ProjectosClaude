@@ -1285,7 +1285,7 @@ const PLANTILLAS_WA = [
         type: 'BODY',
         text:
           'Hola {{1}} 🎄\n\n' +
-          'Esta Navidad baila con constancia: cumple todas las clases de tu tiquetera y recibe un premio por tu constancia ' +
+          'Esta Navidad baila con constancia: cumple todas las clases de tu tiquetera y premiamos tu constancia ' +
           '(1 con la tiquetera de 4 clases, 2 con la de 8). Mira las opciones 👇',
         example: { body_text: [['Laura']] },
       },
