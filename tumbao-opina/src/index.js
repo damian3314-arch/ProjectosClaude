@@ -1,3 +1,4 @@
+import { rutaInforme } from './informe.js';
 /**
  * Tumbao · bot de opiniones
  *
@@ -1354,6 +1355,7 @@ function paginaLeer(filas, problema, analisis) {
   }).join('');
 
   return marco(`<h1>Lo que dice la gente</h1>
+    ${analisis && analisis.token ? `<p class="sub"><a href="/informe?token=${esc(analisis.token)}"><b>📊 Ver el informe con acciones y estrategia 2027 →</b></a></p>` : ''}
     <p class="sub">${filas.length} conversacion${filas.length === 1 ? '' : 'es'}${
       urgentes ? ` · <b style="color:var(--bad)">${urgentes} para mirar hoy</b>` : ''
     } · lo urgente va primero</p>
@@ -1632,6 +1634,9 @@ export default {
        * Mientras no exista, la página lo dice en vez de quedar abierta:
        * aquí hay nombres, celulares y quejas de clientes.
        */
+      // 2 nov: el informe de la encuesta (insights, correcciones, plan de acción y estrategia 2027).
+      if (ruta === '/informe') return await rutaInforme(request, env, { sacarJSON, hayCF, MODELO_CF });
+
       if (ruta === '/leer') {
         if (!env.TOKEN_REPORTE) {
           return new Response(paginaLeer(null, 'sin-token'), {

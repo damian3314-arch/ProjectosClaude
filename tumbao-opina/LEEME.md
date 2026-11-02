@@ -450,3 +450,15 @@ la clienta —abrir, contestar, irse— y pedir después el reporte.
 
     npx wrangler deploy
     npx wrangler d1 execute tumbao-opina --remote --file=schema.sql
+
+## El informe de la encuesta (2 nov 2026)
+
+`/informe?token=…` (la misma llave de `/leer`) arma una presentación lista para usar: resumen, lo urgente, lo que aman, qué cambiar, por qué se irían,
+la atención, lo que quieren en 2027, un plan de acción con matriz de impacto y esfuerzo, la estrategia 2027 y los casos para atender.
+Tiene botón de imprimir / guardar como PDF. `&demo=1` muestra el mismo informe con datos de ejemplo.
+
+- Lee las conversaciones del tema `escuchamos` desde el 2 de noviembre. Con menos de 3 no arma nada; con menos de 30 avisa que hay que leerlo con cuidado.
+- Con más de 40 respuestas las resume por tandas (una por visita; la página se recarga sola y muestra el avance) y al final un análisis junta todo.
+- El resultado queda en la caché de Cloudflare con la huella de las conversaciones: abrir la página otra vez no llama al modelo. «Volver a calcular» lo fuerza.
+- Al modelo no viajan teléfonos, correos ni el nombre que la persona dejó. Los números que el modelo dice se bajan al total real de personas.
+- Con `OPENAI_API_KEY` usa OpenAI (`MODELO_INFORME` o `MODELO_CHAT`); sin ella, Workers AI. Para un informe de más calidad conviene la llave de OpenAI.
