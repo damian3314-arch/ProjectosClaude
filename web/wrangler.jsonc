@@ -32,6 +32,7 @@
     "KAPSO_LEAD_TEMPLATE": "",
     "KAPSO_TEMPLATE_LANG": "es",
     "AUTO_CONTACT_LEADS": "false",
+    "AGENDA_HOURS": "9,10,11,14,15,16", // horas de inicio que Alter puede ofrecer para demos (Colombia, lunes a viernes, sin festivos)
     "OUTBOX_PER_DAY": "150",
     "OUTBOX_PER_RUN": "10",    // cuántos primeros mensajes salen en cada revisión (cada 5 min): así cada ola sale escalonada   // tope diario de primeros mensajes por plantilla mientras el número nuevo se calienta
     "OUTBOX_ALIAS": "{\"loggro_primer_contacto\":\"solicitud_loggro_en_proceso\"}",      // p. ej. {"loggro_primer_contacto":"solicitud_loggro_en_proceso"} para cambiar de plantilla sin tocar la rutina

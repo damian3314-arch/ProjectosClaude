@@ -14,6 +14,7 @@
 
 import { systemPrompt, playbookText, CAMPAIGN_CONTEXT, PRODUCTS, ALLOWED_LINKS, AGENDA_URL } from './kb.js';
 import { alertHotLead, alertReply } from './loggro.js';
+import { freeSlots, slotsPromptText, reserveSlot, slotLabel } from './agenda.js';
 
 const HISTORY = 16;           // mensajes que ve la IA en cada turno
 const MAX_USER_PER_DAY = 80;  // tope por persona (cuida el costo de IA)
@@ -27,7 +28,7 @@ const SCHEMA = {
   strict: true,
   schema: {
     type: 'object', additionalProperties: false,
-    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'ask_contact', 'meeting_pref', 'follow_up', 'facts', 'summary', 'handoff_reason'],
+    required: ['messages', 'stage', 'hot', 'product', 'send_video', 'offer_agenda_link', 'is_auto_reply', 'ask_contact', 'meeting_pref', 'follow_up', 'chosen_slot', 'facts', 'summary', 'handoff_reason'],
     properties: {
       messages: { type: 'array', maxItems: 3, items: { type: 'string' } },
       stage: { type: 'string', enum: STAGES },
@@ -39,6 +40,7 @@ const SCHEMA = {
       ask_contact: { type: 'boolean' },
       meeting_pref: STR,
       follow_up: STR,
+      chosen_slot: STR,
       facts: {
         type: 'object', additionalProperties: false,
         required: ['contact_name', 'business_type', 'city', 'size', 'current_system', 'pain', 'timeline', 'phone', 'frente', 'budget', 'timing', 'decider'],
@@ -115,7 +117,14 @@ export async function agentTurn(c) {
     extra.push(`Te dejo un video corto de ${PRODUCTS[product].name} para que lo veas cuando puedas 👇\n${PRODUCTS[product].video}`);
     videosSent.add(product);
   }
-  const wantsAgenda = (out.offer_agenda_link || out.stage === 'wants_demo') && !chat.agenda_sent;
+  // Si el cliente eligió uno de los horarios que Alter ofreció (código exacto de la lista), queda reservado y Damián agenda a mano: no se manda el enlace de la agenda
+  const chosen = (c.slots || []).find(sl => sl.iso === out.chosen_slot) || null;
+  if (chosen) {
+    await reserveSlot(env, c.row?.phone || c.key, chosen).catch(err => console.error('agenda', err?.message || 'desconocido'));
+    out.stage = 'wants_demo'; out.hot = true; out.meeting_pref = chosen.label;
+    c.chosen = chosen;
+  }
+  const wantsAgenda = !chosen && (out.offer_agenda_link || out.stage === 'wants_demo') && !chat.agenda_sent;
   if (wantsAgenda) extra.push(`Y esta es mi agenda por si prefieres escoger tú la hora 👇\n${AGENDA_URL}`);
 
   const all = [...messages, ...extra];
@@ -152,12 +161,15 @@ async function callModel(c, chat, history) {
   const campaign = c.source === 'loggro' ? (CAMPAIGN_CONTEXT[campaignOf(c.row)] || CAMPAIGN_CONTEXT.desconocido) : CAMPAIGN_CONTEXT.anuncio;
   const known = Object.entries(facts).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('; ');
   const name = c.first || c.h.clean(c.inb.name, 40).split(' ')[0];
+  // Horarios libres reales de Damián (solo para leads de Loggro): Alter propone dos y, si el cliente elige uno, le avisa a Damián para que agende
+  c.slots = c.source === 'loggro' ? await freeSlots(env).catch(() => []) : [];
+  const slotsText = slotsPromptText(c.slots);
   const sys = systemPrompt({
     nowBogota: new Date(Date.now() - 5 * 3600e3).toLocaleString('es-CO', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
     source: c.source,
     campaign: (campaign || '').replace(/\{nombre\}/g, name || 'buen día'),
     products: chat.product || '',
-    slotsText: await freeSlots(env),
+    slotsText: slotsText,
     phoneKnown: !!c.inb.from,
     playbook: c.source === 'loggro' ? playbookText(chat.product) : '',
   }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
@@ -193,9 +205,7 @@ export function campaignOf(row) {
   return 'contacto_inicial';
 }
 
-// Agenda en vivo: todavía no hay proveedor conectado. Cuando se conecte (HubSpot o Google Calendar) devuelve los huecos libres
-// como texto, por ejemplo "mañana 10:00, mañana 15:30, jueves 9:00". Mientras tanto el agente recoge la hora que prefiere la persona.
-async function freeSlots(_env) { return ''; }
+
 
 /* ---------- Guardado y avisos ---------- */
 const HOT_STAGES = new Set(['wants_demo', 'wants_quote']);
@@ -237,16 +247,17 @@ async function persistLoggro(c, { out, hot, product, summary, newlyHot, prefChan
   const closed = ['wants_demo', 'wants_quote', 'not_now', 'not_fit', 'support'].includes(out.stage) || hot;
   const state = out.stage === 'optout' ? 'optout' : closed ? 'done' : row.state === 'done' ? 'done' : 'agent';
   const changed = state !== row.state || hot !== !!row.hot || summary !== row.summary;
-  const reAlert = newlyHot || (hot && prefChanged);
+  const newMeeting = !!c.chosen && c.chosen.iso !== row.meeting_at;
+  const reAlert = newlyHot || (hot && prefChanged) || newMeeting;
   const facts = safeJson(c.factsJson);
   // Etapa sugerida para el negocio en HubSpot (la aplica la rutina horaria): nunca "demo agendada" hasta que exista la reunión
   // Quien respondió pidiendo retomar más adelante pasa a "necesidades identificadas" con fecha de seguimiento
   const nextStage = out.stage === 'optout' || out.stage === 'not_fit' ? 'perdido' : hot ? 'demo_pendiente' : (out.stage === 'not_now' || (facts.business_type && facts.pain)) ? 'necesidades' : null;
   const followUp = out.stage === 'not_now' && /^\d{4}-\d{2}-\d{2}$/.test(out.follow_up || '') ? out.follow_up : null;
-  await env.DB.prepare(`UPDATE loggro_leads SET next_stage = COALESCE(?, next_stage), state = ?, hot = ?, product = COALESCE(?, product), summary = ?, follow_up = COALESCE(?, follow_up), synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
+  await env.DB.prepare(`UPDATE loggro_leads SET next_stage = COALESCE(?, next_stage), state = ?, hot = ?, product = COALESCE(?, product), summary = ?, follow_up = COALESCE(?, follow_up), meeting_at = COALESCE(?, meeting_at), synced_state = CASE WHEN ? THEN NULL ELSE synced_state END,
       alerted_at = CASE WHEN ? THEN NULL ELSE alerted_at END, updated_at = datetime('now') WHERE phone = ?`)
-    .bind(nextStage, state, hot ? 1 : 0, product, summary, followUp, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
-  c.row = { ...row, state, hot: hot ? 1 : 0, summary, alerted_at: reAlert ? null : row.alerted_at };
+    .bind(nextStage, state, hot ? 1 : 0, product, summary, followUp, c.chosen?.iso || null, changed && (state === 'done' || state === 'optout') ? 1 : 0, reAlert ? 1 : 0, row.phone).run();
+  c.row = { ...row, state, hot: hot ? 1 : 0, summary, meeting_at: c.chosen?.iso || row.meeting_at, alerted_at: reAlert ? null : row.alerted_at };
   if (reAlert) await alertHotLead(env, c.h, c.row);
   else if (hot && row.alerted_at) await alertReply(env, c.h, c.row, c.inb.text);
 }

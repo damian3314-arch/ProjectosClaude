@@ -14,6 +14,7 @@
  */
 
 import { agentTurn } from './agent.js';
+import { slotLabel } from './agenda.js';
 
 const MAX_MSGS = 30;
 const REPLY_ALERT_MINUTES = 30;
@@ -199,9 +200,11 @@ export function hotAlertText(row, ctx = {}) {
   return [
     `🔥 Llámalo ahora: ${row.name || 'Sin nombre'} +${row.phone}`,
     `Origen: ${origen}.`,
+    row.meeting_at && `📅 Aceptó una cita: ${slotLabel(Date.parse(row.meeting_at))}. Agéndala tú a mano en HubSpot (Teams + invitado) para esa hora.`,
     row.summary && `Qué pasó: ${say(row.summary, 320)}`,
     ctx.lastUser && `Escribió: «${say(ctx.lastUser, 160)}»`,
     ctx.lastBot && `Alter le dijo: «${say(ctx.lastBot, 140)}»`,
+    row.deal_id && `Negocio para agregar la cita: https://app.hubspot.com/contacts/21089075/deal/${row.deal_id}`,
     `Ya quedó registrado en HubSpot. Llama o escribe: https://wa.me/${row.phone}`,
   ].filter(Boolean).join('\n');
 }
