@@ -29,6 +29,8 @@
   .letra{font-size:25px;color:#a99bbd;margin-top:26px;line-height:1.35}
   .eq{display:flex;align-items:flex-end;gap:7px;height:110px;margin-top:40px}
   .eq i{width:16px;border-radius:6px;background:linear-gradient(180deg,#ff2e8f,#ff6b35)}
+  .pag{position:absolute;top:84px;right:84px;font-size:28px;font-weight:700;color:var(--tx2);letter-spacing:.1em}
+  .desliza{position:absolute;bottom:60px;right:84px;font-size:30px;font-weight:800;color:#ffc14d}
   .tarj{padding:34px 40px;border-radius:34px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.16);position:relative}
   .tarj::before{content:"";position:absolute;left:0;top:26px;bottom:26px;width:8px;border-radius:8px;background:linear-gradient(180deg,var(--mag),var(--nar))}
   .tarj .yo{font-size:34px;color:#b7a9c9;text-decoration:line-through;text-decoration-color:rgba(255,111,177,.8);margin-left:12px}
@@ -127,6 +129,60 @@ const PIEZAS = {
       <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera <span>desde $52.000</span></div><div class="yo" style="text-decoration:none;color:#d9cfe6;font-size:36px;margin-top:8px">Tú eliges cuándo · premiamos tu constancia</div></div>
     </div>
     <span class="cta" style="margin-top:50px">tumbaobaila.com/mensualidad</span></div></div>`,
+  // ── Carrusel «Rumbo a 2027» (1080 × 1350) ──────────────────────────────
+  c1: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 30, destellos: [[930, 540, .9]], semilla: 21, evitar: [[84, 520, 1000, 1290]] })}
+    ${LOGO(150)}<span class="pag">1/5</span>
+    <div class="bloque" style="top:540px"><span class="chip"><i></i>Faltan ${diasA2027()} días para 2027</span>
+    <h1>Este año,<br><span class="g">no empieces<br>en enero.</span></h1></div><span class="desliza">Desliza →</span></div>`,
+  c2: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 24, destellos: [[960, 400, .8]], semilla: 4, evitar: [[84, 330, 1000, 1290]] })}
+    ${LOGO(150)}<span class="pag">2/5</span>
+    <div class="bloque" style="top:340px"><h2>Lo has <span class="g">intentado.</span></h2>
+    <div style="display:grid;gap:24px;margin-top:40px">
+      <div class="tarj"><div class="yo">«A las 3 semanas ya no iba»</div><div class="tu">Aquí es <span>una rumba</span>, no una rutina.</div></div>
+      <div class="tarj"><div class="yo">«No tengo tiempo»</div><div class="tu">Horario fijo: <span>llegas y entras.</span></div></div>
+      <div class="tarj"><div class="yo">«Llego con la cabeza llena de estrés»</div><div class="tu">Baila pa' sanar: <span>sales liviano.</span></div></div></div></div><span class="desliza">Desliza →</span></div>`,
+  c3: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 24, destellos: [[960, 400, .8]], semilla: 8, evitar: [[84, 330, 1000, 1290]] })}
+    ${LOGO(150)}<span class="pag">3/5</span>
+    <div class="bloque" style="top:330px"><h2>Dos formas de <span class="g">empezar.</span></h2>
+    <div style="display:grid;gap:26px;margin-top:44px">
+      <div class="tarj"><div class="tu" style="margin-top:0">Mensualidad <span>$125.000</span></div><div class="yo" style="text-decoration:none;color:#d9cfe6;font-size:36px;margin-top:8px">Todo el mes · horario fijo · ≈ $5.000 por clase</div></div>
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera <span>desde $52.000</span></div><div class="yo" style="text-decoration:none;color:#d9cfe6;font-size:36px;margin-top:8px">4 u 8 clases · tú eliges cuándo · 30 días</div></div></div></div><span class="desliza">Desliza →</span></div>`,
+  c4: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 24, destellos: [[960, 400, .8]], semilla: 12, evitar: [[84, 330, 1000, 1290]] })}
+    ${LOGO(150)}<span class="pag">4/5</span>
+    <div class="bloque" style="top:330px"><span class="chip"><i></i>Tu tiquetera, tu hábito</span>
+    <h2 style="margin-top:28px;font-size:84px">Cumple tus clases.<br><span class="g">Premiamos tu constancia.</span></h2>
+    <div style="display:grid;gap:24px;margin-top:44px">
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera de 4 → <span>1 clase más</span></div></div>
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera de 8 → <span>2 clases más</span></div></div></div></div><span class="desliza">Desliza →</span></div>`,
+  c5: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 30, destellos: [[930, 540, .9]], semilla: 17, evitar: [[84, 520, 1000, 1290]] })}
+    ${LOGO(150)}<span class="pag">5/5</span>
+    <div class="bloque" style="top:540px"><span class="chip"><i></i>Empieza hoy</span>
+    <h1 style="font-size:112px">Llega a 2027<br><span class="g">bailando.</span></h1>
+    <p class="sub">Elige tu pase en la página. Mensualidad o tiquetera.</p>
+    <span class="cta">tumbaobaila.com/mensualidad</span></div></div>`,
+  // ── Regala Tumbao ───────────────────────────────────────────────────────
+  r1: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 28, destellos: [[950, 430, .9]], semilla: 31, evitar: [[84, 330, 1000, 1290]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:330px"><span class="chip"><i></i>Regala Tumbao</span>
+    <h1 style="margin-top:28px;font-size:112px">Regala<br><span class="g">movimiento.</span></h1>
+    <p class="sub">Una tiquetera de 4 u 8 clases para esa persona que quiere bailar más. Tú pagas y le mandas el código por WhatsApp.</p>
+    <span class="cta">tumbaobaila.com/mensualidad</span></div></div>`,
+  r2: () => `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="tinte"></div>${navidad(1080, 1920, { nieve: 40, destellos: [[960, 480, .9]], semilla: 41, evitar: [[84, 520, 1000, 1760]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:540px"><span class="chip"><i></i>Esta Navidad</span>
+    <h1 style="margin-top:26px">Regala<br><span class="g">Tumbao.</span></h1>
+    <p class="sub">Tú pagas, le mandas el código por WhatsApp y esa persona reserva cuando quiera durante 30 días.</p>
+    <div style="display:grid;gap:22px;margin-top:40px">
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera de 4 <span>$52.000</span></div></div>
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera de 8 <span>$96.000</span></div></div></div>
+    <span class="cta" style="margin-top:48px">tumbaobaila.com/mensualidad</span></div></div>`,
+  // ── Cuenta regresiva (historia diaria: se vuelve a sacar cada día con el número del día) ──
+  d1: () => `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="tinte"></div>${navidad(1080, 1920, { nieve: 40, destellos: [[960, 600, .9]], semilla: 51, evitar: [[84, 640, 1000, 1700]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:640px;text-align:center"><span class="chip"><i></i>Rumbo a 2027</span>
+    <div style="font-size:340px;line-height:.9;font-weight:900;letter-spacing:-.07em;margin-top:30px" class="g">${diasA2027()}</div>
+    <h2 style="margin-top:8px">días para 2027.</h2><p class="sub" style="margin-top:26px">Cada clase cuenta. Empieza hoy.</p>
+    <span class="cta" style="margin-top:46px">tumbaobaila.com</span></div></div>`,
 };
 const p = new URLSearchParams(location.search).get('p') || 'p1';
 document.getElementById('raiz').innerHTML = (PIEZAS[p] || PIEZAS.p1)();

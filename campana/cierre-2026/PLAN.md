@@ -100,3 +100,10 @@ Una toma diaria de cualquier clase con el número del día encima. Constancia de
 4. ¿Un reto o evento de cierre (por ejemplo, clase de despedida del año) y en qué fecha? ¿Un tercer horario los sábados, que es lo que más se llena?
 5. ¿Quieres que Timba cambie de público (de «reactivar» a frecuentes)?
 6. Grabar V1/V4: ¿quién graba (Luisa o Tania) y qué día?
+
+---
+## Actualización 2 nov — lo que ya está hecho
+- Aprobado y hecho: campaña a frecuentes (6 mensajes, cron diario hasta el 20 nov), Timba prioriza frecuentes, «Regala Tumbao» activo desde hoy. «Asegura tu enero» se quitó.
+- Plantillas nuevas creadas en Meta (esperan aprobación): `premiamos_constancia` (reemplaza «clase de regalo»), `regala_tumbao`, `navidad_tiquetera`. El aviso de constancia está apagado hasta que `premiamos_constancia` se apruebe, para que nadie reciba el texto viejo.
+- Piezas para redes: `campana/2027/salida/` (feeds, historias, carrusel de 5, Regala Tumbao, cuenta regresiva). Se regeneran con `node campana/2027/sacar.mjs`.
+- Videos verticales 1080×1920 sin sonido: `campana/2027/salida/videos/` (se regeneran con `node campana/2027/videos.mjs`; la cuenta regresiva se actualiza sola con la fecha del día). Se les pone la música desde Instagram al publicar.
