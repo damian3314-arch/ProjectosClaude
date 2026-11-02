@@ -14,7 +14,7 @@ titulo('1. Sin «Asegura tu enero» (Damián, 2 nov)');
 ok('la página no ofrece mensualidad de enero adelantada', !/Asegura tu enero|esp-enero|modoEnero/.test(mens));
 
 titulo('2. Regala Tumbao');
-ok('la sección aparece del 15 nov al 24 dic', /desde: '2026-11-15', hasta: '2026-12-24'/.test(mens) && /id="esp-regalo" hidden/.test(mens));
+ok('la sección aparece del 2 nov al 24 dic', /desde: '2026-11-02', hasta: '2026-12-24'/.test(mens) && /id="esp-regalo" hidden/.test(mens));
 ok('al terminar la compra de una tiquetera se puede mandar el código como regalo por WhatsApp', /Enviar como regalo por WhatsApp/.test(mens) && /Te regalo clases en Tumbao/.test(mens));
 ok('sin descuentos ni promesas nuevas', !/descuento/i.test(mens.match(/id="esp-regalo"[\s\S]*?<\/section>/)[0]));
 
