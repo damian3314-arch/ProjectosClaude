@@ -401,7 +401,7 @@ ok('hay una sola navegación', await p.locator('.lateral').count() === 1);
 // paquetes de clases prepago. Este número se toca a mano a propósito —
 // es el recordatorio de que añadir una sección es una decisión, no un
 // descuido.
-ok('con las once secciones dentro', cuantas === 11, `${cuantas} botones`);
+ok('con las doce secciones dentro (la de Opina es la nueva, 2 nov)', cuantas === 12, `${cuantas} botones`);
 ok('agrupadas en tres bloques',
    await p.locator('.lateral .lat-grupo').count() === 3);
 ok('y el título dice dónde estás',
