@@ -10,17 +10,13 @@ let fallos = 0;
 const ok = (n, c) => { if (!c) fallos++; console.log(`${c ? '✓' : '✗'} ${n}`); };
 const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.length))}`);
 
-titulo('1. Asegura tu enero');
-ok('la sección aparece sola del 15 dic al 3 ene y se fuerza o quita con ?enero', /desde: '2026-12-15', hasta: '2027-01-03'/.test(mens) && /id="esp-enero" hidden/.test(mens));
-ok('la mensualidad de enero empieza el lunes 4 de enero y la página lo dice en el pago', /inicio: '2027-01-04'/.test(mens) && /Tu mensualidad empieza el/.test(mens));
-ok('la fecha viaja con la solicitud y el servidor la valida antes de guardarla', /inicio: modoEnero \? ENERO\.inicio : undefined/.test(mens) && /mensualidad_fijar_inicio/.test(caja) && /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/.test(caja));
-ok('la base solo acepta fechas entre el 15 dic y el 28 feb, y solo en solicitudes recientes', /p_inicio < date '2026-12-15' or p_inicio > date '2027-02-28'/.test(mig) && /creado_at > now\(\) - interval '2 days'/.test(mig));
-ok('el panel le muestra a recepción desde qué fecha registrarla', /inicio_deseado/.test(admin) && /Empieza el/.test(admin) && /''inicio_deseado'', s\.inicio_deseado/.test(mig));
+titulo('1. Sin «Asegura tu enero» (Damián, 2 nov)');
+ok('la página no ofrece mensualidad de enero adelantada', !/Asegura tu enero|esp-enero|modoEnero/.test(mens));
 
 titulo('2. Regala Tumbao');
 ok('la sección aparece del 15 nov al 24 dic', /desde: '2026-11-15', hasta: '2026-12-24'/.test(mens) && /id="esp-regalo" hidden/.test(mens));
 ok('al terminar la compra de una tiquetera se puede mandar el código como regalo por WhatsApp', /Enviar como regalo por WhatsApp/.test(mens) && /Te regalo clases en Tumbao/.test(mens));
-ok('sin descuentos ni promesas nuevas: mismo precio', /Mismo precio/.test(mens) && !/descuento/i.test(mens.match(/id="esp-regalo"[\s\S]*?<\/section>/)[0]));
+ok('sin descuentos ni promesas nuevas', !/descuento/i.test(mens.match(/id="esp-regalo"[\s\S]*?<\/section>/)[0]));
 
 titulo('3. Frecuentes → tiquetera y Timba');
 ok('la campaña usa la plantilla aprobada, los filtros de siempre y es idempotente', /'tiquetera_frecuentes'/.test(mig) && /wa_bajas/.test(mig) && /on conflict \(clave\) do nothing/.test(mig) && /wa_es_dueno/.test(mig));

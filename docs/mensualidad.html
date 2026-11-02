@@ -857,7 +857,7 @@ const CONFIG = {
   .cupos-vivos .cv.pocos{border-color:var(--hot);color:var(--hot-2)}
   .cupos-vivos .cv.lleno{color:var(--tx-3)}
 
-  /* ═══ Navidad: «Regala Tumbao» y «Asegura tu enero» ═══ */
+  /* ═══ Navidad: «Regala Tumbao» ═══ */
   .esp{margin:1.4rem 0 0;padding:1.1rem 1.1rem 1.15rem;border-radius:22px;border:1px solid rgba(255,111,177,.35);
     background:linear-gradient(135deg,rgba(255,46,143,.16),rgba(143,61,255,.14)),var(--surface);position:relative;overflow:hidden}
   .esp .k{font-size:.72rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff9ec0;margin:0 0 .35rem}
@@ -865,7 +865,6 @@ const CONFIG = {
   .esp p{margin:0 0 .8rem;color:var(--tx-2);font-size:.95rem;line-height:1.45}
   .esp .btn{margin:0}
   .esp[hidden]{display:none}
-  .nota-enero{margin:.8rem 0 0;padding:.7rem .9rem;border-radius:14px;background:rgba(198,255,61,.1);border:1px solid rgba(198,255,61,.35);font-size:.9rem;color:var(--tx)}
   .compartir{margin-top:1.2rem;padding:1rem;border-radius:18px;border:1px dashed var(--line-2);text-align:center}
   .compartir b{display:block;margin-bottom:.3rem}
   .compartir p{margin:0 0 .7rem;color:var(--tx-2);font-size:.9rem}
@@ -1034,12 +1033,6 @@ const CONFIG = {
   <p class="cupos-vivos" id="cupos-vivos" hidden></p>
   <div class="detalle" id="detalle" aria-live="polite"></div>
 
-  <section class="esp rv" id="esp-enero" hidden>
-    <p class="k">🎄 Antes de que acabe el año</p>
-    <h3>Asegura tu enero desde hoy</h3>
-    <p>Paga tu mensualidad de enero ahora y llega a 2027 con tu cupo y tu horario ya guardados. Empieza el <b>lunes 4 de enero</b>. Mismo precio.</p>
-    <button class="btn" type="button" id="btn-enero">Asegurar mi enero</button>
-  </section>
   <section class="esp rv" id="esp-regalo" hidden>
     <p class="k">🎁 Regala Tumbao</p>
     <h3>Regala movimiento esta Navidad</h3>
@@ -1675,7 +1668,6 @@ const CONFIG = {
           correo, nacimiento: nacimiento || undefined, salud, salud_ok: completa ? $('#salud-ok').checked : undefined,
           habeas: renueva ? undefined : true,
           acepta_novedades: renueva ? false : $('#novedades').checked, apellido2: $('#apellido2').value,
-          inicio: modoEnero ? ENERO.inicio : undefined,
         }),
       });
       const d = await r.json();
@@ -1735,7 +1727,6 @@ const CONFIG = {
       : `Te guardamos el cupo de las <b>${esc(h ? h.etiqueta : '')}</b> por ` +
         '<b>24 horas</b>. Transfiere y avísanos aquí mismo.';
     $('#monto').textContent = pesos(valorCop);
-    if (modoEnero) $('#sub2').insertAdjacentHTML('beforeend', `<div class="nota-enero">🎄 Tu mensualidad empieza el <b>${ENERO.inicioTxt}</b>. Tu cupo y tu horario quedan guardados.</div>`);
     $('#d-llave').textContent = CONFIG.PAGO.llave;
     $('#d-banco').textContent = CONFIG.PAGO.banco + ' · ' + CONFIG.PAGO.tipo;
     $('#d-cuenta').textContent = CONFIG.PAGO.cuenta;
@@ -1919,16 +1910,13 @@ const CONFIG = {
   };
   const extraTxt = (clases) => { const n = CONFIG.EXTRA(clases); return `${n} ${n === 1 ? 'clase más' : 'clases más'}`; };
 
-  /* ═══ Navidad: «Asegura tu enero» y «Regala Tumbao» ═══
-     Aparecen solos por fecha (hora de Bogotá). ?enero=1 / ?regala=1 las fuerzan y =0 las quitan. */
-  const ENERO = { desde: '2026-12-15', hasta: '2027-01-03', inicio: '2027-01-04', inicioTxt: 'lunes 4 de enero de 2027' };
+  /* ═══ Navidad: «Regala Tumbao» ═══
+     Aparece sola por fecha (hora de Bogotá). ?regala=1 la fuerza y =0 la quita. */
   const REGALO = { desde: '2026-11-15', hasta: '2026-12-24' };
-  let modoEnero = false;
   (function ventanasDeNavidad() {
     const q = (k) => (location.search.match(new RegExp('[?&]' + k + '=(\\d)')) || [])[1];
     const h = hoyBogota();
     const on = (k, v) => q(k) === '1' || (q(k) !== '0' && h >= v.desde && h <= v.hasta);
-    $('#esp-enero').hidden = !on('enero', ENERO);
     $('#esp-regalo').hidden = !on('regala', REGALO);
     const irAPases = (i) => {
       const cont = $('#tarjetas-eleccion');
@@ -1936,9 +1924,7 @@ const CONFIG = {
       if (t) { try { mostrarDetalle(i, true); } catch (_) {} cont.scrollTo({ left: t.offsetLeft - 16, behavior: 'smooth' }); }
       $('#cta-pase').scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
-    $('#btn-enero').addEventListener('click', () => { modoEnero = true; irAPases(0); });
     $('#btn-regalo').addEventListener('click', () => {
-      modoEnero = false;
       const i = pasesActuales.findIndex(p => p.tipo !== 'mensualidad');
       irAPases(i < 0 ? 0 : i);
     });
