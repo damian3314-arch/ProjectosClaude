@@ -1328,6 +1328,30 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 2 nov (Damián): encuesta masiva a toda la base. Lleva a «Tumbao opina» (opina.tumbaobaila.com), anónima y de 5 preguntas.
+    // Se envía con campana_encuesta(true) cuando Meta la aprueba (marketing, ≈ $46 por mensaje).
+    name: 'encuesta_tumbao',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡 Llegamos hasta aquí gracias a ti y este año queremos subir el nivel. ' +
+          '¿Nos cuentas qué mejorarías de Tumbao? Son 5 preguntas cortas y es anónimo: tú decides si dejas tus datos.',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Contar mi opinión', url: 'https://opina.tumbaobaila.com/' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov (Damián): reemplaza a pase_constancia y pase_constancia_2, que dicen «clase de regalo». Una sola plantilla para las dos tiqueteras:
     // {{3}} es «1 clase más» o «2 clases más». Cuando Meta la apruebe se enciende con ajustes.wa_pase_plantilla_nueva = 'premiamos_constancia' (0195).
     name: 'premiamos_constancia',

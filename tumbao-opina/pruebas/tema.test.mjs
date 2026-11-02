@@ -45,19 +45,24 @@ titulo('1. Sin tema, el bot escucha (la campaña del 15 de septiembre)');
 const siempre = chat(worker, env, CONV_A);
 const s1 = await siempre.abrir();
 ok('saluda presentándose',
-   /Somos Tumbao/.test(s1.respuesta), s1.respuesta.slice(0, 60));
+   /equipo de Tumbao/.test(s1.respuesta), s1.respuesta.slice(0, 60));
 ok('dice para qué pregunta',
-   /mejor espacio/.test(s1.respuesta), s1.respuesta.slice(0, 110));
+   /gracias a ti/.test(s1.respuesta) && /anónimo/.test(s1.respuesta) && /5 preguntas/.test(s1.respuesta), s1.respuesta.slice(0, 110));
+ok('y avisa que el contacto es opcional y al final', /solo si quieres/.test(s1.respuesta));
 ok('y arranca por lo que más le gusta',
    /¿Qué es lo que más te gusta de Tumbao\?/.test(s1.respuesta), s1.respuesta.slice(-60));
 ok('sin hablar del aniversario', !/aniversario/i.test(s1.respuesta));
 
 const s2 = await siempre.escribir('La energía de las clases');
-ok('la segunda pregunta es qué mejorar',
-   /podemos mejorar/i.test(s2.respuesta), s2.respuesta.slice(0, 90));
+ok('la segunda pregunta es qué cambiarían',
+   /cambiar UNA cosa/i.test(s2.respuesta), s2.respuesta.slice(0, 90));
 const s3 = await siempre.escribir('El sonido a veces se escucha bajo');
-ok('y la tercera, qué les gustaría encontrar',
-   /te gustaría encontrar/i.test(s3.respuesta), s3.respuesta.slice(0, 110));
+ok('y la tercera, por qué dejarían de venir',
+   /dejaras de venir/i.test(s3.respuesta), s3.respuesta.slice(0, 110));
+const s4 = await siempre.escribir('Que a veces me da pena preguntar');
+ok('la cuarta, la atención (recepción, WhatsApp, pagos)', /atención/i.test(s4.respuesta), s4.respuesta.slice(0, 110));
+const s5 = await siempre.escribir('El WhatsApp responde lento');
+ok('y la quinta, qué encontrar en 2027', /2027/.test(s5.respuesta), s5.respuesta.slice(0, 110));
 
 titulo('2. Con tema aniversario, pregunta por la fiesta');
 

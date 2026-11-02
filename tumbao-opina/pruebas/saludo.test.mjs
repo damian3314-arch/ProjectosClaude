@@ -113,12 +113,11 @@ console.log('\n-- 5. Un saludo no adelanta el cierre -----------------------');
   await c.abrir();
   const saludo = await c.escribir('Buena tarde');
   ok('con un saludo no cierra', saludo.listo === false);
-  const uno = await c.escribir('El ambiente');
-  ok('con una respuesta tampoco', uno.listo === false);
-  const dos = await c.escribir('Trabajo');
-  ok('con dos tampoco', dos.listo === false);
-  const tres = await c.escribir('Que vengan');
-  ok('con las tres todavía no: falta el cierre', tres.listo === false);
+  // 2 nov: el guion por defecto tiene cinco preguntas, así que hacen falta cinco respuestas y lo del cierre.
+  for (const [i, t] of ['El ambiente', 'Los horarios', 'El precio', 'La atención', 'Más clases'].entries()) {
+    const r = await c.escribir(t);
+    ok(`con ${i + 1} respuesta${i ? 's' : ''} todavía no cierra`, r.listo === false);
+  }
   const cuatro = await c.escribir('Marcela, 3001234567');
   ok('y ahí sí termina', cuatro.listo === true);
 }

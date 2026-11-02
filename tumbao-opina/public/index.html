@@ -10,10 +10,10 @@
      basta. Aquí va la misma promesa que adentro, no una más cara.
      Van también las etiquetas og: porque WhatsApp arma la vista previa
      con esas y solo cae a <title> si no están. -->
-<title>Cuéntanos cómo te ha ido · Tumbao</title>
-<meta name="description" content="Con una frase basta. Queremos mejorar un par de cosas y preferimos preguntarte a ti.">
-<meta property="og:title" content="Cuéntanos cómo te ha ido · Tumbao">
-<meta property="og:description" content="Con una frase basta. Queremos mejorar un par de cosas y preferimos preguntarte a ti.">
+<title>Tu opinión importa · Tumbao</title>
+<meta name="description" content="Anónimo y en 5 preguntas cortas. Llegamos hasta aquí gracias a ti: cuéntanos qué mejorar.">
+<meta property="og:title" content="Tu opinión importa · Tumbao">
+<meta property="og:description" content="Anónimo y en 5 preguntas cortas. Llegamos hasta aquí gracias a ti: cuéntanos qué mejorar.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0d0b0f">
 <meta name="robots" content="noindex">
@@ -46,12 +46,24 @@
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
   header small{color:var(--tx-3);font-size:.78rem}
+  .quien{display:flex;align-items:center;gap:.6rem;min-width:0}
+  .avatar{flex:none;width:2.3rem;height:2.3rem;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#1a0a02;
+    background:linear-gradient(140deg,var(--gold),var(--hot));box-shadow:0 0 0 2px rgba(255,255,255,.08)}
+  .quien b{display:block;font-size:.95rem;line-height:1.1}
+  .quien span{display:block;font-size:.74rem;color:var(--tx-3)}
+  .anonimo{margin-left:auto;flex:none;font-size:.72rem;font-weight:700;padding:.3rem .6rem;border-radius:99px;color:var(--ok);
+    border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.08);white-space:nowrap}
+  .progreso{flex:none;height:3px;background:var(--bg-3)}
+  .progreso i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--hot));transition:width .5s cubic-bezier(.23,1,.32,1)}
+  .paso{flex:none;text-align:center;font-size:.74rem;color:var(--tx-3);padding:.35rem 0 0}
 
   /* Dentro de la burbuja de tumbaobaila.com el encabezado sobra: la
      ventanita ya tiene su propia barra con el nombre y la X, y repetir
      "TUMBAO" dos veces en 40 mm de alto se come el espacio del chat,
      que es lo único que importa ahí. */
   body.burbuja header{display:none}
+  body.burbuja .progreso{display:none}
+  .sin-progreso .progreso,.sin-progreso .paso{display:none}
   body.burbuja main{padding-top:1rem}
 
   main{
@@ -136,9 +148,14 @@
 </script>
 
 <header>
-  <h1 class="logo">TUMBAO</h1>
-  <small>cuéntanos cómo te ha ido</small>
+  <div class="quien">
+    <div class="avatar" aria-hidden="true">T</div>
+    <div><b>Equipo Tumbao</b><span>te escucha · responde enseguida</span></div>
+  </div>
+  <span class="anonimo" title="No te pedimos nombre ni celular">🔒 Anónimo</span>
 </header>
+<div class="progreso" aria-hidden="true"><i id="barra"></i></div>
+<div class="paso" id="paso" aria-live="polite"></div>
 
 <main id="hilo"></main>
 
@@ -151,8 +168,8 @@
   </div>
   <div class="aviso" id="aviso" hidden></div>
   <p class="pie">
-    Lo que nos cuentes lo lee el equipo de Tumbao para mejorar.
-    Las notas de voz se convierten en texto y <b>el audio no se guarda</b>.
+    🔒 Anónimo: tus datos solo los dejas si quieres. Lo que cuentes lo lee el equipo de Tumbao para mejorar.
+    Puedes escribir o mandar una nota de voz: se convierte en texto y <b>el audio no se guarda</b>.
   </p>
   <input type="file" id="archivo" accept="image/*" hidden>
 </footer>
@@ -165,6 +182,18 @@ const hilo = $('#hilo');
 // del aniversario manda ?tema=aniversario y el bot pregunta por la
 // fiesta en vez de por qué volvió.
 const TEMA = (new URLSearchParams(location.search).get('tema') || '').trim();
+// El avance «Pregunta 2 de 5» es de la conversación por defecto; los temas aparte (aniversario, opinión) tienen otro número de preguntas.
+const PREGUNTAS = 5;
+if (TEMA) document.body.classList.add('sin-progreso');
+function avance(){
+  if (TEMA) return;
+  const dijo = historia.filter(m => m.role === 'user').length;
+  const k = Math.min(dijo, PREGUNTAS);
+  $('#barra').style.width = (terminado ? 100 : Math.round((k / (PREGUNTAS + 1)) * 100)) + '%';
+  $('#paso').textContent = terminado ? 'Listo 🧡'
+    : dijo < PREGUNTAS ? 'Pregunta ' + (dijo + 1) + ' de ' + PREGUNTAS
+    : 'Último paso: tus datos (opcional)';
+}
 
 // Un id por conversación, en el navegador. Si recarga, sigue la misma.
 //
@@ -248,12 +277,17 @@ async function turno(texto, medio){
   ocupado = true; aviso('');
   if (texto) burbuja('yo', texto, medio);
   pensando(true);
+  const t0 = Date.now();
   try {
     const d = await api('/api/mensaje', { conversacion: CONV, historia, texto, medio, tema: TEMA });
+    // Que se sienta una persona escribiendo: los puntitos se quedan un rato que depende de lo largo del mensaje (sin pasarse).
+    const espera = Math.min(1900, 650 + d.respuesta.length * 9);
+    await new Promise(r => setTimeout(r, Math.max(0, espera - (Date.now() - t0))));
     pensando(false);
     if (texto) historia.push({ role:'user', content: texto });
     historia.push({ role:'assistant', content: d.respuesta });
     burbuja('bot', d.respuesta);
+    avance();
     if (d.listo) await cerrar();
   } catch (e){
     pensando(false);
@@ -270,8 +304,9 @@ async function cerrar(){
   try { await api('/api/cerrar', { conversacion: CONV, historia }); } catch (_) {}
   $('#pie').innerHTML =
     '<div class="fin"><div class="tic">✓</div>' +
-    '<b>Gracias, de verdad.</b>' +
-    'Lo que nos contaste lo leemos esta semana.</div>';
+    '<b>Gracias, de verdad 🧡</b>' +
+    'Llegamos hasta aquí gracias a ti. Lo que nos contaste lo leemos esta semana y lo vamos a usar para subir el nivel en 2027.</div>';
+  avance();
   try { localStorage.removeItem('tumbao_opina_id'); } catch (_) {}
 }
 

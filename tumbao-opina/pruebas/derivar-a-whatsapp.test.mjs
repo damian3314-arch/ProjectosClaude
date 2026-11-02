@@ -54,7 +54,7 @@ ok('con el WhatsApp de verdad de Tumbao',
    clases, y seguir el cuestionario es lo que hizo que el caso del 15 se
    perdiera entre respuestas de opinión. */
 ok('y cierra ahí, sin seguir el cuestionario',
-   /Las tres preguntas no van/.test(worker),
+   /Las preguntas no van/.test(worker),
    'seguir preguntando es lo que enterró el caso del 15 de septiembre');
 ok('sin prometer lo que no controla',
    /No prometas que lo vas a pasar/.test(worker));

@@ -80,21 +80,39 @@ const TEMAS = {
      conversaciones distintas según por dónde entras sería un sistema
      con dos caras. */
   escuchamos: {
+    /* 2 nov (Damián): encuesta masiva a toda la base, de la mano de Timba, y la misma que abre la burbuja. «Que la gente suelte todo,
+       que se sienta segura, que sienta que habla con una persona. Llegamos hasta aquí gracias a ellos y este año queremos subir el
+       nivel.» Cinco preguntas que van de lo fácil (lo que les gusta) a lo difícil (qué cambiarían, por qué se irían), anónimo desde
+       el primer mensaje y con el contacto al final, solo si quieren. */
     saludo:
-      '¡Hola! Somos Tumbao 🧡 Queremos hacer de este un mejor espacio ' +
-      'para seguir gozando, y para eso necesitamos oírte a ti. Lo que ' +
-      'escribas aquí lo leemos nosotras, no un robot, y con una frase ' +
-      'basta.',
+      '¡Hola! 🧡 Soy del equipo de Tumbao. Llegamos hasta aquí gracias a ti y este año queremos subir el nivel, ' +
+      'así que necesitamos oírte: lo bueno y lo que no tanto.\n\n' +
+      'Es anónimo: no te pedimos nombre ni celular (al final, solo si quieres, nos dejas tus datos para responderte). ' +
+      'Son 5 preguntas cortas y con una frase basta.',
     trabajo:
-      'Estás escuchando a gente que ya viene a clases para mejorar la ' +
-      'academia. No vienen a quejarse ni a llenar una encuesta: te están ' +
-      'ayudando. Recibe cada cosa que digan —lo bueno y lo malo— con la ' +
-      'misma atención, y sobre todo NO te pongas a la defensiva cuando ' +
-      'señalen algo que está mal.',
+      'Estás escuchando a gente que baila o ha bailado en la academia, para mejorarla. No vienen a llenar una encuesta: te están ' +
+      'ayudando, y muchos nunca se han atrevido a decir lo que piensan. Recibe cada cosa —lo bueno y lo malo— con la misma ' +
+      'atención y NO te pongas a la defensiva cuando señalen algo que está mal. Tu meta es que se sientan seguros y que suelten ' +
+      'de verdad lo que piensan.',
+    extra: `
+SEGURIDAD Y CONFIANZA
+- Todo lo que cuentan es anónimo mientras no dejen su nombre. Si dudan o preguntan «¿esto quién lo lee?», díselo claro: lo lee el
+  equipo de Tumbao para mejorar, y no se usa para nada más.
+- Si preguntan si hablan con una persona o con un robot, di la verdad: eres el asistente virtual de Tumbao, y lo que cuenten lo
+  lee el equipo.
+- Nunca presiones por un nombre ni un teléfono. Si dicen que no, perfecto: se agradece igual.
+
+PROFUNDIZA SIN INTERROGAR
+- Cuando la persona suelta algo importante —una queja, una frustración, una idea— haz UNA pregunta de seguimiento natural antes de
+  pasar a la siguiente: «¿qué pasó exactamente?», «¿cómo te hubiera gustado que fuera?», «¿a ti qué te ayudaría?». Solo una por tema.
+- Si contestan corto o con miedo a quejarse («todo bien»), normaliza: «puedes decirlo con confianza, así mejoramos». Una vez.
+- Lo que más nos sirve son ejemplos concretos (un día, una clase, una situación), no adjetivos.`,
     preguntas: [
       '¿Qué es lo que más te gusta de Tumbao?',
-      '¿Qué crees que podemos mejorar?',
-      '¿Qué te gustaría encontrar aquí que todavía no está?',
+      'Si pudieras cambiar UNA cosa de Tumbao mañana, ¿cuál sería?',
+      'Si un día dejaras de venir, ¿cuál sería la razón más probable?',
+      '¿Cómo te ha ido con la atención —recepción, WhatsApp, reservas y pagos—? ¿Algo que podamos hacer más fácil?',
+      'Pensando en 2027: ¿qué te gustaría encontrar en Tumbao que hoy no hay (una clase, un horario, un servicio)?',
     ],
   },
   aniversario: {
@@ -175,31 +193,33 @@ const saludoDe = (tema) => {
 // Barrancabermeja, no la otra. Estuvo mal escrito desde el primer
 // día: el bot le decía a las clientas que la academia está en otra
 // ciudad, a 120 km de donde bailan.
+const NUMERO = { 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis' };
 const instruccionesDe = (tema) => {
   const g = guionDe(tema);
+  const n = g.preguntas.length;
+  const nn = NUMERO[n] || String(n);
   return `
 Eres el asistente de Tumbao, una academia de baile en Barrancabermeja,
 Colombia. ${g.trabajo}
+${g.extra || ''}
 
 TU TRABAJO
 Llevar una conversación corta y cálida en la que la persona te cuente
 de verdad. No eres un formulario con emojis: eres alguien de la
 academia que sí quiere saber.
 
-Ya saludaste y ya hiciste la PRIMERA de las tres preguntas. El primer
+Ya saludaste y ya hiciste la PRIMERA de las ${nn} preguntas. El primer
 mensaje que te llega es, casi siempre, su respuesta a esa. No es su
 nombre. Y OJO: a veces tampoco es una respuesta. Ver más abajo.
 
 Todavía no sabes cómo se llama, y está bien: el nombre se pide al final.
 No lo preguntes antes ni lo inventes.
 
-LAS TRES PREGUNTAS, EN ESTE ORDEN
-1. ${g.preguntas[0]}   ← ya la hiciste tú en el saludo
-2. ${g.preguntas[1]}
-3. ${g.preguntas[2]}
+LAS ${nn.toUpperCase()} PREGUNTAS, EN ESTE ORDEN
+${g.preguntas.map((q, i) => `${i + 1}. ${q}${i === 0 ? '   ← ya la hiciste tú en el saludo' : ''}`).join('\n')}
 
 Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
-mira la conversación y pregúntate cuál de las tres falta. Si la persona
+mira la conversación y pregúntate cuál de las ${nn} falta. Si la persona
 ya contestó una vez, lo que falta es la 2.
 
 NO LE PASES POR ENCIMA A LO QUE ESCRIBIÓ
@@ -214,7 +234,7 @@ es, y en los dos avanzar es un error que se siente feo:
   1, y la persona no volvió a escribir.
 - Viene a contar algo suyo: «Hola, quiero contarles algo», «tengo una
   queja». Eso no se responde con el guion. Se responde escuchando:
-  dile que la escuchas y pídele que te cuente. Las tres preguntas
+  dile que la escuchas y pídele que te cuente. Las preguntas
   esperan; lo que la persona trae de casa va primero, y cuando termine
   de contarlo retomas por donde ibas.
 
@@ -275,7 +295,7 @@ Qué haces, en UN solo mensaje y sin seguir el guion:
 - Dile con todas las letras que eso lo resuelve recepción, no tú.
 - Pega el enlace tal cual, sin cambiarle nada:
   ${WHATSAPP_ENLACE}
-- Cierra ese mensaje con [FIN]. Las tres preguntas no van: alguien con
+- Cierra ese mensaje con [FIN]. Las preguntas no van: alguien con
   un pago atascado no está para contarte qué le gusta de las clases.
 
 No prometas que lo vas a pasar, ni que alguien la va a llamar: no
@@ -298,7 +318,7 @@ plata, ganas de retirarse. Ahí:
   decir que eso lo va a leer la dueña.
 
 EL CIERRE
-Solo cuando ya tengas respuesta a las TRES preguntas. Si falta alguna,
+Solo cuando ya tengas respuesta a las ${nn.toUpperCase()} preguntas. Si falta alguna,
 no estás cerrando: estás preguntando.
 
 Y va en dos mensajes distintos, no en uno:
@@ -316,7 +336,7 @@ Y va en dos mensajes distintos, no en uno:
 REGLAS DE [FIN], QUE NO SE ROMPEN
 - [FIN] va en UN solo mensaje de toda la conversación: el último.
 - Un mensaje con [FIN] no puede llevar ninguna pregunta.
-- Nunca [FIN] antes de tener las tres respuestas.
+- Nunca [FIN] antes de tener las ${nn} respuestas.
 - Nunca [FIN] en el mismo mensaje donde te contaron algo delicado.
 `.trim();
 };
@@ -407,7 +427,7 @@ export function conAcuse(respuesta, tema) {
 const NOTA_ESCUCHA = `
 AVISO SOBRE EL ÚLTIMO MENSAJE
 Lo que acaba de escribir la persona NO es la respuesta a ninguna de las
-tres preguntas: es un saludo, o el anuncio de que quiere contarte algo.
+preguntas: es un saludo, o el anuncio de que quiere contarte algo.
 NO avances a la pregunta siguiente.
 
 Si solo saludó: devuélvele el saludo en una línea y vuelve a poner la
@@ -454,7 +474,7 @@ async function conversar(env, historia, nota = '', tema) {
     if (!hayCF(env)) return ensayo(historia, tema);
     const d = await env.AI.run(env.MODELO_CF || MODELO_CF, {
       messages: [{ role: 'system', content: guion }, ...historia],
-      max_tokens: 220,
+      max_tokens: 280,
       temperature: 0.7,
     });
     return (d.response || '').trim() || '…';
@@ -469,7 +489,7 @@ async function conversar(env, historia, nota = '', tema) {
     body: JSON.stringify({
       model: env.MODELO_CHAT || 'gpt-4o-mini',
       temperature: 0.7,
-      max_tokens: 220,
+      max_tokens: 280,
       messages: [{ role: 'system', content: guion }, ...historia],
     }),
   });
@@ -496,8 +516,7 @@ function ensayo(historia, tema) {
     (m) => m.role === 'user' && !esArranque(m.content)).length;
   const guion = [
     `¡Hola! Qué bueno leerte. Cuéntame con una frase: ${preg[0]}`,
-    `Qué bueno saberlo. Ahora una más: ${preg[1]}`,
-    `Gracias por contarme. Última: ${preg[2]}`,
+    ...preg.slice(1).map((q, i) => (i === 0 ? 'Qué bueno saberlo. Ahora una más: ' : i === preg.length - 2 ? 'Gracias por contarme. Última: ' : 'Gracias por decirlo. Sigo: ') + q),
     'Mil gracias. Si quieres agregar algo, mándame una nota de voz.\n\n' +
       'Y si nos dejas tu nombre y tu celular te podemos responder. Es ' +
       'opcional, y solo para eso.',
@@ -1451,7 +1470,7 @@ export default {
         // de las tres preguntas sin hacer.
         const suyas = entera.filter(
           (m) => m.role === 'user' && !esArranque(m.content)).length;
-        const listo = cruda.includes('[FIN]') && suyas >= 4;
+        const listo = cruda.includes('[FIN]') && suyas >= guionDe(tema).preguntas.length + 1;
 
         // El acuse solo se fuerza cuando la persona dijo algo de verdad:
         // meterle un "gracias por contarme" a quien apenas escribió
