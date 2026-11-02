@@ -34,7 +34,7 @@ en 2027 y que más gente se quede (renovación de mensualidades ≈ 55-60 %).
 
 const SISTEMA = `
 Eres el analista estratégico de Tumbao. Te paso lo que la gente contó en una encuesta anónima de 5 preguntas (qué le gusta, qué cambiaría,
-por qué dejaría de venir, cómo le ha ido con la atención y qué querría encontrar en 2027). Con eso escribes el informe que la dueña y el
+por qué dejaría de venir, cómo le ha ido con la atención y qué querría encontrar en 2027) más dos extras opcionales: qué otro horario le gustaría y qué música o ritmos quiere bailar más. Con eso escribes el informe que la dueña y el
 dueño van a presentar: tiene que ser claro, concreto y accionable. Contexto del negocio:
 ${CONTEXTO}
 
@@ -47,6 +47,8 @@ Devuelves SOLO un objeto JSON con estas claves (todas las listas pueden ir vací
  "fuga": [{"razon": "...", "cuantos": "...", "cita": "..."}],                  // por qué dejarían de venir
  "atencion": {"hallazgos": ["..."], "arreglos": ["..."]},                       // recepción, WhatsApp, reservas, pagos
  "deseos": [{"idea": "...", "cuantos": "...", "cita": "..."}],                  // qué quieren encontrar en 2027
+ "horarios": [{"horario": "día y hora concretos, como los dijeron", "cuantos": "...", "cita": "..."}],   // qué otro horario les gustaría (agrupa los parecidos)
+ "musica": [{"ritmo": "ritmo, género o artista", "cuantos": "...", "cita": ""}],                      // qué música o ritmos quieren bailar más, de más a menos pedido
  "acciones": [{"area": "Clases|Atención|Operación|Mercadeo|Precios y planes|Tecnología|Equipo", "accion": "...", "por_que": "...",
                "plazo": "esta semana|30 días|primer trimestre 2027", "impacto": "alto|medio|bajo", "esfuerzo": "bajo|medio|alto",
                "metrica": "cómo sabremos que funcionó", "responsable": "quién lo lleva (dueña, dueño, recepción, profes, Timba, página)"}],
@@ -70,8 +72,8 @@ REGLAS QUE MANDAN
 
 const SISTEMA_TANDA = `
 Eres el analista de Tumbao. Te paso hasta ${TANDA} conversaciones anónimas de una encuesta de 5 preguntas (qué les gusta, qué cambiarían, por qué
-dejarían de venir, cómo les ha ido con la atención, qué querrían en 2027) de una academia de baile en Barrancabermeja.
-Devuelves SOLO un objeto JSON: {"personas": N, "temas": [{"categoria": "aman|cambiar|fuga|atencion|deseo", "tema": "3-5 palabras", "detalle": "1-2 frases",
+dejarían de venir, cómo les ha ido con la atención, qué querrían en 2027) más dos extras: otro horario y música de una academia de baile en Barrancabermeja.
+Devuelves SOLO un objeto JSON: {"personas": N, "temas": [{"categoria": "aman|cambiar|fuga|atencion|deseo|horario|musica", "tema": "3-5 palabras", "detalle": "1-2 frases",
 "personas": cuántas de ESTA tanda lo dijeron, "gravedad": "critica|alta|media|", "citas": ["frase textual corta", "..."]}], "urgentes": [{"que": "...", "por_que": "..."}]}.
 Reglas: no inventes; cuenta personas de verdad; agrupa lo parecido bajo el mismo tema; máximo 18 temas; citas textuales sin nombres ni teléfonos, con
 «comillas angulares»; urgentes solo si alguien se sintió maltratado, hubo un cobro mal hecho o dice que se va ya. Nunca comillas dobles dentro de los textos. JSON válido y nada más.
@@ -167,6 +169,8 @@ export function limpiarInforme(d, total) {
     fuga: lista(x.fuga, 6).map((i) => ({ razon: txt(i.razon, 220), cuantos: cuantos(i.cuantos), cita: txt(i.cita, 220) })).filter((i) => i.razon),
     atencion: { hallazgos: lista(x.atencion && x.atencion.hallazgos, 6).map((t) => txt(t, 260)).filter(Boolean),
                 arreglos: lista(x.atencion && x.atencion.arreglos, 6).map((t) => txt(t, 260)).filter(Boolean) },
+    horarios: lista(x.horarios, 8).map((i) => ({ horario: txt(i.horario, 120), cuantos: cuantos(i.cuantos), cita: txt(i.cita, 200) })).filter((i) => i.horario),
+    musica: lista(x.musica, 10).map((i) => ({ ritmo: txt(i.ritmo, 100), cuantos: cuantos(i.cuantos), cita: txt(i.cita, 200) })).filter((i) => i.ritmo),
     deseos: lista(x.deseos, 8).map((i) => ({ idea: txt(i.idea, 160), cuantos: cuantos(i.cuantos), cita: txt(i.cita, 220) })).filter((i) => i.idea),
     acciones: lista(x.acciones, 16).map((i) => ({
       area: una(i.area, ['Clases', 'Atención', 'Operación', 'Mercadeo', 'Precios y planes', 'Tecnología', 'Equipo'], 'Operación'),
@@ -299,7 +303,7 @@ export function paginaInforme(estado) {
   const barra = `<div class="demo" ${demo ? '' : 'hidden'}>EJEMPLO · datos inventados para mostrar cómo se verá el informe</div>`;
   const nav = `<nav class="noimp"><div class="in">
    <a href="#resumen">Resumen</a><a href="#ya">Lo urgente</a><a href="#aman">Lo que aman</a><a href="#cambiar">Qué cambiar</a><a href="#fuga">Por qué se irían</a>
-   <a href="#atencion">Atención</a><a href="#deseos">2027</a><a href="#plan">Plan de acción</a><a href="#estrategia">Estrategia</a>${urgentes.length ? '<a href="#casos">Casos</a>' : ''}
+   <a href="#atencion">Atención</a><a href="#deseos">2027</a><a href="#horarios">Horarios</a><a href="#musica">Música</a><a href="#plan">Plan de acción</a><a href="#estrategia">Estrategia</a>${urgentes.length ? '<a href="#casos">Casos</a>' : ''}
    <span class="sp"></span><button onclick="print()">Imprimir / PDF</button></div></nav>`;
 
   const tarjeta = (i, extra = '') => `<div class="card"><span class="n">${esc(i.cuantos || '')}</span>
@@ -331,6 +335,9 @@ export function paginaInforme(estado) {
    <div class="card"><h3>Lo que encontramos</h3><ul class="puntos">${r.atencion.hallazgos.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>
    <div class="card"><h3>Cómo arreglarlo</h3><ul class="puntos">${r.atencion.arreglos.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div></div></section>
   <section id="deseos"><p class="k">Mirando a 2027</p><h2>Lo que quieren encontrar</h2><div class="grid">${r.deseos.map((i) => tarjeta(i)).join('')}</div></section>
+
+  <section id="horarios"><p class="k">Extra de la encuesta</p><h2>Qué otro horario les gustaría</h2><div class="grid">${(r.horarios || []).map((i) => `<div class="card"><span class="n">${esc(i.cuantos || '')}</span><h3>${esc(i.horario)}</h3>${i.cita ? `<div class="cita">«${esc(i.cita)}»</div>` : ''}</div>`).join('') || '<p class="aviso">Nadie pidió un horario nuevo o no contestaron este extra.</p>'}</div></section>
+  <section id="musica"><p class="k">Extra de la encuesta</p><h2>Música y ritmos que quieren bailar</h2><div class="grid">${(r.musica || []).map((i) => `<div class="card"><span class="n">${esc(i.cuantos || '')}</span><h3>${esc(i.ritmo)}</h3>${i.cita ? `<div class="cita">«${esc(i.cita)}»</div>` : ''}</div>`).join('') || '<p class="aviso">Todavía no hay suficientes respuestas sobre música.</p>'}</div></section>
 
   <section id="plan"><p class="k">Todo accionable</p><h2>Plan de acción</h2>
    <div class="matriz">
@@ -401,10 +408,22 @@ export const EJEMPLO = {
       { idea: 'Eventos: noche de baile, aniversario', cuantos: '17 de 87 personas', cita: '' },
       { idea: 'Retos o seguimiento de constancia', cuantos: '9 de 87 personas', cita: 'Me motivaría que me contaran mi progreso' },
     ],
+    horarios: [
+      { horario: 'Domingos en la mañana', cuantos: '19 de 87 personas', cita: 'Un domingo a las 9 sería perfecto' },
+      { horario: 'Entre semana a las 8 pm', cuantos: '14 de 87 personas', cita: '' },
+      { horario: 'Sábados en la tarde', cuantos: '8 de 87 personas', cita: '' },
+    ],
+    musica: [
+      { ritmo: 'Salsa y salsa choke', cuantos: '41 de 87 personas', cita: 'Más salsa, que me muero por la salsa' },
+      { ritmo: 'Champeta', cuantos: '33 de 87 personas', cita: '' },
+      { ritmo: 'Reggaetón clásico', cuantos: '27 de 87 personas', cita: '' },
+      { ritmo: 'Vallenato y merengue', cuantos: '15 de 87 personas', cita: '' },
+    ],
     acciones: [
       { area: 'Atención', accion: 'Mensaje de «tu cupo ya quedó» al terminar el pago', por_que: 'La confusión al pagar es la queja de operación más repetida.', plazo: 'esta semana', impacto: 'alto', esfuerzo: 'bajo', metrica: 'Menos mensajes de «¿ya quedó mi pago?»', responsable: 'página y Timba' },
       { area: 'Clases', accion: 'Norma visible: nadie sale a bailar si no quiere', por_que: 'Evita que se pierdan personas nuevas por pena.', plazo: 'esta semana', impacto: 'alto', esfuerzo: 'bajo', metrica: 'Cero quejas de exposición', responsable: 'dueña y profes' },
       { area: 'Operación', accion: 'Probar una clase más (domingo o 8 pm) por un mes', por_que: 'Es el cambio más pedido.', plazo: '30 días', impacto: 'alto', esfuerzo: 'medio', metrica: 'Asistencia promedio de la clase de prueba', responsable: 'dueño' },
+      { area: 'Clases', accion: 'Sesiones temáticas con los ritmos más pedidos (salsa choke y champeta) una vez por semana', por_que: 'Es lo que más piden bailar y no cuesta un horario nuevo.', plazo: '30 días', impacto: 'medio', esfuerzo: 'bajo', metrica: 'Asistencia en esas clases', responsable: 'profes' },
       { area: 'Mercadeo', accion: 'Mensajes basados en «es mi hora para mí» y «sin saber bailar»', por_que: 'Es lo que más valoran, dicho con sus palabras.', plazo: '30 días', impacto: 'medio', esfuerzo: 'bajo', metrica: 'Respuestas y compras por mensaje', responsable: 'Timba y redes' },
       { area: 'Precios y planes', accion: 'Un plan flexible para quien cambia de turno laboral', por_que: 'La falta de tiempo es la primera razón de fuga.', plazo: 'primer trimestre 2027', impacto: 'alto', esfuerzo: 'medio', metrica: 'Renovación de mensualidades', responsable: 'dueña y dueño' },
       { area: 'Tecnología', accion: 'Seguimiento de constancia visible para cada persona', por_que: 'Responde al deseo de retos y refuerza el premio por constancia.', plazo: 'primer trimestre 2027', impacto: 'medio', esfuerzo: 'medio', metrica: 'Personas que completan su tiquetera', responsable: 'página' },

@@ -16,11 +16,11 @@ ok('con p_ejecutar en false solo cuenta', /where p_ejecutar/.test(mig) && /defau
 
 titulo('2. El chat de Tumbao opina');
 const g = opina.slice(opina.indexOf('  escuchamos: {'), opina.indexOf('  aniversario: {'));
-ok('son cinco preguntas', (g.match(/^      '¿|^      'Si |^      'Pensando/gm) || []).length === 5);
+ok('son cinco preguntas y dos extras opcionales (horario y música)', /nucleo: 5/.test(g) && /otro horario/.test(g) && /música o ritmos/.test(g) && (g.slice(g.indexOf('preguntas: [')).match(/^      '/gm) || []).length === 7);
 ok('dice que es anónimo y que el contacto es opcional y al final', /anónimo/.test(g) && /solo si quieres/.test(g));
 ok('tiene una regla de seguridad y de decir la verdad si preguntan si es un robot', /SEGURIDAD Y CONFIANZA/.test(g) && /asistente virtual de Tumbao/.test(g));
 ok('profundiza con UNA pregunta de seguimiento y pide ejemplos concretos', /UNA pregunta de seguimiento/.test(g) && /ejemplos concretos/.test(g));
-ok('cierra solo con las cinco respuestas y lo del contacto', /preguntas\.length \+ 1/.test(opina));
+ok('cierra solo con las cinco respuestas y lo del contacto', /nucleo \|\| .*preguntas\.length\) \+ 1/.test(opina));
 
 titulo('3. La página');
 ok('muestra que es anónimo, el avance «Pregunta N de 5» y un avatar', /🔒 Anónimo/.test(ui) && /Pregunta ' \+ \(dijo \+ 1\) \+ ' de ' \+ PREGUNTAS/.test(ui) && /class="avatar"/.test(ui));

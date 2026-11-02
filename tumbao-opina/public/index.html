@@ -184,14 +184,16 @@ const hilo = $('#hilo');
 const TEMA = (new URLSearchParams(location.search).get('tema') || '').trim();
 // El avance «Pregunta 2 de 5» es de la conversación por defecto; los temas aparte (aniversario, opinión) tienen otro número de preguntas.
 const PREGUNTAS = 5;
+const EXTRAS = 2;   // horario y música: opcionales
 if (TEMA) document.body.classList.add('sin-progreso');
 function avance(){
   if (TEMA) return;
   const dijo = historia.filter(m => m.role === 'user').length;
-  const k = Math.min(dijo, PREGUNTAS);
-  $('#barra').style.width = (terminado ? 100 : Math.round((k / (PREGUNTAS + 1)) * 100)) + '%';
+  const k = Math.min(dijo, PREGUNTAS + EXTRAS);
+  $('#barra').style.width = (terminado ? 100 : Math.round((k / (PREGUNTAS + EXTRAS + 1)) * 100)) + '%';
   $('#paso').textContent = terminado ? 'Listo 🧡'
     : dijo < PREGUNTAS ? 'Pregunta ' + (dijo + 1) + ' de ' + PREGUNTAS
+    : dijo < PREGUNTAS + EXTRAS ? 'Extra opcional: horarios y música'
     : 'Último paso: tus datos (opcional)';
 }
 

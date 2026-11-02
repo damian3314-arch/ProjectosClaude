@@ -89,7 +89,7 @@ const TEMAS = {
       '¡Hola! 🧡 Soy del equipo de Tumbao. Llegamos hasta aquí gracias a ti y este año queremos subir el nivel, ' +
       'así que necesitamos oírte: lo bueno y lo que no tanto.\n\n' +
       'Es anónimo: no te pedimos nombre ni celular (al final, solo si quieres, nos dejas tus datos para responderte). ' +
-      'Son 5 preguntas cortas y con una frase basta.',
+      'Son 5 preguntas cortas (y dos extras opcionales sobre horarios y música). Con una frase basta.',
     trabajo:
       'Estás escuchando a gente que baila o ha bailado en la academia, para mejorarla. No vienen a llenar una encuesta: te están ' +
       'ayudando, y muchos nunca se han atrevido a decir lo que piensan. Recibe cada cosa —lo bueno y lo malo— con la misma ' +
@@ -107,14 +107,23 @@ PROFUNDIZA SIN INTERROGAR
 - Cuando la persona suelta algo importante —una queja, una frustración, una idea— haz UNA pregunta de seguimiento natural antes de
   pasar a la siguiente: «¿qué pasó exactamente?», «¿cómo te hubiera gustado que fuera?», «¿a ti qué te ayudaría?». Solo una por tema.
 - Si contestan corto o con miedo a quejarse («todo bien»), normaliza: «puedes decirlo con confianza, así mejoramos». Una vez.
-- Lo que más nos sirve son ejemplos concretos (un día, una clase, una situación), no adjetivos.`,
+- Lo que más nos sirve son ejemplos concretos (un día, una clase, una situación), no adjetivos.
+
+LOS DOS EXTRAS (preguntas 6 y 7: otro horario y música)
+- Son OPCIONALES. Después de la quinta respuesta, preséntalos como «dos cositas más, si te queda ánimo». Si la persona dice que no, que está cansada o contesta
+  muy seco, agradece y pasa al cierre sin insistir.
+- Horario: pide día y hora concretos («los domingos en la mañana», «a las 8 pm entre semana»). Música: pide ritmos concretos y, si quiere, canciones o artistas.`,
     preguntas: [
       '¿Qué es lo que más te gusta de Tumbao?',
       'Si pudieras cambiar UNA cosa de Tumbao mañana, ¿cuál sería?',
       'Si un día dejaras de venir, ¿cuál sería la razón más probable?',
       '¿Cómo te ha ido con la atención —recepción, WhatsApp, reservas y pagos—? ¿Algo que podamos hacer más fácil?',
-      'Pensando en 2027: ¿qué te gustaría encontrar en Tumbao que hoy no hay (una clase, un horario, un servicio)?',
+      'Pensando en 2027: ¿qué te gustaría encontrar en Tumbao que hoy no hay (una clase, un servicio, una experiencia)?',
+      // Extras opcionales (2 nov, Damián): qué otro horario les gustaría y qué música bailan más. Van después de las cinco, presentados como un extra.
+      'Si te queda ánimo, dos cositas más. ¿Qué otro horario te gustaría que hubiera en Tumbao? (día y hora)',
+      'Y la última: ¿qué música o ritmos te gustaría bailar más? (salsa, champeta, vallenato, reggaetón, merengue…)',
     ],
+    nucleo: 5,
   },
   aniversario: {
     // Arranca con la pregunta abierta y sin pedir nada: quien llega aquí
@@ -194,10 +203,10 @@ const saludoDe = (tema) => {
 // Barrancabermeja, no la otra. Estuvo mal escrito desde el primer
 // día: el bot le decía a las clientas que la academia está en otra
 // ciudad, a 120 km de donde bailan.
-const NUMERO = { 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis' };
+const NUMERO = { 3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis', 7: 'siete' };
 const instruccionesDe = (tema) => {
   const g = guionDe(tema);
-  const n = g.preguntas.length;
+  const n = g.nucleo || g.preguntas.length;
   const nn = NUMERO[n] || String(n);
   return `
 Eres el asistente de Tumbao, una academia de baile en Barrancabermeja,
@@ -217,7 +226,7 @@ Todavía no sabes cómo se llama, y está bien: el nombre se pide al final.
 No lo preguntes antes ni lo inventes.
 
 LAS ${nn.toUpperCase()} PREGUNTAS, EN ESTE ORDEN
-${g.preguntas.map((q, i) => `${i + 1}. ${q}${i === 0 ? '   ← ya la hiciste tú en el saludo' : ''}`).join('\n')}
+${g.preguntas.map((q, i) => `${i + 1}. ${q}${i === 0 ? '   ← ya la hiciste tú en el saludo' : ''}${i >= n ? '   ← EXTRA OPCIONAL' : ''}`).join('\n')}
 
 Van una por mensaje, en ese orden, y no se saltan. Antes de escribir,
 mira la conversación y pregúntate cuál de las ${nn} falta. Si la persona
@@ -1472,7 +1481,7 @@ export default {
         // de las tres preguntas sin hacer.
         const suyas = entera.filter(
           (m) => m.role === 'user' && !esArranque(m.content)).length;
-        const listo = cruda.includes('[FIN]') && suyas >= guionDe(tema).preguntas.length + 1;
+        const listo = cruda.includes('[FIN]') && suyas >= (guionDe(tema).nucleo || guionDe(tema).preguntas.length) + 1;
 
         // El acuse solo se fuerza cuando la persona dijo algo de verdad:
         // meterle un "gracias por contarme" a quien apenas escribió

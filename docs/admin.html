@@ -7734,6 +7734,8 @@ const CONFIG = {
          <div class="ficha op-col"><div class="cab">Lo que más piden cambiar</div>${lista(top(r.cambiar, 3), i => i.tema)}</div>
          <div class="ficha op-col"><div class="cab">Por qué se irían</div>${lista(top(r.fuga, 2), i => i.razon)}</div>
          <div class="ficha op-col"><div class="cab">Lo que quieren en 2027</div>${lista(top(r.deseos, 2), i => i.idea)}</div>
+         <div class="ficha op-col"><div class="cab">Otro horario que piden</div>${lista(top(r.horarios, 3), i => i.horario)}</div>
+         <div class="ficha op-col"><div class="cab">Música que quieren bailar</div>${lista(top(r.musica, 4), i => i.ritmo)}</div>
          <div class="ficha ancha"><div class="cab">Primeros pasos</div>${pasos.length ? pasos.map(a =>
            `<div class="op-paso"><i>${esc(a.plazo === 'esta semana' ? 'YA' : a.plazo === '30 días' ? '30d' : '2027')}</i><div><b>${esc(a.accion)}</b><small>${esc(a.area)} · lleva ${esc(a.responsable || '—')} · ${esc(a.metrica || '')}</small></div></div>`).join('')
            : '<p class="suave">Aún no hay acciones.</p>'}</div>
