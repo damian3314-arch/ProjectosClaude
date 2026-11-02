@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Piezas · Rumbo a 2027</title>
+<!-- 2 nov: piezas del cierre de año «Rumbo a 2027». Fotos reales del salón. Sin descuentos ni «regalo»: solo el premio por constancia (autorizado 1 nov).
+     Una por URL: piezas.html?p=p1 … p4. `node sacar.mjs` las exporta a salida/. -->
+<style>
+  @font-face{font-family:'Outfit';font-weight:100 900;src:url(outfit-latin-wght.woff2) format('woff2')}
+  :root{--mag:#ff2e8f;--vio:#8f3dff;--nar:#ff6b35;--lima:#c6ff3d;--oro:#ffd479;--tx:#fff;--tx2:#d9cfe6}
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#000}
+  body{font-family:'Outfit',system-ui,sans-serif;color:var(--tx)}
+  .pieza{position:relative;overflow:hidden;width:1080px;height:1350px;background:#07040c;isolation:isolate}
+  .pieza.historia{height:1920px}
+  .fondo{position:absolute;inset:0;z-index:-3;background-size:cover;background-position:center;filter:saturate(1.3) contrast(1.05)}
+  .tinte{position:absolute;inset:0;z-index:-2;background:radial-gradient(90% 50% at 90% 0%,rgba(255,46,143,.5),transparent 62%),radial-gradient(80% 50% at 0% 100%,rgba(143,61,255,.5),transparent 64%),linear-gradient(180deg,rgba(7,4,12,.55) 0%,rgba(7,4,12,.82) 55%,rgba(7,4,12,.97) 100%)}
+  .fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+  .logo{position:absolute;left:50%;transform:translateX(-50%);width:250px}
+  .bloque{position:absolute;left:84px;right:84px}
+  .chip{display:inline-flex;align-items:center;gap:14px;padding:14px 26px;border-radius:99px;font-size:28px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.28)}
+  .chip i{width:16px;height:16px;border-radius:50%;background:var(--lima);box-shadow:0 0 18px var(--lima)}
+  h1{font-size:128px;line-height:.93;letter-spacing:-.055em;font-weight:900;margin-top:30px}
+  h2{font-size:92px;line-height:.98;letter-spacing:-.05em;font-weight:900}
+  .g{background:linear-gradient(100deg,#ffc14d 0%,#ff6b35 42%,#ff2e8f 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:42px;line-height:1.28;color:var(--tx2);margin-top:30px;font-weight:500}
+  .sub b{color:#fff;font-weight:800}
+  .cta{display:inline-flex;margin-top:44px;padding:30px 48px;border-radius:99px;font-size:42px;font-weight:850;color:#fff;background:linear-gradient(100deg,#ff6b35,#ff2e8f);box-shadow:0 22px 50px -14px rgba(255,46,143,.8)}
+  .letra{font-size:25px;color:#a99bbd;margin-top:26px;line-height:1.35}
+  .eq{display:flex;align-items:flex-end;gap:7px;height:110px;margin-top:40px}
+  .eq i{width:16px;border-radius:6px;background:linear-gradient(180deg,#ff2e8f,#ff6b35)}
+  .tarj{padding:34px 40px;border-radius:34px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.16);position:relative}
+  .tarj::before{content:"";position:absolute;left:0;top:26px;bottom:26px;width:8px;border-radius:8px;background:linear-gradient(180deg,var(--mag),var(--nar))}
+  .tarj .yo{font-size:34px;color:#b7a9c9;text-decoration:line-through;text-decoration-color:rgba(255,111,177,.8);margin-left:12px}
+  .tarj .tu{font-size:46px;font-weight:800;line-height:1.15;margin-top:10px;margin-left:12px}
+  .tarj .tu span{color:#ff9ec0}
+  .num{font-size:300px;line-height:.9;font-weight:900;letter-spacing:-.07em}
+  .pase{position:relative;overflow:hidden;isolation:isolate;width:860px;aspect-ratio:1.586;border-radius:46px;color:#fff;box-shadow:0 50px 90px -40px rgba(255,46,143,.7)}
+  .pase .foto{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .pase .foto::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.84) 0%,rgba(0,0,0,.45) 60%,rgba(0,0,0,.12) 100%)}
+  .pase svg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+  .pase .cinta{fill:none;stroke-linecap:round}
+  .pase .marca-p{position:absolute;top:44px;left:52px;font-size:22px;font-weight:800;letter-spacing:.28em;opacity:.85}
+  .pase .nom{position:absolute;top:118px;left:52px;font-size:34px;font-weight:700;opacity:.9}
+  .pase .cant{position:absolute;top:158px;left:50px;font-size:92px;font-weight:850;letter-spacing:-.045em;line-height:1}
+  .pase .precio{position:absolute;bottom:46px;left:52px;font-size:66px;font-weight:850;letter-spacing:-.03em}
+  .pase .xc{position:absolute;bottom:58px;left:340px;font-size:28px;font-weight:600;opacity:.85}
+  .pase .premio{position:absolute;bottom:40px;right:44px;font-size:30px;font-weight:850;padding:14px 24px;border-radius:18px;color:#1a0a02;background:linear-gradient(180deg,#ffe7a8,#ffc14d)}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<script>
+const CINTAS = `<svg viewBox="0 0 320 202" preserveAspectRatio="none" aria-hidden="true">
+  <path class="cinta" d="M-30 170 C 60 120, 110 210, 190 140 S 300 40, 360 80" stroke="#ff7a1f" stroke-width="12" opacity=".75"/>
+  <path class="cinta" d="M-20 120 C 70 60, 140 170, 220 100 S 320 10, 360 30" stroke="#ffb347" stroke-width="5" opacity=".6"/>
+  <path class="cinta" d="M-10 200 C 80 150, 150 230, 240 170 S 330 110, 370 140" stroke="#ffa14f" stroke-width="2.2" opacity=".5"/></svg>`;
+const pase = ({ foto, nom, cant, precio, xc, premio }) => `
+  <div class="pase"><div class="foto" style="background-image:url('${foto}')"></div>${CINTAS}
+    <span class="marca-p">TUMBAO · PASE</span><span class="nom">${nom}</span><span class="cant">${cant}</span>
+    <span class="precio">${precio}</span>${xc ? `<span class="xc">${xc}</span>` : ''}${premio ? `<span class="premio">${premio}</span>` : ''}</div>`;
+// Brillo navideño: guirnalda de luces arriba, nieve fina y destellos dorados. Todo en un SVG detrás del texto.
+const navidad = (W, H, { nieve = 46, destellos = [], semilla = 7, evitar = [] } = {}) => {
+  let r = semilla; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  const colores = ['#ffd479', '#ff5a4d', '#ff9a3c', '#fff2cf', '#ffd479', '#ff6b81'];
+  const hilo = (x) => 78 + Math.sin((x / W) * Math.PI * 3) * 20;   // el cable se descuelga entre luces
+  let luces = '<path d="M-10 70 ' + Array.from({ length: 28 }, (_, i) => { const x = (i + 1) * (W + 20) / 28; return `L${x.toFixed(0)} ${hilo(x).toFixed(0)}`; }).join(' ') + '" fill="none" stroke="#2a1a10" stroke-width="5" stroke-linecap="round"/>';
+  for (let i = 0; i < 15; i++) {
+    const x = 40 + i * (W - 80) / 14, y = hilo(x) + 22, c = colores[i % colores.length];
+    luces += `<line x1="${x}" y1="${hilo(x)}" x2="${x}" y2="${y - 10}" stroke="#2a1a10" stroke-width="4"/>
+      <circle cx="${x}" cy="${y + 8}" r="38" fill="${c}" opacity=".16"/><circle cx="${x}" cy="${y + 8}" r="22" fill="${c}" opacity=".3"/>
+      <ellipse cx="${x}" cy="${y + 6}" rx="11" ry="16" fill="${c}"/><ellipse cx="${x - 3}" cy="${y}" rx="3.5" ry="6" fill="#fff" opacity=".7"/>`;
+  }
+  let copos = '';
+  for (let i = 0; i < nieve; i++) {
+    const x = rnd() * W, y = 150 + rnd() * (H - 150), t = 2 + rnd() * 4.5;
+    if (evitar.some(([a, b, c, d]) => x > a - 14 && x < c + 14 && y > b - 14 && y < d + 14)) continue;
+    copos += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${t.toFixed(1)}" fill="#fff" opacity="${(.25 + rnd() * .5).toFixed(2)}"/>`;
+  }
+  const estrella = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})"><circle r="46" fill="#ffd479" opacity=".14"/>
+      <path d="M0 -34 C3 -10 10 -3 34 0 C10 3 3 10 0 34 C-3 10 -10 3 -34 0 C-10 -3 -3 -10 0 -34Z" fill="#ffe7a8"/><circle r="4" fill="#fff"/></g>`;
+  return `<svg class="fx" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${copos}${luces}${destellos.map(d => estrella(d[0], d[1], d[2])).join('')}</svg>`;
+};
+
+
+const diasA2027 = () => {
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+  return Math.round((Date.parse('2027-01-01T12:00:00-05:00') - Date.parse(hoy + 'T12:00:00-05:00')) / 86400000);
+};
+const barras = (n, alto) => `<div class="eq" style="height:${alto}px">` + Array.from({ length: n }, (_, i) => `<i style="height:${Math.round(alto * (.22 + .78 * Math.abs(Math.sin(i * 1.7 + 1))))}px"></i>`).join('') + '</div>';
+const LOGO = (top) => `<img class="logo" style="top:${top}px" src="logo-tumbao.png" alt="">`;
+
+const PIEZAS = {
+  // p1 · feed 4:5 · el gancho
+  p1: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 30, destellos: [[930, 560, .9]], semilla: 11, evitar: [[84, 520, 1000, 1290]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:560px"><span class="chip"><i></i>Faltan ${diasA2027()} días para 2027</span>
+    <h1>Este año,<br><span class="g">no empieces<br>en enero.</span></h1>
+    <p class="sub">Llega a 2027 con el hábito <b>ya hecho</b>. Empieza hoy, bailando.</p></div></div>`,
+  // p2 · historia 9:16 · el dolor
+  p2: () => `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="tinte"></div>${navidad(1080, 1920, { nieve: 40, destellos: [[960, 480, .9]], semilla: 5, evitar: [[84, 540, 1000, 1760]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:560px"><h2>Lo has <span class="g">intentado.</span></h2>
+    <div style="display:grid;gap:26px;margin-top:46px">
+      <div class="tarj"><div class="yo">«A las 3 semanas ya no iba»</div><div class="tu">Aquí es <span>una rumba</span>, no una rutina.</div></div>
+      <div class="tarj"><div class="yo">«No tengo tiempo»</div><div class="tu">Horario fijo: <span>llegas y entras.</span></div></div>
+      <div class="tarj"><div class="yo">«Llego con la cabeza llena de estrés»</div><div class="tu">Baila pa' sanar: <span>sales liviano.</span></div></div>
+    </div>
+    <span class="cta" style="margin-top:56px">Empieza hoy · tumbaobaila.com</span></div></div>`,
+  // p3 · feed 4:5 · el premio por constancia
+  p3: () => `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="tinte"></div>${navidad(1080, 1350, { nieve: 24, destellos: [[960, 470, .9]], semilla: 9, evitar: [[84, 330, 1000, 1290]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:330px"><span class="chip"><i></i>Tu constancia tiene premio</span>
+    <h2 style="margin-top:28px">Cumple tus clases<br><span class="g">y gana un premio.</span></h2></div>
+    <div style="position:absolute;left:50%;top:640px;display:grid;gap:34px;transform:translateX(-50%) scale(.6);transform-origin:top center">
+      ${pase({ foto: 'pase-8.jpg', nom: 'Tiquetera', cant: '8 clases', precio: '$96.000', premio: '+2 clases de premio' })}
+      ${pase({ foto: 'pase-4.jpg', nom: 'Tiquetera', cant: '4 clases', precio: '$52.000', premio: '+1 clase de premio' })}
+    </div></div>`,
+  // p4 · historia 9:16 · el cierre: dos formas de llegar a 2027
+  p4: () => `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="tinte"></div>${navidad(1080, 1920, { nieve: 40, destellos: [[960, 470, .9]], semilla: 3, evitar: [[84, 420, 1000, 1800]] })}
+    ${LOGO(150)}
+    <div class="bloque" style="top:500px"><span class="chip"><i></i>Rumbo a 2027</span>
+    <div class="num g" style="margin-top:20px">${diasA2027()}</div>
+    <h2 style="margin-top:6px">días para empezar<br>con el hábito hecho.</h2>
+    <div style="display:grid;gap:26px;margin-top:50px">
+      <div class="tarj"><div class="tu" style="margin-top:0">Mensualidad <span>$125.000</span></div><div class="yo" style="text-decoration:none;color:#d9cfe6;font-size:36px;margin-top:8px">Todo el mes · ≈ $5.000 por clase</div></div>
+      <div class="tarj"><div class="tu" style="margin-top:0">Tiquetera <span>desde $52.000</span></div><div class="yo" style="text-decoration:none;color:#d9cfe6;font-size:36px;margin-top:8px">Tú eliges cuándo · premio por tu constancia</div></div>
+    </div>
+    <span class="cta" style="margin-top:50px">tumbaobaila.com/mensualidad</span></div></div>`,
+};
+const p = new URLSearchParams(location.search).get('p') || 'p1';
+document.getElementById('raiz').innerHTML = (PIEZAS[p] || PIEZAS.p1)();
+</script>
+</body>
+</html>
