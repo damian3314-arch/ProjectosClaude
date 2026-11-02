@@ -1281,6 +1281,50 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 2 nov (Damián): reemplaza a pase_constancia y pase_constancia_2, que dicen «clase de regalo». Una sola plantilla para las dos tiqueteras:
+    // {{3}} es «1 clase más» o «2 clases más». Cuando Meta la apruebe se enciende con ajustes.wa_pase_plantilla_nueva = 'premiamos_constancia' (0195).
+    name: 'premiamos_constancia',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          '¡Felicidades {{1}}! 🎉 Completaste las {{2}} clases de tu tiquetera en Tumbao y premiamos tu constancia con {{3}}.\n\n' +
+          '🎟️ {{4}}\n📅 Valen hasta el {{5}}\n\n' +
+          'Para usarlas entra a tumbaobaila.com y elige Tengo tiquetera.\n\n' +
+          'Gracias por bailar con nosotros 🧡',
+        example: { body_text: [['Laura', '4', '1 clase más', 'Código: A1B2C3', 'jueves 26 de noviembre']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Reservar mi clase', url: 'https://tumbaobaila.com' }] },
+    ],
+  },
+  {
+    // 2 nov: «Regala Tumbao». Para quien compró una tiquetera: invita a regalar otra. Sin descuento. SOLO se crea en Meta (gratis).
+    name: 'regala_tumbao',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🎁\n\n' +
+          'Esta Navidad puedes regalar movimiento: una tiquetera de 4 u 8 clases para esa persona que quiere bailar más. ' +
+          'Tú la compras, le mandas el código por WhatsApp y ella o él reserva cuando quiera durante 30 días.',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Regalar una tiquetera', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 1 nov: Navidad en Tumbao. La dueña aprobó el premio por constancia (1 con la tiquetera de 4, 2 con la de 8).
     // Sin descuentos. SOLO se crea en Meta (gratis). Enviarla cuesta (marketing) y escribe a clientes reales: la autoriza Damián.
     name: 'navidad_tiquetera',
