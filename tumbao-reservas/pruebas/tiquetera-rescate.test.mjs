@@ -123,7 +123,7 @@ async function llamar({ ajuste = 'esperando_plantilla', metaEstado = 'APPROVED',
 }
 {
   ok('el cron del Worker (cada 10 minutos) lo revisa, con su propio catch para que un fallo no frene la liberación de cupos',
-     /activarRecordatorioTiquetera\(env\)\.catch\(/.test(w) && /await frenoAutomatico\(env\)\.catch[\s\S]{0,200}activarRecordatorioTiquetera\(env\)[\s\S]{0,300}liberar_cupos_expirados/.test(w));
+     /activarRecordatorioTiquetera\(env\)\.catch\(/.test(w) && /await frenoAutomatico\(env\)\.catch[\s\S]{0,200}activarRecordatorioTiquetera\(env\)[\s\S]{0,800}liberar_cupos_expirados/.test(w));
   ok('el asistente y el bot de ventas reciben la tiquetera pendiente', /tiquetera_pendiente: perfil\.tiquetera_pendiente \|\| null/.test(w));
 }
 

@@ -69,6 +69,7 @@ const SUITES = [
   'navidad-enero-regalo',
   'plantillas-imagen',
   'encuesta-masiva',
+  'calendario-campanas',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',

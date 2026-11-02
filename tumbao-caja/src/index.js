@@ -1330,6 +1330,31 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 2 nov (Damián): «los mensajes a las clientas que solo vienen los sábados, ofreciendo la tiquetera». Precios de siempre
+    // (4 clases $52.000; la suelta $15.000) y «premiamos tu constancia». La manda el calendario de campañas (0199).
+    name: 'tiquetera_sabados',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 💃 Te hemos visto bailando los sábados en Tumbao ({{2}} en los últimos dos meses).\n\n' +
+          'Con la *tiquetera de 4 clases* ($52.000) cada sábado te sale en $13.000 en vez de $15.000, y apartas tu cupo con tiempo, ' +
+          'que los sábados se llenan. Si un día entre semana te provoca, también te sirve. Y si completas las 4, premiamos tu constancia con 1 clase más.',
+        example: { body_text: [['Laura', '3']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Ver tiqueteras', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov (Damián): encuesta masiva a toda la base. Lleva a «Tumbao opina» (opina.tumbaobaila.com), anónima y de 5 preguntas.
     // Se envía con campana_encuesta(true) cuando Meta la aprueba (marketing, ≈ $46 por mensaje).
     name: 'encuesta_tumbao',
@@ -2042,6 +2067,15 @@ async function asegurarPlantillas(env) {
                error: c.error ? (c.error.error_user_msg || c.error.message) : null });
   }
   return { ok: true, plantillas: out };
+}
+
+/* 0199 · Anota en ajustes.wa_plantillas_aprobadas las plantillas que Meta ya aprobó (y crea las que falten). */
+async function anotarPlantillasAprobadas(env) {
+  const r = await asegurarPlantillas(env);
+  if (!r || !r.ok) return r;
+  const aprobadas = r.plantillas.filter((p) => p.estado === 'APPROVED').map((p) => p.nombre).join(',');
+  await rpc(env, 'wa_plantillas_anotar', { p_aprobadas: aprobadas });
+  return { ok: true, aprobadas };
 }
 
 /* 0171 · /wa/campana-tiquetera: la campaña de la tiquetera por constancia. La llama un cron de la base cada hora.
@@ -4163,7 +4197,15 @@ export default {
       catch (e) { console.log('recordar tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
     }
     if (ruta === '/wa/plantillas' && request.method === 'GET') {
-      try { return json(await asegurarPlantillas(env), 200, origen); }
+      try {
+        const r = await asegurarPlantillas(env);
+        if (r && r.ok) {
+          await rpc(env, 'wa_plantillas_anotar', {
+            p_aprobadas: r.plantillas.filter((p) => p.estado === 'APPROVED').map((p) => p.nombre).join(','),
+          }).catch(() => null);
+        }
+        return json(r, 200, origen);
+      }
       catch (e) { return json({ ok: false, error: 'FALLA' }, 502, origen); }
     }
 
@@ -4882,6 +4924,11 @@ export default {
       await rpc(env, 'cron_latido', { p_cron: evento && evento.cron }).catch((e) => console.log('latido', e && e.message));
       await frenoAutomatico(env).catch((e) => console.log('freno', e && e.message));
       await activarRecordatorioTiquetera(env).catch((e) => console.log('recordar_tiquetera', e && e.message));
+      // 0199 · Una vez por hora: crea en Meta las plantillas que falten y anota cuáles están aprobadas, para que el calendario de
+      // campañas use la principal o la de respaldo.
+      if (new Date().getUTCMinutes() < 10) {
+        await anotarPlantillasAprobadas(env).catch((e) => console.log('plantillas', e && e.message));
+      }
       try {
         const r = await rpc(env, 'liberar_cupos_expirados', {});
         // PostgREST devuelve el entero pelado o envuelto según el caso.

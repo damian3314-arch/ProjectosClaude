@@ -49,7 +49,7 @@ titulo('2. El Worker');
 {
   ok('el centinela (cada hora) corre el freno y le avisa a Damián una vez al día', /frenoAutomatico\(env\)[\s\S]{0,200}f\.accion === 'apagado'[\s\S]{0,200}alerta\(`freno:\$\{hoy\}`/.test(w));
   ok('el cron del Worker anota el latido y corre el freno antes de liberar cupos',
-     /async scheduled\(evento, env, ctx\)[\s\S]{0,700}'cron_latido'[\s\S]{0,300}frenoAutomatico\(env\)[\s\S]{0,300}liberar_cupos_expirados/.test(w));
+     /async scheduled\(evento, env, ctx\)[\s\S]{0,700}'cron_latido'[\s\S]{0,300}frenoAutomatico\(env\)[\s\S]{0,900}liberar_cupos_expirados/.test(w));
   ok('si el latido o el freno fallan, liberar cupos sigue corriendo (cada uno con su catch)',
      /'cron_latido'[^\n]*\.catch\(/.test(w) && /frenoAutomatico\(env\)\.catch\(/.test(w));
   ok('lee la calidad del número a Meta y manda null si no puede (el freno no se dispara por un fallo de red)',
