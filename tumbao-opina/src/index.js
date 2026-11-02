@@ -1,4 +1,4 @@
-import { rutaInforme } from './informe.js';
+import { rutaInforme, rutaInformePanel } from './informe.js';
 /**
  * Tumbao · bot de opiniones
  *
@@ -1635,6 +1635,7 @@ export default {
        * aquí hay nombres, celulares y quejas de clientes.
        */
       // 2 nov: el informe de la encuesta (insights, correcciones, plan de acción y estrategia 2027).
+      if (ruta === '/api/admin/informe') return await rutaInformePanel(request, env, { sacarJSON, hayCF, MODELO_CF });
       if (ruta === '/informe') return await rutaInforme(request, env, { sacarJSON, hayCF, MODELO_CF });
 
       if (ruta === '/leer') {

@@ -406,6 +406,8 @@ const ADMIN = {
      mes en curso hasta hoy, que es lo que se mira al abrir la pestaña. */
   // 0190 · La meta del mes (cuánto falta por vender), quién ya tiene plan (fuera del ranking) y cambiar la meta.
   'meta-mes': { fn: 'admin_meta_mes', args: () => ({}) },
+  // 2 nov: el Worker de opiniones le pregunta a este quién es el dueño de un token del panel (solo rol), para abrir la sección «Opina».
+  'quien-soy': { fn: 'admin_quien_soy', args: () => ({}) },
   'planes-vigentes': { fn: 'admin_telefonos_con_plan', args: () => ({}) },
   'meta-fijar': { fn: 'admin_meta_fijar',
                 args: (b) => (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(b.mes || '')) && Number.isFinite(+b.cop)

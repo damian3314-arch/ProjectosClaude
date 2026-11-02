@@ -29,6 +29,8 @@ const CONFIG = {
   // Va por un Worker de Cloudflare, que además guarda la llave de
   // Supabase y deja solo cuatro endpoints expuestos.
   CAJA_BASE: 'https://tumbao-caja.damian3314.workers.dev',
+  // 2 nov: el informe de la encuesta («Opina») lo arma el Worker de opiniones; ahí vive lo que dijo la gente.
+  OPINA_BASE: 'https://opina.tumbaobaila.com',
   WHATSAPP_PAIS: '57',
   // Tiene que ser el mismo plazo que aplica admin_deshacer en Supabase.
   // Aquí solo sirve para la cuenta atrás; quien decide de verdad es la
@@ -593,6 +595,23 @@ const CONFIG = {
     font-size:.68rem;color:var(--gold);border-bottom:1px dotted currentColor;
     cursor:help;font-weight:600;letter-spacing:.01em;
   }
+  /* ═══ Opina (2 nov) ═══ */
+  .op-demo{margin-left:auto;display:inline-flex;gap:.35rem;align-items:center;cursor:pointer}
+  .op-resumen{font-size:1.02rem;line-height:1.5;color:var(--tx)}
+  .op-lista{list-style:none;margin:.2rem 0 0;padding:0;display:grid;gap:.5rem}
+  .op-lista li{display:block;font-size:.9rem;color:var(--tx-2)}
+  .op-lista li b{color:var(--tx)}
+  .op-lista .n{display:block;color:var(--tx-3);font-size:.76rem;font-variant-numeric:tabular-nums}
+  @media (min-width:700px){.ficha.op-col{grid-column:span 2}}
+  .op-lista .sub{grid-column:1/-1;font-size:.8rem;color:var(--tx-3);margin-top:-.15rem}
+  .op-ya{border-color:rgba(255,107,129,.5)}.op-ya .cab{color:var(--bad)}
+  .op-paso{display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;padding:.45rem 0;border-top:1px solid var(--line)}
+  .op-paso:first-of-type{border-top:0}
+  .op-paso i{flex:none;font-style:normal;font-weight:800;font-size:.7rem;color:#1a0a02;background:var(--gold);border-radius:99px;padding:.1rem .5rem;margin-top:.15rem}
+  .op-paso small{display:block;color:var(--tx-3);font-size:.76rem}
+  .op-acciones{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+  #op-marco{width:100%;height:78vh;min-height:30rem;border:1px solid var(--line);border-radius:var(--r);background:#0b0810}
+  .op-barra{height:6px;background:var(--bg-3);border-radius:99px;overflow:hidden;margin:.8rem 0}.op-barra i{display:block;height:100%;background:var(--gold)}
   /* La lista de salidas: concepto a la izquierda, plata a la derecha,
      alineada por la coma para compararla de un vistazo. */
   .ficha .renglones{
@@ -1770,6 +1789,7 @@ const CONFIG = {
   <symbol id="ph-bank" viewBox="0 0 256 256"><path d="M24,104H48v64H32a8,8,0,0,0,0,16H224a8,8,0,0,0,0-16H208V104h24a8,8,0,0,0,4.19-14.81l-104-64a8,8,0,0,0-8.38,0l-104,64A8,8,0,0,0,24,104Zm40,0H96v64H64Zm80,0v64H112V104Zm48,64H160V104h32ZM128,41.39,203.74,88H52.26ZM248,208a8,8,0,0,1-8,8H16a8,8,0,0,1,0-16H240A8,8,0,0,1,248,208Z"/></symbol>
   <symbol id="ph-calendar-dots" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z"/></symbol>
   <symbol id="ph-users-three" viewBox="0 0 256 256"><path d="M244.8,150.4a8,8,0,0,1-11.2-1.6A51.6,51.6,0,0,0,192,128a8,8,0,0,1-7.37-4.89,8,8,0,0,1,0-6.22A8,8,0,0,1,192,112a24,24,0,1,0-23.24-30,8,8,0,1,1-15.5-4A40,40,0,1,1,219,117.51a67.94,67.94,0,0,1,27.43,21.68A8,8,0,0,1,244.8,150.4ZM190.92,212a8,8,0,1,1-13.84,8,57,57,0,0,0-98.16,0,8,8,0,1,1-13.84-8,72.06,72.06,0,0,1,33.74-29.92,48,48,0,1,1,58.36,0A72.06,72.06,0,0,1,190.92,212ZM128,176a32,32,0,1,0-32-32A32,32,0,0,0,128,176ZM72,120a8,8,0,0,0-8-8A24,24,0,1,1,87.24,82a8,8,0,1,0,15.5-4A40,40,0,1,0,37,117.51,67.94,67.94,0,0,0,9.6,139.19a8,8,0,1,0,12.8,9.61A51.6,51.6,0,0,1,64,128,8,8,0,0,0,72,120Z"/></symbol>
+  <symbol id="ph-chat-circle-dots" viewBox="0 0 256 256"><path d="M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128ZM84,116a12,12,0,1,0,12,12A12,12,0,0,0,84,116Zm88,0a12,12,0,1,0,12,12A12,12,0,0,0,172,116Zm60,12A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Zm-16,0A88,88,0,1,0,51.81,172.06a8,8,0,0,1,.66,6.54L40,216,77.4,203.53a7.85,7.85,0,0,1,2.53-.42,8,8,0,0,1,4,1.08A88,88,0,0,0,216,128Z"/></symbol>
   <symbol id="ph-sign-out" viewBox="0 0 256 256"><path d="M120,216a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V40a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H56V208h56A8,8,0,0,1,120,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L204.69,120H112a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,229.66,122.34Z"/></symbol>
   <symbol id="ph-dots-three-outline" viewBox="0 0 256 256"><path d="M128,96a32,32,0,1,0,32,32A32,32,0,0,0,128,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,128,144ZM48,96a32,32,0,1,0,32,32A32,32,0,0,0,48,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,48,144ZM208,96a32,32,0,1,0,32,32A32,32,0,0,0,208,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,208,144Z"/></symbol>
   <symbol id="ph-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
@@ -1886,6 +1906,9 @@ const CONFIG = {
         <span class="ic" aria-hidden="true"><svg><use href="#ph-chart-line-up"/></svg></span>Resumen</button>
       <button class="tab sec" role="tab" id="tab-tesoreria" aria-selected="false" hidden>
         <span class="ic" aria-hidden="true"><svg><use href="#ph-bank"/></svg></span>Tesorería</button>
+
+      <button class="tab sec" role="tab" id="tab-opina" aria-selected="false" hidden>
+        <span class="ic" aria-hidden="true"><svg><use href="#ph-chat-circle-dots"/></svg></span>Opina</button>
 
       <div class="lat-grupo sec" id="grupo-ajustes">Ajustes</div>
       <button class="tab sec" role="tab" id="tab-horario" aria-selected="false">
@@ -2244,6 +2267,16 @@ const CONFIG = {
          El correo trae el monto, la cuenta de destino y la hora. Lo que
          no trae es a quién: en una transferencia solo viene el número.
          Por eso esta pantalla existe — alguien tiene que decirlo. -->
+    <!-- 2 nov · OPINA: lo que dijo la gente en la encuesta, ya convertido en acciones. Condensado; el informe completo se abre debajo. -->
+    <div class="panel" id="p-opina">
+      <div class="semana-bar">
+        <button class="btn-min ico-btn" id="op-recargar" title="Volver a calcular"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
+        <span class="suave" id="op-estado"></span>
+        <label class="suave op-demo"><input type="checkbox" id="op-demo"> ver ejemplo</label>
+      </div>
+      <div id="op-cuerpo"></div>
+    </div>
+
     <div class="panel" id="p-salidas">
       <div class="semana-bar">
         <button class="btn-min ico-btn" id="sal-recargar" title="Recargar"><svg aria-hidden="true"><use href="#ph-arrows-clockwise"/></svg><span class="sr">Recargar</span></button>
@@ -2795,6 +2828,8 @@ const CONFIG = {
     // La tesorería lleva la nómina de todo el mundo. La cajera no la ve
     // en la barra, y Postgres la rebota igual si se llegara a la ruta.
     $('#tab-tesoreria').hidden = esCajero;
+    // Opina (2 nov): lo que dijo la gente, con nombres y teléfonos si los dejaron. Propietario y administrador; el Worker de opiniones lo vuelve a verificar.
+    $('#tab-opina').hidden = esCajero || rol == null;
     // Un rótulo de grupo con todo lo suyo oculto es un rótulo suelto.
     $('#grupo-negocio').hidden = esCajero;
     $('#grupo-ajustes').hidden = esCajero && !vePropietario;
@@ -2804,7 +2839,7 @@ const CONFIG = {
     $('#tab-tiqueteras').classList.toggle('sec', !esCajero);
     $('#tab-resumen').classList.toggle('sec', esCajero);
     globoMas();
-    if (esCajero && ['horario', 'disfrutar', 'resumen', 'tesoreria'].includes(panelActual)) {
+    if (esCajero && ['horario', 'disfrutar', 'resumen', 'tesoreria', 'opina'].includes(panelActual)) {
       verPanel('tablero');
     }
   }
@@ -2954,7 +2989,7 @@ const CONFIG = {
   }
 
   const PANELES = ['resumen', 'tesoreria', 'tablero', 'horario', 'pendientes',
-                   'disfrutar', 'caja', 'mensualidad', 'salidas', 'tiqueteras', 'usuarios'];
+                   'disfrutar', 'caja', 'mensualidad', 'salidas', 'tiqueteras', 'usuarios', 'opina'];
   // El nombre de cada sección, para el título de arriba. Vive aquí y no
   // en el HTML porque en el celular el botón dice «Tesorería» en letra
   // pequeña y el título tiene que poder decir algo más largo.
@@ -2962,7 +2997,7 @@ const CONFIG = {
     resumen: 'Resumen', tesoreria: 'Tesorería', tablero: 'Tablero',
     horario: 'Horario', pendientes: 'Por validar', disfrutar: 'Por disfrutar',
     caja: 'Caja', mensualidad: 'Mensualidad', usuarios: 'Usuarios',
-    salidas: 'Salidas por clasificar', tiqueteras: 'Tiqueteras',
+    salidas: 'Salidas por clasificar', tiqueteras: 'Tiqueteras', opina: 'Opina',
   };
   /* ---------- «Más», la hoja del celular ----------
      Abre la misma <nav> hacia arriba, con las secciones que no caben en
@@ -7631,6 +7666,97 @@ const CONFIG = {
     $('#p-tesoreria').classList.add('abierta');
     llenarMeses(); cargarTesoreria(true);
   });
+
+  /* ═══════════════ Opina: la encuesta, condensada (2 nov) ═══════════════
+     Condensado aquí; el informe completo (todas las secciones, con matriz y estrategia) se abre debajo en un marco aislado, que además se
+     puede imprimir o guardar como PDF. El análisis lo hace el Worker de opiniones; aquí solo se pregunta y se pinta. */
+  let opinaN = '', opinaPagina = '', opinaPidiendo = false;
+  async function cargarOpina(recalcular) {
+    if (opinaPidiendo) return;
+    opinaPidiendo = true;
+    if (recalcular === true) opinaN = String(Date.now());
+    const demo = $('#op-demo').checked;
+    try {
+      const res = await fetch(`${CONFIG.OPINA_BASE}/api/admin/informe`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, n: opinaN, demo }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.status === 401) { cerrarSesion('El token no sirve o fue revocado. Entra de nuevo.'); return; }
+      if (res.status === 403) { $('#op-cuerpo').innerHTML = '<p class="suave">Esta sección es del propietario y de quien administra.</p>'; return; }
+      if (!res.ok || !d.ok) throw new Error(d.error || ('Error ' + res.status));
+      pintarOpina(d);
+    } catch (e) {
+      $('#op-estado').textContent = '';
+      $('#op-cuerpo').innerHTML = '<p class="suave">No pudimos cargar la encuesta ahora. Toca recargar en un momento.</p>';
+    } finally { opinaPidiendo = false; }
+  }
+
+  function pintarOpina(d) {
+    const caja = $('#op-cuerpo');
+    $('#op-estado').textContent = '';
+    if (d.estado === 'pocas') {
+      caja.innerHTML = `<div class="ficha ancha"><div class="cab">La encuesta</div><div class="op-resumen">Todavía no hay suficientes respuestas: van ${d.total}. ` +
+        `Cuando lleguen ${d.minimo} o más, aquí aparece el informe con las acciones. Mientras tanto puedes marcar «ver ejemplo» arriba.</div></div>`;
+      return;
+    }
+    if (d.estado === 'avance') {
+      const pct = Math.round(d.avance.hechas / d.avance.total * 100);
+      caja.innerHTML = `<div class="ficha ancha"><div class="cab">Armando el informe</div><div class="op-resumen">Leyendo y agrupando lo que contó la gente… ${d.avance.hechas} de ${d.avance.total}.</div>` +
+        `<div class="op-barra"><i style="width:${pct}%"></i></div></div>`;
+      setTimeout(() => { if (panelActual === 'opina') cargarOpina(); }, 1500);
+      return;
+    }
+    if (d.estado === 'error') {
+      caja.innerHTML = `<p class="suave">No se pudo armar el informe (${esc(d.mensaje || '')}). Toca recargar en un momento.</p>`;
+      return;
+    }
+    const r = d.informe, p = d.part;
+    opinaPagina = d.pagina || '';
+    const top = (l, n) => (l || []).slice(0, n);
+    const lista = (items, tit, sub) => items.length ? `<ul class="op-lista">${items.map(i =>
+      `<li><b>${esc(tit(i))}</b><span class="n">${esc(i.cuantos || '')}</span>${sub && sub(i) ? `<span class="sub">${esc(sub(i))}</span>` : ''}</li>`).join('')}</ul>`
+      : '<p class="suave">Nada para destacar por ahora.</p>';
+    // Los primeros pasos: lo de mucho impacto y poco esfuerzo va primero.
+    const peso = a => (a.impacto === 'alto' ? 0 : a.impacto === 'medio' ? 2 : 4) + (a.esfuerzo === 'bajo' ? 0 : a.esfuerzo === 'medio' ? 1 : 2);
+    const pasos = (r.acciones || []).slice().sort((a, b) => peso(a) - peso(b)).slice(0, 4);
+    caja.innerHTML =
+      `<div class="fichas">
+         <div class="ficha"><div class="cab">Respondieron</div><div class="gordo">${p.total}</div></div>
+         <div class="ficha"><div class="cab">Terminaron las 5</div><div class="gordo">${p.completas}</div></div>
+         <div class="ficha"><div class="cab">Dejaron datos</div><div class="gordo">${p.con_contacto}</div></div>
+         <div class="ficha ${p.urgentes ? 'op-ya' : ''}"><div class="cab">Casos para atender</div><div class="gordo">${p.urgentes}</div></div>
+         <div class="ficha ancha"><div class="cab">En resumen</div><div class="op-resumen">${esc(r.resumen)}</div>${d.desde ? `<p class="suave">${esc(d.desde)}</p>` : ''}</div>
+         <div class="ficha ancha op-ya"><div class="cab">Lo urgente: corregir ya</div>${(r.ya || []).length
+           ? top(r.ya, 3).map(i => `<div class="op-paso"><i>YA</i><div><b>${esc(i.que)}</b><small>${esc(i.que_hacer || i.por_que)}</small></div></div>`).join('')
+           : '<p class="suave">Nada crítico en lo que dijeron.</p>'}</div>
+         <div class="ficha op-col"><div class="cab">Lo que más aman</div>${lista(top(r.aman, 3), i => i.tema)}</div>
+         <div class="ficha op-col"><div class="cab">Lo que más piden cambiar</div>${lista(top(r.cambiar, 3), i => i.tema)}</div>
+         <div class="ficha op-col"><div class="cab">Por qué se irían</div>${lista(top(r.fuga, 2), i => i.razon)}</div>
+         <div class="ficha op-col"><div class="cab">Lo que quieren en 2027</div>${lista(top(r.deseos, 2), i => i.idea)}</div>
+         <div class="ficha ancha"><div class="cab">Primeros pasos</div>${pasos.length ? pasos.map(a =>
+           `<div class="op-paso"><i>${esc(a.plazo === 'esta semana' ? 'YA' : a.plazo === '30 días' ? '30d' : '2027')}</i><div><b>${esc(a.accion)}</b><small>${esc(a.area)} · lleva ${esc(a.responsable || '—')} · ${esc(a.metrica || '')}</small></div></div>`).join('')
+           : '<p class="suave">Aún no hay acciones.</p>'}</div>
+         ${r.estrategia && r.estrategia.tesis ? `<div class="ficha ancha"><div class="cab">La apuesta 2027</div><div class="op-resumen">${esc(r.estrategia.tesis)}</div></div>` : ''}
+       </div>
+       <div class="op-acciones"><button class="btn" id="op-completo" type="button">Ver informe completo</button></div>
+       <div id="op-marco-caja" hidden></div>`;
+    $('#op-completo').addEventListener('click', () => {
+      const cont = $('#op-marco-caja');
+      if (!cont.hidden) { cont.hidden = true; $('#op-completo').textContent = 'Ver informe completo'; return; }
+      // Marco aislado (sin acceso al panel): trae su propio botón de imprimir o guardar como PDF.
+      cont.innerHTML = '<iframe id="op-marco" sandbox="allow-scripts allow-modals" title="Informe completo de la encuesta"></iframe>';
+      $('#op-marco').srcdoc = opinaPagina;
+      cont.hidden = false;
+      $('#op-completo').textContent = 'Ocultar informe completo';
+      cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('#op-estado').textContent = d.part && d.part.total ? 'Encuesta · ' + p.total + ' respuestas' : '';
+  }
+  $('#tab-opina').addEventListener('click', () => { verPanel('opina'); cargarOpina(); });
+  $('#op-recargar').addEventListener('click', () => cargarOpina(true));
+  $('#op-demo').addEventListener('change', () => cargarOpina());
+
 
   /* ═══════════════ salidas de la cuenta por clasificar ═══════════════
      El correo del banco ya llegaba y ya se guardaba; el parser incluso

@@ -425,6 +425,54 @@ export const EJEMPLO = {
 
 /* ───────────────────────── la ruta ───────────────────────── */
 
+/** El estado del informe, igual para la página y para el panel: { estado: 'pocas'|'avance'|'listo'|'error', ... }. */
+export async function estadoInforme(env, deps, nonce) {
+  const personas = await personasDeLaEncuesta(env);
+  if (personas.length < MINIMO) return { estado: 'pocas', total: personas.length, minimo: MINIMO };
+  try {
+    const paso = await avanzarInforme(env, deps, personas, nonce);
+    if (paso.avance) return { estado: 'avance', avance: paso.avance };
+    const urgentes = personas.filter((p) => p.urgente).slice(0, 12).map((p) => ({ motivo: p.motivo_urgente, resumen: p.resumen, nombre: p.nombre, telefono: p.telefono }));
+    const aviso = personas.length < 30 ? `Son ${personas.length} respuestas: sirve para ver por dónde va la cosa, pero hay que leerlo con cuidado.` : '';
+    return { estado: 'listo', part: participacion(personas), informe: paso.informe, urgentes, desde: aviso };
+  } catch (e) {
+    return { estado: 'error', mensaje: String((e && e.message) || e).slice(0, 120) };
+  }
+}
+
+const CAJA = 'https://tumbao-caja.damian3314.workers.dev';
+const ORIGENES_PANEL = new Set(['https://tumbaobaila.com', 'https://www.tumbaobaila.com']);
+
+/** POST /api/admin/informe {token, n?}: lo que lee la sección «Opina» del panel. El token es el del panel; aquí se le pregunta al Worker de la caja
+ *  de quién es y solo pasan el propietario y el administrador (la cajera y los token viejos sin rol no ven lo que dice la gente). */
+export async function rutaInformePanel(request, env, deps) {
+  const origen = request.headers.get('Origin');
+  const cab = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store',
+    ...(origen && ORIGENES_PANEL.has(origen) ? { 'Access-Control-Allow-Origin': origen, 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' } : {}) };
+  const responder = (o, estado = 200) => new Response(JSON.stringify(o), { status: estado, headers: cab });
+  if (request.method === 'OPTIONS') return new Response(null, { headers: cab });
+  if (request.method !== 'POST') return responder({ ok: false, error: 'METODO' }, 405);
+  let b = {};
+  try { b = await request.json(); } catch (_) { /* sin cuerpo */ }
+  const token = String(b.token || '');
+  if (!token) return responder({ ok: false, error: 'NO_AUTORIZADO' }, 401);
+  let quien = null;
+  try {
+    const r = await (deps.caja || fetch)(`${CAJA}/api/admin/quien-soy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    quien = await r.json().catch(() => null);
+  } catch (_) { /* queda null */ }
+  if (!quien || quien.ok !== true) return responder({ ok: false, error: 'NO_AUTORIZADO' }, 401);
+  if (!['propietario', 'administrador'].includes(quien.rol)) return responder({ ok: false, error: 'SIN_PERMISO' }, 403);
+
+  const est = b.demo === true ? { estado: 'listo', ...EJEMPLO, desde: '' } : await estadoInforme(env, deps, String(b.n || '').slice(0, 20));
+  if (est.estado === 'listo') {
+    // La presentación completa, para abrirla en otra pestaña o imprimirla desde el panel (sin la llave de /leer).
+    est.pagina = paginaInforme({ token: '', demo: b.demo === true, part: est.part, informe: est.informe, urgentes: est.urgentes, desde: est.desde })
+      .replace(/<a href="\/(leer|informe)[^>]*>[^<]*<\/a>( · )?/g, '');
+  }
+  return responder({ ok: true, ...est });
+}
+
 export async function rutaInforme(request, env, deps) {
   const url = new URL(request.url);
   const html = (cuerpo, estado = 200) => new Response(cuerpo, { status: estado, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -434,19 +482,13 @@ export async function rutaInforme(request, env, deps) {
 
   if (url.searchParams.get('demo') === '1') return html(paginaInforme({ token, demo: true, ...EJEMPLO }));
 
-  const personas = await personasDeLaEncuesta(env);
   const nonce = url.searchParams.get('n') || '';
-  if (personas.length < MINIMO) {
+  const est = await estadoInforme(env, deps, nonce);
+  if (est.estado === 'pocas') {
     return html(paginaEstado('Todavía no hay suficientes respuestas',
-      `Van ${personas.length}. Con ${MINIMO} o más ya se puede armar el informe; entre más respondan, más sólido sale.`, false, token, nonce));
+      `Van ${est.total}. Con ${est.minimo} o más ya se puede armar el informe; entre más respondan, más sólido sale.`, false, token, nonce));
   }
-  try {
-    const paso = await avanzarInforme(env, deps, personas, nonce);
-    if (paso.avance) return html(paginaEstado('Armando el informe…', 'Estamos leyendo y agrupando lo que contó la gente.', true, token, nonce, paso.avance));
-    const urgentes = personas.filter((p) => p.urgente).slice(0, 12).map((p) => ({ motivo: p.motivo_urgente, resumen: p.resumen, nombre: p.nombre, telefono: p.telefono }));
-    const aviso = personas.length < 30 ? `Son ${personas.length} respuestas: sirve para ver por dónde va la cosa, pero hay que leerlo con cuidado.` : '';
-    return html(paginaInforme({ token, demo: false, part: participacion(personas), informe: paso.informe, urgentes, desde: aviso }));
-  } catch (e) {
-    return html(paginaEstado('No se pudo armar el informe', `Falló el análisis (${String((e && e.message) || e).slice(0, 100)}). Vuelve a intentarlo en un momento.`, false, token, nonce), 502);
-  }
+  if (est.estado === 'avance') return html(paginaEstado('Armando el informe…', 'Estamos leyendo y agrupando lo que contó la gente.', true, token, nonce, est.avance));
+  if (est.estado === 'error') return html(paginaEstado('No se pudo armar el informe', `Falló el análisis (${est.mensaje}). Vuelve a intentarlo en un momento.`, false, token, nonce), 502);
+  return html(paginaInforme({ token, demo: false, part: est.part, informe: est.informe, urgentes: est.urgentes, desde: est.desde }));
 }

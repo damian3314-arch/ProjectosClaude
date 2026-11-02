@@ -462,3 +462,12 @@ Tiene botón de imprimir / guardar como PDF. `&demo=1` muestra el mismo informe 
 - El resultado queda en la caché de Cloudflare con la huella de las conversaciones: abrir la página otra vez no llama al modelo. «Volver a calcular» lo fuerza.
 - Al modelo no viajan teléfonos, correos ni el nombre que la persona dejó. Los números que el modelo dice se bajan al total real de personas.
 - Con `OPENAI_API_KEY` usa OpenAI (`MODELO_INFORME` o `MODELO_CHAT`); sin ella, Workers AI. Para un informe de más calidad conviene la llave de OpenAI.
+
+### «Opina» en el panel (admin)
+
+La pestaña **Opina** de tumbaobaila.com/admin (propietario y administrador; la cajera no la ve) muestra la encuesta condensada —cifras, lo urgente, lo que
+aman, lo que piden cambiar, por qué se irían, lo que quieren en 2027, los primeros pasos y la apuesta 2027— y un botón «Ver informe completo» que abre la
+presentación entera en un marco aislado (con botón de imprimir / PDF). «Ver ejemplo» muestra datos inventados.
+
+El panel llama a `POST /api/admin/informe` de este Worker con el token del panel; el Worker le pregunta al Worker de la caja de quién es
+(`/api/admin/quien-soy` → `admin_quien_soy`, 0198) y solo deja pasar al propietario y al administrador. No hace falta la llave de `/leer`.
