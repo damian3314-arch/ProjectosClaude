@@ -81,13 +81,3 @@ Tu patrón documentado es construir infraestructura y documentación antes de qu
 > Si la respuesta es no, la prioridad es shippear lo mínimo usable, no seguir planificando.
 
 Esto aplica en frío: si pides documentar o diseñar algo nuevo sin que lo anterior esté en uso real, Claude Code te lo señala antes de ejecutar.
-
----
-
-## 7. Checklist de arranque (sin teatro de "confirma asimilación")
-
-Al cargar este archivo en una sesión nueva, Claude Code simplemente:
-
-1. Lee este índice + el sub-archivo relevante a la tarea pedida.
-2. Verifica estado actual del repo (qué existe, qué no).
-3. Empieza a ejecutar lo que esté en verde/amarillo. No pide confirmación de haber "entendido el framework" — eso no aporta nada, solo ejecuta.
