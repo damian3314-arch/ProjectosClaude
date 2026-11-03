@@ -39,7 +39,7 @@ import { estiloDelInforme, alertasDelDia, esPedidoDeDetalle, modoPedido, INSTRUC
 import { esRespuestaAutomatica, esImagenDeChat, RESPUESTA_IMAGEN_VENTAS, INSTRUCCIONES_VENTAS, MAX_TURNOS_VENTAS, RESPUESTA_SEGURA_VENTAS, guardarRespuestaVentas, opcionesDeVenta, textoSeguimientoVentas, conEnlaceDeChat, llevaEnlaceDeCompra, textoRecepcionEnlace } from './ventas.js';
 import { ENLACE_RECEPCION, conRecepcion, enlaceRecepcion } from './recepcion.js';
 import { hoyBogota, conFechas, textoHorarios, traeListaDeHoras } from './horarios.js';
-import { INSTRUCCIONES_SALIDAS, CATEGORIAS_SALIDA, esLuego, interpretarSalida, textoPreguntaSalida, textoSalidaRegistrada, textoSalidaDescartada, aclaracionesSeguidas } from './salidas.js';
+import { INSTRUCCIONES_SALIDAS, CATEGORIAS_SALIDA, esLuego, esOtraConsulta, pideVerLaSalida, interpretarSalida, textoPreguntaSalida, textoSalidaRegistrada, textoSalidaDescartada, aclaracionesSeguidas } from './salidas.js';
 import { esRedes, INSTRUCCIONES_REDES, PLAN_CONTENIDO, guardarRespuestaRedes, RESPUESTA_REDES_SEGURA } from './redes.js';
 import { repiteMensaje, INSTRUCCIONES_ASISTENTE, MAX_TURNOS_ASISTENTE, RESPUESTA_SEGURA_ASISTENTE, guardarRespuestaAsistente, esAfirmativo, esNegativo, limpiarNombre, textoPropuesta, textoReservaHecha, textoPideComprobanteNueva, textoSinResumen, textoNoReserve, textoNoAutoriza, textoPreguntaFaltante, textoErrorReserva, textoImagenSinReserva, botonesPropuesta, leerBoton, textoToqueElBoton, textoBotonViejo, textoSinBotones, BOTON_SI, BOTON_NO } from './asistente.js';
 import { INSTRUCCIONES_PAGO, MAX_TURNOS_PAGO, RESPUESTA_SEGURA_PAGO, guardarRespuestaPago, textoDatosDePago, textoPideComprobante, textoComprobanteIlegible, textoSoloImagen, textoSoporteRecibido, textoPagoConfirmado, textoEnRevision, textoPagoNoValidado, textoEfectivo, esProblemaDePago, textoEfectivoNoDisponible, textoSinCupo, textoRecepcionPago, pagadoEnDeHora, leerMarcaDeImagen, validarComprobante, textoComprobanteNoCuadra, textoComprobanteRevisaEquipo, MAX_INTENTOS_COMPROBANTE } from './pago.js';
@@ -3907,6 +3907,14 @@ async function atenderSalida(env, m, q) {
     return '\n\n' + textoPreguntaSalida(sig, 0);
   };
   const quedan = (r) => Number(r && r.quedan != null ? r.quedan : 0);
+  // 3 nov · Si Tania pregunta otra cosa (reservas, ventas...), la salida queda para otro día y la consulta la contesta el
+  // asistente general (devolver null = seguir con el resto de agenteWA). Antes Timba se quedaba pegada en la salida.
+  const dejarParaLuego = async () => { await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {}); return null; };
+  if (pideVerLaSalida(m.texto)) {
+    return '¡Hola! 👋 Te pregunto por esta salida del banco:\n\n' + textoPreguntaSalida(q, 0) +
+      '\n\nSi necesitas otra cosa, pregúntame directo y esta la dejo para otro día.';
+  }
+  if (esOtraConsulta(m.texto)) return dejarParaLuego();
 
   if (esLuego(m.texto)) {
     await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {});
@@ -3931,6 +3939,7 @@ async function atenderSalida(env, m, q) {
     j = leerJSON(await redactar(env, INSTRUCCIONES_SALIDAS, entrada, 'low').catch((e) => { console.log('salidas', e && e.message); return ''; }));
   }
   const it = interpretarSalida(j);
+  if (it.accion === 'otra_cosa') return dejarParaLuego();
 
   if (it.accion === 'clasificar') {
     const r = await rpc(env, 'salida_clasificar_timba',
@@ -3953,7 +3962,9 @@ async function atenderSalida(env, m, q) {
     await rpc(env, 'salida_saltar_timba', { p_id: q.id }).catch(() => {});
     return 'Sin problema, la dejo pendiente 👌 Te la vuelvo a preguntar otro día.';
   }
-  return it.mensaje;
+  // La aclaración siempre dice de qué salida se habla (antes llegaba «¿A qué corresponde esta salida?» sin decir cuál).
+  return it.mensaje + '\n\n(Es la de *$' + Number(q.valor_cop || 0).toLocaleString('es-CO') + '* del ' + q.cuando +
+    '. Si no sabes, escribe «luego»; si necesitas otra cosa, pregúntame directo.)';
 }
 
 async function agenteWA(request, env, origen) {
@@ -3978,9 +3989,10 @@ async function agenteWA(request, env, origen) {
         : 'No tengo resúmenes pendientes 👌 Pregúntame lo que necesites de Tumbao.';
     } else if (m.tipo !== 'text' || !m.texto) {
       respuesta = 'Por ahora solo entiendo mensajes de texto 🙏 Escríbeme tu pregunta.';
-    } else if ((salidaAbierta = await rpc(env, 'salida_pregunta_actual', { p_tel: m.telefono }).catch(() => null)) && salidaAbierta.id) {
-      // 0190 · Tania contesta a qué corresponde una salida del banco: lo registra Timba (apagado hasta que Damián confirme su número).
-      respuesta = await atenderSalida(env, m, salidaAbierta);
+    } else if ((salidaAbierta = await rpc(env, 'salida_pregunta_actual', { p_tel: m.telefono }).catch(() => null)) && salidaAbierta.id
+               && (respuesta = await atenderSalida(env, m, salidaAbierta))) {
+      // 0190 · Tania contesta a qué corresponde una salida del banco: lo registra Timba. Si escribió otra cosa, atenderSalida
+      // devuelve null y el mensaje sigue a las ramas de abajo (3 nov).
     } else if (esPedidoDeDetalle(m.texto) && env.OPENAI_API_KEY) {
       // 0160: «detalle» = el informe completo, ahora. Mañana si todavía no son las 3 pm; si no, el del día.
       await responderYGuardar(env, m.telefono, 'Dame un momento y te armo el detalle 🙌');

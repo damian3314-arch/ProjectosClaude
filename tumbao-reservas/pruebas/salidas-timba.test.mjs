@@ -136,5 +136,28 @@ const textoEnviado = (t) => t.enviados.map(e => e.text && e.text.body).filter(Bo
   ok('tres aclaraciones seguidas: la deja para recepción en vez de dar vueltas', t.rpcs.some(r => r.fn === 'salida_saltar_timba') && /recepción/.test(textoEnviado(t)));
 }
 
+titulo('5. No se queda pegada (3 nov: Tania preguntaba por reservas y Timba solo repetía la salida)');
+for (const texto of ['cuantas reservas hay para clase de 5 pm ?', 'dame el dato de las reservas clase suelta hoy \n6 pm \n7 pm', 'Dame el dato de la reservas de hoy']) {
+  // El «modelo» simulado aquí contesta como el asistente general: si la respuesta llega, la consulta no se quedó en la salida.
+  const t = await conversacion({ texto, modelo: 'Hoy hay 2 reservas a las 6 pm' });
+  const tx = textoEnviado(t);
+  ok(`«${texto.split('\n')[0]}» deja la salida para otro día y pasa al asistente general`,
+     t.rpcs.some(r => r.fn === 'salida_saltar_timba') && !t.rpcs.some(r => r.fn === 'salida_clasificar_timba') && /Hoy hay 2 reservas/.test(tx) && !/Es la de \*\$60/.test(tx), tx);
+}
+{
+  const t = await conversacion({ texto: 'oye y la profe de hoy quién es', modelo: { accion: 'otra_cosa' } });
+  ok('si el modelo dice «otra_cosa», tampoco se queda pegada', t.rpcs.some(r => r.fn === 'salida_saltar_timba') && !/A qué corresponde/.test(textoEnviado(t)));
+}
+for (const texto of ['hola', 'cuál', '¿cuál?']) {
+  const t = await conversacion({ texto, modelo: { accion: 'aclarar', mensaje: '¿A qué corresponde esta salida de plata?' } });
+  const tx = textoEnviado(t);
+  ok(`«${texto}» le vuelve a mostrar la salida con valor y fecha`, /60\.000/.test(tx) && /20\/10/.test(tx) && /otra cosa/.test(tx) && !t.rpcs.some(r => r.fn === 'salida_saltar_timba'), tx);
+}
+{
+  const t = await conversacion({ texto: 'pagué algo', modelo: { accion: 'aclarar', mensaje: '¿A quién le pagaste?' } });
+  ok('la aclaración dice de qué salida se habla', /60\.000/.test(textoEnviado(t)) && /20\/10/.test(textoEnviado(t)));
+}
+ok('el guion del modelo conoce la acción «otra_cosa»', /otra_cosa/.test(INSTRUCCIONES_SALIDAS) && interpretarSalida({ accion: 'otra_cosa' }).accion === 'otra_cosa');
+
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

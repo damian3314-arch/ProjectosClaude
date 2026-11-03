@@ -21,11 +21,12 @@ export const CATEGORIAS_SALIDA = {
 export const INSTRUCCIONES_SALIDAS = `Eres Timba, la asistente de Tumbao. Le preguntaste a Tania (una de las dueñas) a qué corresponde una salida de plata del banco y ella te contesta. Tu trabajo es SOLO interpretar su respuesta.
 
 Devuelve un JSON con esta forma exacta y nada más:
-{"accion":"clasificar|descartar|luego|aclarar","categoria":"…","concepto":"…","a_quien":"…","mensaje":"…"}
+{"accion":"clasificar|descartar|luego|aclarar|otra_cosa","categoria":"…","concepto":"…","a_quien":"…","mensaje":"…"}
 
 - "clasificar": ella dice a qué corresponde. "categoria" es UNA de: ${Object.keys(CATEGORIAS_SALIDA).join(', ')}. "concepto" es una frase corta y clara que escribes tú con sus palabras (ej. «Clase profe Nagle», «Arriendo del salón»). "a_quien" es la persona o empresa si la dice; si no, vacío.
 - "descartar": dice que NO es un gasto del negocio, que es un traslado entre cuentas o que ya estaba registrada. "mensaje" lleva el motivo con sus palabras.
 - "luego": no sabe, lo dejará para después, o te pide saltarla.
+- "otra_cosa": su mensaje NO responde por la salida: te pide un dato o te pregunta otra cosa del negocio (reservas, ventas, clases, cupos, mensualidades, un informe…). En ese caso no clasifiques nada; otro asistente le contesta.
 - "aclarar": su respuesta no alcanza para clasificar. "mensaje" es UNA pregunta corta y concreta (en tuteo, amable, sin emojis de más).
 
 Reglas:
@@ -41,6 +42,22 @@ export function esLuego(texto) {
   return /^(luego|despues|mas tarde|ahora no|no se|nose|ni idea|no recuerdo|no la recuerdo|salta(r)?|siguiente|paso)\b/.test(norm(texto));
 }
 
+/** 3 nov · Tania escribió otra cosa (una consulta, un pedido de datos) mientras había una salida abierta. Antes Timba tomaba todo
+ * como respuesta a la salida y se quedaba pegada; ahora la consulta pasa al asistente general y la salida queda para otro día.
+ * Se reconoce sin el modelo lo evidente; lo dudoso lo decide el modelo con la acción "otra_cosa". */
+export function esOtraConsulta(texto) {
+  const t = norm(texto);
+  if (!t) return false;
+  if (/^(dame|dime|damelo|pasame|muestrame|mandame|enviame|necesito|quiero saber|cuant[oa]s?|como (van|vamos|va|estamos)|que (hay|tal|clases)|hay (cupo|clase|reserva)s?|ver resumen|resumen|detalle|informe)\b/.test(t)) return true;
+  if (/(reserva|clase|cupo|mensualidad|tiquetera|venta|vendimos|asistencia|alumn|inscrit|horario|pm\b|am\b)/.test(t) && /(\?|^(cuant|cual|como|que|quien|donde|cuando|hay|dame|dime))/.test(t)) return true;
+  return false;
+}
+
+/** «hola», «¿cuál?», «qué salida»: no sabe de qué le hablan. Se le vuelve a mostrar la salida completa. */
+export function pideVerLaSalida(texto) {
+  return /^(hola|holi|buenas|buenos dias|buenas tardes|buenas noches|cual|cual salida|que salida|cual es|que|como asi|de que|\?+|cual\?)\W*$/.test(norm(texto).replace(/[¿?!¡.]+/g, (x) => (x.includes('?') ? '?' : '')).trim());
+}
+
 /** Valida lo que devolvió el modelo. Devuelve {accion, ...} o {accion:'aclarar'} si no sirve para registrar nada. */
 export function interpretarSalida(j) {
   const aclarar = (mensaje) => ({ accion: 'aclarar', mensaje: mensaje || '¿Me cuentas un poco más a qué corresponde esa salida? Por ejemplo: «clase de Nagle» o «arriendo».' });
@@ -48,6 +65,7 @@ export function interpretarSalida(j) {
   const accion = String(j.accion || '').toLowerCase();
   const limpio = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
   if (accion === 'luego') return { accion: 'luego' };
+  if (accion === 'otra_cosa') return { accion: 'otra_cosa' };
   if (accion === 'descartar') {
     const motivo = limpio(j.mensaje, 160);
     return motivo ? { accion: 'descartar', motivo } : aclarar('¿Por qué no cuenta como gasto? Por ejemplo: «es un traslado» o «ya la había registrado».');
