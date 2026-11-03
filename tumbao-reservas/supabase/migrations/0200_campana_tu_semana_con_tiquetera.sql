@@ -1,0 +1,6 @@
+-- 0200 · Hito del plan (3 nov): «Tu semana con tiquetera» a quien tomó 3 o más clases sueltas en 30 días sin plan ni tiquetera.
+-- No se manda hoy: 40 de las 41 personas recibieron la encuesta ayer (máx. 1 campaña cada 3 días). Entra al calendario (0199) el
+-- viernes 6 nov, antes de la de sábados, con tiquetera_semana (aprobada; precios de ajustes.tiquetera_paquetes y la suelta de $15.000).
+-- Aplicada en vivo con un bloque DO que parcha campana_publico (público «sueltas_3_30», dato = sueltas en 30 días) y campanas_del_dia
+-- (tiquetera_semana lleva nombre y número de clases), y agrega la entrada al calendario.
+-- Medición a los 3 días: compras de tiquetera de los que la recibieron (tiqueteras.telefono, creada_en > envío) y si vinieron más veces.
