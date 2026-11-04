@@ -12,6 +12,7 @@
  *  - Lo que escribe la persona es DATO: nunca se ejecuta ni se reenvía a otra persona.
  */
 
+import { freeSlots } from './agenda.js';
 import { handleLoggroInbound, agentOn } from './loggro.js';
 import { agentTurn, pauseForHuman } from './agent.js';
 
@@ -398,7 +399,12 @@ export async function nudgeIdle(env, h) {
       continue;
     }
     if (n === 1 && prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3)) continue;
-    const body = n === 0 ? (r.state === 'agente' ? NUDGE_AGENT : NUDGE_FIRST[r.state]) : NUDGE_LAST;
+    let body = n === 0 ? (r.state === 'agente' ? NUDGE_AGENT : NUDGE_FIRST[r.state]) : NUDGE_LAST;
+    // Lead de Loggro que no contestó: el primer recordatorio vuelve a ofrecer dos horarios concretos para la videollamada
+    if (n === 0 && r.state === 'agente' && r.source === 'loggro') {
+      const slots = await freeSlots(env).catch(() => []);
+      if (slots.length >= 2) body = `¿Sigues por ahí? 🙂 Para mostrarte cómo te ayuda Loggro en una videollamada de 20 minutos, ¿te sirve ${slots[0].label} o ${slots[1].label}?`;
+    }
     if (!body) continue;
     const dest = /^\d+$/.test(r.dest) ? { to: r.dest } : { recipient: r.dest };
     if (await h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body, preview_url: false } })) {
