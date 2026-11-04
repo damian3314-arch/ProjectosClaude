@@ -2348,6 +2348,29 @@ async function responderYGuardar(env, para, texto) {
   return id;
 }
 
+/* 3 nov (Damián): «Reactiva e invita a la gente a retomar aprovechando la ventana de 24 horas». El chat de Tumbao opina se quedó
+ * sin IA desde las 10 am (tope diario gratis de Cloudflare) y varias personas contestaron la primera pregunta sin respuesta. A
+ * quien recibió la encuesta Y le escribió a Timba en las últimas 23,5 h se le manda un texto libre (gratis, dentro de la ventana).
+ * Cada persona una sola vez: la base la marca en wa_avisos antes de enviar (encuesta_reactivar_lista). */
+export function textoReactivarEncuesta(nombre) {
+  const n = String(nombre || '').trim();
+  return `¡Hola${n ? ' ' + n : ''}! 🧡 Te escribimos de Tumbao.\n\n` +
+    'Hoy la encuesta «Tumbao opina» se nos quedó en silencio un rato y quizá no te respondió. Ya está arreglada 🙌\n\n' +
+    'Si la empezaste, o si no alcanzaste a abrirla, aún estás a tiempo: son 5 preguntas cortas y es anónima 👉 https://opina.tumbaobaila.com/\n\n' +
+    'Lo que nos cuentes lo usamos para subir el nivel en 2027. ¡Gracias!';
+}
+
+async function reactivarEncuesta(env) {
+  const lista = await rpc(env, 'encuesta_reactivar_lista', { p_marcar: true });
+  const filas = Array.isArray(lista) ? lista : [];
+  let enviados = 0, fallidos = 0;
+  for (const f of filas) {
+    try { await responderYGuardar(env, '57' + f.telefono, textoReactivarEncuesta(f.nombre)); enviados++; }
+    catch (e) { fallidos++; console.log('reactivar encuesta', e && e.message); }
+  }
+  return { ok: true, candidatos: filas.length, enviados, fallidos };
+}
+
 async function marcarLeido(env, waMsgId) {
   if (!waMsgId) return;
   await fetch(`${GRAPH}/${env.WHATSAPP_PHONE_ID}/messages`, {
@@ -4207,6 +4230,10 @@ export default {
     if (ruta === '/wa/recordar-tiquetera' && (request.method === 'POST' || request.method === 'GET')) {
       try { return json(await activarRecordatorioTiquetera(env), 200, origen); }
       catch (e) { console.log('recordar tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
+    }
+    if (ruta === '/wa/reactivar-encuesta' && request.method === 'POST') {
+      try { return json(await reactivarEncuesta(env), 200, origen); }
+      catch (e) { return json({ ok: false, error: String((e && e.message) || e).slice(0, 200) }, 500, origen); }
     }
     if (ruta === '/wa/plantillas' && request.method === 'GET') {
       try {

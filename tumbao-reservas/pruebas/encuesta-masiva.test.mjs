@@ -14,6 +14,10 @@ ok('sin descuentos ni regalos', !/descuento|regalo|gratis|premio/i.test(t));
 ok('la campaña respeta bajas, dueñas, campañas recientes y no repite', /wa_bajas/.test(mig) && /wa_es_dueno/.test(mig) && /interval '2 days'/.test(mig) && /plantilla='encuesta_tumbao'/.test(mig) && /on conflict \(clave\) do nothing/.test(mig));
 ok('con p_ejecutar en false solo cuenta', /where p_ejecutar/.test(mig) && /default false/.test(mig));
 
+ok('3 nov: reactivar la encuesta va solo por la ventana de 24 h, una vez por persona y sin ofertas',
+   /'\/wa\/reactivar-encuesta'/.test(caja) && /encuesta_reactivar_lista/.test(caja) && /p_marcar: true/.test(caja) &&
+   !/descuento|regalo|gratis|promoci/i.test(caja.slice(caja.indexOf('export function textoReactivarEncuesta'), caja.indexOf('async function reactivarEncuesta'))));
+
 titulo('2. El chat de Tumbao opina');
 const g = opina.slice(opina.indexOf('  escuchamos: {'), opina.indexOf('  aniversario: {'));
 ok('son cinco preguntas y dos extras opcionales (horario y música)', /nucleo: 5/.test(g) && /otro horario/.test(g) && /música o ritmos/.test(g) && (g.slice(g.indexOf('preguntas: [')).match(/^      '/gm) || []).length === 7);
