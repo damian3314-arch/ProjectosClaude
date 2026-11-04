@@ -1,0 +1,11 @@
+{
+  "name": "brag-tumbao",
+  "description": "Brag de tumbaobaila.com (20 s, vertical, estilo dark neón de Tumbao). Ver ../brag-plan.md.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.150 preview",
+    "check": "npx --yes hyperframes@0.8.150 check",
+    "render": "npx --yes hyperframes@0.8.150 render"
+  }
+}
