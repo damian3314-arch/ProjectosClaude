@@ -1355,6 +1355,30 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 4 nov (Damián: «enviar el recordatorio… hagámosle»): recordatorio de la encuesta a quienes la recibieron. Anónima: no se sabe
+    // quién ya contestó, por eso agradece a quien ya lo hizo. Sin ofertas. La envía campana_encuesta_recordatorio (0202).
+    name: 'encuesta_tumbao_recordatorio',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🧡 Ayer te escribimos para pedirte tu opinión y el chat estuvo caído un rato; ya está listo. ' +
+          'Si aún no la contestas, son 5 preguntas cortas y es anónima. Si ya lo hiciste, ¡gracias de corazón!',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Contar mi opinión', url: 'https://opina.tumbaobaila.com/' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov (Damián): encuesta masiva a toda la base. Lleva a «Tumbao opina» (opina.tumbaobaila.com), anónima y de 5 preguntas.
     // Se envía con campana_encuesta(true) cuando Meta la aprueba (marketing, ≈ $46 por mensaje).
     name: 'encuesta_tumbao',
