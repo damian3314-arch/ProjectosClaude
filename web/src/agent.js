@@ -76,6 +76,11 @@ export async function agentTurn(c) {
   if (!content) return;
 
   const chat = await loadChat(c);
+  // Cliente con una demo agendada (o con recordatorio reciente): Alter NO contesta. Le avisa a Damián para que responda él por su número directo.
+  if (c.source === 'loggro') {
+    const guard = await meetingGuard(c).catch(() => null);
+    if (guard) return meetingSilence(c, guard, content);
+  }
   // Si Damián tomó la conversación a mano, el agente ni contesta ni guarda lo que se escriben: son mensajes entre ellos, no del agente
   if (chat.paused_until && chat.paused_until > sqlTime(Date.now())) {
     if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
@@ -134,6 +139,28 @@ export async function agentTurn(c) {
     await logAssistant(c, all[i]);
   }
   await persist(c, chat, out, { product, videosSent, agendaSent: chat.agenda_sent || (wantsAgenda ? 1 : 0) });
+}
+
+// ¿Esta persona ya tiene una demo agendada con Damián? Sí si hay una reunión próxima con su teléfono en agenda_busy o si se le envió un recordatorio de demo en las últimas 48 h
+async function meetingGuard(c) {
+  const phone = c.row?.phone || c.key;
+  const now = sqlTime(Date.now());
+  const m = await c.env.DB.prepare("SELECT start_utc, label FROM agenda_busy WHERE phone = ? AND end_utc > start_utc AND end_utc > ? AND start_utc < ? ORDER BY start_utc LIMIT 1")
+    .bind(phone, sqlTime(Date.now() - 3 * 3600e3), sqlTime(Date.now() + 5 * 86400e3)).first().catch(() => null);
+  if (m) return { detail: `Tiene una reunión agendada (${slotLabel(Date.parse(m.start_utc.replace(' ', 'T') + 'Z'))}).` };
+  const r = await c.env.DB.prepare("SELECT sent_at FROM outbox WHERE phone = ? AND kind = 'recordatorio' AND status = 'sent' AND sent_at > ? LIMIT 1").bind(phone, sqlTime(Date.now() - 48 * 3600e3)).first();
+  if (r) return { detail: 'Le enviaste el recordatorio de su demo.' };
+  return null;
+}
+
+async function meetingSilence(c, guard, content) {
+  const { env, key } = c;
+  await env.DB.prepare('INSERT INTO agent_log (chat_key, role, content) VALUES (?, ?, ?)').bind(key, 'user', c.h.clean(content, 1500)).run();
+  const last = c.row?.reply_alert_at ? Date.parse(String(c.row.reply_alert_at).replace(' ', 'T') + 'Z') : 0;
+  if (Date.now() - last < 20 * 60e3) return; // un aviso cada 20 minutos por persona
+  await env.DB.prepare("UPDATE loggro_leads SET reply_alert_at = datetime('now') WHERE phone = ?").bind(c.row?.phone || key).run().catch(() => {});
+  const say = String(content).replace(/\s+/g, ' ').slice(0, 200);
+  await c.h.alertMessage(env, `📅 ${c.row?.name || 'Un cliente'} (+${c.row?.phone || key}) respondió: «${say}». ${guard.detail} No le contesté: respóndele tú por tu número directo. https://wa.me/${c.row?.phone || key}`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
 async function loadChat(c) {
