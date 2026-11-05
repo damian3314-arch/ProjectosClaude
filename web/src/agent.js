@@ -83,6 +83,8 @@ export async function agentTurn(c) {
   }
   // Si Damián tomó la conversación a mano, el agente ni contesta ni guarda lo que se escriben: son mensajes entre ellos, no del agente
   if (chat.paused_until && chat.paused_until > sqlTime(Date.now())) {
+    // Conversación que Alter le pasó a Damián: lo que escriba el cliente se le reenvía (un aviso cada 20 min); si Damián escribió a mano, él ya lo ve en su celular
+    if (c.source === 'loggro' && chat.stage === 'handoff') return meetingSilence(c, { detail: 'Esta conversación quedó en tus manos.' }, content);
     if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
     return;
   }
@@ -110,6 +112,14 @@ export async function agentTurn(c) {
   }
 
   if (out.is_auto_reply) { await logAssistant(c, '[respuesta automática del otro lado: no se contesta]'); return; }
+
+  // MODO A (Damián, 5 nov): Alter solo atiende lo rutinario. Si hay algo que Damián deba ver (una pregunta que Alter no sabe responder, soporte,
+  // o una conversación que se alarga), NO se envía nada: se le avisa a Damián con el borrador para que conteste él por su número directo.
+  if (c.source === 'loggro' && env.AGENT_MODE !== 'c') {
+    const maxTurns = Number(env.AGENT_MAX_TURNS) > 0 ? Number(env.AGENT_MAX_TURNS) : 8;
+    const why = out.handoff_reason ? out.handoff_reason : out.stage === 'support' ? 'Necesita soporte.' : (chat.turns || 0) >= maxTurns ? 'La conversación ya lleva varios turnos sin cita.' : null;
+    if (why && !out.chosen_slot) return escalateToDamian(c, out, content, why);
+  }
 
   const messages = out.messages.map(m => sanitize(c.h, m)).filter(Boolean).slice(0, 3);
   const extra = [];
@@ -151,6 +161,24 @@ async function meetingGuard(c) {
   const r = await c.env.DB.prepare("SELECT sent_at FROM outbox WHERE phone = ? AND kind = 'recordatorio' AND status = 'sent' AND sent_at > ? LIMIT 1").bind(phone, sqlTime(Date.now() - 48 * 3600e3)).first();
   if (r) return { detail: 'Le enviaste el recordatorio de su demo.' };
   return null;
+}
+
+async function escalateToDamian(c, out, content, why) {
+  const { env, key } = c;
+  const phone = c.row?.phone || key;
+  const draft = (out.messages || []).map(m => sanitize(c.h, m)).filter(Boolean).join(' ');
+  await logAssistant(c, `[borrador NO enviado: lo ve Damián] ${draft}`.slice(0, 1500));
+  await env.DB.prepare("UPDATE agent_chats SET stage = 'handoff', paused_until = datetime('now', '+1 day'), summary = ?, updated_at = datetime('now') WHERE chat_key = ?").bind(c.h.clean(`${out.summary || ''} Para Damián: ${why}`, 600), key).run();
+  await env.DB.prepare("UPDATE loggro_leads SET state = 'done', hot = 0, summary = ?, synced_state = NULL, updated_at = datetime('now') WHERE phone = ? AND state != 'optout'").bind(c.h.clean(`${out.summary || ''} Para Damián: ${why}`, 600), phone).run().catch(() => {});
+  const say = t => String(t || '').replace(/\s+/g, ' ').slice(0, 220);
+  await c.h.alertMessage(env, [
+    `✋ ${c.row?.name || 'Un cliente'} (+${phone}) necesita tu atención. No le contesté.`,
+    `Escribió: «${say(content)}»`,
+    `Por qué: ${say(why)}`,
+    draft && `Borrador de Alter (no enviado): «${say(draft)}»`,
+    c.row?.deal_id && `Negocio: https://app.hubspot.com/contacts/21089075/deal/${c.row.deal_id}`,
+    `Respóndele tú por tu número directo: https://wa.me/${phone}`,
+  ].filter(Boolean).join('\n'), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
 async function meetingSilence(c, guard, content) {
