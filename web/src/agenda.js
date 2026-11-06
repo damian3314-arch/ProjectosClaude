@@ -23,8 +23,9 @@ export function slotLabel(startMs) {
 }
 
 // Hasta `n` horarios libres (máximo 2 por día, en los próximos 10 días). Cada uno: { iso, label }
-export async function freeSlots(env, now = Date.now(), n = 6) {
-  const busy = ((await env.DB.prepare('SELECT start_utc, end_utc FROM agenda_busy WHERE end_utc > ?').bind(sqlTime(now - 3600e3)).all().catch(() => ({ results: [] }))).results || [])
+export async function freeSlots(env, now = Date.now(), n = 6, ownPhone = '') {
+  // La hora que esta misma persona ya eligió no cuenta como ocupada para ella (si no, Alter le diría que "no está disponible" la hora que acaba de confirmar)
+  const busy = ((await env.DB.prepare("SELECT start_utc, end_utc FROM agenda_busy WHERE end_utc > ? AND id != ? AND (phone IS NULL OR phone != ?)").bind(sqlTime(now - 3600e3), `alter:${ownPhone}`, ownPhone || '-').all().catch(() => ({ results: [] }))).results || [])
     .map(b => [Date.parse(b.start_utc.replace(' ', 'T') + 'Z'), Date.parse(b.end_utc.replace(' ', 'T') + 'Z')]);
   const out = [];
   const bog = new Date(now - BOGOTA_MS);
@@ -53,6 +54,6 @@ export const slotsPromptText = slots => slots.map(s => `${s.iso} = ${s.label}`).
 // El cliente eligió uno de los horarios ofrecidos: se reserva para que no se le ofrezca a otro
 export async function reserveSlot(env, phone, slot) {
   const start = Date.parse(slot.iso);
-  await env.DB.prepare("INSERT OR REPLACE INTO agenda_busy (id, start_utc, end_utc, label) VALUES (?, ?, ?, ?)")
-    .bind(`alter:${phone}`, sqlTime(start), sqlTime(start + 3600e3), 'Alter: elegido por el cliente').run();
+  await env.DB.prepare("INSERT OR REPLACE INTO agenda_busy (id, start_utc, end_utc, label, phone) VALUES (?, ?, ?, ?, ?)")
+    .bind(`alter:${phone}`, sqlTime(start), sqlTime(start + 3600e3), 'Alter: elegido por el cliente', phone).run();
 }

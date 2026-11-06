@@ -155,7 +155,7 @@ export async function agentTurn(c) {
 async function meetingGuard(c) {
   const phone = c.row?.phone || c.key;
   const now = sqlTime(Date.now());
-  const m = await c.env.DB.prepare("SELECT start_utc, label FROM agenda_busy WHERE phone = ? AND end_utc > start_utc AND end_utc > ? AND start_utc < ? ORDER BY start_utc LIMIT 1")
+  const m = await c.env.DB.prepare("SELECT start_utc, label FROM agenda_busy WHERE phone = ? AND id LIKE 'hs:%' AND end_utc > start_utc AND end_utc > ? AND start_utc < ? ORDER BY start_utc LIMIT 1")
     .bind(phone, sqlTime(Date.now() - 3 * 3600e3), sqlTime(Date.now() + 5 * 86400e3)).first().catch(() => null);
   if (m) return { detail: `Tiene una reunión agendada (${slotLabel(Date.parse(m.start_utc.replace(' ', 'T') + 'Z'))}).` };
   const r = await c.env.DB.prepare("SELECT sent_at FROM outbox WHERE phone = ? AND kind = 'recordatorio' AND status = 'sent' AND sent_at > ? LIMIT 1").bind(phone, sqlTime(Date.now() - 48 * 3600e3)).first();
@@ -217,7 +217,14 @@ async function callModel(c, chat, history) {
   const known = Object.entries(facts).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('; ');
   const name = c.first || c.h.clean(c.inb.name, 40).split(' ')[0];
   // Horarios libres reales de Damián (solo para leads de Loggro): Alter propone dos y, si el cliente elige uno, le avisa a Damián para que agende
-  c.slots = c.source === 'loggro' ? await freeSlots(env).catch(() => []) : [];
+  c.slots = c.source === 'loggro' ? await freeSlots(env, Date.now(), 6, c.row?.phone || c.key).catch(() => []) : [];
+  // Si esta persona ya eligió una hora, se le recuerda al modelo (y esa hora sigue en la lista) para que no se contradiga
+  let chosenNote = '';
+  if (c.source === 'loggro' && c.row?.meeting_at) {
+    const iso = String(c.row.meeting_at);
+    if (!c.slots.some(sl => sl.iso === iso)) c.slots.unshift({ iso, label: slotLabel(Date.parse(iso)) });
+    chosenNote = `\n\nYA ELIGIÓ HORA: ${slotLabel(Date.parse(iso))} (código ${iso}, reservada para esta persona). Esa hora SÍ está disponible: confírmala si la menciona y NO ofrezcas otras salvo que pida cambiarla. No te corrijas ni digas que no está disponible. Si ya diste su correo, no lo vuelvas a pedir.`;
+  }
   const slotsText = slotsPromptText(c.slots);
   const sys = systemPrompt({
     nowBogota: new Date(Date.now() - 5 * 3600e3).toLocaleString('es-CO', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
@@ -227,7 +234,7 @@ async function callModel(c, chat, history) {
     slotsText: slotsText,
     phoneKnown: !!c.inb.from,
     playbook: c.source === 'loggro' ? playbookText(chat.product) : '',
-  }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}`;
+  }) + `${facts.lead_id ? '\nYa dejó su nombre y WhatsApp en el formulario: no se los vuelvas a pedir.' : ''}` + `\n\nDATOS CONOCIDOS DE LA PERSONA\nNombre en WhatsApp: ${name || 'no se sabe'}. ${known ? 'Lo que ya dijo: ' + known + '.' : ''} Etapa actual: ${chat.stage || 'nueva'}.${chat.meeting_pref ? ` Hora que propuso: ${chat.meeting_pref}.` : ''}${chat.summary ? ` Resumen previo: ${chat.summary}` : ''}` + chosenNote;
   const messages = [{ role: 'system', content: sys }, ...history.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))];
   // Modelos nuevos (gpt-5, gpt-6, o…) razonan: no aceptan temperature y usan max_completion_tokens. Los anteriores (gpt-4o…) siguen como antes.
   const call = model => fetch('https://api.openai.com/v1/chat/completions', {
