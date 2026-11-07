@@ -18,7 +18,7 @@
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
 import { webTurn, webContact } from './agent.js';
-import { sendHotAlert, dailyReport, rescueSend, outboxSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
+import { sendHotAlert, dailyReport, morningBrief, rescueSend, outboxSend, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
 const INTENTS = ['nomina', 'software', 'ia', 'procesos', 'datos'];
 const INTENT_NAMES = { nomina: 'Nómina', software: 'Software', ia: 'IA y automatización', procesos: 'Procesos', datos: 'Datos y campañas' };
@@ -68,6 +68,7 @@ export default {
       // La bandeja también sale aquí: lo que la rutina de HubSpot deja listo no espera a la hora en punto (el horario y el tope diario se respetan igual)
       return ctx.waitUntil(outboxSend(env).then(r => r.sent && console.log('bandeja', JSON.stringify(r))).catch(err => console.error('bandeja', err?.message || 'desconocido')));
     }
+    if (new Date(Date.now() - BOGOTA_MS).getUTCHours() === 8) ctx.waitUntil(morningBrief(env, agentHelpers()).catch(err => console.error('resumen', err?.message || 'desconocido')));
     if (new Date(Date.now() - BOGOTA_MS).getUTCHours() === 19) ctx.waitUntil(dailyReport(env, agentHelpers()).catch(err => console.error('reporte', err?.message || 'desconocido')));
     ctx.waitUntil(ownerPush(env).catch(err => console.error('ownerPush', err?.message || 'desconocido')));
     ctx.waitUntil(rescueSend(env).then(r => r.sent && console.log('rescate', JSON.stringify(r))).catch(err => console.error('rescate', err?.message || 'desconocido')));
@@ -525,9 +526,9 @@ async function ownerMessage(env, text) {
   // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
   if (dest.to && dest.to === selfNumber(env)) return tg; // WhatsApp no deja que un número se escriba a sí mismo
-  // Con plantilla aprobada llega siempre; si por algo falla, se intenta como texto libre (sirve si la ventana de 24 h está abierta)
-  // Primero texto libre (no cuesta si la ventana de 24 h está abierta); la plantilla solo si esa ventana está cerrada
-  if (await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) return true;
+  // Kapso acepta el texto libre aunque la ventana de 24 h esté cerrada y el fallo (131047) llega después: por eso la ventana se lleva a mano
+  // (cada mensaje de Damián al número la abre). Abierta → texto libre; cerrada → plantilla de utilidad con el resumen + el texto completo en la cola.
+  if (await ownerWindowOpen(env) && await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) return true;
   return (await queueAlert(env, dest, text)) || tg;
 }
 
@@ -550,6 +551,12 @@ async function queueAlert(env, dest, text) {
   return sent;
 }
 
+// ¿Damián le escribió al número en las últimas 23 h? Si sí, la ventana de 24 h está abierta y se puede mandar texto libre
+async function ownerWindowOpen(env) {
+  const r = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = 'owner' AND type = 'owner_inbound' AND created_at > datetime('now', '-23 hours') LIMIT 1").first().catch(() => null);
+  return !!r;
+}
+
 const selfNumber = env => String(env.KAPSO_SENDER_NUMBER || '').replace(/\D/g, '');
 
 // Canal de avisos que no depende de WhatsApp: un bot de Telegram propio (TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID como secretos)
@@ -570,16 +577,18 @@ async function telegram(env, text) {
 async function alertMessage(env, text, templateName) {
   const tg = await telegram(env, text);
   if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return tg;
+  // Los avisos de Loggro van a UN solo destino: el número de trabajo (si existe). El BSUID del dueño y ese número son la misma persona: antes llegaba (o fallaba) dos veces.
   const dests = [];
-  if (env.OWNER_BSUID) dests.push({ recipient: String(env.OWNER_BSUID).trim() });
-  else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
   const work = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
   if (work) dests.push({ to: work });
+  else if (env.OWNER_BSUID) dests.push({ recipient: String(env.OWNER_BSUID).trim() });
+  else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
   for (let i = dests.length - 1; i >= 0; i--) if (dests[i].to && dests[i].to === selfNumber(env)) dests.splice(i, 1); // nunca al propio número remitente
+  const open = await ownerWindowOpen(env);
   let ok = false;
   for (const dest of dests) {
-    // Texto libre primero (gratis con la ventana abierta); plantilla solo si la ventana está cerrada
-    let sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
+    // Ventana abierta → texto libre (gratis). Cerrada → plantilla de utilidad con el resumen y el texto completo queda en la cola hasta que Damián escriba o toque algo.
+    let sent = open && await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text.slice(0, 1024), preview_url: false } });
     if (!sent) sent = await queueAlert(env, dest, text);
     ok = ok || sent;
   }

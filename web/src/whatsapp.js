@@ -169,7 +169,8 @@ async function handleInbound(env, ctx, h, payload) {
   const ownerPhone = String(env.OWNER_WHATSAPP || '').replace(/\D/g, '');
   const workPhone = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
   if ((ownerPhone && inb.from === ownerPhone) || (workPhone && inb.from === workPhone) || (env.OWNER_BSUID && inb.userId === String(env.OWNER_BSUID).trim())) {
-    // Damián escribió (por ejemplo tocó "Ver avisos"): se le entregan los avisos que estaban esperando y el agente calla
+    // Damián escribió (por ejemplo tocó "Ver avisos"): la ventana de 24 h queda abierta, se le entregan los avisos que estaban esperando y el agente calla
+    await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('owner', 'owner_inbound')").run().catch(() => {});
     return flushAlerts(env, h, [inb.from, inb.userId].filter(Boolean));
   }
 

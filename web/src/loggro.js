@@ -214,6 +214,33 @@ export async function sendHotAlert(env, h, row) {
   return h.alertMessage(env, hotAlertText(row, ctx), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
+// Resumen de la mañana (8 am, una vez): solo lo que pide su atención hoy. Si no hay nada, no manda nada (no quiere ruido).
+export async function morningBrief(env, h) {
+  const bogota = new Date(Date.now() - 5 * 3600e3);
+  const day = bogota.toISOString().slice(0, 10);
+  const dayStart = `${day} 05:00:00`;
+  const dow = bogota.getUTCDay();
+  if (dow === 0) return false; // domingo no
+  const done = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = 'reporte' AND type = 'morning_brief' AND created_at >= ?").bind(dayStart).first();
+  if (done) return false;
+  const q = async (sql, ...b) => ((await env.DB.prepare(sql).bind(...b).all().catch(() => ({ results: [] }))).results) || [];
+  const dayEnd = `${new Date(Date.UTC(bogota.getUTCFullYear(), bogota.getUTCMonth(), bogota.getUTCDate() + 1)).toISOString().slice(0, 10)} 05:00:00`;
+  const meetings = await q("SELECT a.start_utc, a.label, a.phone, l.name FROM agenda_busy a LEFT JOIN loggro_leads l ON l.phone = a.phone WHERE a.id LIKE 'hs:%' AND a.end_utc > a.start_utc AND a.start_utc >= ? AND a.start_utc < ? ORDER BY a.start_utc", dayStart, dayEnd);
+  const followUps = await q("SELECT name, phone FROM loggro_leads WHERE follow_up IS NOT NULL AND follow_up <= ? AND follow_up >= date(?, '-3 days') AND state != 'optout' LIMIT 8", day, day);
+  const handoffs = await q("SELECT l.name, l.phone FROM agent_chats a JOIN loggro_leads l ON l.phone = a.chat_key WHERE a.stage = 'handoff' AND a.updated_at > datetime('now', '-2 days') LIMIT 8");
+  const hots = await q("SELECT name, phone FROM loggro_leads WHERE hot = 1 AND meeting_at IS NULL AND updated_at > datetime('now', '-2 days') LIMIT 8");
+  const hour = ms => { const t = new Date(ms - 5 * 3600e3), x = t.getUTCHours(); return `${x % 12 === 0 ? 12 : x % 12}:${String(t.getUTCMinutes()).padStart(2, '0')} ${x < 12 ? 'a. m.' : 'p. m.'}`; };
+  const who = r => `${r.name || 'Sin nombre'} +${r.phone}`;
+  const lines = [];
+  if (meetings.length) lines.push(`📅 Demos de hoy: ${meetings.map(m => `${hour(Date.parse(m.start_utc.replace(' ', 'T') + 'Z'))} ${m.name || String(m.label || '').slice(0, 30)}`).join(' · ')}`);
+  if (hots.length) lines.push(`🔥 Para llamar: ${hots.map(who).join(' · ')}`);
+  if (handoffs.length) lines.push(`✋ Esperan tu respuesta: ${handoffs.map(who).join(' · ')}`);
+  if (followUps.length) lines.push(`🗓 Tocaba retomar: ${followUps.map(who).join(' · ')}`);
+  await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'morning_brief')").run().catch(() => {});
+  if (!lines.length) return false;
+  return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+}
+
 // Reporte del día para Damián (lo envía el cron de las 7 pm, una sola vez): qué salió, quién contestó, a quién llamar y a quién retomar
 export async function dailyReport(env, h) {
   const bogota = new Date(Date.now() - 5 * 3600e3);
