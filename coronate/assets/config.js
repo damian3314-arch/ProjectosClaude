@@ -10,13 +10,15 @@ window.CORO = {
     lanzamiento: '2026-11-21'
   },
   contacto: {
-    whatsapp: '',                 // [CONFIRMAR] formato 573001234567 (sin + ni espacios). Es el WhatsApp de la joyería que recibe las citas
+    whatsapp: '573016068003',     // [CONFIRMAR] número público del Instagram de la joyería. Es el WhatsApp que recibe las citas
     direccion: '[DIRECCIÓN]',     // [CONFIRMAR]
     horario: '[HORARIO]',         // [CONFIRMAR] ej. "Jornada continua, 9:00 a.m. a 5:00 p.m."
     instagram: ''                 // [CONFIRMAR] ej. https://instagram.com/...
   },
   // URL pública donde quede publicada la landing. Si queda vacío, se usa la dirección actual del navegador.
   baseUrl: '',
+  // Precios que ve el público general. Los invitados premium (?p=1) ven el shampoo de regalo.
+  precios: { shampoo: 'desde $20.000', reparacion: 'desde $30.000', pulsera: 'desde $30.000' },
   agenda: {
     inicio: '09:00',              // [CONFIRMAR]
     fin: '17:00',                 // [CONFIRMAR]

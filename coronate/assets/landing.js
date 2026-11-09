@@ -1,47 +1,61 @@
-/* Landing pública (clientes). Personalización por link: index.html?n=Carlos  ·  día de prueba: ?p=1 */
+/* Landing de clientes, pensada para celular.
+   General (cualquier persona): index.html  ·  Invitación premium (shampoo de regalo): index.html?n=Carlos&p=1  (también vale ?vip=1) */
 (function () {
-  var C = window.CORO, U = window.CoroUtil, S = U.S;
+  var C = window.CORO, U = window.CoroUtil;
   var $ = function (id) { return document.getElementById(id); };
-  var q = new URLSearchParams(location.search);
+  var q = new URLSearchParams(window.CORO_DEMO || location.search); /* CORO_DEMO: solo para vistas previas sin parámetros en la URL */
   var nombre = (q.get('n') || '').trim().slice(0, 40);
-  var prueba = q.get('p') === '1';
+  var vip = q.get('p') === '1' || q.get('vip') === '1';
+  var P = C.precios || {};
+  document.body.classList.toggle('vip', vip);
 
-  /* ----- textos desde config ----- */
-  document.querySelectorAll('[data-c]').forEach(function (el) {
+  Array.prototype.forEach.call(document.querySelectorAll('[data-c]'), function (el) {
     var v = el.getAttribute('data-c').split('.').reduce(function (o, k) { return o && o[k]; }, C);
     if (v != null) el.textContent = v;
   });
-  $('bebidas').textContent = C.bebidas;
-  if (C.mostrarSnacks) { $('snacks').textContent = C.snacksTexto; $('snacks').hidden = false; }
 
-  /* ----- nieve (se apaga sola con prefers-reduced-motion en CSS) ----- */
-  var snow = $('snow');
-  for (var i = 0; i < 18; i++) {
-    var d = document.createElement('i');
-    d.style.left = (Math.random() * 100) + '%';
-    d.style.animationDuration = (8 + Math.random() * 10) + 's';
-    d.style.animationDelay = (-Math.random() * 12) + 's';
-    d.style.opacity = (0.3 + Math.random() * 0.6).toFixed(2);
-    snow.appendChild(d);
-  }
+  /* ----- WhatsApp: todas las citas las agenda una asesora ----- */
+  var msg = vip
+    ? 'Hola, soy ' + (nombre || '[tu nombre]') + '. Recibí la invitación especial de Joyería Tanya Santiago y quiero agendar mi turno para el shampoo de brillo de regalo.'
+    : 'Hola, quiero agendar mi turno para el shampoo de brillo de mis joyas en Joyería Tanya Santiago.';
+  var wa = C.contacto.whatsapp ? U.waLink(C.contacto.whatsapp, msg) : '#';
+  ['waTop', 'waHero', 'waEnd'].forEach(function (id) { $(id).href = wa; });
 
-  /* ----- saludo y cuenta regresiva ----- */
-  if (nombre) {
-    $('kicker').textContent = (prueba ? 'Invitación selecta · ' : 'Invitación para ') + nombre;
-    $('h1').innerHTML = U.esc(nombre) + ', tu oro, <em>tu corona.</em>';
-    $('fNombre').value = nombre;
-  } else if (prueba) {
-    $('kicker').textContent = 'Invitación selecta · día de prueba';
+  /* ----- textos según el tipo de invitación ----- */
+  if (vip) {
+    $('kicker').textContent = nombre ? 'Invitación especial para ' + nombre : 'Invitación especial';
+    $('h1').innerHTML = nombre ? U.esc(nombre) + ', esta Navidad <em>brillas tú.</em>' : 'Esta Navidad <em>brillas tú.</em>';
+    $('lede').textContent = 'Eres uno de nuestros clientes más especiales y queremos agradecértelo. Trae hasta 3 joyas de oro y te las dejamos brillando, sin ningún costo. Mientras tanto, compartes con nosotros un rato agradable con una Corona bien fría.';
+    $('chip').textContent = 'De regalo para ti · hasta 3 joyas · sin costo';
+    $('ctaH').innerHTML = 'Tu turno te espera. <em>Escríbenos y lo apartamos.</em>';
+    $('ctaP').textContent = 'Responde por WhatsApp y una asesora te agenda la hora, para tener todo listo cuando llegues. Puedes venir con alguien especial.';
+  } else {
+    $('chip').textContent = 'Shampoo de brillo ' + (P.shampoo || 'desde $20.000') + ' · hasta 3 joyas';
   }
-  var objetivo = prueba ? C.campana.prueba : C.campana.lanzamiento;
-  var faltan = U.daysUntil(objetivo);
+  $('tk').textContent = (vip
+    ? 'Tu invitación especial ✦ shampoo de brillo de regalo ✦ Corona bien fría ✦ sábado 21 de noviembre ✦ la vitrina más linda de la Navidad ✦ '
+    : 'Navidad es para brillar ✦ shampoo de brillo para tus joyas ✦ Corona bien fría ✦ sábado 21 de noviembre, de corrido ✦ oro 18k ✦ ').repeat(4);
+
+  /* ----- cuenta regresiva ----- */
+  var faltan = U.daysUntil(C.campana.lanzamiento);
   if (faltan >= 0) {
     $('count').hidden = false;
     $('countN').textContent = faltan === 0 ? 'Hoy' : faltan;
-    $('countT').textContent = faltan === 0 ? 'es el día' : (faltan === 1 ? 'día para el ' : 'días para el ') + U.fmtDate(objetivo, true);
+    $('countT').textContent = faltan === 0 ? 'se abre el telón' : (faltan === 1 ? 'día para el ' : 'días para el ') + 'sábado 21';
   }
 
-  /* ----- test de banderas rojas ----- */
+  /* ----- nieve ----- */
+  var snow = $('snow');
+  for (var i = 0; i < 16; i++) {
+    var d = document.createElement('i');
+    d.style.left = (Math.random() * 100) + '%';
+    d.style.animationDuration = (9 + Math.random() * 10) + 's';
+    d.style.animationDelay = (-Math.random() * 12) + 's';
+    d.style.opacity = (0.3 + Math.random() * 0.5).toFixed(2);
+    snow.appendChild(d);
+  }
+
+  /* ----- test de la realeza ----- */
   var FL = [
     'Los aretes que no te quitas ni para dormir.',
     'La manilla tejida, de cuero o neopreno que ya huele a recuerdo.',
@@ -55,107 +69,54 @@
   var on = {};
   function renderFlags() {
     $('flags').innerHTML = FL.map(function (t, i) {
-      return '<button type="button" class="fl" data-i="' + i + '" aria-pressed="' + (!!on[i]) + '">' +
+      return '<button type="button" class="fl" style="--i:' + i + '" data-i="' + i + '" aria-pressed="' + (!!on[i]) + '">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h12l-2.5 4L17 12H5"/></svg><span>' + U.esc(t) + '</span></button>';
     }).join('');
     Array.prototype.forEach.call($('flags').querySelectorAll('button'), function (b) {
       b.onclick = function () { var i = +b.dataset.i; if (on[i]) delete on[i]; else on[i] = 1; renderFlags(); };
     });
     var n = Object.keys(on).length;
-    var v = n === 0 ? ['Impecable. ¿Seguro?', 'Igual ven por tu Corona.']
-      : n <= 2 ? ['Nada grave, pero tu oro pide spa.', 'Mejor ahora que en diciembre.']
-      : n <= 5 ? ['Tu oro necesita un shampoo este sábado.', 'Tráelo todo, te apartamos turno.']
+    var v = n === 0 ? ['Marca lo que te pasa.', 'Sé honesto: aquí nadie te juzga. Casi.']
+      : n <= 2 ? ['Nada grave, pero tu oro pide brillo.', 'Mejor ahora que en plena Navidad.']
+      : n <= 5 ? ['Tu oro necesita su día de realeza.', 'Tráelo todo: te apartamos turno.']
       : ['Alerta dorada.', 'Trae todo. La Corona la ponemos nosotros.'];
-    $('verdict').innerHTML = '<div class="n num">' + n + '<span style="font-size:32px"> / ' + FL.length + '</span></div>' +
+    $('verdict').innerHTML = '<div class="n num">' + n + '<span> / ' + FL.length + '</span></div>' +
       '<div><div class="t">' + v[0] + '</div><p>' + v[1] + '</p></div>' +
-      '<a class="btn gold" href="#agenda">Agenda tu turno</a>';
+      '<a class="btn wa" href="' + wa + '" target="_blank" rel="noopener">Agenda tu turno</a>';
   }
   renderFlags();
 
-  /* ----- fechas ----- */
-  var fechas = U.fechasPublicas(prueba);
-  $('datesList').innerHTML = fechas.length ? fechas.map(function (x) {
-    return '<div><b>' + U.esc(U.fmtDate(x.f)) + '</b><span>' + U.esc(x.etiqueta) + '</span></div>';
-  }).join('') : '<p class="muted">Las próximas fechas se anuncian muy pronto.</p>';
-
-  /* ----- agenda ----- */
-  var fFecha = $('fFecha'), fHora = $('fHora'), fJoyas = $('fJoyas');
-  fFecha.innerHTML = fechas.map(function (x) {
-    return '<option value="' + x.f + '">' + U.esc(U.fmtDate(x.f, true)) + '</option>';
+  /* ----- lo que te espera ----- */
+  var perks = [
+    ['shampoo', vip ? 'Shampoo de brillo, de regalo' : 'Shampoo de brillo', vip ? 'Hasta 3 joyas de oro salen lavadas y brillando, sin ningún costo para ti.' : 'Hasta 3 joyas de oro salen lavadas y brillando.', vip ? 'De regalo' : (P.shampoo || 'Desde $20.000')],
+    ['corona', 'Tu Corona bien fría', 'Mientras trabajamos, te atendemos con una Corona en un espacio de Navidad. Solo mayores de 18.', vip ? 'Por la casa' : 'Por la casa'],
+    ['arreglo', 'Arreglos al momento', 'Puntos de soldadura, broches y piedras flojas. Te mostramos el valor y tú decides.', P.reparacion || 'Desde $30.000'],
+    ['pulsera', 'Tu pulsera tejida', 'Escoges el hilo y el dije de oro, y la tejemos a tu medida.', P.pulsera || 'Desde $30.000'],
+    ['vitrina', 'La vitrina de Navidad', 'Tréboles, corazones de esmeralda, candongas y argollas recién llegadas.', 'Oro 18k'],
+    ['oro', 'Tu oro vale', 'El oro que ya no usas lo recibimos como parte de pago de tu próxima joya, al precio del día.', 'Parte de pago']
+  ];
+  var ICO = {
+    shampoo: '<path d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9Z"/>',
+    corona: '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5Z"/>',
+    arreglo: '<path d="M14 6a4 4 0 0 0 5 5L11 19l-4 1 1-4Z"/>',
+    pulsera: '<path d="M4 12c4-6 12-6 16 0M4 12c4 6 12 6 16 0"/><circle cx="12" cy="12" r="2"/>',
+    vitrina: '<path d="M12 3l2.6 5.6L20 9.3l-4 4 1 5.7-5-2.8-5 2.8 1-5.7-4-4 5.4-.7Z"/>',
+    oro: '<circle cx="12" cy="12" r="8"/><path d="M9 12h6M12 9v6"/>'
+  };
+  $('perks').innerHTML = perks.map(function (p, i) {
+    return '<div class="perk" style="--i:' + i + '"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[p[0]] + '</svg></div>' +
+      '<div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
   }).join('');
-  var j = ''; for (var n = 1; n <= C.agenda.maxJoyas; n++) j += '<option value="' + n + '">' + n + (n === 1 ? ' joya' : ' joyas') + '</option>';
-  fJoyas.innerHTML = j;
 
-  function takenLocal(f) {
-    var t = {};
-    (S.get('citas', []) || []).forEach(function (c) { if (c.f === f) t[c.h] = (t[c.h] || 0) + 1; });
-    return t;
-  }
-
-  function pintarHoras(taken) {
-    var f = fFecha.value;
-    var local = takenLocal(f);
-    fHora.innerHTML = U.slots().map(function (h) {
-      var usados = Math.max(local[h] || 0, (taken && taken[h]) || 0);
-      var quedan = C.agenda.cuposPorBloque - usados;
-      return '<option value="' + h + '"' + (quedan <= 0 ? ' disabled' : '') + '>' + h + (quedan <= 0 ? ' · lleno' : ' · quedan ' + quedan) + '</option>';
-    }).join('');
-  }
-
-  function cargarHoras() {
-    pintarHoras(null);
-    if (C.agenda.endpoint && fFecha.value) {
-      fetch(C.agenda.endpoint + '?fecha=' + encodeURIComponent(fFecha.value))
-        .then(function (r) { return r.json(); })
-        .then(function (d) { pintarHoras(d && d.taken); })
-        .catch(function () { /* sin red: se queda con lo local */ });
-    }
-  }
-  fFecha.addEventListener('change', cargarHoras);
-  cargarHoras();
-
-  function evento(c) {
-    return {
-      titulo: 'Sábado de Realeza · ' + C.campana.marca, f: c.f, ini: c.h, fin: U.addMin(c.h, C.agenda.bloqueMin),
-      detalle: 'Shampoo de brillo para hasta ' + C.agenda.maxJoyas + ' joyas. Cita a nombre de ' + c.nombre + '.', lugar: C.contacto.direccion
-    };
-  }
-
-  $('form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var err = $('fErr'); err.hidden = true;
-    var tel = U.normPhone($('fTel').value);
-    var c = {
-      id: U.uid(), nombre: $('fNombre').value.trim(), tel: tel.num, f: fFecha.value, h: fHora.value,
-      joyas: +fJoyas.value, acomp: +$('fAcomp').value, nota: $('fNota').value.trim(), creada: new Date().toISOString(), origen: 'web'
-    };
-    var msg = '';
-    if (c.nombre.length < 2) msg = 'Escribe tu nombre.';
-    else if (!tel.ok) msg = 'Revisa tu WhatsApp: son 10 dígitos y empieza por 3.';
-    else if (!c.f || !c.h) msg = 'Elige día y hora disponibles.';
-    else if (!$('fOk').checked) msg = 'Necesitamos tu autorización para confirmar la cita.';
-    if (msg) { err.textContent = msg; err.hidden = false; return; }
-
-    var citas = S.get('citas', []) || [];
-    citas.push(c); S.set('citas', citas);
-    if (C.agenda.endpoint) {
-      try { fetch(C.agenda.endpoint, { method: 'POST', mode: 'no-cors', body: JSON.stringify(c) }); } catch (x) { /* se reintenta desde WhatsApp */ }
-    }
-
-    var ev = evento(c);
-    $('okP').textContent = c.nombre + ', te esperamos el ' + U.fmtDate(c.f, true) + ' a las ' + c.h + '. ' +
-      (C.contacto.whatsapp ? 'Confirma por WhatsApp para que la asesora vea tu cita.' : 'Una asesora te escribirá para confirmar.');
-    var act = $('okAct'); act.innerHTML = '';
-    if (C.contacto.whatsapp) {
-      var texto = 'Hola, soy ' + c.nombre + '. Aparté mi turno para el ' + U.fmtDate(c.f, true) + ' a las ' + c.h + ' (' + c.joyas + ' joya(s)).';
-      act.insertAdjacentHTML('beforeend', '<a class="btn wa" target="_blank" rel="noopener" href="' + U.esc(U.waLink(C.contacto.whatsapp, texto)) + '">Confirmar por WhatsApp</a>');
-    }
-    act.insertAdjacentHTML('beforeend', '<a class="btn line" target="_blank" rel="noopener" href="' + U.esc(U.gcalLink(ev)) + '">Agregar a Google Calendar</a>');
-    var ics = document.createElement('button'); ics.type = 'button'; ics.className = 'btn line'; ics.textContent = 'Descargar para otro calendario';
-    ics.onclick = function () { U.download('sabado-de-realeza.ics', 'text/calendar', U.makeICS([ev])); };
-    act.appendChild(ics);
-    $('okNote').textContent = C.agenda.endpoint ? '' : 'Modo prueba: esta cita solo se guardó en este dispositivo.';
-    $('form').hidden = true; $('okBox').hidden = false;
-    $('okBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
+  /* ----- preguntas ----- */
+  var faq = [
+    ['¿Cuánto cuesta?', vip
+      ? 'Para ti, el shampoo de brillo de hasta 3 joyas de oro es de regalo. Los arreglos y las pulseras tejidas tienen costo: ' + (P.reparacion || 'desde $30.000') + ' y ' + (P.pulsera || 'desde $30.000') + '.'
+      : 'El shampoo de brillo de hasta 3 joyas cuesta ' + (P.shampoo || 'desde $20.000') + '. Los arreglos, ' + (P.reparacion || 'desde $30.000') + ', y la pulsera tejida, ' + (P.pulsera || 'desde $30.000') + '. La Corona va por la casa (+18).'],
+    ['¿Tengo que agendar?', 'Sí, te lo recomendamos: los cupos son limitados. Escríbenos por WhatsApp y una asesora te aparta la hora.'],
+    ['¿Puedo ir con alguien?', vip ? 'Claro, puedes venir con alguien especial.' : 'Claro. La cerveza es solo para mayores de 18, con documento.'],
+    ['¿Reciben mi oro como parte de pago?', 'Sí, al precio del día, para tu próxima joya.'],
+    ['¿Qué días atienden?', 'El lanzamiento es el sábado 21 de noviembre, de corrido. Después, todos los sábados hasta el 26 de diciembre y algunos domingos de diciembre con cita.']
+  ];
+  $('faqList').innerHTML = faq.map(function (f) { return '<details class="faq"><summary>' + f[0] + '</summary><p>' + f[1] + '</p></details>'; }).join('');
 })();
