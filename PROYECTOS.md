@@ -103,7 +103,7 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 |---|---|---|---|---|
 | Lun 9 | 6:00–8:00 (calendario) | 9–19 | — | Noche 19:30–21:00 |
 | Mar 10 | 6:00–8:00 | 9–19 | — | Noche 19:30–21:30 |
-| Mié 11 | 6:00–8:00 | **11–19** | — | **Mañana 9:00–10:45** + noche 19:30–21:00 |
+| Mié 11 | 6:00–8:00 | **11–19** | — | **Mañana 9:00–11:00 en la joyería (todos los miércoles)** + noche 19:30–21:00 |
 | Jue 12 | 6:00–8:00 | 9–19 | 17–19 | Noche 19:30–20:15 (liviana) |
 | Vie 13 | 6:00–8:00 | 9–18 | 17–18 | Noche 18:30–20:00 |
 | Sáb 14 | 6:00–8:00 | Descanso | — | Todo el día; bloque Joyería 14–18 |
@@ -117,13 +117,16 @@ Estas son ≈ 17 h de proyectos en la semana, con Loggro y gimnasio intactos.
 |---|---|
 | Lun 9, 19:30–21:00 | `[CORO]` Revisión con el chat Corónate: costos, diseño, grabación |
 | Mar 10, 19:30–21:30 | `[JTS]` Joyería y Tumbao (**movido** de 2–6 p. m. porque choca con Loggro) |
-| Mié 11, 9:00–10:45 | `[SETTE]` Preparar arranque: fecha, accesos a Restobar, instructivo |
+| Mié 11, 9:00–11:00 (y todos los miércoles hasta el 30 dic) | `[JTS]` Joyería antes de Loggro |
 | Mié 11, 19:30–21:00 | `[CORO]` Costos reales con Tania para el ROI |
 | Jue 12, 19:30–20:15 | `[CORO]` Aprobar piezas e invitaciones |
 | Vie 13, 18:30–20:00 | `[TUM][DIR]` Tumbao, decisiones abiertas y revisión semanal |
 | Dom 15, 14:30–17:00 | `[JTS]` Visita a la joyería |
 | Dom 15, 20:00–20:45 | `[DIR]` Revisión semanal y plan de la semana del 16 |
-| **Lun 16 (festivo), 9:30–13:30 y 19:00–21:30** | `[SETTE]` H1: día de compras y recepción + cierre del día. Horario por confirmar con Lorena |
+| **Lun 16 (festivo), 9:30–13:30** | `[CORO]` Ultimar detalles: todo listo para enviar el martes 17 |
+| Lun 16 (festivo), 19:00–21:30 | `[SETTE]` solo si Lorena confirma auxiliar; si no, libre |
+| Mar 17, 19:30–21:00 | `[CORO]` Día 1 de invitaciones: revisar envíos y respuestas (movido desde 2–6 p. m.) |
+| Sáb 21 | `[CORO]` LANZAMIENTO (evento de día completo) |
 
 ### Cosas del calendario que debes revisar
 1. **Gimnasio:** bloqueado de 6 a 9 a. m. (incluye traslado). Decisión de Damián: se deja así. Mis bloques no pueden empezar antes de las 9.
@@ -135,11 +138,11 @@ Estas son ≈ 17 h de proyectos en la semana, con Loggro y gimnasio intactos.
 ### Semana tipo desde el 18 de nov
 Mismo molde: lunes a viernes solo noches de 1,5 a 2 h y los miércoles 8:45–10:45; sábados de Corónate; domingo de visita a la joyería. Máximo 3 noches con proyectos por semana; el resto es descanso.
 
-### Sette: 8 semanas **[SUPUESTO: arranque lunes 16 nov]**
+### Sette: 8 semanas **(en espera: Lorena está entrevistando a la auxiliar y avisará)**
 
 | Sem | Fechas | Hito del plan |
 |---|---|---|
-| 1 | 16–22 nov | H1 mapa del proceso aprobado. **El festivo lun 16 es el día de compras y cierre** (decidido por Damián) |
+| 1 | **Por definir** (arranca cuando Lorena tenga auxiliar) | H1 mapa del proceso aprobado. Acompañar un día de compras y cierre |
 | 2 | 23–29 nov | H2 plantilla de compras probada |
 | 3 | 30 nov–6 dic | H3 primera carga completa en Restobar; entra la auxiliar |
 | 4 | 7–13 dic | H4 reporte semanal de compras + recetas de 10 platos. **Aquí se confirma el mes 2** |
@@ -243,4 +246,4 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 10. **Dami:** recargar Kapso o pausar.
 11. Los 5 chats `[?]`: ¿de qué proyecto son?
 
-Resueltas: la grabación del 9 y 10 la hace Giovanni; Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 1 = $1,5M con costos aparte; invitaciones del 16 al 20; domingos los atienden las asesoras.
+Resueltas: la grabación del 9 y 10 la hace Giovanni (Damián le envía el brief por link, sin estar presente); invitaciones salen el martes 17; Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 1 = $1,5M con costos aparte; invitaciones del 16 al 20; domingos los atienden las asesoras.
