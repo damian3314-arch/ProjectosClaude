@@ -45,15 +45,18 @@ Nota: en los chats el proyecto aparece como "Sete". Lo trato como Sette.
 
 | Proyecto | Ingreso | Notas |
 |---|---|---|
-| Loggro | Salario + comisiones | **[SIN DATO]** no lo he visto |
+| Loggro | $2.200.000/mes de salario + comisión | 8 h diarias ≈ 176 h/mes ≈ $12.500/h solo con el salario. Comisión sin dato |
 | Joyería (asesoría mensual) | $2.200.000/mes | Recurrente |
 | Corónate (dentro de Joyería) | $1.500.000 por 2 meses ≈ $750.000/mes | **[SUPUESTO]** $1,5M es el total, no por mes |
 | Sette | $2.000.000/mes | Piloto 8 semanas, sin tope de horas definido |
 | Tumbao (web + Beat) | $750.000/mes | |
 | HolaDami | $0 | Solo gasto (Kapso, Meta Ads, Cloudflare, tokens) |
 | **Total extra a Loggro** | **≈ $5.700.000/mes** | Joyería concentra $2,95M (52%) |
+| **Total base (sin comisión)** | **≈ $7.900.000/mes** | Loggro es 28%; los proyectos son 72% |
 
-Lectura rápida: la mayor ambición (Corónate = "centro neurálgico") es de lo que menos pagan por hora. Joyería es 52% de tus ingresos extra, así que Corónate importa por la relación con Joyería más que por sus $750.000.
+Lectura rápida:
+- La mayor ambición (Corónate = "centro neurálgico") es de lo que menos pagan por hora. Joyería es 52% de tus ingresos extra, así que Corónate importa por la relación con Joyería más que por sus $750.000.
+- Loggro te ocupa 8 h al día pero es solo 28% del ingreso base. Los proyectos pagan más del doble y compiten por las horas que quedan fuera de Loggro. La comisión de Loggro es la única variable que puede cambiar ese 28%: cuánto sube con el tiempo que le dedicas es un dato que aún falta.
 
 ---
 
