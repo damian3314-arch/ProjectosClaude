@@ -97,31 +97,42 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 | 22–24 dic | En 2025 la joyería vendió ≈ $92 M en estos 3 días | Plan Corónate |
 | Vie 25 dic | Festivo, cerrado | idem |
 
-### Semana del piloto (9–17 nov)
+### Tu horario real (semana del 9 al 15 nov)
 
-| Día | Horas | Qué |
-|---|---|---|
-| Lun 9 | 2 h | Corónate: texto con Tania, lista de 150, calendario de citas |
-| Mar 10 | 4 h | Joyería + apoyo a las asesoras con las invitaciones |
-| Mié 11 | 2 h | Corónate: agenda de quienes respondieron QUIERO |
-| Jue 12 | 2 h | Sette: pedir accesos a Lorena y fijar fecha de arranque |
-| Vie 13 | 2 h | Corónate: confirmaciones (1 h) + Tumbao (0,5 h) + revisión semanal (0,5 h) |
-| Sáb 14 | 6 h | Corónate: día del piloto, registro de visitas y ventas |
-| Dom 15 | 0 | Descanso |
-| Lun 16 (festivo) | 4–5 h | **[SUPUESTO]** Sette: día de acompañamiento en compras y cierre (H1) si Loggro está cerrado |
-| Mar 17 | 4 h + 2 h | Joyería + informe del piloto para Tania (decisión de fases 2 y 3) |
+| Día | Gimnasio | Loggro | Chat Loggro | Libre para proyectos |
+|---|---|---|---|---|
+| Lun 9 | 6:00–8:00 (calendario) | 9–19 | — | Noche 19:30–21:00 |
+| Mar 10 | 6:00–8:00 | 9–19 | — | Noche 19:30–21:30 |
+| Mié 11 | 6:00–8:00 | **11–19** | — | **Mañana 8:45–10:45** + noche 19:30–21:00 |
+| Jue 12 | 6:00–8:00 | 9–19 | 17–19 | Noche 19:30–20:15 (liviana) |
+| Vie 13 | 6:00–8:00 | 9–18 | 17–18 | Noche 18:30–20:00 |
+| Sáb 14 | 6:00–8:00 | Descanso | — | Todo el día; bloque Joyería 14–18 |
+| Dom 15 | — | Descanso | — | Visita a la joyería 14:30–17:00; revisión semanal 20:00 |
 
-### Semana tipo desde el 18 de nov (≈ 18 h/semana fuera de Loggro)
+Estas son ≈ 17 h de proyectos en la semana, con Loggro y gimnasio intactos.
 
-| Día | Horas | Proyecto |
-|---|---|---|
-| Lun | 2 h | Sette |
-| Mar | 4 h | Joyería (incluye lo de Corónate que se haga en tienda) |
-| Mié | 2 h | Corónate (WhatsApp, plantillas, agenda, tablero) |
-| Jue | 2 h | Sette |
-| Vie | 2 h | Sette revisión con Lorena 1 h + Tumbao 0,5 h + revisión semanal 0,5 h |
-| Sáb | 5–6 h | **Corónate / Sábado de Realeza** (reemplaza el sábado de Joyería) |
-| Dom | 0 | Descanso, salvo domingos abiertos (ver pregunta 4) |
+### Bloques creados en tu Google Calendar (9–15 nov)
+
+| Día y hora | Bloque |
+|---|---|
+| Lun 9, 19:30–21:00 | `[CORO]` Revisión con el chat Corónate: costos, diseño, grabación |
+| Mar 10, 19:30–21:30 | `[JTS]` Joyería y Tumbao (**movido** de 2–6 p. m. porque choca con Loggro) |
+| Mié 11, 8:45–10:45 | `[SETTE]` Preparar arranque: fecha, accesos a Restobar, instructivo |
+| Mié 11, 19:30–21:00 | `[CORO]` Costos reales con Tania para el ROI |
+| Jue 12, 19:30–20:15 | `[CORO]` Aprobar piezas e invitaciones |
+| Vie 13, 18:30–20:00 | `[TUM][DIR]` Tumbao, decisiones abiertas y revisión semanal |
+| Dom 15, 14:30–17:00 | `[JTS]` Visita a la joyería |
+| Dom 15, 20:00–20:45 | `[DIR]` Revisión semanal y plan de la semana del 16 |
+
+### Cosas del calendario que debes revisar
+1. **Gimnasio:** el calendario dice 6:00–8:00; tú dices 6:30–8:30. No lo toqué.
+2. **Bloque de Joyería de los martes (2–6 p. m.):** choca con Loggro. Solo moví el del 10 nov. El del 17 sigue igual.
+3. **PILA de Tania:** el recordatorio está el 10 nov, pero tu nota dice "día hábil 10". Con el festivo del 2 y del 16 de nov, mi cuenta da el **martes 17 de nov**. Verifícalo en la tabla de Aportes en Línea antes de pagar. Mora = intereses + 1 día de salario por día de retraso.
+4. **Tumbao:** tienes un recordatorio el sáb 14 a las 9:00 para planear diciembre (clausura, show de fin de año, clase especial de Feria de Cali del 25 al 30). No estaba en mi plan; hay que tenerlo.
+5. **Festivos confirmados:** lun 16 nov, mar 8 dic, vie 25 dic.
+
+### Semana tipo desde el 18 de nov
+Mismo molde: lunes a viernes solo noches de 1,5 a 2 h y los miércoles 8:45–10:45; sábados de Corónate; domingo de visita a la joyería. Máximo 3 noches con proyectos por semana; el resto es descanso.
 
 ### Sette: 8 semanas **[SUPUESTO: arranque lunes 16 nov]**
 
