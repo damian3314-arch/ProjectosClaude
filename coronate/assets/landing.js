@@ -28,7 +28,7 @@
   /* ----- saludo y cuenta regresiva ----- */
   if (nombre) {
     $('kicker').textContent = (prueba ? 'Invitación selecta · ' : 'Invitación para ') + nombre;
-    $('h1').innerHTML = U.esc(nombre) + ', tu oro merece <em>una corona.</em>';
+    $('h1').innerHTML = U.esc(nombre) + ', tu oro, <em>tu corona.</em>';
     $('fNombre').value = nombre;
   } else if (prueba) {
     $('kicker').textContent = 'Invitación selecta · día de prueba';

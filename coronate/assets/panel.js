@@ -250,79 +250,84 @@
     var ly = m.nov2025 + m.dic2025, falta = m.meta - m.vendidoNov, dias = m.diasAbiertos + m.domingos;
     var porDia = falta / dias, brecha = m.meta - m.proyeccion;
     $('meta400').innerHTML = '<div class="kpis">' + [
-      ['Noviembre + diciembre 2025', money(ly), 'la meta es ' + Math.round((m.meta / ly - 1) * 100) + '% más'],
+      ['Meta noviembre + diciembre', money(m.meta), 'ajustada desde ' + money(m.metaOriginal)],
+      ['Mismo período de 2025', money(ly), 'la meta es ' + Math.round((m.meta / ly - 1) * 100) + '% más'],
       ['Vendido en noviembre', money(m.vendidoNov), 'hasta el ' + U.fmtDate(m.corte)],
       ['Falta por día abierto', money(porDia), dias + ' días (' + m.diasAbiertos + ' hábiles + ' + m.domingos + ' domingos)'],
-      ['Al ritmo actual llegamos a', money(m.proyeccion), 'octubre ' + money(m.ritmoOct) + '/día × subida de temporada ' + String(m.subidaTemporada).replace('.', ',')],
-      ['Brecha contra la meta', money(brecha), 'lo que tiene que traer el plan']
+      ['Al ritmo actual llegamos a', money(m.proyeccion), 'sin campaña'],
+      ['Lo que trae la campaña', money(brecha), 'brecha a cerrar']
     ].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num">' + k[1] + '</b><em>' + esc(k[2]) + '</em></div>'; }).join('') + '</div>' +
-      '<p class="note" style="margin-top:10px">Para llegar a $400 M hay que vender ' + money(porDia) + ' cada día abierto: unas ' + (porDia / m.ritmoOct).toFixed(1).replace('.', ',') + ' veces el ritmo de octubre. Diciembre de 2025 vendió ' + money(m.dic2025) + ' y noviembre ' + money(m.nov2025) + '. La campaña de sábados sola no cierra esa brecha: hacen falta las ventas grandes (encargos, argollas, clientes selectos) y la semana de Navidad completa. Datos del libro de ventas; actualiza "vendidoNov" en config.js cada semana.</p>';
+      '<p class="note" style="margin-top:10px">En el libro de ventas, noviembre y diciembre de 2025 suman ' + money(ly) + ' (noviembre ' + money(m.nov2025) + ', diciembre ' + money(m.dic2025) + '). Los $327 M que se recuerdan incluyen del 29 al 31 de octubre. Para $380 M hay que vender ' + money(porDia) + ' cada día abierto, unas ' + (porDia / m.ritmoOct).toFixed(1).replace('.', ',') + ' veces el ritmo de octubre: la campaña tiene que sumarse a las ventas grandes (encargos, argollas, selectos) y a una semana de Navidad completa. Actualiza "vendidoNov" en config.js cada semana.</p>';
   }
 
   /* ---------- costos y retorno ---------- */
   var CAMPOS = [
     ['sabados', 'Sábados de campaña', 1], ['domingos', 'Domingos con cita', 1],
-    ['clientesSabado', 'Clientes atendidos por sábado', 1], ['clientesDomingo', 'Clientes por domingo', 1], ['acompanantes', 'Acompañantes por cliente', 0.1],
-    ['shampooInsumo', 'Insumos del shampoo por cliente ($)', 500], ['shampooMin', 'Minutos de taller por cliente', 5], ['horaTecnico', 'Costo hora del técnico ($)', 1000],
-    ['bebidaPromedio', 'Bebida promedio por persona ($)', 500], ['hieloJornada', 'Hielo por jornada ($)', 5000], ['snacksPersona', 'Snacks por persona ($, 0 = no)', 500],
-    ['empaquesLote', 'Agendas, bolsas y empaques ($)', 50000], ['decoracion', 'Decoración y fachada ($)', 100000], ['fotoVideo', 'Foto y video ($)', 50000],
-    ['personalExtraJornada', 'Personal extra por jornada ($)', 10000], ['honorarios', 'Honorarios Fase 1 ($)', 100000],
+    ['invitadosRegalo', 'Invitados con shampoo de regalo', 5], ['costoShampoo', 'Costo del shampoo de regalo (3 joyas) ($)', 500],
+    ['clientesPagan', 'Clientes que pagan el shampoo', 5], ['costoShampooPago', 'Costo del shampoo pago ($)', 500], ['precioShampoo', 'Precio que paga el cliente ($)', 1000],
+    ['acompanantes', 'Acompañantes por cliente', 0.1], ['partCervezaSoda', 'Parte que toma Corona o soda (0 a 1)', 0.05],
+    ['costoCervezaSoda', 'Costo Corona o soda ($)', 100], ['costoAguaCanada', 'Costo agua o Canada Dry ($)', 100],
+    ['hieloJornada', 'Hielo por jornada ($)', 5000], ['snacksPersona', 'Snacks por persona ($, 0 = no)', 500],
+    ['decoracion', 'Decoración de Navidad ($)', 50000], ['fotoVideo', 'Foto y video del creativo ($)', 50000],
+    ['empaques', 'Empaques nuevos ($, 0 = los asume la joyería)', 50000], ['personalExtraJornada', 'Personal extra por jornada ($, 0 = no)', 10000],
+    ['honorarios', 'Honorarios Fase 1 ($)', 100000],
     ['ventaSabadoCampana', 'Venta esperada por sábado de campaña ($)', 500000], ['ventaSabadoNormal', 'Venta de un sábado normal ($)', 100000], ['ventaSabado2025', 'Venta de esos sábados en 2025 ($)', 100000],
-    ['ventaDomingo', 'Venta esperada por domingo ($)', 100000], ['canibalizacionDomingo', 'Parte del domingo que se habría vendido igual (0 a 1)', 0.05], ['margen', 'Margen sobre la venta (0 a 1)', 0.01]
+    ['ventaDomingo', 'Venta esperada por domingo ($)', 100000], ['canibalizacionDomingo', 'Parte del domingo que se habría vendido igual (0 a 1)', 0.05], ['margen', 'Margen sobre la venta de joyas (0 a 1)', 0.01]
   ];
   function costosBase() { var b = {}; Object.keys(C.costos).forEach(function (k) { b[k] = C.costos[k]; }); b.honorarios = C.honorarios.fase1; b.ventaSabadoNormal = C.ventaSabadoNormal; return b; }
-  function costosVal() { var b = costosBase(), o = S.get('costos', {}) || {}; Object.keys(o).forEach(function (k) { if (o[k] !== '' && o[k] != null) b[k] = +o[k]; }); return b; }
+  function costosVal() { var b = costosBase(), o = S.get('costos2', {}) || {}; Object.keys(o).forEach(function (k) { if (o[k] !== '' && o[k] != null) b[k] = +o[k]; }); return b; }
   function renderCostosIn() {
-    var v = costosVal(), base = costosBase(), o = S.get('costos', {}) || {};
+    var v = costosVal(), base = costosBase(), o = S.get('costos2', {}) || {};
     $('costIn').innerHTML = CAMPOS.map(function (c) {
       var editado = o[c[0]] != null && o[c[0]] !== '' && +o[c[0]] !== base[c[0]];
       return '<label>' + esc(c[1]) + (editado ? '' : ' <span class="note">[CONFIRMAR]</span>') + '<input type="number" step="' + c[2] + '" data-cs="' + c[0] + '" value="' + v[c[0]] + '"></label>';
     }).join('');
     Array.prototype.forEach.call($('costIn').querySelectorAll('input'), function (i) {
-      i.oninput = function () { var o2 = S.get('costos', {}) || {}; o2[i.getAttribute('data-cs')] = i.value; S.set('costos', o2); renderCostos(); };
+      i.oninput = function () { var o2 = S.get('costos2', {}) || {}; o2[i.getAttribute('data-cs')] = i.value; S.set('costos2', o2); renderCostos(); };
     });
   }
   function renderCostos() {
     var v = costosVal();
     var jornadas = v.sabados + v.domingos;
-    var clientesT = v.sabados * v.clientesSabado + v.domingos * v.clientesDomingo;
-    var personas = clientesT * (1 + v.acompanantes);
+    var atendidos = v.invitadosRegalo + v.clientesPagan;
+    var personas = atendidos * (1 + v.acompanantes);
     var rubros = [
-      ['Shampoo de brillo (insumos)', clientesT * v.shampooInsumo, 'por cliente'],
-      ['Tiempo del taller', clientesT * v.shampooMin / 60 * v.horaTecnico, 'por cliente'],
-      ['Bebidas', personas * v.bebidaPromedio, 'por persona'],
+      ['Shampoo de regalo a invitados', v.invitadosRegalo * v.costoShampoo, v.invitadosRegalo + ' invitados'],
+      ['Corona y soda', personas * v.partCervezaSoda * v.costoCervezaSoda, Math.round(personas * v.partCervezaSoda) + ' bebidas'],
+      ['Agua y Canada Dry', personas * (1 - v.partCervezaSoda) * v.costoAguaCanada, Math.round(personas * (1 - v.partCervezaSoda)) + ' bebidas'],
+      ['Hielo', jornadas * v.hieloJornada, jornadas + ' jornadas'],
       ['Snacks', personas * v.snacksPersona, 'por persona'],
-      ['Hielo', jornadas * v.hieloJornada, 'por jornada'],
+      ['Decoración de Navidad', v.decoracion, 'una vez'],
+      ['Foto y video del creativo', v.fotoVideo, 'una vez'],
+      ['Empaques nuevos', v.empaques, 'una vez'],
       ['Personal extra', jornadas * v.personalExtraJornada, 'por jornada'],
-      ['Agendas, bolsas y empaques', v.empaquesLote, 'una vez'],
-      ['Decoración y fachada', v.decoracion, 'una vez'],
-      ['Foto y video', v.fotoVideo, 'una vez'],
       ['Honorarios Fase 1', v.honorarios, 'una vez']
     ];
     var total = rubros.reduce(function (s, r) { return s + r[1]; }, 0);
-    var variable = rubros.slice(0, 4).reduce(function (s, r) { return s + r[1]; }, 0);
+    var servicio = v.clientesPagan * (v.precioShampoo - v.costoShampooPago);
     var ventaCamp = v.sabados * v.ventaSabadoCampana + v.domingos * v.ventaDomingo;
     var incr = v.sabados * (v.ventaSabadoCampana - v.ventaSabadoNormal) + v.domingos * v.ventaDomingo * (1 - v.canibalizacionDomingo);
     var incr25 = v.sabados * (v.ventaSabadoCampana - v.ventaSabado2025) + v.domingos * v.ventaDomingo * (1 - v.canibalizacionDomingo);
-    var margenIncr = incr * v.margen, neto = margenIncr - total, roi = total ? margenIncr / total : 0, equilibrio = v.margen ? total / v.margen : 0;
+    var margenIncr = incr * v.margen + servicio, neto = margenIncr - total, roi = total ? margenIncr / total : 0;
+    var equilibrio = v.margen ? Math.max(0, total - servicio) / v.margen : 0;
     $('costKpis').innerHTML = [
-      ['Costo total de la campaña', money(total), jornadas + ' jornadas'],
-      ['Costo por cliente atendido', money(clientesT ? total / clientesT : 0), money(clientesT ? variable / clientesT : 0) + ' variable · ' + clientesT + ' clientes'],
-      ['Venta incremental', money(incr), 'contra un sábado normal · ' + money(incr25) + ' contra 2025'],
-      ['Margen incremental', money(margenIncr), 'con margen del ' + Math.round(v.margen * 100) + '%'],
+      ['Costo de la campaña', money(total), 'lo que se carga al proyecto'],
+      ['Costo por cliente atendido', money(atendidos ? total / atendidos : 0), atendidos + ' clientes · ' + Math.round(personas) + ' personas'],
+      ['El shampoo pago deja', money(servicio), v.clientesPagan + ' clientes × ' + money(v.precioShampoo - v.costoShampooPago)],
+      ['Venta incremental de joyas', money(incr), 'contra un sábado normal · ' + money(incr25) + ' contra 2025'],
+      ['Margen incremental total', money(margenIncr), 'joyas al ' + Math.round(v.margen * 100) + '% + shampoo pago'],
       ['Por cada $1 invertido vuelven', '$' + roi.toFixed(2).replace('.', ','), 'de margen'],
-      ['Punto de equilibrio', money(equilibrio), 'de venta incremental para cubrir todo']
+      ['Punto de equilibrio', money(equilibrio), 'de venta incremental de joyas']
     ].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num">' + k[1] + '</b><em>' + esc(k[2]) + '</em></div>'; }).join('');
-    var cumple = v.ventaSabadoCampana >= C.metasDia.venta;
-    var vb = $('costVeredicto');
-    if (neto >= 0) { vb.className = 'ok-box'; vb.innerHTML = '<b>La campaña se paga y deja ' + money(neto) + ' de margen.</b> Venta de la campaña: ' + money(ventaCamp) + '.'; }
-    else if (cumple) { vb.className = 'warn-box'; vb.innerHTML = '<b>Cumplimos la meta de venta del día pero no ganamos:</b> faltan ' + money(-neto) + ' de margen para cubrir los costos. Baja costos fijos o sube la venta incremental a ' + money(equilibrio) + '.'; }
-    else { vb.className = 'warn-box'; vb.innerHTML = '<b>Con estos supuestos la campaña no se paga:</b> faltan ' + money(-neto) + ' de margen. La venta incremental tiene que llegar a ' + money(equilibrio) + '.'; }
-    $('costTbl').innerHTML = '<thead><tr><th>Rubro</th><th>Cómo se calcula</th><th class="r">Costo</th><th class="r">%</th></tr></thead><tbody>' +
+    var cumple = v.ventaSabadoCampana >= C.metasDia.venta, vb = $('costVeredicto');
+    if (neto >= 0) { vb.className = 'ok-box'; vb.innerHTML = '<b>La campaña se paga y deja ' + money(neto) + ' de margen.</b> Venta de la campaña: ' + money(ventaCamp) + '. No se cargan el tiempo del taller, las asesoras ni la energía: ya son costos de la joyería.'; }
+    else if (cumple) { vb.className = 'warn-box'; vb.innerHTML = '<b>Cumplimos la meta de venta del día pero no ganamos:</b> faltan ' + money(-neto) + ' de margen. La venta incremental de joyas tiene que llegar a ' + money(equilibrio) + '.'; }
+    else { vb.className = 'warn-box'; vb.innerHTML = '<b>Con estos supuestos la campaña no se paga:</b> faltan ' + money(-neto) + ' de margen. La venta incremental de joyas tiene que llegar a ' + money(equilibrio) + '.'; }
+    $('costTbl').innerHTML = '<thead><tr><th>Rubro</th><th>Base</th><th class="r">Costo</th><th class="r">%</th></tr></thead><tbody>' +
       rubros.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td class="note">' + esc(r[2]) + '</td><td class="r num">' + money(r[1]) + '</td><td class="r num">' + (total ? Math.round(r[1] / total * 100) : 0) + '%</td></tr>'; }).join('') +
-      '<tr><td><b>Total</b></td><td></td><td class="r num"><b>' + money(total) + '</b></td><td class="r">100%</td></tr></tbody>';
+      '<tr><td><b>Total cargado a la campaña</b></td><td></td><td class="r num"><b>' + money(total) + '</b></td><td class="r">100%</td></tr></tbody>';
   }
-  $('costReset').onclick = function () { S.set('costos', {}); renderCostosIn(); renderCostos(); };
+  $('costReset').onclick = function () { S.set('costos2', {}); renderCostosIn(); renderCostos(); };
 
   function renderPend() {
     $('pendTbl').innerHTML = '<thead><tr><th>Decisión</th><th>Opciones</th><th>Quién decide</th></tr></thead><tbody>' +

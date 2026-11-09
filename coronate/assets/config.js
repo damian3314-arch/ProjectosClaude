@@ -51,19 +51,21 @@ window.CORO = {
   snacksTexto: 'Algo para picar mientras esperas.',
   // Línea de tiempo que ve la propietaria. tipo: hito | redes | evento
   linea: [
-    { f: '2026-11-09', t: 'Grabación con clientes (día 1): producto, taller, Tania a cámara, vitrina tapada', tipo: 'hito' },
-    { f: '2026-11-10', t: 'Grabación con clientes (día 2): testimonios, brindis, entregas. Autorizaciones firmadas', tipo: 'hito' },
-    { f: '2026-11-11', t: 'Confirmar con Tania si va la prueba del 14 y con qué clientes', tipo: 'hito' },
-    { f: '2026-11-12', t: 'Si hay prueba: invitaciones a mano a un grupo pequeño de selectos (sin redes)', tipo: 'hito' },
+    { f: '2026-11-09', t: 'Grabación día 1: producto, taller, pulsera tejida, vitrina tapada, Tania a cámara', tipo: 'hito' },
+    { f: '2026-11-10', t: 'Grabación día 2 con clientes. Autorizaciones firmadas. Material a Drive', tipo: 'hito' },
+    { f: '2026-11-11', t: '6 p.m.: tarjeta de invitación, flyer y primeras historias para aprobación de Tania', tipo: 'hito' },
+    { f: '2026-11-12', t: '6 p.m.: reels R1 y R2 editados', tipo: 'hito' },
+    { f: '2026-11-13', t: '6 p.m.: reels R3 y R4 editados; tarjetas listas para las asesoras', tipo: 'hito' },
     { f: '2026-11-14', t: 'PRUEBA OPCIONAL con grupo pequeño · Tania en tienda cerrando ventas', tipo: 'evento' },
-    { f: '2026-11-15', t: 'Arranca expectativa en redes: vitrina tapada, "estamos preparando algo muy especial"', tipo: 'redes' },
-    { f: '2026-11-16', t: 'Festivo. Teaser en historias (las asesoras no envían hoy)', tipo: 'redes' },
-    { f: '2026-11-17', t: 'Invitaciones a la base (asesoras, línea actual): martes', tipo: 'hito' },
-    { f: '2026-11-18', t: 'Invitaciones: miércoles · información abierta del servicio pago', tipo: 'hito' },
-    { f: '2026-11-19', t: 'Invitaciones: jueves · fachada y decoración en montaje', tipo: 'hito' },
-    { f: '2026-11-20', t: 'Recordatorio a cada cita. Fachada lista, moño puesto, bebidas y hielo', tipo: 'hito' },
-    { f: '2026-11-21', t: 'LANZAMIENTO · la gran revelación de la vitrina', tipo: 'evento' },
-    { f: '2026-11-27', t: 'Black Friday', tipo: 'hito' },
+    { f: '2026-11-15', t: 'Se publica la vitrina tapada y R1', tipo: 'redes' },
+    { f: '2026-11-16', t: 'Festivo, se trabaja: arrancan invitaciones de las asesoras; R2 y "faltan 5"', tipo: 'hito' },
+    { f: '2026-11-17', t: 'Invitaciones · R4 (test) · anuncio del servicio pago', tipo: 'redes' },
+    { f: '2026-11-18', t: 'Invitaciones · R3 · empieza montaje de fachada', tipo: 'redes' },
+    { f: '2026-11-19', t: '6 p.m.: R5 con clientes; fachada y decoración listas; ensayo', tipo: 'hito' },
+    { f: '2026-11-20', t: 'Recordatorio a cada cita; "mañana se abre el telón"; bebidas, hielo, tela y moño', tipo: 'hito' },
+    { f: '2026-11-21', t: 'LANZAMIENTO · revelación a las 9:00', tipo: 'evento' },
+    { f: '2026-11-22', t: 'Reel resumen y agradecimientos "Tu oro, tu corona"', tipo: 'redes' },
+    { f: '2026-11-23', t: 'Resultados del 21 y ajustes para Black Friday', tipo: 'hito' },
     { f: '2026-11-28', t: 'Sábado de Black Friday', tipo: 'evento' },
     { f: '2026-12-06', t: 'Primer domingo de diciembre con cita', tipo: 'evento' },
     { f: '2026-12-15', t: 'Primas: se pagan hasta el 20 de diciembre', tipo: 'hito' },
@@ -94,7 +96,8 @@ window.CORO = {
     'Teaser de expectativa en redes programado',
     'Carpeta de Drive del creativo creada y compartida',
     'Calendar compartido con las asesoras',
-    'Costos reales confirmados con Tania (pestaña Propietaria · Costos y retorno)'
+    'Costos reales confirmados con Tania (pestaña Propietaria · Costos y retorno)',
+    'Brief creativo entregado al creativo (creativo.html)'
   ],
   // Decisiones abiertas: se muestran en el panel hasta que se definan.
   pendientes: [
@@ -109,16 +112,23 @@ window.CORO = {
   honorarios: { fase1: 1500000, fase2: 2000000 },
   costos: {
     sabados: 6, domingos: 4,
-    clientesSabado: 22, clientesDomingo: 8, acompanantes: 0.5,
-    shampooInsumo: 3000, shampooMin: 15, horaTecnico: 12000,
-    bebidaPromedio: 3500, hieloJornada: 30000, snacksPersona: 0,
-    empaquesLote: 600000, decoracion: 1500000, fotoVideo: 800000, personalExtraJornada: 120000,
+    // Shampoo de brillo: de regalo solo para los invitados; el resto lo paga.
+    invitadosRegalo: 50, costoShampoo: 5000,
+    clientesPagan: 120, costoShampooPago: 6500, precioShampoo: 25000,
+    // Bebidas: Corona y soda ≈ $2.500; agua y Canada Dry ≈ $1.000–1.500.
+    acompanantes: 0.5, partCervezaSoda: 0.6, costoCervezaSoda: 2500, costoAguaCanada: 1250,
+    hieloJornada: 20000, snacksPersona: 0,
+    // Costos que sí se cargan a la campaña (Tania quiere recuperarlos).
+    decoracion: 1750000, fotoVideo: 550000,
+    // Opcionales: 0 = ya los asume la joyería (empaques, personal).
+    empaques: 0, personalExtraJornada: 0,
     ventaSabadoCampana: 10000000, ventaSabado2025: 5270000, ventaDomingo: 3000000, canibalizacionDomingo: 0.3,
     margen: 0.45
   },
-  // Meta noviembre + diciembre (decisión del 8–9 nov) y su contraste con los datos del libro de ventas.
+
+  // Meta noviembre + diciembre: se ajustó de 400 M a 380 M (decisión del 9 nov) y su contraste con los datos del libro de ventas.
   metaNovDic: {
-    meta: 400000000, nov2025: 88905000, dic2025: 229812000,
+    meta: 380000000, metaOriginal: 400000000, nov2025: 88905000, dic2025: 229812000,
     vendidoNov: 13260000, corte: '2026-11-07',
     diasAbiertos: 43, domingos: 4,
     ritmoOct: 3390000, subidaTemporada: 1.34, proyeccion: 222000000

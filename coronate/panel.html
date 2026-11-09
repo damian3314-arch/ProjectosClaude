@@ -15,7 +15,7 @@
   <div class="ptop">
     <div class="top" style="padding-top:0">
       <a class="mark" href="index.html"><i>TS</i><span><b>Panel de campaña</b><small id="pTitulo"></small></span></a>
-      <span class="actions" style="margin:0"><a class="btn line small" href="grabacion.html" target="_blank" rel="noopener">Grabación 9–10 nov</a><a class="btn line small" href="index.html" target="_blank" rel="noopener">Ver landing</a></span>
+      <span class="actions" style="margin:0"><a class="btn line small" href="creativo.html">Brief creativo</a><a class="btn line small" href="grabacion.html">Grabación</a><a class="btn line small" href="index.html">Ver landing</a></span>
     </div>
     <div class="tabs" role="tablist" aria-label="Secciones del panel">
       <button role="tab" id="t-ase" aria-selected="true" data-p="ase">Asesoras</button>
@@ -23,6 +23,12 @@
       <button role="tab" id="t-cre" aria-selected="false" data-p="cre">Creativo</button>
     </div>
   </div>
+
+  <div class="pband">
+    <div><p class="eyebrow">Navidad 2026 · Joyería Tanya Santiago</p><h1>Sábados de <em>Realeza</em></h1><p class="pb-sub">Tu oro, tu corona. Todo lo que el equipo necesita para el lanzamiento del sábado 21.</p></div>
+    <div class="pb-count"><b class="num" id="pbN">–</b><span id="pbT">días para la revelación</span></div>
+  </div>
+  <div class="ticker" aria-hidden="true"><div><span>Meta nov + dic: $380 M ✦ revelación sábado 21, 9:00 a.m. ✦ invitaciones del 16 al 20 ✦ shampoo de brillo de regalo para invitados ✦ Tu oro, tu corona ✦ Meta nov + dic: $380 M ✦ revelación sábado 21, 9:00 a.m. ✦ invitaciones del 16 al 20 ✦ shampoo de brillo de regalo para invitados ✦ Tu oro, tu corona ✦ </span></div></div>
 
   <div class="warn-box" id="cfgWarn" hidden></div>
 
@@ -73,7 +79,7 @@
     <div class="kpis" id="admKpis"></div>
 
     <div class="card gold">
-      <h3>Meta noviembre + diciembre: $400 M</h3>
+      <h3>Meta noviembre + diciembre: $380 M</h3>
       <div id="meta400" style="margin-top:10px"></div>
     </div>
 
@@ -189,5 +195,7 @@
 <script src="assets/config.js"></script>
 <script src="assets/shared.js"></script>
 <script src="assets/panel.js"></script>
+<script src="assets/fx.js"></script>
+<script>(function(){var d=Math.round((new Date('2026-11-21T12:00:00-05:00')-new Date())/864e5);var n=document.getElementById('pbN'),t=document.getElementById('pbT');if(d>0){n.textContent=d;t.textContent=(d===1?'día':'días')+' para la revelación';}else if(d===0){n.textContent='Hoy';t.textContent='es la revelación';}else{n.textContent='✦';t.textContent='campaña en curso';}})();</script>
 </body>
 </html>
