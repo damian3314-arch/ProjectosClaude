@@ -359,6 +359,16 @@ export async function alertReply(env, h, row, text) {
  */
 // Permite cambiar la plantilla que se usa sin tocar la rutina: OUTBOX_ALIAS = {"loggro_primer_contacto":"loggro_solicitud_info"}
 function templateAlias(env, name) { try { return JSON.parse(env.OUTBOX_ALIAS || '{}')[name] || name; } catch { return name; } }
+// A/B del primer contacto: AB_PRIMER = {"A":"plantilla_utilidad","B":"plantilla_marketing"}. Reparto fijo por el último dígito del
+// teléfono (par = A, impar = B), así la misma persona siempre recibe la misma variante. Sin la variable, se usa el alias de siempre.
+function abTemplate(env, r) {
+  if (r.kind !== 'primer_contacto' || !env.AB_PRIMER) return null;
+  try {
+    const ab = JSON.parse(env.AB_PRIMER);
+    const d = Number(String(r.phone).slice(-1));
+    return (d % 2 === 0 ? ab.A : ab.B) || null;
+  } catch { return null; }
+}
 export const OUTBOX = { from: 8, to: 19, perDay: 5, perRun: 4 }; // perRun: cada revisión (cada 5 min) envía pocos, para que salgan escalonados
 
 export async function outboxSend(env) {
@@ -385,9 +395,11 @@ export async function outboxSend(env) {
     // Reserva la fila antes de enviar: el cron de cada hora y el de cada 5 minutos coinciden en el minuto 0 y, sin esto, los dos mandaban el mismo mensaje
     const claim = await env.DB.prepare("UPDATE outbox SET status = 'sending' WHERE id = ? AND status = 'queued'").bind(r.id).run();
     if (!claim.meta?.changes) continue;
-    const res = await sendTemplate(env, r.phone, templateAlias(env, r.template), params);
+    const tpl = abTemplate(env, r) || templateAlias(env, r.template);
+    const res = await sendTemplate(env, r.phone, tpl, params);
     if (res.ok) {
-      await env.DB.prepare("UPDATE outbox SET status = 'sent', sent_at = ?, wamid = ? WHERE id = ?").bind(sqlTime(Date.now()), res.wamid || null, r.id).run();
+      // Se guarda la plantilla realmente usada: así el A/B se mide cruzando outbox.template con las respuestas
+      await env.DB.prepare("UPDATE outbox SET status = 'sent', sent_at = ?, wamid = ?, template = ? WHERE id = ?").bind(sqlTime(Date.now()), res.wamid || null, tpl, r.id).run();
       if (!reminder) {
         // Queda registrado para que Alter atienda la respuesta; el recordatorio no cambia el estado de una conversación en curso
         await env.DB.prepare("INSERT OR IGNORE INTO loggro_leads (phone, deal_id, contact_id, name, state) VALUES (?, ?, ?, ?, 'sent')").bind(r.phone, r.deal_id || null, r.contact_id || null, r.name || null).run();
