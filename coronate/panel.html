@@ -34,49 +34,88 @@
 
   <!-- ================= ASESORAS ================= -->
   <section class="pane on" id="p-ase" role="tabpanel" aria-labelledby="t-ase">
-    <div class="kpis" id="aseKpis"></div>
+    <div class="ase-top">
+      <label class="ase-yo">Tu nombre (va en los mensajes)<input id="aseNombre" placeholder="Ej. Laura" autocomplete="given-name"></label>
+      <div class="kpis" id="aseKpis"></div>
+    </div>
+    <div class="warn-box" id="aseBase" hidden></div>
 
-    <div class="card">
-      <h3>1 · Mensaje</h3>
-      <div class="tools" style="margin-top:10px">
-        <label>Plantilla<select id="tplSel"></select></label>
-        <label>Tu nombre (asesora)<input id="asesora" placeholder="Ej. Laura"></label>
-        <label>Día que ofreces<select id="fechaOf"></select></label>
+    <div class="card ase-trabajo">
+      <h3>¿Qué mensaje vas a enviar?</h3>
+      <div class="pasos" id="pasos" role="tablist" aria-label="Paso"></div>
+      <p class="note" id="pasoAyuda"></p>
+      <details class="prev">
+        <summary>Ver cómo queda el mensaje</summary>
+        <div class="prev-g">
+          <div><span class="tag gold">👑 Premium</span><div class="cpy" id="msgPrem"></div></div>
+          <div><span class="tag">General</span><div class="cpy" id="msgGen"></div></div>
+        </div>
+        <details class="prev-ed">
+          <summary>Editar el texto de este paso</summary>
+          <p class="note">Usa {nombre}, {asesora}, {dia}, {hora}, {proximo} y {direccion}: se llenan solos. Los cambios quedan en este navegador.</p>
+          <label>Texto premium<textarea id="tplEdP"></textarea></label>
+          <label style="margin-top:8px">Texto general<textarea id="tplEdG"></textarea></label>
+          <div class="actions" style="margin-top:8px"><button class="btn line small" id="tplRes" type="button">Volver al texto original</button></div>
+        </details>
+      </details>
+      <div class="tools ase-fil">
+        <label>Buscar<input id="aseBusq" placeholder="Nombre o celular" type="search"></label>
+        <label>Tipo<select id="aseTipo"><option value="">Todos</option><option value="p">👑 Premium</option><option value="g">General</option></select></label>
+        <label class="sw"><input type="checkbox" id="aseMias" checked> Solo mis clientes</label>
+        <label class="sw"><input type="checkbox" id="aseTodos"> Ver toda la lista</label>
       </div>
-      <label style="margin-top:12px">Texto <small style="font-weight:500">Variables: {nombre} {fecha} {link} {asesora}</small>
-        <textarea id="tplTxt"></textarea></label>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn line small" id="tplSave" type="button">Guardar cambios de esta plantilla</button>
-        <button class="btn line small" id="tplReset" type="button">Volver al texto original</button>
-      </div>
-      <p class="note" style="margin-top:8px">El {link} lleva el nombre del cliente, así la página lo saluda por su nombre.</p>
+      <p class="ase-n" id="aseConteo"></p>
+      <div class="cl-list" id="aseLista"></div>
     </div>
 
     <div class="card">
-      <h3>2 · Lista de clientes</h3>
-      <p class="note">Pega una lista (<b>nombre, teléfono</b>, uno por línea) o sube un CSV. Se queda solo en este dispositivo.</p>
-      <label style="margin-top:10px">Pegar lista<textarea id="imp" placeholder="Carlos Pérez, 300 123 4567&#10;María López, 3109876543"></textarea></label>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn fill small" id="impBtn" type="button">Agregar a la lista</button>
-        <label class="btn line small" style="cursor:pointer;margin:0">Subir CSV<input id="impFile" type="file" accept=".csv,.txt" style="display:none"></label>
-        <label style="display:flex;flex-direction:row;gap:8px;align-items:center;font-weight:600"><input id="impPrueba" type="checkbox" style="width:20px;min-height:0">Invitado premium (shampoo de regalo)</label>
-      </div>
-      <p class="note" id="impMsg" style="margin-top:8px"></p>
+      <h3>Agenda del día</h3>
+      <div class="tools" style="margin:10px 0"><label>Día<select id="agDia"></select></label></div>
+      <div class="ag-tabla" id="agTabla"></div>
     </div>
 
     <div class="card">
-      <h3>3 · A quién escribir</h3>
-      <div class="tools" style="margin:10px 0">
-        <label>Buscar<input id="busq" placeholder="Nombre o teléfono"></label>
-        <label>Estado<select id="filtro"></select></label>
-      </div>
-      <div class="clist" id="clientes"></div>
+      <h3>Piezas para pegar en el chat</h3>
+      <p class="note">Toca "Copiar imagen", ve al chat de WhatsApp y pega (Ctrl + V en el computador; mantener presionado y Pegar en el celular). Si tu navegador no deja copiar, la imagen se descarga para adjuntarla.</p>
+      <div class="pz-g" id="piezasAse"></div>
+    </div>
+
+    <div class="card">
+      <h3>Respuestas rápidas</h3>
+      <p class="note">Lo que más preguntan. Copia, pega y ajusta si hace falta. Siempre cierra proponiendo un día.</p>
+      <div class="rq-l" id="respAse"></div>
+    </div>
+
+    <div class="card guia">
+      <h3>Cómo trabajar la lista</h3>
+      <ol>
+        <li><b>Escribe tu nombre arriba.</b> Así cada mensaje sale firmado por ti.</li>
+        <li><b>Elige el paso</b> (Invitación, Seguimiento…) y la lista te muestra solo a quién le toca.</li>
+        <li><b>Toca el botón verde.</b> Se abre WhatsApp con el mensaje listo. Revisa y envía. Si va con imagen, toca antes "Copiar imagen" y pégala en el chat.</li>
+        <li><b>Cuando respondan, marca lo que pasó</b>: Agendar, Respondió, No le interesa. Lo que marques decide en qué paso vuelve a aparecer.</li>
+        <li><b>Seguimiento a los 2 días</b> si no responde. Máximo dos mensajes sin respuesta: después se deja quieto.</li>
+        <li><b>Recordatorio el día anterior</b> al turno, y "Gracias" después de la visita.</li>
+        <li><b>Si alguien pide no recibir más mensajes, márcalo "No escribir más"</b> y no se le vuelve a escribir.</li>
+        <li><b>No envíes en ráfaga</b>: escribe a los clientes uno por uno, con su nombre. Si muchos reportan el número, WhatsApp lo puede bloquear.</li>
+      </ol>
+      <p class="note">El avance de la lista se guarda en este navegador. Trabajen todas desde el mismo computador (el del WhatsApp Business de la joyería) para que nadie le escriba dos veces al mismo cliente.</p>
     </div>
   </section>
 
   <!-- ================= PROPIETARIA ================= -->
   <section class="pane" id="p-adm" role="tabpanel" aria-labelledby="t-adm">
     <div class="kpis" id="admKpis"></div>
+
+    <div class="card">
+      <h3>Base de clientes para las asesoras</h3>
+      <p class="note" id="baseInfo"></p>
+      <p class="note">Sube un archivo CSV (en Excel: Guardar como → CSV) con las columnas <b>Nombre</b>, <b>Celular</b>, <b>Premium</b> (sí / no) y, si quieres repartir la lista, <b>Asesora</b>. Queda guardada en este navegador; los datos no se suben a ningún lado.</p>
+      <div class="actions" style="margin-top:10px">
+        <label class="btn fill small" style="cursor:pointer;margin:0">Subir base (CSV)<input id="baseFile" type="file" accept=".csv,.txt" style="display:none"></label>
+        <button class="btn line small" id="baseQuitar" type="button">Quitar base de este navegador</button>
+      </div>
+      <p class="note" id="baseMsg" style="margin-top:8px"></p>
+    </div>
 
     <div class="card gold">
       <h3>Meta noviembre + diciembre: $380 M</h3>
@@ -194,6 +233,9 @@
 
 <script src="assets/config.js"></script>
 <script src="assets/shared.js"></script>
+<script src="assets/clientes.ejemplo.js"></script>
+<script src="assets/clientes.js"></script>
+<script src="assets/asesoras.js"></script>
 <script src="assets/panel.js"></script>
 <script src="assets/fx.js"></script>
 <script>(function(){var d=Math.round((new Date('2026-11-21T12:00:00-05:00')-new Date())/864e5);var n=document.getElementById('pbN'),t=document.getElementById('pbT');if(d>0){n.textContent=d;t.textContent=(d===1?'día':'días')+' para la revelación';}else if(d===0){n.textContent='Hoy';t.textContent='es la revelación';}else{n.textContent='✦';t.textContent='campaña en curso';}})();</script>

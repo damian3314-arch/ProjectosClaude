@@ -3,35 +3,10 @@
   var C = window.CORO, U = window.CoroUtil, S = U.S, esc = U.esc;
   var $ = function (id) { return document.getElementById(id); };
 
-  var ESTADOS = [
-    ['pendiente', 'Por escribir'], ['enviada', 'Invitación enviada'], ['respondio', 'Respondió'],
-    ['agendo', 'Agendó'], ['llego', 'Llegó'], ['compro', 'Compró'], ['baja', 'Pidió BAJA']
-  ];
-  var META_DIARIA = 75;
-
-  var TPL_DEF = {
-    invitacion: {
-      nombre: 'Invitación',
-      txt: 'Hola {nombre} ✨ Soy {asesora} de Joyería Tanya Santiago.\n\nQueremos consentirte: el {fecha} trae hasta 3 joyas de oro y les hacemos un shampoo de brillo de regalo. Mientras tanto te relajas con una Corona bien fría (+18) o una bebida sin alcohol, y conoces lo nuevo de nuestra vitrina de Navidad.\n\nAquí ves todo y agendas tu turno: {link}\n\n¿Te aparto un espacio? Respóndeme QUIERO. Si prefieres no recibir más mensajes, responde BAJA.'
-    },
-    seguimiento: {
-      nombre: 'Seguimiento (no respondió)',
-      txt: 'Hola {nombre}, soy {asesora} de Joyería Tanya Santiago. Te escribo por si se te pasó la invitación del {fecha}: shampoo de brillo de regalo para tus joyas de oro y una Corona bien fría. Cupos limitados, aquí agendas: {link}\n\nSi no quieres recibir más mensajes, responde BAJA.'
-    },
-    recordatorio: {
-      nombre: 'Recordatorio de cita',
-      txt: 'Hola {nombre}, te recuerdo que te esperamos el {fecha} en Joyería Tanya Santiago. Trae tus joyas y ven con ganas de disfrutar. Si necesitas cambiar la hora, respóndeme por aquí. {asesora}'
-    },
-    gracias: {
-      nombre: 'Gracias por venir',
-      txt: 'Gracias por venir, {nombre} 💛 Fue un gusto consentir tu oro: tu oro, tu corona. Si quieres, cuéntame cómo te fue. {asesora}, Joyería Tanya Santiago'
-    }
-  };
-
-  /* ---------- datos ---------- */
-  var clientes = S.get('clientes', []) || [];
-  function guardar() { S.set('clientes', clientes); }
-  function primerNombre(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
+  /* Las asesoras trabajan en assets/asesoras.js; aquí se leen sus registros. */
+  var A = window.CoroAse;
+  function regs() { return A ? A.registros() : []; }
+  function fechaTarjeta(f) { return (f ? U.fmtDate(f, true) : 'Pronto') + ' · jornada continua'; }
 
   /* ---------- configuración pendiente ---------- */
   var faltan = [];
@@ -58,190 +33,11 @@
     b.onclick = function () { tab(b.dataset.p); };
   });
 
-  /* ================= ASESORAS ================= */
-  var fechasOf = C.fechas.filter(function (x) { return x.f >= U.today(); });
-  $('fechaOf').innerHTML = fechasOf.map(function (x) { return '<option value="' + x.f + '">' + esc(U.fmtDate(x.f, true)) + '</option>'; }).join('');
-  $('asesora').value = S.get('asesora', '') || '';
-  $('asesora').addEventListener('input', function () { S.set('asesora', $('asesora').value); renderClientes(); });
-  $('fechaOf').addEventListener('change', function () { renderClientes(); });
-
-  function tplTexto(id) { var o = S.get('tpl', {}) || {}; return o[id] != null ? o[id] : TPL_DEF[id].txt; }
-  $('tplSel').innerHTML = Object.keys(TPL_DEF).map(function (k) { return '<option value="' + k + '">' + esc(TPL_DEF[k].nombre) + '</option>'; }).join('');
-  function cargarTpl() { $('tplTxt').value = tplTexto($('tplSel').value); }
-  $('tplSel').addEventListener('change', function () { cargarTpl(); renderClientes(); });
-  $('tplTxt').addEventListener('input', renderClientes);
-  $('tplSave').onclick = function () { var o = S.get('tpl', {}) || {}; o[$('tplSel').value] = $('tplTxt').value; S.set('tpl', o); this.textContent = 'Guardado ✓'; var b = this; setTimeout(function () { b.textContent = 'Guardar cambios de esta plantilla'; }, 1500); };
-  $('tplReset').onclick = function () { var o = S.get('tpl', {}) || {}; delete o[$('tplSel').value]; S.set('tpl', o); cargarTpl(); renderClientes(); };
-  cargarTpl();
-
-  function linkPara(c) {
-    return U.baseUrl() + '?n=' + encodeURIComponent(primerNombre(c.nombre)) + (c.prueba ? '&p=1' : '');
-  }
-  function mensajePara(c) {
-    var f = $('fechaOf').value;
-    var fechaTxt = f ? U.fmtDate(f, true) : '[fecha]';
-    return $('tplTxt').value
-      .replace(/\{nombre\}/g, primerNombre(c.nombre))
-      .replace(/\{fecha\}/g, fechaTxt)
-      .replace(/\{link\}/g, linkPara(c))
-      .replace(/\{asesora\}/g, $('asesora').value.trim() || 'tu asesora');
-  }
-
-  /* importar */
-  function parseLine(l) {
-    var m = l.match(/(\+?\d[\d\s\-().]{8,}\d)/);
-    if (!m) return null;
-    var tel = U.normPhone(m[1]);
-    var nombre = l.replace(m[1], ' ').replace(/[,;\t"]+/g, ' ').replace(/\s+/g, ' ').trim() || 'Cliente';
-    return { nombre: nombre, tel: tel.num, ok: tel.ok };
-  }
-  function importar(texto, prueba) {
-    var vistos = {}; clientes.forEach(function (c) { vistos[c.tel] = 1; });
-    var nuevos = 0, dup = 0, mal = 0, sin = 0;
-    texto.split(/\r?\n/).forEach(function (l) {
-      if (!l.trim()) return;
-      var p = parseLine(l);
-      if (!p) { sin++; return; }
-      if (vistos[p.tel]) { dup++; return; }
-      vistos[p.tel] = 1; if (!p.ok) mal++;
-      clientes.push({ id: U.uid(), nombre: p.nombre, tel: p.tel, estado: 'pendiente', prueba: !!prueba, fechaCita: '', monto: 0, nota: '', enviadaAt: '' });
-      nuevos++;
-    });
-    guardar();
-    $('impMsg').textContent = nuevos + ' agregados · ' + dup + ' repetidos' + (mal ? ' · ' + mal + ' con teléfono dudoso' : '') + (sin ? ' · ' + sin + ' líneas sin teléfono' : '') + '.';
-    renderClientes();
-  }
-  $('impBtn').onclick = function () { importar($('imp').value, $('impPrueba').checked); $('imp').value = ''; };
-  $('impFile').onchange = function () {
-    var f = this.files[0]; if (!f) return;
-    var r = new FileReader(); var pr = $('impPrueba').checked;
-    r.onload = function () { importar(String(r.result), pr); };
-    r.readAsText(f);
-    this.value = '';
-  };
-
-  $('filtro').innerHTML = '<option value="">Todos</option>' + ESTADOS.map(function (e) { return '<option value="' + e[0] + '">' + e[1] + '</option>'; }).join('');
-  $('filtro').addEventListener('change', renderClientes);
-  $('busq').addEventListener('input', renderClientes);
-
-  function renderClientes() {
-    var hoy = U.today();
-    var porEstado = {}; ESTADOS.forEach(function (e) { porEstado[e[0]] = 0; });
-    clientes.forEach(function (c) { porEstado[c.estado] = (porEstado[c.estado] || 0) + 1; });
-    var enviadasHoy = clientes.filter(function (c) { return c.enviadaAt === hoy; }).length;
-    var respondieron = porEstado.respondio + porEstado.agendo + porEstado.llego + porEstado.compro;
-    $('aseKpis').innerHTML = [
-      ['En la lista', clientes.length, ''],
-      ['Por escribir', porEstado.pendiente, ''],
-      ['Enviadas hoy', enviadasHoy, 'meta ' + META_DIARIA],
-      ['Respondieron', respondieron, ''],
-      ['Agendaron', porEstado.agendo + porEstado.llego + porEstado.compro, '']
-    ].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num">' + k[1] + '</b><em>' + k[2] + '</em></div>'; }).join('');
-
-    var fil = $('filtro').value, bq = $('busq').value.trim().toLowerCase();
-    var lista = clientes.filter(function (c) {
-      return (!fil || c.estado === fil) && (!bq || c.nombre.toLowerCase().indexOf(bq) >= 0 || c.tel.indexOf(bq.replace(/\D/g, '') || '§') >= 0);
-    }).slice(0, 200);
-
-    if (!clientes.length) { $('clientes').innerHTML = '<p class="muted">Aún no hay clientes. Pega una lista arriba.</p>'; return; }
-    if (!lista.length) { $('clientes').innerHTML = '<p class="muted">Nada con ese filtro.</p>'; return; }
-
-    var opts = '<option value="">Día de la cita…</option>' + C.fechas.map(function (x) { return '<option value="' + x.f + '">' + esc(U.fmtDate(x.f)) + '</option>'; }).join('');
-    $('clientes').innerHTML = lista.map(function (c) {
-      var ok = U.normPhone(c.tel).ok;
-      return '<div class="cli' + (c.estado === 'compro' ? ' hecho' : '') + '" data-id="' + c.id + '">' +
-        '<div><div class="nm">' + esc(c.nombre) + (c.prueba ? ' <span class="pill">selecto</span>' : '') + (ok ? '' : ' <span class="pill bad">revisar teléfono</span>') + '</div>' +
-        '<div class="sub">' + esc(c.tel) + (c.enviadaAt ? ' · enviada ' + esc(c.enviadaAt) : '') + '</div></div>' +
-        '<div class="bt"><button class="btn wa small" data-a="wa"' + (ok && c.estado !== 'baja' ? '' : ' disabled') + '>WhatsApp</button>' +
-        '<button class="btn line small" data-a="card">Tarjeta</button></div>' +
-        '<div class="ctl">' +
-        '<select data-f="estado" aria-label="Estado">' + ESTADOS.map(function (e) { return '<option value="' + e[0] + '"' + (e[0] === c.estado ? ' selected' : '') + '>' + e[1] + '</option>'; }).join('') + '</select>' +
-        '<select data-f="fechaCita" aria-label="Día de la cita">' + opts.replace('value="' + c.fechaCita + '"', 'value="' + c.fechaCita + '" selected') + '</select>' +
-        '<input data-f="monto" type="number" inputmode="numeric" min="0" step="1000" placeholder="Compra $" value="' + (c.monto || '') + '" aria-label="Valor de la compra">' +
-        '<input data-f="nota" placeholder="Nota" value="' + esc(c.nota) + '" aria-label="Nota">' +
-        '</div></div>';
-    }).join('');
-  }
-
-  $('clientes').addEventListener('change', function (e) {
-    var t = e.target, f = t.getAttribute('data-f'); if (!f) return;
-    var id = t.closest('.cli').dataset.id;
-    var c = clientes.filter(function (x) { return x.id === id; })[0]; if (!c) return;
-    c[f] = f === 'monto' ? (+t.value || 0) : t.value;
-    if (f === 'estado' && c.estado === 'enviada' && !c.enviadaAt) c.enviadaAt = U.today();
-    guardar(); renderClientes();
-  });
-  $('clientes').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-a]'); if (!b) return;
-    var id = b.closest('.cli').dataset.id;
-    var c = clientes.filter(function (x) { return x.id === id; })[0]; if (!c) return;
-    if (b.dataset.a === 'wa') {
-      window.open(U.waLink(c.tel, mensajePara(c)), '_blank', 'noopener');
-      if (c.estado === 'pendiente') { c.estado = 'enviada'; c.enviadaAt = U.today(); guardar(); renderClientes(); }
-    } else if (b.dataset.a === 'card') {
-      abrirTarjeta(c);
-    }
-  });
-
-  /* ---------- tarjeta personalizada (canvas) ---------- */
-  function drawCard(cv, nombre, fechaTxt) {
-    var g = cv.getContext('2d'), W = cv.width, H = cv.height;
-    var grad = g.createLinearGradient(0, 0, W, H); grad.addColorStop(0, '#22421F'); grad.addColorStop(1, '#16301A');
-    g.fillStyle = grad; g.fillRect(0, 0, W, H);
-    var seed = 7; function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-    for (var i = 0; i < 70; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.15 + rnd() * 0.5).toFixed(2) + ')'; g.beginPath(); g.arc(rnd() * W, rnd() * H, 2 + rnd() * 5, 0, 7); g.fill(); }
-    g.strokeStyle = '#C9A44A'; g.lineWidth = 5; g.strokeRect(48, 48, W - 96, H - 96);
-    g.strokeStyle = 'rgba(201,164,74,.45)'; g.lineWidth = 2; g.strokeRect(68, 68, W - 136, H - 136);
-    g.fillStyle = '#B3261E'; g.beginPath(); g.moveTo(W - 220, 48); g.lineTo(W - 140, 48); g.lineTo(W - 140, 260); g.lineTo(W - 180, 225); g.lineTo(W - 220, 260); g.closePath(); g.fill();
-    g.textAlign = 'center';
-    g.fillStyle = '#C9A44A'; g.font = '700 30px "Hanken Grotesk", system-ui, sans-serif';
-    if ('letterSpacing' in g) g.letterSpacing = '8px';
-    g.fillText('JOYERÍA TANYA SANTIAGO', W / 2 - 40, 170);
-    if ('letterSpacing' in g) g.letterSpacing = '0px';
-    var nm = primerNombre(nombre) + ',';
-    var size = 190; g.font = size + 'px "Instrument Serif", Georgia, serif';
-    while (g.measureText(nm).width > W - 220 && size > 70) { size -= 6; g.font = size + 'px "Instrument Serif", Georgia, serif'; }
-    g.fillStyle = '#F7F2E8'; g.fillText(nm, W / 2, 520);
-    g.font = 'italic 78px "Instrument Serif", Georgia, serif'; g.fillStyle = '#C9A44A';
-    g.fillText('esta invitación es solo para ti', W / 2, 630);
-    g.fillStyle = '#F7F2E8'; g.font = '700 42px "Hanken Grotesk", system-ui, sans-serif';
-    g.fillText(fechaTxt, W / 2, 790);
-    g.font = '500 38px "Hanken Grotesk", system-ui, sans-serif'; g.fillStyle = '#D9E3D6';
-    ['Shampoo de brillo de regalo para tus joyas', 'Una Corona bien fría (+18) o bebida sin alcohol', 'Lo nuevo de nuestra vitrina de Navidad'].forEach(function (t, i) { g.fillText(t, W / 2, 880 + i * 62); });
-    g.fillStyle = '#C9A44A'; var bw = 760, bh = 96, bx = (W - bw) / 2, by = 1130;
-    g.beginPath(); g.moveTo(bx + 48, by); g.arcTo(bx + bw, by, bx + bw, by + bh, 48); g.arcTo(bx + bw, by + bh, bx, by + bh, 48); g.arcTo(bx, by + bh, bx, by, 48); g.arcTo(bx, by, bx + bw, by, 48); g.fill();
-    g.fillStyle = '#2A1D00'; g.font = '800 38px "Hanken Grotesk", system-ui, sans-serif';
-    g.fillText('Responde QUIERO y te apartamos tu turno', W / 2, by + 62);
-  }
-  function fechaTarjeta(f) { return (f ? U.fmtDate(f, true) : 'Pronto') + ' · jornada continua'; }
-
-  function abrirTarjeta(c) {
-    var d = $('dlg'), body = $('dlgBody');
-    body.innerHTML = '<h3>Tarjeta para ' + esc(primerNombre(c.nombre)) + '</h3><canvas id="tarjetaDlg" width="1080" height="1350" style="width:100%;border-radius:14px;margin:10px 0"></canvas>' +
-      '<div class="actions"><button class="btn fill small" id="tdDown">Descargar</button><button class="btn wa small" id="tdShare">Compartir</button><button class="btn line small" id="tdClose">Cerrar</button></div>' +
-      '<p class="note" style="margin-top:8px">En el celular, "Compartir" abre WhatsApp con la imagen. En computador, descárgala y adjúntala.</p>';
-    var cv = $('tarjetaDlg');
-    var go = function () { drawCard(cv, c.nombre, fechaTarjeta($('fechaOf').value)); };
-    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go);
-    $('tdClose').onclick = function () { d.close(); };
-    $('tdDown').onclick = function () { cv.toBlob(function (b) { U.download('invitacion-' + primerNombre(c.nombre).toLowerCase() + '.png', 'image/png', b); }); };
-    $('tdShare').onclick = function () {
-      cv.toBlob(function (b) {
-        var file = new File([b], 'invitacion.png', { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], text: mensajePara(c) }).catch(function () { /* cancelado */ });
-        } else { U.download('invitacion-' + primerNombre(c.nombre).toLowerCase() + '.png', 'image/png', b); }
-      });
-    };
-    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
-  }
-
   /* ================= PROPIETARIA ================= */
   function ratio(a, meta) { return meta ? a / meta : 0; }
   function luz(r, vacio) { if (vacio) return '<span class="light n">–</span>'; return '<span class="light ' + (r >= 1 ? 'g' : r >= 0.7 ? 'y' : 'r') + '">' + Math.round(r * 100) + '%</span>'; }
   function money(n) { return '$' + Math.round(n).toLocaleString('es-CO'); }
 
-  function citasWeb() { return S.get('citas', []) || []; }
 
 
   /* ---------- meta noviembre + diciembre ---------- */
@@ -337,16 +133,16 @@
   function renderAdm() {
     renderMeta(); renderCostosIn(); renderCostos(); renderPend();
     var hoy = U.today();
+    var clientes = regs();
     var cnt = function (arr) { return clientes.filter(function (c) { return arr.indexOf(c.estado) >= 0; }).length; };
-    var enviadas = clientes.length - cnt(['pendiente']);
-    var resp = cnt(['respondio', 'agendo', 'llego', 'compro']);
-    var ag = cnt(['agendo', 'llego', 'compro']);
-    var web = citasWeb().length;
+    var enviadas = clientes.length - cnt(['porinvitar']);
+    var resp = cnt(['interesado', 'agendado', 'recordado', 'llego', 'compro', 'nointeresa', 'baja']);
+    var ag = cnt(['agendado', 'recordado', 'llego', 'compro']);
     var monto = clientes.reduce(function (s, c) { return s + (c.estado === 'compro' ? (+c.monto || 0) : 0); }, 0);
     $('admKpis').innerHTML = [
       ['Invitaciones enviadas', enviadas, 'de ' + clientes.length + ' en lista'],
-      ['Respuestas', resp, enviadas ? Math.round(resp / enviadas * 100) + '% de las enviadas' : ''],
-      ['Citas (asesoras + web)', ag + web, ag + ' asesoras · ' + web + ' web'],
+      ['Respondieron', resp, enviadas ? Math.round(resp / enviadas * 100) + '% de las enviadas' : ''],
+      ['Turnos agendados', ag, cnt(['nointeresa']) + ' no les interesa · ' + cnt(['baja']) + ' pidieron no escribir'],
       ['Llegaron', cnt(['llego', 'compro']), ''],
       ['Compraron', cnt(['compro']), ''],
       ['Venta atribuida', money(monto), 'suma de lo anotado']
@@ -355,8 +151,8 @@
     var ventaDia = S.get('ventaDia', {}) || {};
     var rows = C.fechas.map(function (x) {
       var m = x.tipo === 'prueba' ? C.metasPrueba : C.metasDia;
-      var cl = clientes.filter(function (c) { return c.fechaCita === x.f; });
-      var citas = cl.filter(function (c) { return ['agendo', 'llego', 'compro'].indexOf(c.estado) >= 0; }).length + citasWeb().filter(function (c) { return c.f === x.f; }).length;
+      var cl = clientes.filter(function (c) { return c.cita && c.cita.f === x.f; });
+      var citas = cl.filter(function (c) { return ['agendado', 'recordado', 'llego', 'compro'].indexOf(c.estado) >= 0; }).length;
       var llegan = cl.filter(function (c) { return c.estado === 'llego' || c.estado === 'compro'; }).length;
       var compran = cl.filter(function (c) { return c.estado === 'compro'; }).length;
       var atr = cl.reduce(function (s, c) { return s + (c.estado === 'compro' ? (+c.monto || 0) : 0); }, 0);
@@ -385,13 +181,13 @@
     }).join('');
 
     /* citas */
-    var todas = citasWeb().map(function (c) { return { f: c.f, h: c.h, n: c.nombre, t: c.tel, j: c.joyas, o: 'Web' }; });
-    clientes.forEach(function (c) { if (c.fechaCita && ['agendo', 'llego', 'compro'].indexOf(c.estado) >= 0) todas.push({ f: c.fechaCita, h: '', n: c.nombre, t: c.tel, j: '', o: 'Asesora' }); });
+    var todas = [];
+    clientes.forEach(function (c) { if (c.cita && ['agendado', 'recordado', 'llego', 'compro'].indexOf(c.estado) >= 0) todas.push({ f: c.cita.f, h: c.cita.h, n: c.nombre, t: c.tel, j: c.nota, o: c.premium ? 'Premium' : 'General', e: c.estado }); });
     todas.sort(function (a, b) { return (a.f + a.h) < (b.f + b.h) ? -1 : 1; });
-    $('citasTbl').innerHTML = todas.length ? '<thead><tr><th>Día</th><th>Hora</th><th>Cliente</th><th>WhatsApp</th><th>Joyas</th><th>Origen</th></tr></thead><tbody>' +
+    $('citasTbl').innerHTML = todas.length ? '<thead><tr><th>Día</th><th>Hora</th><th>Cliente</th><th>WhatsApp</th><th>Nota</th><th>Tipo</th></tr></thead><tbody>' +
       todas.map(function (c) { return '<tr><td>' + esc(U.fmtDate(c.f)) + '</td><td>' + esc(c.h || '–') + '</td><td>' + esc(c.n) + '</td><td><a href="' + esc(U.waLink(c.t)) + '" target="_blank" rel="noopener">' + esc(c.t) + '</a></td><td>' + esc(c.j || '–') + '</td><td>' + c.o + '</td></tr>'; }).join('') + '</tbody>'
       : '<tbody><tr><td class="muted">Aún no hay citas.</td></tr></tbody>';
-    $('citasNote').textContent = C.agenda.endpoint ? 'Las citas de la web también se guardan en tu hoja y Calendar de Google.' : 'Modo prueba: solo se ven las citas hechas desde este navegador. Para recibir las de todos los clientes, conecta el Apps Script (ver README).';
+    $('citasNote').textContent = 'Turnos que agendaron las asesoras en este navegador.';
 
     /* checklist */
     var ck = S.get('check', {}) || {};
@@ -408,7 +204,7 @@
     U.download('sabados-de-realeza-fechas.ics', 'text/calendar', U.makeICS(ev));
   };
   $('bkDown').onclick = function () {
-    var dump = {}; ['clientes', 'citas', 'tpl', 'check', 'piezas', 'ventaDia', 'asesora', 'drive'].forEach(function (k) { dump[k] = S.get(k, null); });
+    var dump = {}; ['seg', 'base', 'tpl2', 'check', 'piezas', 'ventaDia', 'asesora', 'drive', 'costos2'].forEach(function (k) { dump[k] = S.get(k, null); });
     U.download('coronate-copia-' + U.today() + '.json', 'application/json', JSON.stringify(dump, null, 1));
   };
   $('bkUp').onchange = function () {
@@ -444,7 +240,7 @@
     Array.prototype.forEach.call($('piezas').querySelectorAll('input'), function (i) {
       i.onchange = function () { var o = S.get('piezas', {}) || {}; o[i.getAttribute('data-pz')] = i.checked; S.set('piezas', o); };
     });
-    var all = [['Invitación por WhatsApp (plantilla base)', TPL_DEF.invitacion.txt]].concat(TEXTOS);
+    var all = [['Invitación por WhatsApp (premium)', A ? A.mensajeBase() : '']].concat(TEXTOS);
     $('textos').innerHTML = all.map(function (t, i) { return '<div><b>' + esc(t[0]) + '</b><div class="cpy">' + esc(t[1]) + '</div><button class="btn line small" style="margin-top:6px" data-cp="' + i + '">Copiar</button></div>'; }).join('');
     Array.prototype.forEach.call($('textos').querySelectorAll('button'), function (b) {
       b.onclick = function () { U.copy(all[+b.dataset.cp][1], function () { var o = b.textContent; b.textContent = 'Copiado ✓'; setTimeout(function () { b.textContent = o; }, 1200); }); };
@@ -455,7 +251,7 @@
   function pintarTarjeta() {
     var cv = $('tarjeta');
     (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
-      drawCard(cv, $('cardNombre').value || 'Cliente', fechaTarjeta($('cardFecha').value));
+      if (A) A.pieza(cv, A.datosPieza('invitacion', { id: '_cre', nombre: $('cardNombre').value || 'Cliente', premium: true }));
     });
   }
   $('driveUrl').addEventListener('input', function () { S.set('drive', this.value.trim()); $('driveGo').href = this.value.trim() || '#'; $('driveGo').style.opacity = this.value.trim() ? 1 : .5; });
@@ -464,7 +260,6 @@
   $('cardDown').onclick = function () { $('tarjeta').toBlob(function (b) { U.download('invitacion-' + ($('cardNombre').value || 'cliente').toLowerCase() + '.png', 'image/png', b); }); };
 
   /* ---------- arranque ---------- */
-  renderClientes();
   var h = (location.hash || '').replace('#', '');
   if (['ase', 'adm', 'cre'].indexOf(h) >= 0) tab(h);
 })();

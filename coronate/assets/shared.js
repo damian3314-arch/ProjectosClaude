@@ -28,7 +28,8 @@
 
   function waLink(phone, text) {
     var p = normPhone(phone);
-    return 'https://wa.me/' + p.num + (text ? '?text=' + encodeURIComponent(text) : '');
+    /* api.whatsapp.com y no wa.me: la redirección de wa.me daña los emojis (salen como un rombo con signo de pregunta). */
+    return 'https://api.whatsapp.com/send?phone=' + p.num + (text ? '&text=' + encodeURIComponent(text) : '');
   }
 
   function dateObj(f, hhmm) {
