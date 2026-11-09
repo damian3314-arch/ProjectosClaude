@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sábados de Realeza · Joyería Tanya Santiago</title>
+<meta name="description" content="Un sábado para consentir tu oro: shampoo de brillo de regalo, una Corona bien fría y lo nuevo de la vitrina.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="mark" href="#inicio" aria-label="Joyería Tanya Santiago"><i>TS</i><span><b>Tanya Santiago</b><small>Joyería</small></span></a>
+    <nav aria-label="Secciones"><a href="#ruta">Tu sábado</a><a href="#banderas">Test</a><a href="#agenda">Agenda tu turno</a></nav>
+  </div>
+
+  <header class="hero" id="inicio">
+    <div class="snow" id="snow" aria-hidden="true"></div>
+    <div class="ribbon" aria-hidden="true"></div>
+    <p class="eyebrow" id="kicker">Navidad en Joyería Tanya Santiago</p>
+    <h1 id="h1">Tu oro merece <em>una corona.</em></h1>
+    <p class="lede" id="lede">Trae tus joyas de oro y les hacemos un shampoo de brillo de regalo. Tú, mientras tanto, esperas con una Corona bien fría y descubres la vitrina más linda de la Navidad.</p>
+    <div class="count" id="count" hidden><b id="countN">–</b><span id="countT"></span></div>
+    <div class="cta">
+      <a class="btn gold" href="#agenda">Agenda tu turno</a>
+      <a class="btn line" href="#ruta">Así es tu sábado</a>
+    </div>
+  </header>
+
+  <section class="blk" id="ruta">
+    <div class="sh"><p class="eyebrow">Tu sábado en la joyería</p><h2>Vienes por el brillo. <em>Te quedas por todo lo demás.</em></h2><p>Seis cosas que pasan mientras tus joyas se ponen al día.</p></div>
+    <div class="grid g3">
+      <div class="card sage"><h3>Tu turno, apartado</h3><p>Escoges tu hora y una asesora te espera. Llegas y empezamos.</p></div>
+      <div class="card gold"><h3>Shampoo de brillo, de regalo</h3><p>Hasta <span data-c="agenda.maxJoyas"></span> joyas de oro salen lavadas y brillando. Si alguna necesita arreglo, te la mostramos y tú decides.</p></div>
+      <div class="card blush"><h3>Algo para tomar</h3><p id="bebidas"></p></div>
+      <div class="card sage"><h3>Lo nuevo de la vitrina</h3><p>Tréboles, corazones de esmeralda, candongas y argollas recién llegadas, para mirar con calma.</p></div>
+      <div class="card gold"><h3>Tu oro vale</h3><p>El oro que ya no usas lo recibimos como parte de pago de tu próxima joya, al precio del día.</p></div>
+      <div class="card blush"><h3>Tu pulsera tejida</h3><p>Escoges el color del hilo y el dije de oro, y la tejemos en el momento, a tu medida.</p></div>
+    </div>
+    <p class="note" id="snacks" style="margin-top:14px" hidden></p>
+  </section>
+
+  <section class="blk" id="banderas">
+    <div class="sh"><p class="eyebrow">Test de 20 segundos</p><h2>Las <em>banderas rojas</em> de tu oro</h2><p>Marca las que te suenan. Prometemos no contarle a nadie.</p></div>
+    <div class="flags" id="flags"></div>
+    <div class="verdict" id="verdict" aria-live="polite"></div>
+  </section>
+
+  <section class="blk" id="fechas">
+    <div class="sh"><p class="eyebrow">Fechas</p><h2>Elige tu <em>día de realeza</em></h2><p>Cupos limitados, con cita. Jornada continua.</p></div>
+    <div class="dates" id="datesList"></div>
+  </section>
+
+  <section class="blk" id="agenda">
+    <div class="sh"><p class="eyebrow">Agenda tu turno</p><h2>Te <em>apartamos</em> la hora</h2><p>Llena esto y te confirmamos por WhatsApp. Máximo <span data-c="agenda.maxJoyas"></span> joyas por persona para que la fila avance.</p></div>
+    <div class="grid g2">
+      <div class="card">
+        <form class="cita" id="form" novalidate>
+          <label>Tu nombre<input id="fNombre" autocomplete="name" required></label>
+          <label>Tu WhatsApp<input id="fTel" type="tel" inputmode="tel" autocomplete="tel" placeholder="300 123 4567" required></label>
+          <div class="row2">
+            <label>Día<select id="fFecha" required></select></label>
+            <label>Hora<select id="fHora" required></select></label>
+          </div>
+          <div class="row2">
+            <label>Cuántas joyas traes<select id="fJoyas"></select></label>
+            <label>¿Vienes con alguien?<select id="fAcomp"><option value="0">Voy sola/o</option><option value="1">Con 1 persona</option><option value="2">Con 2 personas</option><option value="3">Con 3 o más</option></select></label>
+          </div>
+          <label>Algo que debamos saber (opcional)<input id="fNota" placeholder="Ej. traigo una cadena y unas argollas"></label>
+          <label style="display:flex;gap:10px;align-items:flex-start;font-weight:500;color:var(--ink)"><input type="checkbox" id="fOk" style="width:22px;min-height:0;margin-top:3px">
+            <span>Autorizo que Joyería Tanya Santiago use mi nombre y teléfono para confirmar mi cita y enviarme novedades de la campaña. Puedo pedir que me retiren cuando quiera.</span></label>
+          <p class="note" id="fErr" style="color:var(--bad);font-weight:700" hidden></p>
+          <button class="btn fill" type="submit">Apartar mi turno</button>
+        </form>
+        <div class="ok-box" id="okBox" hidden>
+          <h3 id="okT">Listo, tu turno quedó apartado</h3>
+          <p id="okP"></p>
+          <div class="actions" id="okAct"></div>
+          <p class="note" id="okNote"></p>
+        </div>
+      </div>
+      <div class="card sage">
+        <h3>Dónde y cuándo</h3>
+        <p style="margin-top:8px"><b data-c="contacto.direccion"></b><br><span data-c="contacto.horario"></span></p>
+        <p style="margin-top:14px"><b>Mayores de 18</b> para tomar cerveza, con documento. Para el resto: bebidas sin alcohol y agua helada.</p>
+        <p style="margin-top:14px">Si necesitas cambiar tu hora, escríbenos por WhatsApp.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk" id="faq">
+    <div class="sh"><p class="eyebrow">Dudas</p><h2>Lo que <em>más preguntan</em></h2></div>
+    <details class="faq"><summary>¿Tiene algún costo?</summary><p>El shampoo de brillo es de regalo para hasta <span data-c="agenda.maxJoyas"></span> joyas de oro. Si una joya necesita arreglo, te mostramos el valor y tú decides.</p></details>
+    <details class="faq"><summary>¿Tengo que agendar?</summary><p>Te lo recomendamos: los cupos son limitados y así no esperas de más. Si llegas sin cita, te atendemos según haya espacio.</p></details>
+    <details class="faq"><summary>¿Puedo ir con niños o con alguien que no toma?</summary><p>Claro. Hay bebidas sin alcohol y agua helada. La cerveza es solo para mayores de 18 con documento.</p></details>
+    <details class="faq"><summary>¿Reciben mi oro como parte de pago?</summary><p>Sí, al precio del día, para tu próxima joya.</p></details>
+    <details class="faq"><summary>¿Qué pasa si cambio de plan?</summary><p>Escríbenos por WhatsApp y movemos tu cita.</p></details>
+  </section>
+
+  <footer class="foot">
+    <b><span data-c="campana.marca"></span> · <span data-c="campana.ciudad"></span></b>
+    <span data-c="contacto.direccion"></span> · <span data-c="contacto.horario"></span>
+    <span>Beber con moderación. Prohibida la venta de licor a menores de edad.</span>
+  </footer>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/shared.js"></script>
+<script src="assets/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Panel · Sábados de Realeza</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="ptop">
+    <div class="top" style="padding-top:0">
+      <a class="mark" href="index.html"><i>TS</i><span><b>Panel de campaña</b><small id="pTitulo"></small></span></a>
+      <a class="btn line small" href="index.html" target="_blank" rel="noopener">Ver landing</a>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Secciones del panel">
+      <button role="tab" id="t-ase" aria-selected="true" data-p="ase">Asesoras</button>
+      <button role="tab" id="t-adm" aria-selected="false" data-p="adm">Propietaria</button>
+      <button role="tab" id="t-cre" aria-selected="false" data-p="cre">Creativo</button>
+    </div>
+  </div>
+
+  <div class="warn-box" id="cfgWarn" hidden></div>
+
+  <!-- ================= ASESORAS ================= -->
+  <section class="pane on" id="p-ase" role="tabpanel" aria-labelledby="t-ase">
+    <div class="kpis" id="aseKpis"></div>
+
+    <div class="card">
+      <h3>1 · Mensaje</h3>
+      <div class="tools" style="margin-top:10px">
+        <label>Plantilla<select id="tplSel"></select></label>
+        <label>Tu nombre (asesora)<input id="asesora" placeholder="Ej. Laura"></label>
+        <label>Día que ofreces<select id="fechaOf"></select></label>
+      </div>
+      <label style="margin-top:12px">Texto <small style="font-weight:500">Variables: {nombre} {fecha} {link} {asesora}</small>
+        <textarea id="tplTxt"></textarea></label>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn line small" id="tplSave" type="button">Guardar cambios de esta plantilla</button>
+        <button class="btn line small" id="tplReset" type="button">Volver al texto original</button>
+      </div>
+      <p class="note" style="margin-top:8px">El {link} lleva el nombre del cliente, así la página lo saluda por su nombre.</p>
+    </div>
+
+    <div class="card">
+      <h3>2 · Lista de clientes</h3>
+      <p class="note">Pega una lista (<b>nombre, teléfono</b>, uno por línea) o sube un CSV. Se queda solo en este dispositivo.</p>
+      <label style="margin-top:10px">Pegar lista<textarea id="imp" placeholder="Carlos Pérez, 300 123 4567&#10;María López, 3109876543"></textarea></label>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn fill small" id="impBtn" type="button">Agregar a la lista</button>
+        <label class="btn line small" style="cursor:pointer;margin:0">Subir CSV<input id="impFile" type="file" accept=".csv,.txt" style="display:none"></label>
+        <label style="display:flex;flex-direction:row;gap:8px;align-items:center;font-weight:600"><input id="impPrueba" type="checkbox" style="width:20px;min-height:0">Es de la base selecta (día de prueba)</label>
+      </div>
+      <p class="note" id="impMsg" style="margin-top:8px"></p>
+    </div>
+
+    <div class="card">
+      <h3>3 · A quién escribir</h3>
+      <div class="tools" style="margin:10px 0">
+        <label>Buscar<input id="busq" placeholder="Nombre o teléfono"></label>
+        <label>Estado<select id="filtro"></select></label>
+      </div>
+      <div class="clist" id="clientes"></div>
+    </div>
+  </section>
+
+  <!-- ================= PROPIETARIA ================= -->
+  <section class="pane" id="p-adm" role="tabpanel" aria-labelledby="t-adm">
+    <div class="kpis" id="admKpis"></div>
+
+    <div class="card">
+      <h3>Semáforo por fecha</h3>
+      <p class="note">Verde = cumple la meta · Amarillo = 70% o más · Rojo = menos del 70%. "Venta del día" la escribes tú con el dato de caja.</p>
+      <div class="twrap" style="margin-top:10px"><table id="semaforo"></table></div>
+    </div>
+
+    <div class="card">
+      <h3>Línea de tiempo</h3>
+      <div id="linea" style="margin-top:8px"></div>
+      <div class="actions" style="margin-top:12px"><button class="btn line small" id="icsLinea" type="button">Descargar fechas clave (.ics) para el calendario</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Citas</h3>
+      <div class="twrap" style="margin-top:10px"><table id="citasTbl"></table></div>
+      <p class="note" style="margin-top:8px" id="citasNote"></p>
+    </div>
+
+    <div class="card">
+      <h3>Lista de preparación</h3>
+      <div id="checklist"></div>
+    </div>
+
+    <div class="card">
+      <h3>Copia de seguridad</h3>
+      <p class="note">Todo vive en este navegador. Descarga la copia antes de cambiar de equipo o limpiar el navegador.</p>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn line small" id="bkDown" type="button">Descargar copia</button>
+        <label class="btn line small" style="cursor:pointer;margin:0">Restaurar copia<input id="bkUp" type="file" accept=".json" style="display:none"></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CREATIVO ================= -->
+  <section class="pane" id="p-cre" role="tabpanel" aria-labelledby="t-cre">
+    <div class="card gold">
+      <h3>Carpeta de material</h3>
+      <p class="note">Aquí va todo el material puro: fotos, videos, logos, piezas finales. Un solo lugar para todos.</p>
+      <div class="tools" style="margin-top:10px">
+        <label>Link de la carpeta de Drive<input id="driveUrl" placeholder="https://drive.google.com/drive/folders/..."></label>
+        <a class="btn gold small" id="driveGo" target="_blank" rel="noopener" href="#">Abrir carpeta</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Idea de la campaña</h3>
+      <ul style="margin:8px 0 0;padding-left:20px;display:grid;gap:6px">
+        <li><b>Expectativa (16 a 20 nov):</b> la vitrina "tapada" con tela o cortinas. Mensaje: "Estamos preparando algo muy especial para ti".</li>
+        <li><b>Revelación (sáb 21 nov):</b> vitrina nueva, moño, iluminación, música, cerveza fría, shampoo de brillo.</li>
+        <li><b>Tarjeta de invitación personalizada</b> con el nombre de cada cliente + link a la landing.</li>
+        <li><b>Fotografía y video de la mejor calidad</b> para redes y para entregar como regalo (agendas, bolsas, empaques nuevos).</li>
+        <li><b>Tono:</b> cálido, con humor sobre las joyas, nunca sobre la persona. Navidad sin exceso de rojo: el verde y el oro mandan.</li>
+        <li><b>Licor:</b> la Corona es un detalle, no el protagonista. No usar licor en anuncios pagados ni en plantillas de WhatsApp oficial (Meta lo restringe). Siempre "+18".</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Paleta</h3>
+      <div class="swatches" style="margin-top:10px">
+        <div class="sw"><i style="background:#22421F"></i><span>Verde #22421F</span></div>
+        <div class="sw"><i style="background:#C9A44A"></i><span>Oro #C9A44A</span></div>
+        <div class="sw"><i style="background:#F7F2E8"></i><span>Crema #F7F2E8</span></div>
+        <div class="sw"><i style="background:#DDE7DF"></i><span>Salvia #DDE7DF</span></div>
+        <div class="sw"><i style="background:#F6E6E3"></i><span>Rubor #F6E6E3</span></div>
+        <div class="sw"><i style="background:#B3261E"></i><span>Rojo moño #B3261E</span></div>
+      </div>
+      <p class="note" style="margin-top:8px">Tipografías: Instrument Serif (títulos) y Hanken Grotesk (texto).</p>
+    </div>
+
+    <div class="card">
+      <h3>Piezas por producir</h3>
+      <div id="piezas"></div>
+    </div>
+
+    <div class="card">
+      <h3>Tarjeta de invitación (vista previa)</h3>
+      <div class="tools" style="margin:10px 0">
+        <label>Nombre de ejemplo<input id="cardNombre" value="Carlos"></label>
+        <label>Día<select id="cardFecha"></select></label>
+      </div>
+      <canvas id="tarjeta" width="1080" height="1350" aria-label="Vista previa de la tarjeta"></canvas>
+      <div class="actions" style="margin-top:10px"><button class="btn fill small" id="cardDown" type="button">Descargar PNG</button></div>
+      <p class="note" style="margin-top:8px">Es un diseño base generado en la página. El creativo puede reemplazarlo por una pieza final y subirla a la carpeta de Drive.</p>
+    </div>
+
+    <div class="card">
+      <h3>Banco de textos</h3>
+      <div id="textos" style="display:grid;gap:12px;margin-top:10px"></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg"><div id="dlgBody"></div></dialog>
+
+<script src="assets/config.js"></script>
+<script src="assets/shared.js"></script>
+<script src="assets/panel.js"></script>
+</body>
+</html>

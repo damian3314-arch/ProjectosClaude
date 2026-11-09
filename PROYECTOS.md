@@ -31,7 +31,7 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 | Proyecto | Ya hecho | Pendiente / bloqueo | Chat donde seguir |
 |---|---|---|---|
 | **Sette** | Plan piloto de 8 semanas con 7 hitos (H1–H7), matriz de prioridades, backlog operativo, fases 2–4, propuesta para Lorena con inversión y alcance. **Aprobada** | Fecha de arranque. Lorena debe dar: usuario de Restobar, plantilla de importación, hojas de inventario, comandas de 2 días, recetario de 10 platos. Contratar a la auxiliar (~$800.000/mes, la paga Sette) para la semana 3 | `[SETTE] Revisión operativa…` |
-| **Corónate** | Plan (meta $320 M del 29 oct al 31 dic, calendario día por día, WhatsApp, domingos), Propuesta, página "Sábados de Realeza" (v10), deck para Tania | **Esta semana es el piloto del sábado 14 de nov** (ver §2c). Aprobación de Tania, lista de 150 clientes, hora con las asesoras | `[CORO] Coronate × Joyería` (chat de ~624k tokens: conviene abrir uno nuevo para la fase 2) |
+| **Corónate** | Plan, Propuesta, página "Sábados de Realeza" y deck. **Landing + panel construidos en local** (`coronate/`, ver `coronate/README.md`) | Reajustado el 9-nov con Tania: Fase 1 aprobada; **día de prueba sáb 14 nov** con base selecta; **lanzamiento oficial sáb 21 nov** con decoración de Navidad. Faltan datos de contacto (WhatsApp, dirección, horario), copy final y diseños | `[CORO] Coronate × Joyería` (chat de ~624k tokens: abrir uno nuevo) |
 | **Tumbao** | Sistema funcionando: confirmación de reserva, asistente del negocio, asistente de clientes por WhatsApp, SALIR, informes 8 am / 8 pm, cupo sin pago, campañas autorizadas del 6 nov al 28 dic (tope $120.000), rutina diaria autónoma lun–sáb 1:17 pm | **La rutina autónoma está parada desde el 7-nov**: espera tu aprobación de un `Execute SQL` en Supabase (era una consulta SELECT de lectura). Sin ese clic no corre. Además ~10 decisiones tuyas abiertas (ver §2a) | `[TUM] tumbaobaila.com web + Supabase` |
 | **Joyería** | Tablero gerencial de ventas conectado a la hoja | 4 supuestos sin confirmar con Tanya: metas, facturado, años anteriores | `[JTS] Dashboard gerencial de ventas` |
 | **Loggro** | Guía del asesor, comparativo de mercado, Playbook Restobar. Piloto de agente en WhatsApp (Kapso): ya responde mensajes | Faltan el túnel y el webhook para que responda solo. Y 4 respuestas tuyas: 3 tareas concretas de Loggro, quién lo usa, de dónde salen los datos, qué puede hacer sin preguntarte | `[LOG] Número de teléfono y tareas Loggro` |
@@ -62,11 +62,11 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 | Tumbao (web + Beat) | $750.000/mes | Hoy solo monitoreo |
 | HolaDami | $0 | Solo gasto |
 
-**Corónate: precios en conflicto.** Lo que tú dices: $1,5M por una primera fase (2 meses) y $2M por la fase 2. Lo que dicen los documentos:
-- Propuesta de octubre: $3,5M fijos en tres entregas ($1,5M + $1,0M + $1,0M) + bono 3% con tope de $1M.
-- "Sábados de Realeza" v10 (7 nov): **Fase 1 sin costo** (piloto del 14 nov), Fase 2 = $2.000.000, Fase 3 = $1.500.000, bono 3% con tope de $1M.
-
-Los $2M y $1,5M aparecen, pero en orden inverso y con la Fase 1 en $0. **Confirma cuál está acordado con Tania.** Hasta entonces uso tu cifra ($1,5M por 2 meses) como mínimo seguro.
+**Corónate: reajuste acordado con Tania (9 nov).**
+- Fase 1: aprobada (día de prueba del 14 nov y preparación). **[CONFIRMAR]** si tiene costo; los documentos la tenían en $0.
+- Fase 2, campaña de temporada: **$1.500.000** (las asesoras envían los mensajes desde la línea actual; 6 sábados y los domingos de diciembre; semáforo semanal de ventas).
+- Fase 3, WhatsApp oficial verificado: **$2.000.000**, solo si los resultados son muy buenos.
+- Bono 3% (tope $1M) y operación mensual de $300.000 desde enero: no sé si siguen vigentes. **[CONFIRMAR]**
 
 Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0,75 + Tumbao 0,75) + Loggro $2,2M + comisión → **≈ $8,3M a $9,1M/mes**. Joyería + Corónate concentran el 37% del ingreso base.
 
@@ -78,16 +78,18 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 
 | Fecha | Qué | De dónde sale |
 |---|---|---|
-| Lun 9 nov | Tania aprueba la invitación; se eligen 150 clientes; se arma el calendario de citas | Sábados de Realeza |
+| Lun 9 nov | Landing + panel + copy listos en local; Tania aprueba la invitación; se elige la base selecta | Reajuste del 9-nov |
 | Mar 10 – Mié 11 | Las asesoras envían 75 invitaciones por día, a mano, desde la línea actual | idem |
 | Jue 12 | Segunda tanda (50 más si quedan cupos) | idem |
 | Vie 13 | Confirmación de cada cita + historias. Es quincena | idem |
-| **Sáb 14 nov** | **Piloto "Sábado de Realeza"**, jornada continua con cita. Meta: $10 M de venta (un sábado normal vende $7,3 M) | idem |
+| **Sáb 14 nov** | **Día de prueba** con base selecta (sin redes ni mensajes masivos). Meta: $8 M | Reajuste del 9-nov |
 | Lun 16 nov | **Festivo** | Plan Corónate |
-| **Mar 17 nov** | **Informe del piloto y decisión de fases 2 y 3** | Sábados de Realeza |
+| **Mar 17 nov** | Informe de la prueba y ajustes de texto, tarjeta y cupos | Reajuste del 9-nov |
+| 16–20 nov | Expectativa en redes (vitrina tapada) e invitaciones a la base completa **[SUPUESTO]** | Reajuste del 9-nov |
+| **Sáb 21 nov** | **Lanzamiento oficial**: revelación de la vitrina, decoración de Navidad, música, cerveza y bebidas sin alcohol | Reajuste del 9-nov |
 | Vie 27 nov | Black Friday | Plan Corónate |
-| 21, 28 nov; 5, 12, 19, 26 dic | Sábados de Realeza (fase 2) | idem |
-| Dom 29 nov; 6, 13, 20, 27 dic | Domingos abiertos con cita | idem |
+| 28 nov; 5, 12, 19, 26 dic | Sábados de Realeza (con el 21 son 6) | idem |
+| Dom 6, 13, 20, 27 dic | Domingos de diciembre con cita. Domingo de noviembre por decidir | idem |
 | Mar 8 dic | Festivo | idem |
 | 22–24 dic | En 2025 la joyería vendió ≈ $92 M en estos 3 días | Plan Corónate |
 | Vie 25 dic | Festivo, cerrado | idem |
@@ -211,7 +213,7 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 ## 7. Preguntas abiertas
 
-1. **Corónate:** ¿cuál es el precio acordado con Tania: Fase 1 = $0 con fases 2 ($2M) y 3 ($1,5M), o Fase 1 = $1,5M y Fase 2 = $2M?
+1. **Corónate:** ¿la Fase 1 tiene costo? ¿El bono de 3% y los $300.000 mensuales siguen? ¿El 21 es solo el evento o también el día en que salen las invitaciones? (asumí que salen del 16 al 20).
 2. **Sette:** ¿qué fecha arranca? ¿Lorena ya te dio los accesos? ¿El acompañamiento es presencial en Barrancabermeja o remoto?
 3. **Lunes 16 (festivo):** ¿Loggro cierra? Si sí, ese día sirve para el día de compras y cierre de Sette.
 4. **Domingos abiertos de Corónate (29 nov, 6, 13, 20, 27 dic):** ¿los atiendes tú o las asesoras?
@@ -219,4 +221,4 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 6. **Dami:** recargar o pausar (tú lo miras).
 7. **Tumbao:** el chat de Beat (app de huella, AdminGym) sigue esperando que pruebes apagar AdminGym y des la marca del lector.
 
-Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes.
+Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 2 = $1,5M y Fase 3 = $2M.
