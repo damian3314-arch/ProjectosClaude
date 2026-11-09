@@ -1,5 +1,7 @@
 # claude.md — Framework Operativo (Beat / Tumbao / Joyería Tanya Santiago)
 
+> **Mapa actual de proyectos (Loggro, Joyería, Corónate, Tumbao, HolaDami, Sette) y códigos de chat: ver `PROYECTOS.md`.** Este archivo aún no cubre Loggro, Dami, Sette ni Corónate.
+
 Índice central. Si vas a tocar un módulo específico, lee también el sub-archivo correspondiente (sección 4). No leas todo el árbol para tareas puntuales.
 
 **Importante de entrada:** este framework rige principalmente el repo de **Beat** (código real: Next.js, Supabase, n8n, WhatsApp Cloud API). Para Tumbao y Joyería, el trabajo casi nunca es "escribir código" — es construir/mantener workflows de n8n, hojas de Google Sheets y archivos `.skill`. Ahí aplican solo las secciones 2, 3 y 5. No fuerces hacks de frontend (sección 1) sobre automatizaciones contables.
