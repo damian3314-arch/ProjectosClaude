@@ -99,11 +99,11 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 
 ### Tu horario real (semana del 9 al 15 nov)
 
-| Día | Gimnasio | Loggro | Chat Loggro | Libre para proyectos |
+| Día | Gimnasio (bloqueado 6–9) | Loggro | Chat Loggro | Libre para proyectos |
 |---|---|---|---|---|
 | Lun 9 | 6:00–8:00 (calendario) | 9–19 | — | Noche 19:30–21:00 |
 | Mar 10 | 6:00–8:00 | 9–19 | — | Noche 19:30–21:30 |
-| Mié 11 | 6:00–8:00 | **11–19** | — | **Mañana 8:45–10:45** + noche 19:30–21:00 |
+| Mié 11 | 6:00–8:00 | **11–19** | — | **Mañana 9:00–10:45** + noche 19:30–21:00 |
 | Jue 12 | 6:00–8:00 | 9–19 | 17–19 | Noche 19:30–20:15 (liviana) |
 | Vie 13 | 6:00–8:00 | 9–18 | 17–18 | Noche 18:30–20:00 |
 | Sáb 14 | 6:00–8:00 | Descanso | — | Todo el día; bloque Joyería 14–18 |
@@ -117,15 +117,16 @@ Estas son ≈ 17 h de proyectos en la semana, con Loggro y gimnasio intactos.
 |---|---|
 | Lun 9, 19:30–21:00 | `[CORO]` Revisión con el chat Corónate: costos, diseño, grabación |
 | Mar 10, 19:30–21:30 | `[JTS]` Joyería y Tumbao (**movido** de 2–6 p. m. porque choca con Loggro) |
-| Mié 11, 8:45–10:45 | `[SETTE]` Preparar arranque: fecha, accesos a Restobar, instructivo |
+| Mié 11, 9:00–10:45 | `[SETTE]` Preparar arranque: fecha, accesos a Restobar, instructivo |
 | Mié 11, 19:30–21:00 | `[CORO]` Costos reales con Tania para el ROI |
 | Jue 12, 19:30–20:15 | `[CORO]` Aprobar piezas e invitaciones |
 | Vie 13, 18:30–20:00 | `[TUM][DIR]` Tumbao, decisiones abiertas y revisión semanal |
 | Dom 15, 14:30–17:00 | `[JTS]` Visita a la joyería |
 | Dom 15, 20:00–20:45 | `[DIR]` Revisión semanal y plan de la semana del 16 |
+| **Lun 16 (festivo), 9:30–13:30 y 19:00–21:30** | `[SETTE]` H1: día de compras y recepción + cierre del día. Horario por confirmar con Lorena |
 
 ### Cosas del calendario que debes revisar
-1. **Gimnasio:** el calendario dice 6:00–8:00; tú dices 6:30–8:30. No lo toqué.
+1. **Gimnasio:** bloqueado de 6 a 9 a. m. (incluye traslado). Decisión de Damián: se deja así. Mis bloques no pueden empezar antes de las 9.
 2. **Bloque de Joyería de los martes (2–6 p. m.):** choca con Loggro. Solo moví el del 10 nov. El del 17 sigue igual.
 3. **PILA de Tania:** el recordatorio está el 10 nov, pero tu nota dice "día hábil 10". Con el festivo del 2 y del 16 de nov, mi cuenta da el **martes 17 de nov**. Verifícalo en la tabla de Aportes en Línea antes de pagar. Mora = intereses + 1 día de salario por día de retraso.
 4. **Tumbao:** tienes un recordatorio el sáb 14 a las 9:00 para planear diciembre (clausura, show de fin de año, clase especial de Feria de Cali del 25 al 30). No estaba en mi plan; hay que tenerlo.
@@ -138,7 +139,7 @@ Mismo molde: lunes a viernes solo noches de 1,5 a 2 h y los miércoles 8:45–10
 
 | Sem | Fechas | Hito del plan |
 |---|---|---|
-| 1 | 16–22 nov | H1 mapa del proceso aprobado (día de compras y cierre) |
+| 1 | 16–22 nov | H1 mapa del proceso aprobado. **El festivo lun 16 es el día de compras y cierre** (decidido por Damián) |
 | 2 | 23–29 nov | H2 plantilla de compras probada |
 | 3 | 30 nov–6 dic | H3 primera carga completa en Restobar; entra la auxiliar |
 | 4 | 7–13 dic | H4 reporte semanal de compras + recetas de 10 platos. **Aquí se confirma el mes 2** |
@@ -237,9 +238,9 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 **Otros proyectos:**
 7. **Sette:** fecha de arranque, accesos de Lorena, ¿presencial o remoto?
-8. **Lunes 16 (festivo):** ¿Loggro cierra? Sirve para el día de compras y cierre de Sette.
+8. ~~Lunes 16 (festivo)~~ Resuelto: se dedica a Sette (H1: compras y cierre).
 9. **Tumbao:** aprobar el `Execute SQL` (SELECT) pendiente; decisiones abiertas del plan.
 10. **Dami:** recargar Kapso o pausar.
 11. Los 5 chats `[?]`: ¿de qué proyecto son?
 
-Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 1 = $1,5M con costos aparte; invitaciones del 16 al 20; domingos los atienden las asesoras.
+Resueltas: la grabación del 9 y 10 la hace Giovanni; Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 1 = $1,5M con costos aparte; invitaciones del 16 al 20; domingos los atienden las asesoras.
