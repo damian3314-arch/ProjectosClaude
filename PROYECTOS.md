@@ -41,6 +41,22 @@ Nota: en los chats el proyecto aparece como "Sete". Lo trato como Sette.
 
 ---
 
+## 2b. Ingresos por proyecto (COP, durante los próximos 2 meses)
+
+| Proyecto | Ingreso | Notas |
+|---|---|---|
+| Loggro | Salario + comisiones | **[SIN DATO]** no lo he visto |
+| Joyería (asesoría mensual) | $2.200.000/mes | Recurrente |
+| Corónate (dentro de Joyería) | $1.500.000 por 2 meses ≈ $750.000/mes | **[SUPUESTO]** $1,5M es el total, no por mes |
+| Sette | $2.000.000/mes | Piloto 8 semanas, sin tope de horas definido |
+| Tumbao (web + Beat) | $750.000/mes | |
+| HolaDami | $0 | Solo gasto (Kapso, Meta Ads, Cloudflare, tokens) |
+| **Total extra a Loggro** | **≈ $5.700.000/mes** | Joyería concentra $2,95M (52%) |
+
+Lectura rápida: la mayor ambición (Corónate = "centro neurálgico") es de lo que menos pagan por hora. Joyería es 52% de tus ingresos extra, así que Corónate importa por la relación con Joyería más que por sus $750.000.
+
+---
+
 ## 3. Cómo pedir cosas (plantilla universal)
 
 Pega esto al abrir cualquier chat nuevo:
