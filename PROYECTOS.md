@@ -57,7 +57,7 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 |---|---|---|
 | Loggro | $2.200.000/mes + comisión | 8 h diarias ≈ 176 h/mes. Comisión: $1,2M, $0,4M, y octubre esperado $0,5–0,8M (promedio ≈ $0,75M) |
 | Joyería (asesoría) | $2.200.000/mes | Martes 4 h y sábado ~6 h hoy (10 h/sem) |
-| Corónate | Ver nota abajo | **Dos versiones que no coinciden** |
+| Corónate | Fase 2 $1,5M · Fase 3 $2M (condicionada) | Ver nota abajo |
 | Sette | $2.000.000/mes | Pago anticipado cada mes; el mes 2 se confirma al entregar H4. El chat lo calculó con ~22 h/mes ≈ $91.000/h |
 | Tumbao (web + Beat) | $750.000/mes | Hoy solo monitoreo |
 | HolaDami | $0 | Solo gasto |
@@ -172,7 +172,7 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 ## 4. Estrategia (hipótesis, rétala)
 
-1. **Esta semana no se construye nada nuevo en Corónate: se mide el sábado 14.** La decisión de fases 2 y 3 se toma el 17 con cifras. Una web nueva antes de esa decisión es el patrón de CLAUDE.md §6: infraestructura antes de uso real. La web como "centro neurálgico" puede ser el Plan Corónate que ya existe, con datos reales del piloto.
+1. **Corónate: la landing es el centro, pero pruébala el 14 antes de crecerla.** Ya está construida en local (`coronate/`). Guardrail de CLAUDE.md §6: el día de prueba con base pequeña es lo que valida si las asesoras la usan de verdad. Si el 14 no la usan, se simplifica antes del 21.
 2. **Tumbao ya está construido; el cuello de botella es que tú apruebes cosas.** La rutina autónoma lleva dos días parada por un clic. Ese es tu cuello de botella más barato de arreglar.
 3. **Sábados.** Corónate ocupa todos los sábados hasta el 26 de dic. El "sábado de Joyería" y el "sábado de Corónate" son el mismo tiempo: define con Tania si cuentan como parte de las 6 h de tu asesoría.
 4. **Chats gigantes.** `[TUM]` (443k) y `[CORO]` (624k) están muy cargados. Antes de la fase 2, pide un resumen de 10 líneas y abre un chat nuevo desde ahí.
@@ -180,7 +180,7 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 | Nivel | Proyectos | Razón |
 |---|---|---|
-| Principal (esta semana) | Corónate (piloto 14 nov) | Fecha dura y decisión de dinero el 17 |
+| Principal (esta semana) | Corónate (prueba 14 nov, lanzamiento 21 nov) | Dos fechas duras |
 | Principal (de la semana 2) | Sette | Pagado, 8 semanas, accesos de Lorena pendientes |
 | Sostener | Loggro, Joyería (martes) | Ingreso fijo y recurrente |
 | Mantenimiento | Tumbao | Un clic hoy y 30 min por semana |
