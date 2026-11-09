@@ -82,10 +82,10 @@ Las preguntas con más de una respuesta defendible se le hacen a Damián **una a
 8. **Precio por joya adicional después de las 3.** Las respuestas rápidas dicen [CONFIRMAR].
 9. **Snacks:** sí o no.
 10. **Domingo de noviembre:** ¿se abre el 29 con cita?
-11. **Domingos de diciembre:** ¿quién atiende? Normalmente 1 asesora, y una sola persona no puede atender 2 puestos por bloque.
+11. **Domingos de diciembre:** ¿quién atiende? Normalmente 1 asesora, y una sola persona no puede atender 3 puestos por bloque.
 12. **Margen real sobre la venta de joyas.** El ROI usa 45% sin confirmar.
 13. **Datos para las autorizaciones de imagen:** razón social y NIT del titular, plazo de uso en años y canal de contacto.
-14. **Dirección, horario de atención y hora de inicio y fin de la agenda.** Hoy son 9:00 a 17:00 [CONFIRMAR].
+14. ~~Horario y agenda~~ **Decidido por Damián (9 nov): se abre a las 9:30 a. m. y se cierra a las 7:30 p. m.; turnos de 9:30 a. m. a 6:30 p. m., 3 personas por turno.** Falta la dirección y el horario de los domingos.
 
 ---
 
@@ -108,7 +108,7 @@ Las preguntas con más de una respuesta defendible se le hacen a Damián **una a
 
 - **Given** el cliente recibió la invitación,
 - **When** responde por WhatsApp con un día,
-- **Then** la asesora toca "Agendar", elige día y hora entre los cupos libres (2 por bloque de 30 min), guarda y envía la confirmación desde el mismo diálogo. El día anterior, el paso "Recordatorio" le muestra ese cliente primero.
+- **Then** la asesora toca "Agendar", elige día y hora entre los cupos libres (3 por bloque de 30 min, de 9:30 a. m. a 6:30 p. m.: 57 cupos por día), guarda y envía la confirmación desde el mismo diálogo. El día anterior, el paso "Recordatorio" le muestra ese cliente primero.
 
 **Hoy:** funciona en un solo navegador.
 

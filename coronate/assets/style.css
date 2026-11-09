@@ -304,3 +304,15 @@ body { background: radial-gradient(60% 40% at 100% 0%, rgba(201,164,74,.10), tra
   .ase-top .kpi em { font-size: 11px; line-height: 1.2; display: block; }
   .cl-c button { font-size: 12px; padding: 4px 9px; min-height: 30px; }
 }
+.kpi.kb { font: inherit; text-align: left; cursor: pointer; color: inherit; width: 100%; }
+.kpi.kb:hover { border-color: var(--gold); }
+.kpi.kb.on { background: var(--green); border-color: transparent; }
+.kpi.kb.on small, .kpi.kb.on em { color: #D9E3D6; }
+.kpi.kb.on b { color: var(--gold); }
+.st { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 99px; background: var(--cream); color: var(--ink); margin-right: 4px; }
+.st-invitado, .st-seguimiento { background: #E8EEF8; color: #2B4A7A; }
+.st-interesado { background: var(--warn-bg); color: var(--warn); }
+.st-agendado, .st-recordado { background: var(--ok-bg); color: var(--ok); }
+.st-llego, .st-compro { background: var(--green); color: #fff; }
+.st-nointeresa, .st-baja { background: var(--bad-bg); color: var(--bad); }
+@media (max-width: 620px) { .pz-g { grid-template-columns: 1fr 1fr; gap: 10px; } .pz { padding: 8px; } .pz .actions .btn { flex: 1 1 100%; padding: 8px 6px; font-size: 13px; } .pz figcaption span { display: none; } }

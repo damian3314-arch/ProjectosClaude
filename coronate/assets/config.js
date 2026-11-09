@@ -12,7 +12,7 @@ window.CORO = {
   contacto: {
     whatsapp: '573016068003',     // [CONFIRMAR] número público del Instagram de la joyería. Es el WhatsApp que recibe las citas
     direccion: '[DIRECCIÓN]',     // [CONFIRMAR]
-    horario: '[HORARIO]',         // [CONFIRMAR] ej. "Jornada continua, 9:00 a.m. a 5:00 p.m."
+    horario: 'Jornada continua de 9:30 a. m. a 7:30 p. m.',   // sábados de campaña (Damián, 9 nov). [CONFIRMAR] domingos
     instagram: ''                 // [CONFIRMAR] ej. https://instagram.com/...
   },
   // URL pública donde quede publicada la landing. Si queda vacío, se usa la dirección actual del navegador.
@@ -20,10 +20,10 @@ window.CORO = {
   // Precios que ve el público general. Los invitados premium (?p=1) ven el shampoo de regalo.
   precios: { shampoo: 'desde $20.000', reparacion: 'desde $30.000', pulsera: 'desde $30.000' },
   agenda: {
-    inicio: '09:00',              // [CONFIRMAR]
-    fin: '17:00',                 // [CONFIRMAR]
+    inicio: '09:30',              // primer turno
+    fin: '19:00',                 // el último turno empieza a las 6:30 p. m.; se cierra 7:30 p. m.
     bloqueMin: 30,
-    cuposPorBloque: 2,            // puestos de servicio a la vez (plan: 2)
+    cuposPorBloque: 3,            // personas atendidas a la vez en cada turno de 30 min
     maxJoyas: 3,
     // Opcional: URL de la Web App de Google Apps Script (ver apps-script/Code.gs). Con esto la cita se crea en el Calendar y en una hoja.
     endpoint: ''

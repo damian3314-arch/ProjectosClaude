@@ -250,7 +250,7 @@
   }
   function pintarTarjeta() {
     var cv = $('tarjeta');
-    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
+    (A ? A.listo() : Promise.resolve()).then(function () {
       if (A) A.pieza(cv, A.datosPieza('invitacion', { id: '_cre', nombre: $('cardNombre').value || 'Cliente', premium: true }));
     });
   }

@@ -107,45 +107,84 @@
   /* ---------------- piezas (imágenes para pegar en el chat) ---------------- */
   function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function fitText(g, t, max, size, pre, fam) { var f = function () { g.font = (pre ? pre + ' ' : '') + size + 'px ' + fam; }; f(); while (g.measureText(t).width > max && size > 30) { size -= 4; f(); } }
+  /* Moño de terciopelo rojo (el mismo de la vitrina), dibujado en SVG y pasado a imagen para las piezas. */
+  var MONO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 230">' +
+    '<defs>' +
+    '<linearGradient id="l" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#D93A33"/><stop offset=".45" stop-color="#B01C20"/><stop offset="1" stop-color="#690A0F"/></linearGradient>' +
+    '<linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CC322D"/><stop offset="1" stop-color="#8A1015"/></linearGradient>' +
+    '<linearGradient id="i" x1="1" y1=".5" x2="0" y2=".5"><stop offset="0" stop-color="#2B0205" stop-opacity=".9"/><stop offset=".6" stop-color="#5A070B" stop-opacity=".4"/><stop offset="1" stop-color="#5A070B" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="cl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6E0A10"/><stop offset=".45" stop-color="#C42A2B"/><stop offset=".6" stop-color="#A3181C"/><stop offset="1" stop-color="#4E060A"/></linearGradient>' +
+    '<linearGradient id="cr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4E060A"/><stop offset=".4" stop-color="#A3181C"/><stop offset=".55" stop-color="#C42A2B"/><stop offset="1" stop-color="#6E0A10"/></linearGradient>' +
+    '<linearGradient id="k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D4392F"/><stop offset=".55" stop-color="#A3181C"/><stop offset="1" stop-color="#5E070C"/></linearGradient>' +
+    '<filter id="n" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" seed="4" result="t"/><feColorMatrix in="t" type="saturate" values="0" result="g"/><feComponentTransfer in="g" result="a"><feFuncA type="linear" slope=".22"/></feComponentTransfer><feComposite in="a" in2="SourceGraphic" operator="in" result="m"/><feBlend in="SourceGraphic" in2="m" mode="multiply"/></filter>' +
+    '<g id="o"><path d="M150 92 C128 52 74 18 38 30 C8 40 4 84 26 108 C50 134 108 122 148 104 Z" fill="#5E0A0F"/>' +
+    '<path d="M148 100 C120 74 82 56 52 58 C40 60 36 70 42 80 C60 74 104 84 148 96 Z" fill="#2E0205" opacity=".45"/>' +
+    '<path d="M150 90 C128 52 76 20 40 29 C28 32 22 40 19 50 C44 42 96 58 146 90 Z" fill="url(#t)"/>' +
+    '<path d="M148 106 C108 124 50 134 26 108 C8 88 10 56 28 40 C22 60 38 76 64 80 C98 84 128 88 148 88 Z" fill="url(#l)"/>' +
+    '<path d="M146 96 C116 94 80 92 60 88" stroke="#3A0306" stroke-width="2" stroke-linecap="round" fill="none" opacity=".3"/>' +
+    '<path d="M24 52 C18 74 26 96 46 108" stroke="#E2554B" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".45"/>' +
+    '<path d="M38 32 C70 28 108 48 140 78" stroke="#E96258" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".4"/></g>' +
+    '</defs><g filter="url(#n)">' +
+    '<path d="M140 108 C130 142 112 176 88 214 L112 204 L122 224 C138 186 152 148 158 112 Z" fill="url(#cl)"/>' +
+    '<path d="M160 108 C170 142 188 176 212 214 L188 204 L178 224 C162 186 148 148 142 112 Z" fill="url(#cr)"/>' +
+    '<use href="#o"/><use href="#o" transform="matrix(-1 0 0 1 300 0)"/>' +
+    '<path d="M135 78 C146 73 154 73 165 78 C169 92 169 108 165 119 C155 123 145 123 135 119 C131 106 131 91 135 78 Z" fill="url(#k)"/>' +
+    '<path d="M136 88 C146 92 154 92 164 87 M135 104 C146 108 154 108 165 102 M137 114 C147 117 153 117 163 113" stroke="#3A0306" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".35"/>' +
+    '<path d="M139 80 C146 77 154 77 161 80" stroke="#F07A6E" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>' +
+    '</g></svg>';
+  var monoImg = new Image(), monoListo = new Promise(function (ok) { monoImg.onload = ok; monoImg.onerror = ok; });
+  monoImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(MONO_SVG);
+
   function pieza(cv, o) {
     var g = cv.getContext('2d'), W = cv.width, H = cv.height, serif = '"Instrument Serif", Georgia, serif', sans = '"Hanken Grotesk", system-ui, sans-serif';
     var grad = g.createLinearGradient(0, 0, W, H); grad.addColorStop(0, '#24451F'); grad.addColorStop(1, '#0F2412');
     g.fillStyle = grad; g.fillRect(0, 0, W, H);
-    var glow = g.createRadialGradient(W * .85, 0, 10, W * .85, 0, W * .8); glow.addColorStop(0, 'rgba(201,164,74,.45)'); glow.addColorStop(1, 'rgba(201,164,74,0)');
+    var glow = g.createRadialGradient(W / 2, 0, 10, W / 2, 0, W * .75); glow.addColorStop(0, 'rgba(201,164,74,.40)'); glow.addColorStop(1, 'rgba(201,164,74,0)');
     g.fillStyle = glow; g.fillRect(0, 0, W, H);
     var seed = 11; function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-    for (var i = 0; i < 80; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.12 + rnd() * 0.45).toFixed(2) + ')'; g.beginPath(); g.arc(rnd() * W, rnd() * H, 2 + rnd() * 5, 0, 7); g.fill(); }
+    /* nieve solo en los márgenes para que no se confunda con tildes o puntos del texto */
+    for (var i = 0; i < 44; i++) { var lado = rnd() < .5, x = lado ? 58 + rnd() * 70 : W - 128 + rnd() * 70; g.fillStyle = 'rgba(255,255,255,' + (0.12 + rnd() * 0.35).toFixed(2) + ')'; g.beginPath(); g.arc(x, 90 + rnd() * (H - 180), 2 + rnd() * 4, 0, 7); g.fill(); }
     g.strokeStyle = '#C9A44A'; g.lineWidth = 4; rr(g, 44, 44, W - 88, H - 88, 36); g.stroke();
+    /* el moño amarra el marco arriba, al centro */
+    if (monoImg.complete && monoImg.naturalWidth) {
+      g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 24; g.shadowOffsetY = 10;
+      var mw = 400, mh = mw * 230 / 300; g.drawImage(monoImg, (W - mw) / 2, -12, mw, mh); g.restore();
+    }
+    var M = W - 260, n = o.lineas.length;
+    /* alto del bloque de texto, para centrarlo entre el moño y el botón */
+    var alto = 140 + 95 + (o.destacado ? 55 + 150 + 80 : 110) + (n - 1) * 62;
+    var y = 320 + 30 + Math.max(0, ((1095 - 320) - (alto + 40)) / 2);
     g.textAlign = 'center';
     g.fillStyle = '#C9A44A'; g.font = '700 30px ' + sans; if ('letterSpacing' in g) g.letterSpacing = '8px';
-    g.fillText(o.kicker, W / 2 + 4, 160); if ('letterSpacing' in g) g.letterSpacing = '0px';
-    g.fillStyle = '#F7F2E8'; fitText(g, o.titulo, W - 200, 150, '', serif); g.fillText(o.titulo, W / 2, 360);
-    g.fillStyle = '#E2C878'; fitText(g, o.sub, W - 200, 96, 'italic', serif); g.fillText(o.sub, W / 2, 470);
+    g.fillText(o.kicker, W / 2 + 4, y); if ('letterSpacing' in g) g.letterSpacing = '0px';
+    y += 140; g.fillStyle = '#F7F2E8'; fitText(g, o.titulo, M, 140, '', serif); g.fillText(o.titulo, W / 2, y);
+    y += 95; g.fillStyle = '#E2C878'; fitText(g, o.sub, M, 84, 'italic', serif); g.fillText(o.sub, W / 2, y);
     if (o.destacado) {
-      g.fillStyle = 'rgba(247,242,232,.1)'; rr(g, 140, 540, W - 280, 150, 30); g.fill();
-      g.strokeStyle = 'rgba(201,164,74,.7)'; g.lineWidth = 2; rr(g, 140, 540, W - 280, 150, 30); g.stroke();
-      g.fillStyle = '#F7F2E8'; g.font = '800 46px ' + sans; g.fillText(o.destacado[0], W / 2, 605);
-      g.fillStyle = '#D9E3D6'; g.font = '500 34px ' + sans; g.fillText(o.destacado[1], W / 2, 660);
-    }
-    g.font = '500 38px ' + sans; g.fillStyle = '#D9E3D6';
-    o.lineas.forEach(function (t, i) { g.fillText(t, W / 2, 800 + i * 66); });
-    g.fillStyle = '#C9A44A'; rr(g, 150, 1110, W - 300, 100, 50); g.fill();
-    g.fillStyle = '#2A1D00'; fitText(g, o.boton, W - 360, 40, '800', sans); g.fillText(o.boton, W / 2, 1174);
-    g.fillStyle = '#B3261E'; g.beginPath(); g.moveTo(W - 230, 44); g.lineTo(W - 150, 44); g.lineTo(W - 150, 240); g.lineTo(W - 190, 206); g.lineTo(W - 230, 240); g.closePath(); g.fill();
+      var bt = y + 55; g.fillStyle = 'rgba(247,242,232,.10)'; rr(g, 130, bt, W - 260, 150, 30); g.fill();
+      g.strokeStyle = 'rgba(201,164,74,.75)'; g.lineWidth = 2; rr(g, 130, bt, W - 260, 150, 30); g.stroke();
+      g.fillStyle = '#F7F2E8'; fitText(g, o.destacado[0], W - 320, 46, '800', sans); g.fillText(o.destacado[0], W / 2, bt + 66);
+      g.fillStyle = '#D9E3D6'; fitText(g, o.destacado[1], W - 320, 34, '500', sans); g.fillText(o.destacado[1], W / 2, bt + 118);
+      y = bt + 150 + 80;
+    } else y += 110;
+    g.fillStyle = '#D9E3D6';
+    o.lineas.forEach(function (t, i) { fitText(g, t, M, 36, '500', sans); g.fillText(t, W / 2, y + i * 62); });
+    g.fillStyle = '#C9A44A'; rr(g, 150, 1130, W - 300, 100, 50); g.fill();
+    g.fillStyle = '#2A1D00'; fitText(g, o.boton, W - 380, 38, '800', sans); g.fillText(o.boton, W / 2, 1193);
   }
   function datosPieza(tipo, c) {
     var nom = c ? primerNombre(c.nombre) : '', s = c ? seg(c.id) : null, prem = c ? c.premium : false;
-    var fechaLanz = U.fmtDate(lanz, true);
-    if (tipo === 'invitacion' && prem) return { kicker: 'INVITACIÓN ESPECIAL', titulo: (nom || 'Para ti') + ',', sub: 'esta Navidad brillas tú', destacado: ['Shampoo de brillo DE REGALO', 'para hasta 3 joyas de oro'], lineas: ['Una Corona bien fría mientras esperas', 'La vitrina más linda de la Navidad', 'Desde el ' + fechaLanz], boton: 'Responde y te apartamos tu turno' };
-    if (tipo === 'invitacion') return { kicker: 'SÁBADOS DE REALEZA', titulo: 'Navidad es para brillar', sub: 'tu oro, tu corona', destacado: ['Shampoo de brillo desde $20.000', 'hasta 3 joyas de oro'], lineas: ['Arreglos al momento desde $30.000', 'Una Corona bien fría mientras esperas', 'Todos los sábados desde el ' + fechaLanz], boton: 'Agenda tu turno por WhatsApp' };
-    if (tipo === 'turno') return { kicker: 'TU TURNO ESTÁ LISTO', titulo: (nom || 'Te esperamos') + (nom ? ',' : ''), sub: 'te esperamos', destacado: s && s.cita ? [U.fmtDate(s.cita.f, true), horaBonita(s.cita.h)] : ['Sábado de Realeza', 'jornada continua'], lineas: [prem ? 'Shampoo de brillo de regalo' : 'Shampoo de brillo desde $20.000', 'Trae hasta 3 joyas de oro', 'Una Corona bien fría te espera'], boton: 'Joyería Tanya Santiago' };
-    return { kicker: 'GRACIAS POR VENIR', titulo: nom ? 'Gracias, ' + nom : 'Gracias', sub: 'tu oro, tu corona', destacado: null, lineas: ['Fue un gusto consentir tu oro', 'Aquí estamos para lo que necesites', 'esta Navidad'], boton: 'Joyería Tanya Santiago' };
+    var dia21 = U.fmtDate(lanz, true).replace(/^\S+\s/, '');
+    var hor = /\[/.test(C.contacto.horario) ? 'jornada continua' : C.contacto.horario;
+    if (tipo === 'invitacion' && prem) return { kicker: 'INVITACIÓN ESPECIAL', titulo: (nom || 'Para ti') + ',', sub: 'esta Navidad brillas tú', destacado: ['Shampoo de brillo DE REGALO', 'para hasta 3 joyas de oro'], lineas: ['Una Corona bien fría mientras esperas', 'La vitrina más linda de la Navidad', 'Desde el sábado ' + dia21], boton: 'Responde y te apartamos tu turno' };
+    if (tipo === 'invitacion') return { kicker: 'SÁBADOS DE REALEZA', titulo: 'Navidad es para brillar', sub: 'tu oro, tu corona', destacado: ['Shampoo de brillo desde $20.000', 'hasta 3 joyas de oro'], lineas: ['Arreglos al momento desde $30.000', 'Una Corona bien fría mientras esperas', 'Todos los sábados desde el ' + dia21], boton: 'Agenda tu turno por WhatsApp' };
+    if (tipo === 'turno') return { kicker: 'TU TURNO ESTÁ LISTO', titulo: nom ? nom + ', te esperamos' : 'Te esperamos', sub: 'como a la realeza', destacado: s && s.cita ? [U.fmtDate(s.cita.f, true), horaBonita(s.cita.h)] : ['Sábados de Realeza', hor], lineas: [prem ? 'Shampoo de brillo de regalo' : 'Shampoo de brillo desde $20.000', 'Trae hasta 3 joyas de oro', 'Una Corona bien fría te espera'], boton: 'Joyería Tanya Santiago' };
+    return { kicker: 'GRACIAS POR VENIR', titulo: nom ? 'Gracias, ' + nom : 'Gracias por venir', sub: 'tu oro, tu corona', destacado: ['Tu oro ya brilla como se merece', 'fue un gusto consentirlo'], lineas: ['Aquí estamos para lo que necesites', 'Todos los sábados hasta el 26 de diciembre'], boton: 'Joyería Tanya Santiago' };
   }
   function lienzo(tipo, c) {
     var cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350;
     pieza(cv, datosPieza(tipo, c)); return cv;
   }
-  function listoFuentes() { return document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve(); }
+  function listoFuentes() { return Promise.all([document.fonts && document.fonts.ready ? document.fonts.ready : null, monoListo]); }
   function copiarImagen(cvPromesa, nombreArchivo, btn) {
     var fin = function (t) { if (!btn) return; var o = btn.getAttribute('data-txt') || btn.textContent; btn.setAttribute('data-txt', o); btn.textContent = t; setTimeout(function () { btn.textContent = o; }, 1800); };
     var blobP = cvPromesa.then(function (cv) { return new Promise(function (r) { cv.toBlob(r, 'image/png'); }); });
@@ -185,23 +224,43 @@
     delete SEG._demo; delete SEG._demo2;
   }
 
+  /* Grupos de estado para revisar la lista completa (100 a 200 clientes) */
+  var VER = [
+    ['', 'A quién le toca este paso', null],
+    ['todos', 'Todos los clientes', function () { return true; }],
+    ['porinvitar', 'Por invitar', function (s) { return s.estado === 'porinvitar'; }],
+    ['esperando', 'Esperando respuesta', function (s) { return s.estado === 'invitado' || s.estado === 'seguimiento'; }],
+    ['interesado', 'Respondieron, falta agendar', function (s) { return s.estado === 'interesado'; }],
+    ['agendado', 'Agendados', function (s) { return AGENDADOS.indexOf(s.estado) >= 0; }],
+    ['vino', 'Ya vinieron', function (s) { return s.estado === 'llego' || s.estado === 'compro'; }],
+    ['nointeresa', 'No les interesa', function (s) { return s.estado === 'nointeresa'; }],
+    ['baja', 'No escribir más', function (s) { return s.estado === 'baja'; }]
+  ];
+  function verFn(k) { for (var i = 0; i < VER.length; i++) if (VER[i][0] === k) return VER[i][2]; return null; }
+  function contar(k) { var f = verFn(k); return BASE.filter(function (c) { return f(seg(c.id)); }).length; }
+
   function kpis() {
-    var hoy = U.today(), n = function (f) { return BASE.filter(function (c) { return f(seg(c.id)); }).length; };
-    var hoyInv = n(function (s) { return s.hist.some(function (h) { return h[0] === 'invitacion' && h[1].slice(0, 10) === hoy; }); });
+    var prem = BASE.filter(function (c) { return c.premium; }).length;
     var pf = proximasFechas({ premium: true }), prox = pf.filter(function (x) { return x.f >= lanz; })[0] || pf[0];
+    var turnos = prox ? BASE.filter(function (c) { var s = seg(c.id); return s.cita && s.cita.f === prox.f && AGENDADOS.indexOf(s.estado) >= 0; }).length : 0;
+    var ver = $('aseVer').value;
     $('aseKpis').innerHTML = [
-      ['Clientes', BASE.length, BASE.filter(function (c) { return c.premium; }).length + ' premium'],
-      ['Invitaciones hoy', hoyInv, 'de ' + n(function (s) { return s.estado === 'porinvitar'; }) + ' por invitar'],
-      ['Esperando respuesta', n(function (s) { return s.estado === 'invitado' || s.estado === 'seguimiento'; }), ''],
-      ['Agendados', n(function (s) { return AGENDADOS.indexOf(s.estado) >= 0; }), ''],
-      ['Turnos ' + (prox ? U.fmtDate(prox.f) : ''), prox ? n(function (s) { return s.cita && s.cita.f === prox.f && AGENDADOS.indexOf(s.estado) >= 0; }) : 0, 'de ' + cupoDia() + ' cupos']
-    ].map(function (k) { return '<div class="kpi"><small>' + esc(k[0]) + '</small><b class="num">' + k[1] + '</b><em>' + esc(k[2]) + '</em></div>'; }).join('');
+      ['todos', 'Clientes', BASE.length, prem + ' premium · ' + (BASE.length - prem) + ' general'],
+      ['porinvitar', 'Por invitar', contar('porinvitar'), 'toca para verlos'],
+      ['esperando', 'Esperando respuesta', contar('esperando'), 'toca para verlos'],
+      ['interesado', 'Falta agendar', contar('interesado'), 'respondieron que sí'],
+      ['agendado', 'Agendados', contar('agendado'), prox ? turnos + ' de ' + cupoDia() + ' cupos el ' + U.fmtDate(prox.f) : '']
+    ].map(function (k) { return '<button type="button" class="kpi kb' + (ver === k[0] ? ' on' : '') + '" data-ver="' + k[0] + '"><small>' + esc(k[1]) + '</small><b class="num">' + k[2] + '</b><em>' + esc(k[3]) + '</em></button>'; }).join('');
+    var sel = $('aseVer'), v = sel.value;
+    sel.innerHTML = VER.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + (o[2] ? ' (' + contar(o[0]) + ')' : '') + '</option>'; }).join('');
+    sel.value = v;
   }
 
   function estadoTexto(c, s) {
-    var u = ultimo(s), t = ESTADOS[s.estado];
-    if (s.cita && AGENDADOS.indexOf(s.estado) >= 0) t += ' · ' + U.fmtDate(s.cita.f) + ' ' + horaBonita(s.cita.h);
-    if (u) { var d = diasDesde(u[1]); t += ' · último mensaje ' + (d === 0 ? 'hoy' : d === 1 ? 'ayer' : 'hace ' + d + ' días'); }
+    var u = ultimo(s), t = [];
+    if (s.cita && AGENDADOS.indexOf(s.estado) >= 0) t.push('Turno: ' + U.fmtDate(s.cita.f) + ', ' + horaBonita(s.cita.h));
+    if (u) { var d = diasDesde(u[1]); t.push('último mensaje ' + (d === 0 ? 'hoy' : d === 1 ? 'ayer' : 'hace ' + d + ' días')); }
+    t = t.join(' · ');
     return t;
   }
   function prioridad(c, s) {
@@ -210,12 +269,20 @@
     return (c.premium ? '0' : '1') + c.nombre;
   }
 
+  /* Paso que corresponde al cliente: el elegido arriba, o el que sigue según su estado cuando se mira un grupo */
+  function pasoDe(s) {
+    if (!$('aseVer').value) return paso;
+    return { porinvitar: 'invitacion', invitado: 'seguimiento', seguimiento: 'seguimiento', interesado: 'confirmar', nointeresa: 'seguimiento',
+      agendado: enviado(s, 'confirmar') ? 'recordatorio' : 'confirmar', recordado: 'recordatorio', llego: 'gracias', compro: 'gracias', baja: 'invitacion' }[s.estado] || paso;
+  }
+
   function renderLista() {
-    var bq = $('aseBusq').value.trim().toLowerCase(), tipo = $('aseTipo').value, todos = $('aseTodos').checked;
+    var bq = $('aseBusq').value.trim().toLowerCase(), tipo = $('aseTipo').value, ver = $('aseVer').value, todos = !!ver, fv = verFn(ver);
     var mias = $('aseMias').checked && ($('aseNombre').value || '').trim();
     var lista = BASE.filter(function (c) {
       var s = seg(c.id);
       if (!todos && (s.estado === 'baja' || s.estado === 'nointeresa' || !PASOS[paso].cola(c, s))) return false;
+      if (todos && !fv(s)) return false;
       if (tipo === 'p' && !c.premium) return false;
       if (tipo === 'g' && c.premium) return false;
       if (mias && c.asesora && c.asesora.toLowerCase() !== mias.toLowerCase()) return false;
@@ -223,12 +290,12 @@
       return true;
     });
     lista.sort(function (a, b) { var x = prioridad(a, seg(a.id)), y = prioridad(b, seg(b.id)); return x < y ? -1 : x > y ? 1 : 0; });
-    $('aseConteo').textContent = lista.length + (lista.length === 1 ? ' cliente' : ' clientes') + (todos ? ' en total' : ' para ' + PASOS[paso].nombre.toLowerCase());
+    $('aseConteo').textContent = lista.length + (lista.length === 1 ? ' cliente' : ' clientes') + (todos ? ' · ' + VER.filter(function (o) { return o[0] === ver; })[0][1].toLowerCase() : ' para ' + PASOS[paso].nombre.toLowerCase());
     if (!lista.length) { $('aseLista').innerHTML = '<p class="vacio">' + (todos ? 'Nadie con ese filtro.' : 'Nadie pendiente en este paso. ¡Buen trabajo!') + '</p>'; return; }
     var MAX = 120;
     $('aseLista').innerHTML = lista.slice(0, MAX).map(function (c) {
       var s = seg(c.id), bloqueado = s.estado === 'baja' || !c.ok;
-      var faltaCita = (paso === 'confirmar' || paso === 'recordatorio') && !s.cita;
+      var pp = pasoDe(s), faltaCita = (pp === 'confirmar' || pp === 'recordatorio') && !s.cita;
       var chips = [];
       if (['porinvitar', 'invitado', 'seguimiento', 'interesado', 'nointeresa'].indexOf(s.estado) >= 0) chips.push(['agendar', '📅 Agendar']);
       if (AGENDADOS.indexOf(s.estado) >= 0) { chips.push(['agendar', 'Cambiar turno'], ['llego', '✅ Llegó']); }
@@ -239,10 +306,10 @@
       return '<article class="cl' + (c.premium ? ' prem' : '') + (bloqueado ? ' off' : '') + '" data-id="' + c.id + '">' +
         '<div class="cl-h"><div><h4>' + esc(c.nombre) + '</h4><span class="tel num">' + esc(fmtTel(c.tel)) + '</span>' + (c.ok ? '' : ' <span class="pill bad">revisar número</span>') + '</div>' +
         (c.premium ? '<span class="tag gold">👑 Premium · shampoo de regalo</span>' : '<span class="tag">General · desde $20.000</span>') + '</div>' +
-        '<p class="cl-s">' + esc(estadoTexto(c, s)) + (c.asesora ? ' · ' + esc(c.asesora) : '') + (s.nota ? ' · ' + esc(s.nota) : '') + '</p>' +
+        '<p class="cl-s"><span class="st st-' + s.estado + '">' + esc(ESTADOS[s.estado]) + '</span> ' + esc(estadoTexto(c, s)) + (c.asesora ? ' · ' + esc(c.asesora) : '') + (s.nota ? ' · ' + esc(s.nota) : '') + '</p>' +
         '<div class="cl-a">' +
         (faltaCita ? '<button class="btn fill" data-a="agendar">📅 Primero agenda el turno</button>'
-          : '<a class="btn wa" data-a="wa" href="' + (bloqueado ? '#' : esc(U.waLink(c.tel, mensaje(paso, c)))) + '" target="_blank" rel="noopener"' + (bloqueado ? ' aria-disabled="true"' : '') + '>' + waIco + ' ' + esc(PASOS[paso].nombre) + '</a>') +
+          : '<a class="btn wa" data-a="wa" href="' + (bloqueado ? '#' : esc(U.waLink(c.tel, mensaje(pp, c)))) + '" target="_blank" rel="noopener"' + (bloqueado ? ' aria-disabled="true"' : '') + '>' + waIco + ' ' + esc(PASOS[pp].nombre) + '</a>') +
         '<button class="btn line" data-a="img" title="Copiar imagen para pegar en el chat">🖼️ <span class="lg">Copiar imagen</span><span class="sm">Imagen</span></button></div>' +
         '<div class="cl-c">' + chips.map(function (x) { return '<button type="button" data-a="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div></article>';
     }).join('') + (lista.length > MAX ? '<p class="vacio">Mostrando ' + MAX + ' de ' + lista.length + '. Usa el buscador para encontrar a alguien.</p>' : '');
@@ -255,24 +322,32 @@
 
   $('pasos').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-paso]'); if (!b) return;
-    paso = b.dataset.paso; S.set('paso', paso); render();
+    paso = b.dataset.paso; S.set('paso', paso); $('aseVer').value = ''; render();
   });
-  ['aseBusq', 'aseTipo', 'aseTodos', 'aseMias'].forEach(function (id) { $(id).addEventListener(id === 'aseBusq' ? 'input' : 'change', renderLista); });
+  ['aseBusq', 'aseTipo', 'aseMias'].forEach(function (id) { $(id).addEventListener(id === 'aseBusq' ? 'input' : 'change', renderLista); });
+  $('aseVer').addEventListener('change', function () { kpis(); renderLista(); });
+  $('aseKpis').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-ver]'); if (!b) return;
+    $('aseVer').value = $('aseVer').value === b.dataset.ver ? '' : b.dataset.ver;
+    kpis(); renderLista();
+    var l = $('aseConteo'); if (l.scrollIntoView) l.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   $('aseNombre').addEventListener('input', function () { S.set('asesora', this.value); renderPasos(); renderLista(); });
 
   $('aseLista').addEventListener('click', function (e) {
     var b = e.target.closest('[data-a]'); if (!b) return;
     var c = porId(b.closest('.cl').dataset.id); if (!c) return;
-    var s = seg(c.id), a = b.dataset.a;
+    var s = seg(c.id), a = b.dataset.a, pp = pasoDe(s);
     if (a === 'wa') {
       if (b.getAttribute('aria-disabled')) { e.preventDefault(); return; }
       if (!($('aseNombre').value || '').trim()) { e.preventDefault(); $('aseNombre').focus(); $('aseNombre').classList.add('pide'); setTimeout(function () { $('aseNombre').classList.remove('pide'); }, 1600); return; }
-      s.hist.push([paso, new Date().toISOString()]);
-      if (PASOS[paso].despues && !(paso === 'seguimiento' && s.estado !== 'invitado' && s.estado !== 'seguimiento')) s.estado = PASOS[paso].despues;
+      var tocaba = PASOS[pp].cola(c, s);
+      s.hist.push([pp, new Date().toISOString()]);
+      if (PASOS[pp].despues && tocaba) s.estado = PASOS[pp].despues;
       guardar(); setTimeout(render, 400);
       return;
     }
-    if (a === 'img') { copiarImagen(listoFuentes().then(function () { return lienzo(PASOS[paso].pieza, c); }), PASOS[paso].pieza + '-' + primerNombre(c.nombre).toLowerCase() + '.png', b); return; }
+    if (a === 'img') { copiarImagen(listoFuentes().then(function () { return lienzo(PASOS[pp].pieza, c); }), PASOS[pp].pieza + '-' + primerNombre(c.nombre).toLowerCase() + '.png', b); return; }
     if (a === 'agendar') { agendar(c); return; }
     if (a === 'compro') { var m = prompt('¿Cuánto compró ' + primerNombre(c.nombre) + '? (solo números)', s.monto || ''); if (m === null) return; s.monto = +String(m).replace(/\D/g, '') || 0; s.estado = 'compro'; }
     else if (a === 'reactivar') { s.estado = s.hist.length ? 'invitado' : 'porinvitar'; }
@@ -324,7 +399,7 @@
   function renderAgenda() {
     var fs = proximasFechas({ premium: true });
     var f = $('agDia').value || ((fs.filter(function (x) { return x.f >= lanz; })[0] || fs[0] || {}).f);
-    $('agDia').innerHTML = fs.map(function (x) { return '<option value="' + x.f + '"' + (x.f === f ? ' selected' : '') + '>' + esc(U.fmtDate(x.f, true)) + ' · ' + ocupados(x.f) + ' turnos</option>'; }).join('');
+    $('agDia').innerHTML = fs.map(function (x) { return '<option value="' + x.f + '"' + (x.f === f ? ' selected' : '') + '>' + esc(U.fmtDate(x.f, true)) + ' · ' + ocupados(x.f) + (ocupados(x.f) === 1 ? ' turno' : ' turnos') + '</option>'; }).join('');
     var cupo = C.agenda.cuposPorBloque || 1;
     $('agTabla').innerHTML = U.slots().map(function (h) {
       var gente = BASE.filter(function (c) { var s = seg(c.id); return s.cita && s.cita.f === f && s.cita.h === h && AGENDADOS.indexOf(s.estado) >= 0; });
@@ -424,7 +499,7 @@
   /* ---------------- lo que usa la pestaña de la propietaria ---------------- */
   window.CoroAse = {
     registros: function () { return BASE.map(function (c) { var s = seg(c.id); return { nombre: c.nombre, tel: c.tel, premium: c.premium, estado: s.estado, cita: s.cita, monto: s.monto, nota: s.nota, hist: s.hist }; }); },
-    pieza: pieza, datosPieza: datosPieza, horaBonita: horaBonita, mensajeBase: function () { return PASOS.invitacion.premium; },
+    pieza: pieza, datosPieza: datosPieza, listo: listoFuentes, horaBonita: horaBonita, mensajeBase: function () { return PASOS.invitacion.premium; },
     render: render
   };
 
