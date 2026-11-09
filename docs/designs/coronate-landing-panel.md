@@ -1,7 +1,7 @@
 # Corónate: landing y panel de campaña
 
 - **Autor:** Claude (chat `[CORO]`), para Damián Barragán
-- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián. Decisiones tomadas: almacén = Cloudflare Worker + D1; acceso = página pública + clave por persona; landing = dominio propio; licor = landing de clientes igual, versión alterna sin cerveza para redes y pauta.
+- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián. Decisiones tomadas: almacén = Cloudflare Worker + D1; acceso = página pública + clave por persona; landing = dominio propio; licor = landing de clientes igual, versión alterna sin cerveza para redes y pauta; premium = top 50 por compras, ajustado por Tania.
 - **Fecha:** 9 de noviembre de 2026
 - **Código revisado:** carpeta `coronate/` en la rama `claude/n8n-pdf-report-delay-1v4yym` (commit `d4476d3`). La rama `claude/wizardly-fermi-3wpram` tiene una copia **anterior** de `coronate/` (sin `asesoras.js`, `landing.css`, `creativo.html` ni `grabacion.html`): no sirve como referencia del estado actual.
 - **Artifacts revisados:** landing general, vista premium, panel y guía de grabación publicados en claude.ai.
@@ -75,7 +75,7 @@ Las preguntas con más de una respuesta defendible se le hacen a Damián **una a
 1. ~~¿Dónde se guarda el estado compartido?~~ **Decidido por Damián (9 nov): Cloudflare Worker + D1** (opción B). Crear la cuenta, la base y desplegar el Worker son acciones rojas: requieren su autorización explícita antes de ejecutarse.
 2. ~~¿Cómo entran las asesoras al panel?~~ **Decidido por Damián (9 nov): página pública + clave.** El panel se publica en Cloudflare Pages o GitHub Pages. El HTML queda a la vista, pero los datos solo salen del Worker con la clave de cada asesora (y una de propietaria). Publicar es una acción roja: necesita autorización antes del deploy. Ningún archivo con teléfonos va en la página publicada: la base se sube al Worker, no a `clientes.js`.
 3. ~~¿Cómo se publica la landing?~~ **Decidido por Damián (9 nov): dominio propio**, apuntando al mismo sitio de Cloudflare/GitHub Pages. Comprar el dominio y configurar el DNS son acciones rojas: necesitan autorización y el nombre exacto. Debe estar en línea antes del lunes 16 para revisar los enlaces personalizados. Cuando exista, `config.baseUrl` lleva esa dirección y los mensajes incluyen el enlace solos.
-4. **¿Qué clientes son premium (shampoo de regalo)?** El modelo de costos asume 50. ¿Los 50 con más compras en 2026, o una lista que haga Tania?
+4. ~~¿Qué clientes son premium?~~ **Decidido por Damián (9 nov): propongo los 50 con más compras en 2026 y Tania quita o agrega** antes del lunes 16. El archivo para su revisión se genera fuera del repo, porque tiene nombres reales.
 5. **¿El día de prueba del sábado 14 se mantiene?** Las invitaciones a la base completa salen el 17, así que el 14 solo funciona con un grupo pequeño invitado a mano entre el 10 y el 13. Si se mantiene, ¿quién lo invita y desde qué lista?
 6. **Quien paga el servicio y no cabe el 21:** ¿se le ofrece martes o miércoles, otra máquina o el sábado siguiente?
 7. **Precio del servicio pago:** desde $20.000 (lo que dice la landing) o $25.000 (lo que usa el modelo de costos).
