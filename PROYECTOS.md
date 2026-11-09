@@ -1,128 +1,150 @@
-# PROYECTOS.md — Panel de control (actualizado 2026-11-09)
+# PROYECTOS.md — Panel de control (revisado 2026-11-09)
 
 Fuente única: qué proyectos hay, dónde vive cada chat, cómo pedir cosas y qué sigue.
-Los datos de estado salen de los chats reales; lo que es suposición va marcado como **[SUPUESTO]**.
+Los datos de estado salen de los chats y artifacts reales; lo que es suposición va marcado como **[SUPUESTO]**.
+
+**Qué revisé a fondo:** Plan Piloto y Propuesta de Sette; Plan, Propuesta y "Sábados de Realeza" de Corónate; Plan Tumbao Cierre 2026 y la rutina autónoma de Tumbao; chats de Loggro.
+**Qué NO revisé a fondo:** el deck "Corónate para Tania", el tablero de Joyería, el chat de HolaDami (solo sus resúmenes) y los chats de skills/sistema.
 
 ---
 
 ## 1. Cómo leer un chat (sistema de nombres)
 
-Cada chat en claude.ai/code empieza con un código entre corchetes:
-
 | Código | Proyecto | Qué es |
 |---|---|---|
 | `[LOG]` | Loggro | Empleo tiempo completo, asesor de venta nueva |
-| `[JTS]` | Joyería Tanya Santiago | Rol CTO / asistente administrativo (dashboards, n8n, Sheets) |
-| `[CORO]` | Corónate (dentro de Joyería) | Proyecto de 2 meses de Joyería Tanya Santiago → web como centro de operación |
-| `[TUM]` | Tumbaobaila.com (incluye Beat) | Apoyo / laboratorio. Beat (retención de alumnos, caja, AdminGym) es el sistema de Tumbao |
-| `[DAMI]` | holadami.com | Asistente real + prospección (Alter) para Loggro y proyectos aparte |
-| `[SETTE]` | Sette | Piloto de 8 semanas: inventario, compras, orden de la casa |
-| `[SIS]` | Sistema | Configuración de Claude, skills, permisos, plugins |
-| `[PERS]` | Personal | Cosas no laborales |
-| `[?]` | Sin clasificar | Necesito que me digas de qué proyecto son |
+| `[JTS]` | Joyería Tanya Santiago | Asesoría mensual: tablero gerencial, hojas, flujos |
+| `[CORO]` | Corónate / Sábados de Realeza (dentro de Joyería) | Campaña de ventas hasta el 31 de dic |
+| `[TUM]` | Tumbaobaila.com (incluye Beat) | Sistema de reservas, caja, WhatsApp y campañas de la academia |
+| `[DAMI]` | holadami.com | Asistente + prospección (Alter) |
+| `[SETTE]` | Sette | Piloto de 8 semanas: compras, inventario, precios |
+| `[SIS]` | Sistema | Configuración de Claude, skills, permisos |
+| `[PERS]` | Personal | No laboral |
+| `[?]` | Sin clasificar | Pendiente de que me digas el proyecto |
 
-Además cada chat tiene etiqueta `proy:<nombre>` para filtrar. Los 6 chats de deploy viejos de Dami llevan `estado:archivar-candidato`.
-**No archivé ni borré nada.** Solo renombré y etiqueté (reversible).
+Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami llevan `estado:archivar-candidato`. No archivé ni borré nada.
 
 ---
 
-## 2. Estado por proyecto
+## 2. Estado real por proyecto (lo hecho vs. lo pendiente)
 
-| Proyecto | Chat canónico (donde seguir) | Dónde quedó | Siguiente paso concreto |
+| Proyecto | Ya hecho | Pendiente / bloqueo | Chat donde seguir |
 |---|---|---|---|
-| **Loggro** | `[LOG] Número de teléfono y tareas Loggro` + `[LOG] Mercado y competencia + Guía del asesor` | Plan de agente listo; esperando respuestas P1 (3 tareas concretas de Loggro) y P3 (dónde viven los datos: API, Excel o Sheets). Existen artifacts "Loggro vs. el Mercado", "Playbook Restobar", "Tarjeta del Asesor" | Responder P1 y P3 en ese chat |
-| **Joyería** | `[JTS] Dashboard gerencial de ventas` | Tablero construido sobre la hoja existente con 4 supuestos sin confirmar (metas, facturado, años anteriores) | Confirmar los 4 supuestos con Tanya |
-| **Corónate** | `[CORO] Coronate × Joyería` | Artifacts: Propuesta Corónate, Plan Corónate, Corónate para Tania, Sábados de Realeza (v10). Chat enorme: contexto ~624k tokens | **Abrir chat nuevo para la web** (ver §4) |
-| **Tumbao** | `[TUM] tumbaobaila.com web + Supabase` | **Bloqueado desde el 7-nov**: espera aprobación de un `Execute SQL` en Supabase. Artifact "Plan Tumbao Cierre 2026" | Revisar ese SQL y aprobar o negar (es 🔴 según CLAUDE.md §2) |
-| **HolaDami** | `[DAMI] Kapso + Alter (ventas WhatsApp)` | Alter: 197 envíos, 0 citas aceptadas. Kapso con US$0,12 de crédito y 2007/2000 mensajes → **no puede enviar más sin recarga**. Meta Ads pausada esperando decisión de SIM para WhatsApp Business | Decidir: recargar Kapso o pausar (ver pregunta 2) |
-| **Sette** | `[SETTE] Revisión operativa + propuesta CTO fraccional` | Artifacts "Plan Piloto Sette" y "Propuesta Sette Dolce Vita". Se discutió precio: $2M/mes con tope de horas es defendible | Honorarios aprobados: $2M/mes. Falta fijar por escrito alcance, tope de horas y fecha de pago antes de la semana 1 |
+| **Sette** | Plan piloto de 8 semanas con 7 hitos (H1–H7), matriz de prioridades, backlog operativo, fases 2–4, propuesta para Lorena con inversión y alcance. **Aprobada** | Fecha de arranque. Lorena debe dar: usuario de Restobar, plantilla de importación, hojas de inventario, comandas de 2 días, recetario de 10 platos. Contratar a la auxiliar (~$800.000/mes, la paga Sette) para la semana 3 | `[SETTE] Revisión operativa…` |
+| **Corónate** | Plan (meta $320 M del 29 oct al 31 dic, calendario día por día, WhatsApp, domingos), Propuesta, página "Sábados de Realeza" (v10), deck para Tania | **Esta semana es el piloto del sábado 14 de nov** (ver §2c). Aprobación de Tania, lista de 150 clientes, hora con las asesoras | `[CORO] Coronate × Joyería` (chat de ~624k tokens: conviene abrir uno nuevo para la fase 2) |
+| **Tumbao** | Sistema funcionando: confirmación de reserva, asistente del negocio, asistente de clientes por WhatsApp, SALIR, informes 8 am / 8 pm, cupo sin pago, campañas autorizadas del 6 nov al 28 dic (tope $120.000), rutina diaria autónoma lun–sáb 1:17 pm | **La rutina autónoma está parada desde el 7-nov**: espera tu aprobación de un `Execute SQL` en Supabase (era una consulta SELECT de lectura). Sin ese clic no corre. Además ~10 decisiones tuyas abiertas (ver §2a) | `[TUM] tumbaobaila.com web + Supabase` |
+| **Joyería** | Tablero gerencial de ventas conectado a la hoja | 4 supuestos sin confirmar con Tanya: metas, facturado, años anteriores | `[JTS] Dashboard gerencial de ventas` |
+| **Loggro** | Guía del asesor, comparativo de mercado, Playbook Restobar. Piloto de agente en WhatsApp (Kapso): ya responde mensajes | Faltan el túnel y el webhook para que responda solo. Y 4 respuestas tuyas: 3 tareas concretas de Loggro, quién lo usa, de dónde salen los datos, qué puede hacer sin preguntarte | `[LOG] Número de teléfono y tareas Loggro` |
+| **HolaDami** | Landing, Kapso, Alter (197 envíos, 0 citas), Meta Ads. Chats de deploy: 7 para un mismo despliegue | Kapso con US$0,12 y 2007/2000 mensajes: no envía sin recarga. Decisión de SIM para WhatsApp Business. Tú ya dijiste que lo miras | `[DAMI] Kapso + Alter` |
 
-Nota: en los chats el proyecto aparece como "Sete". Lo trato como Sette.
+### 2a. Decisiones que solo tú puedes desbloquear
+
+| Proyecto | Decisión | Urgencia |
+|---|---|---|
+| Corónate | Aprobar con Tania la invitación y el shampoo de regalo; pasar la base de clientes; 1 hora con las asesoras | **Hoy (lun 9)** |
+| Tumbao | Aprobar o negar el `Execute SQL` pendiente (SELECT de lectura) | Hoy: la rutina diaria no corre sin eso |
+| Sette | Decir la fecha de arranque y pedirle a Lorena los accesos | Esta semana |
+| Tumbao | Pre-venta de diciembre, evento de diciembre, beneficio de referidos, clips semanales de clase, ventas de recepción al día | Antes del 20 nov |
+| Joyería | Confirmar los 4 supuestos del tablero | Esta semana |
+| Loggro | Responder las 4 preguntas del agente, o decidir que no es prioridad | Opcional |
+| Dami | Recargar Kapso o pausar | Cuando lo mires |
 
 ---
 
-## 2b. Ingresos por proyecto (COP, durante los próximos 2 meses)
+## 2b. Ingresos por proyecto (COP)
 
 | Proyecto | Ingreso | Notas |
 |---|---|---|
-| Loggro | $2.200.000/mes de salario + comisión | 8 h diarias ≈ 176 h/mes ≈ $12.500/h solo con el salario. Comisión sin dato |
-| Joyería (asesoría mensual) | $2.200.000/mes | Recurrente |
-| Corónate (dentro de Joyería) | $1.500.000 por 2 meses ≈ $750.000/mes | **[SUPUESTO]** $1,5M es el total, no por mes |
-| Sette | $2.000.000/mes | Piloto 8 semanas, sin tope de horas definido |
-| Tumbao (web + Beat) | $750.000/mes | |
-| HolaDami | $0 | Solo gasto (Kapso, Meta Ads, Cloudflare, tokens) |
-| **Total extra a Loggro** | **≈ $5.700.000/mes** | Joyería concentra $2,95M (52%) |
-| **Total base (sin comisión)** | **≈ $7.900.000/mes** | Loggro es 28%; los proyectos son 72% |
+| Loggro | $2.200.000/mes + comisión | 8 h diarias ≈ 176 h/mes. Comisión: $1,2M, $0,4M, y octubre esperado $0,5–0,8M (promedio ≈ $0,75M) |
+| Joyería (asesoría) | $2.200.000/mes | Martes 4 h y sábado ~6 h hoy (10 h/sem) |
+| Corónate | Ver nota abajo | **Dos versiones que no coinciden** |
+| Sette | $2.000.000/mes | Pago anticipado cada mes; el mes 2 se confirma al entregar H4. El chat lo calculó con ~22 h/mes ≈ $91.000/h |
+| Tumbao (web + Beat) | $750.000/mes | Hoy solo monitoreo |
+| HolaDami | $0 | Solo gasto |
 
-Lectura rápida:
-- La mayor ambición (Corónate = "centro neurálgico") es de lo que menos pagan por hora. Joyería es 52% de tus ingresos extra, así que Corónate importa por la relación con Joyería más que por sus $750.000.
-- Loggro te ocupa 8 h al día pero es solo 28% del ingreso base. Los proyectos pagan más del doble y compiten por las horas que quedan fuera de Loggro. La comisión de Loggro es la única variable que puede cambiar ese 28%: cuánto sube con el tiempo que le dedicas es un dato que aún falta.
+**Corónate: precios en conflicto.** Lo que tú dices: $1,5M por una primera fase (2 meses) y $2M por la fase 2. Lo que dicen los documentos:
+- Propuesta de octubre: $3,5M fijos en tres entregas ($1,5M + $1,0M + $1,0M) + bono 3% con tope de $1M.
+- "Sábados de Realeza" v10 (7 nov): **Fase 1 sin costo** (piloto del 14 nov), Fase 2 = $2.000.000, Fase 3 = $1.500.000, bono 3% con tope de $1M.
 
-### Ingreso real con la comisión de Loggro
+Los $2M y $1,5M aparecen, pero en orden inverso y con la Fase 1 en $0. **Confirma cuál está acordado con Tania.** Hasta entonces uso tu cifra ($1,5M por 2 meses) como mínimo seguro.
 
-| Mes | Comisión Loggro |
-|---|---|
-| Hace 2 meses | $1.200.000 |
-| Mes pasado | $400.000 |
-| Octubre (esperado) | $500.000 – $800.000 |
-| Promedio de los 3 | ≈ $750.000 (varía de $0,4M a $1,2M) |
-
-Ingreso total esperado: **≈ $8,3M (mes malo) a $9,1M (mes bueno)**, con base fija de $7,9M. La comisión es la única parte que no controlas; los proyectos son lo estable.
+Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0,75 + Tumbao 0,75) + Loggro $2,2M + comisión → **≈ $8,3M a $9,1M/mes**. Joyería + Corónate concentran el 37% del ingreso base.
 
 ---
 
-## 2c. Cronograma realista (9-nov-2026 → 3-ene-2027)
+## 2c. Cronograma real (9 nov → 27 dic, con fechas que ya existen)
 
-**Supuestos que debes confirmar:** Sette y Corónate arrancan esta semana; el martes de Joyería es en la noche (no en horario Loggro); domingo libre; Dami congelado hasta que decidas.
+### Lo que ya tiene fecha
 
-### Semana tipo (18 h/semana fuera de Loggro)
+| Fecha | Qué | De dónde sale |
+|---|---|---|
+| Lun 9 nov | Tania aprueba la invitación; se eligen 150 clientes; se arma el calendario de citas | Sábados de Realeza |
+| Mar 10 – Mié 11 | Las asesoras envían 75 invitaciones por día, a mano, desde la línea actual | idem |
+| Jue 12 | Segunda tanda (50 más si quedan cupos) | idem |
+| Vie 13 | Confirmación de cada cita + historias. Es quincena | idem |
+| **Sáb 14 nov** | **Piloto "Sábado de Realeza"**, jornada continua con cita. Meta: $10 M de venta (un sábado normal vende $7,3 M) | idem |
+| Lun 16 nov | **Festivo** | Plan Corónate |
+| **Mar 17 nov** | **Informe del piloto y decisión de fases 2 y 3** | Sábados de Realeza |
+| Vie 27 nov | Black Friday | Plan Corónate |
+| 21, 28 nov; 5, 12, 19, 26 dic | Sábados de Realeza (fase 2) | idem |
+| Dom 29 nov; 6, 13, 20, 27 dic | Domingos abiertos con cita | idem |
+| Mar 8 dic | Festivo | idem |
+| 22–24 dic | En 2025 la joyería vendió ≈ $92 M en estos 3 días | Plan Corónate |
+| Vie 25 dic | Festivo, cerrado | idem |
 
-| Día | Bloque | Proyecto |
+### Semana del piloto (9–17 nov)
+
+| Día | Horas | Qué |
+|---|---|---|
+| Lun 9 | 2 h | Corónate: texto con Tania, lista de 150, calendario de citas |
+| Mar 10 | 4 h | Joyería + apoyo a las asesoras con las invitaciones |
+| Mié 11 | 2 h | Corónate: agenda de quienes respondieron QUIERO |
+| Jue 12 | 2 h | Sette: pedir accesos a Lorena y fijar fecha de arranque |
+| Vie 13 | 2 h | Corónate: confirmaciones (1 h) + Tumbao (0,5 h) + revisión semanal (0,5 h) |
+| Sáb 14 | 6 h | Corónate: día del piloto, registro de visitas y ventas |
+| Dom 15 | 0 | Descanso |
+| Lun 16 (festivo) | 4–5 h | **[SUPUESTO]** Sette: día de acompañamiento en compras y cierre (H1) si Loggro está cerrado |
+| Mar 17 | 4 h + 2 h | Joyería + informe del piloto para Tania (decisión de fases 2 y 3) |
+
+### Semana tipo desde el 18 de nov (≈ 18 h/semana fuera de Loggro)
+
+| Día | Horas | Proyecto |
 |---|---|---|
 | Lun | 2 h | Sette |
-| Mar | 4 h | Joyería (fijo) |
-| Mié | 2 h | Corónate |
+| Mar | 4 h | Joyería (incluye lo de Corónate que se haga en tienda) |
+| Mié | 2 h | Corónate (WhatsApp, plantillas, agenda, tablero) |
 | Jue | 2 h | Sette |
-| Vie | 2 h | Corónate 1 h + Tumbao monitoreo 0,5 h + revisión semanal 0,5 h |
-| Sáb | 6 h | Joyería 2 h (baja de 6 a 2) + Sette 2 h + Corónate 2 h |
-| Dom | 0 | Descanso |
+| Vie | 2 h | Sette revisión con Lorena 1 h + Tumbao 0,5 h + revisión semanal 0,5 h |
+| Sáb | 5–6 h | **Corónate / Sábado de Realeza** (reemplaza el sábado de Joyería) |
+| Dom | 0 | Descanso, salvo domingos abiertos (ver pregunta 4) |
 
-| Proyecto | Horas/sem hoy → plan | Ingreso | Valor/hora aprox. |
-|---|---|---|---|
-| Joyería | 10 → **6** | $2,2M/mes | $51.000 → **$85.000** |
-| Sette | ? → 6 | $2,0M/mes | ≈ $77.000 |
-| Corónate | ? → 5 | $1,5M fase 1 (≈ 43 h) | ≈ $35.000 (el más bajo) |
-| Tumbao | ? → 0,5 | $0,75M/mes | monitoreo, muy alto |
-| Dami | ? → 0 | $0 | congelado |
+### Sette: 8 semanas **[SUPUESTO: arranque lunes 16 nov]**
 
-Corónate fase 2 ($2M) no tiene fecha ni alcance todavía.
+| Sem | Fechas | Hito del plan |
+|---|---|---|
+| 1 | 16–22 nov | H1 mapa del proceso aprobado (día de compras y cierre) |
+| 2 | 23–29 nov | H2 plantilla de compras probada |
+| 3 | 30 nov–6 dic | H3 primera carga completa en Restobar; entra la auxiliar |
+| 4 | 7–13 dic | H4 reporte semanal de compras + recetas de 10 platos. **Aquí se confirma el mes 2** |
+| 5 | 14–20 dic | Operación asistida |
+| 6 | 21–27 dic | H5 primer cruce de inventario. **Semana crítica (Navidad)** |
+| 7 | 28 dic–3 ene | H6 costo y precio de los 10 platos |
+| 8 | 4–10 ene | H7 piloto cerrado + propuesta de fase 2 |
 
-### Hitos por semana
+### Semanas de choque
+- **23–29 nov:** Black Friday + Sábado de Realeza (28) + domingo abierto (29) + H2 de Sette.
+- **14–20 dic:** primas (prima se paga hasta el 20) + sábado y domingo de Realeza + H4/H5 de Sette.
+- **21–27 dic:** Navidad en la joyería + H5 de Sette + sábado 26 + domingo 27. Si hay que sacrificar algo, se mueve H5 a la semana 7, no se toca Joyería.
 
-| Sem | Fechas | Sette | Corónate | Joyería / Tumbao / Dami |
-|---|---|---|---|---|
-| 1 | 9–15 nov | Alcance por escrito (entregables, tope de horas, fecha de pago) | Alcance fase 1 en 1 página: qué hace la web el día 1 y quién la usa | Joyería: cerrar 4 supuestos del tablero. Tumbao: resolver el SQL pendiente. Dami: decidir recarga o pausa |
-| 2 | 16–22 nov (lun 16 festivo*) | Levantamiento: inventario actual y proceso de compras | Estructura y contenido de la web | — |
-| 3 | 23–29 nov (Black Friday 27) | Datos base listos: maestro de productos, proveedores | Primera versión visible para Tanya | Joyería: probable pico de trabajo; protege el martes |
-| 4 | 30 nov–6 dic | Reglas de reposición y mínimos definidos | Ajustes con feedback de Tanya | — |
-| 5 | 7–13 dic (mar 8 festivo*) | Piloto de compras operando | Web v1 en línea | Joyería: temporada de diciembre |
-| 6 | 14–20 dic | Revisión del piloto con datos reales | Entrega fase 1 y cobro. Decisión de fase 2 ($2M) | — |
-| 7 | 21–27 dic (vie 25 festivo*) | Buffer / corrección | Buffer | Carga alta Joyería |
-| 8 | 28 dic–3 ene | Informe de resultados + propuesta de continuidad | Cierre | Revisión de todo el panel |
-
-\*Festivos de Colombia: verifica las fechas, no las he cotejado con calendario oficial.
-
-### Reglas del cronograma
-1. Sábado: máximo 6 h en total; Joyería no pasa de 2 h.
+### Reglas
+1. Sábado: máximo 6 h. Domingo libre salvo los cinco domingos abiertos que tú decidas atender.
 2. Si un proyecto necesita más horas, otro cede esas horas. No se agregan horas.
-3. Viernes (30 min): ¿hubo entregable por proyecto esta semana? Si no, se mueve de semana o se recorta alcance.
-4. Si en semana 3 o 5 Joyería se desborda (temporada), Corónate cede horas y se negocia el hito, no el sábado de descanso.
+3. Viernes (30 min): ¿hubo entregable por proyecto? Si no, se mueve o se recorta alcance.
+4. Nada nuevo para Dami ni para el agente de Loggro hasta después del 17 de nov.
 
 ---
 
 ## 3. Cómo pedir cosas (plantilla universal)
-
-Pega esto al abrir cualquier chat nuevo:
 
 ```
 Proyecto: [CÓDIGO]. Lee PROYECTOS.md, sección de este proyecto.
@@ -132,38 +154,35 @@ Límite: <tiempo o alcance, ej. "solo lectura", "sin enviar nada a clientes">
 Al terminar: actualiza la fila de Estado en PROYECTOS.md (3 líneas máx.).
 ```
 
-Regla: **un chat = un resultado**. Si cambia el objetivo, chat nuevo con el mismo código.
-Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v1`).
-
-### Primer mensaje sugerido por proyecto
+Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 | Código | Primer mensaje |
 |---|---|
 | `[LOG]` | "Prepárame la llamada con [cliente/sector]. Usa el Playbook Restobar y dime las 3 objeciones más probables." |
-| `[JTS]` | "Revisa el workflow n8n de [X] con datos dummy. No toques datos reales." |
-| `[CORO]` | "Sesión de construcción de la web de Corónate. Meta de hoy: [sección]. Muéstrame el resultado en el navegador antes de seguir." |
-| `[TUM]` | "Solo lectura: dime qué hace el SQL pendiente y qué cambia en las tablas." |
-| `[DAMI]` | "Dame el informe de Alter de la semana: envíos, respuestas, citas, costo por cita." |
-| `[SETTE]` | "Arma el checklist de la semana N del piloto: inventario, compras, responsables, entregable del viernes." |
+| `[JTS]` | "Revisa el tablero con los 4 supuestos pendientes y dime qué pregunto a Tanya." |
+| `[CORO]` | "Estado del piloto del 14 de nov: invitaciones enviadas, respuestas QUIERO, citas agendadas. Arma el informe del 17 contra las metas del plan." |
+| `[TUM]` | "Solo lectura: dime qué hace el SQL pendiente y qué decisiones mías están abiertas." |
+| `[DAMI]` | "Informe de Alter de la semana: envíos, respuestas, citas, costo por cita." |
+| `[SETTE]` | "Checklist de la semana N del piloto: qué debe entregar Lorena, qué entrego yo, qué hito cierra el domingo." |
 | `[SIS]` | "Audita qué plugins/skills uso de verdad en los últimos 30 días." |
 
 ---
 
-## 4. Estrategia sugerida (hipótesis, rétala)
+## 4. Estrategia (hipótesis, rétala)
 
-1. **Corónate = web central.** Antes de construirla, define qué hace la web el día 1 (¿registrar pedidos? ¿mostrar avance? ¿cobrar?). Guardrail de CLAUDE.md §6: si no hay un usuario real que la use la primera semana, es infraestructura prematura.
-2. **Chats gigantes → cortar y empezar limpio.** `[TUM]` (443k de contexto) y `[CORO]` (624k) están muy cargados. Antes de cerrarlos, pídeles un resumen de 10 líneas; el chat nuevo arranca desde ese resumen.
-3. **Dami: medir antes de recargar.** 0 citas en 197 envíos es una señal, no un fallo técnico. Revisa mensaje y lista de destinatarios antes de poner más dinero.
-4. **Límite de trabajo en curso [SUPUESTO]:** 1 proyecto principal + 2 secundarios por semana. Siete frentes con empleo de tiempo completo no caben.
-
-### Propuesta de prioridad (la ajustas tú)
+1. **Esta semana no se construye nada nuevo en Corónate: se mide el sábado 14.** La decisión de fases 2 y 3 se toma el 17 con cifras. Una web nueva antes de esa decisión es el patrón de CLAUDE.md §6: infraestructura antes de uso real. La web como "centro neurálgico" puede ser el Plan Corónate que ya existe, con datos reales del piloto.
+2. **Tumbao ya está construido; el cuello de botella es que tú apruebes cosas.** La rutina autónoma lleva dos días parada por un clic. Ese es tu cuello de botella más barato de arreglar.
+3. **Sábados.** Corónate ocupa todos los sábados hasta el 26 de dic. El "sábado de Joyería" y el "sábado de Corónate" son el mismo tiempo: define con Tania si cuentan como parte de las 6 h de tu asesoría.
+4. **Chats gigantes.** `[TUM]` (443k) y `[CORO]` (624k) están muy cargados. Antes de la fase 2, pide un resumen de 10 líneas y abre un chat nuevo desde ahí.
+5. **Dami y el agente de Loggro:** congelados hasta después del 17 de nov. Ninguno tiene ingreso.
 
 | Nivel | Proyectos | Razón |
 |---|---|---|
-| Principal | Corónate, Sette | Tienen fecha límite (2 meses / 8 semanas). Sette ya está pagado ($2M/mes) |
-| Sostener | Loggro | Es tu ingreso fijo; se alimenta con rutina, no con proyectos |
-| Mínimo viable | Joyería, Dami | Joyería: solo cerrar los 4 supuestos. Dami: decidir recarga o pausa |
-| Mantenimiento | Tumbao | Desbloquear el SQL y dejarlo estable |
+| Principal (esta semana) | Corónate (piloto 14 nov) | Fecha dura y decisión de dinero el 17 |
+| Principal (de la semana 2) | Sette | Pagado, 8 semanas, accesos de Lorena pendientes |
+| Sostener | Loggro, Joyería (martes) | Ingreso fijo y recurrente |
+| Mantenimiento | Tumbao | Un clic hoy y 30 min por semana |
+| Congelado | Dami, agente de Loggro | Sin ingreso |
 
 ---
 
@@ -171,12 +190,12 @@ Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v
 
 | Entorno | Tipo | Estado |
 |---|---|---|
-| `Default` | Nube de Claude | **Todos los chats de nube corren aquí** |
-| `MacBook-Air-de-Damian:Claude` / `:ClaudeBot` / `:matriz-viralidad` | Puente a tu Mac | Activos, pero ningún chat los usa hoy. No sé qué contiene cada carpeta **[SUPUESTO: matriz-viralidad y ClaudeBot son proyectos locales tuyos]** |
+| `Default` | Nube de Claude | Todos los chats de nube corren aquí |
+| `MacBook-Air-de-Damian:Claude` / `:ClaudeBot` / `:matriz-viralidad` | Puente a tu Mac | Activos, ningún chat los usa hoy. No sé qué contienen |
 
-- Repo: solo `damian3314-arch/ProjectosClaude`. Cada chat crea su propia rama `claude/...` (ya hay ~30). La rama `landing-personal` es de HolaDami.
-- Riesgo: todos los proyectos comparten el mismo entorno Default. Las claves (Cloudflare, Kapso, OpenAI) quedan mezcladas. Recomendación: un entorno por proyecto cuando tengas claves de clientes (Sette, Joyería). No lo creé: requiere tu aprobación.
-- `CLAUDE.md` solo describe Beat, Tumbao y Joyería. **No menciona Loggro, Dami, Sette ni Corónate.** Está desactualizado frente a tu realidad actual.
+- Repo único: `damian3314-arch/ProjectosClaude`. Cada chat crea su rama `claude/...`. `landing-personal` es de HolaDami.
+- Riesgo: todo comparte el entorno Default; las claves de Cloudflare, Kapso, OpenAI y Supabase están mezcladas. Un entorno por proyecto cuando manejes claves de clientes (Sette, Joyería). No lo creé: requiere tu aprobación.
+- `CLAUDE.md` describe Beat, Tumbao y Joyería. No menciona Loggro, Dami, Sette ni Corónate.
 
 ---
 
@@ -184,16 +203,20 @@ Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v
 
 | Cuándo | Qué | Tiempo |
 |---|---|---|
-| Lunes | Abrir este archivo, elegir principal + 2 secundarios, actualizar Estado | 15 min |
-| Diario | Entrar solo a chats con el código de proyecto del día | — |
-| Viernes | Cerrar: ¿hubo entregable por proyecto? Si no, ¿por qué? | 15 min |
+| Lunes | Abrir este archivo, mirar §2a (decisiones abiertas) y §2c (semana) | 15 min |
+| Diario | Entrar solo a chats del proyecto del día | — |
+| Viernes | ¿Hubo entregable por proyecto? Actualizar Estado | 30 min |
 
 ---
 
-## 7. Preguntas que necesito que respondas
+## 7. Preguntas abiertas
 
-1. ~~¿Corónate es de Joyería?~~ Resuelto: sí, es de Joyería.
-2. Dami: ¿recargas Kapso hoy, o pausas hasta revisar el mensaje que da 0 citas? (pendiente: lo miras tú)
-3. Los 5 chats `[?]` (Worker Cloudflare que reemplaza n8n, Chocamama, video de propuesta de optimización, certificado, Forjabot): ¿de qué proyecto son, o se archivan?
-4. ~~Beat / AdminGym~~ Resuelto: Beat es de Tumbao. Pendiente: el chat `[TUM] Beat: app Windows huella dactilar` espera que pruebes apagar AdminGym y me digas la marca/modelo del lector.
-5. ~~¿Sette cobra?~~ Resuelto: aprobaron **$2.000.000 COP/mes** de honorarios. Pendiente por escrito: tope de horas por mes, fecha de pago y qué pasa si el piloto se extiende más de 8 semanas.
+1. **Corónate:** ¿cuál es el precio acordado con Tania: Fase 1 = $0 con fases 2 ($2M) y 3 ($1,5M), o Fase 1 = $1,5M y Fase 2 = $2M?
+2. **Sette:** ¿qué fecha arranca? ¿Lorena ya te dio los accesos? ¿El acompañamiento es presencial en Barrancabermeja o remoto?
+3. **Lunes 16 (festivo):** ¿Loggro cierra? Si sí, ese día sirve para el día de compras y cierre de Sette.
+4. **Domingos abiertos de Corónate (29 nov, 6, 13, 20, 27 dic):** ¿los atiendes tú o las asesoras?
+5. Los 5 chats `[?]`: Worker Cloudflare que reemplaza n8n, Chocamama, video de propuesta de optimización, certificado, Forjabot. ¿De qué proyecto son?
+6. **Dami:** recargar o pausar (tú lo miras).
+7. **Tumbao:** el chat de Beat (app de huella, AdminGym) sigue esperando que pruebes apagar AdminGym y des la marca del lector.
+
+Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes.
