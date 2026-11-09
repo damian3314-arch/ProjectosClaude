@@ -118,7 +118,9 @@ export async function agentTurn(c) {
   if (c.source === 'loggro' && env.AGENT_MODE !== 'c') {
     const maxTurns = Number(env.AGENT_MAX_TURNS) > 0 ? Number(env.AGENT_MAX_TURNS) : 8;
     const why = out.handoff_reason ? out.handoff_reason : out.stage === 'support' ? 'Necesita soporte.' : (chat.turns || 0) >= maxTurns ? 'La conversación ya lleva varios turnos sin cita.' : null;
-    if (why && !out.chosen_slot) return escalateToDamian(c, out, content, why);
+    // Quien no es prospecto (no_fit, charla, ahora no) no le llega a Damián: Alter lo despide solo
+    const noEscalar = ['not_fit', 'not_now', 'chitchat', 'optout'].includes(out.stage);
+    if (why && !out.chosen_slot && !noEscalar) return escalateToDamian(c, out, content, why);
   }
 
   const messages = out.messages.map(m => sanitize(c.h, m)).filter(Boolean).slice(0, 3);

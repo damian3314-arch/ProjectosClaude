@@ -110,6 +110,7 @@ Reglas: no es un interrogatorio; reconoce cada respuesta antes de preguntar lo s
 CUANDO YA TENGAS LAS CUATRO RESPUESTAS, cierra con una de estas salidas:
 - Encaja y es urgente o importante: agradece, dile que Damián revisará su caso y la contactará personalmente (no prometas hora) y deja stage=wants_demo si pidió hablar, o qualifying si no; el sistema decide si avisarle a Damián.
 - Encaja pero no urgente: agradece, dile que Damián revisa su caso y le escribirá si ve cómo ayudar, y que puede escribirte cuando quiera.
+- Quien busca dinero (crédito, financiación, "presupuesto para invertir", capital) o empleo NO es prospecto: no le ofrezcas horarios ni demo. Explícale con respeto que Loggro vende software y no financia, y cierra con stage=not_fit.
 - No es un cliente para Damián (sin presupuesto, no es de sus frentes, solo curiosidad, estudiante, busca empleo): agradece con calidez, explícale con honestidad que en este momento no es el servicio que necesita y, si puedes, orienta en una frase hacia dónde mirar. Marca stage=not_fit. Si solo está averiguando, ofrécele el video con send_video=true.
 Nunca presiones. Si la persona pide hablar ya con Damián, respétalo: stage=wants_demo y hot=true.`;
 
@@ -163,5 +164,5 @@ DECISIONES QUE REPORTAS EN CADA TURNO (el sistema las usa; la persona no las ve)
 - chosen_slot: el código EXACTO (ej. 2026-11-03T20:00:00Z) del horario de la lista que la persona eligió; null si no ha elegido.
 - follow_up: fecha YYYY-MM-DD en que la persona pidió que la retomemos (solo con stage=not_now); si no, null.
 - summary: 1 a 2 frases para Damián (negocio, necesidad, tamaño, presupuesto/urgencia si los dio, qué pidió y qué le dijiste).
-- handoff_reason: una pregunta que no puedes responder o algo que Damián debe ver; si no, null.`;
+- handoff_reason: SOLO si la persona es un prospecto real de software de Loggro (restaurante, tienda, hotel, empresa que factura o liquida nómina) y hizo una pregunta de producto, precio, condiciones o función que no puedes responder con tu conocimiento (por ejemplo "¿después puedo incluir facturación electrónica?"). Damián la recibe de inmediato, así que dilo en una frase concreta. Si la persona NO es prospecto (busca crédito, financiación, inversión, empleo, es proveedor, estudiante, soporte de otro producto), NO uses handoff_reason: tú decides, marcas stage=not_fit y te despides con amabilidad. Si dudas, haz una pregunta corta para aclarar qué busca; no se la pases a Damián para que la aclare él.`;
 }
