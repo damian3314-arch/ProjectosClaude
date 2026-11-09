@@ -22,6 +22,8 @@ Los datos de estado salen de los chats y artifacts reales; lo que es suposición
 | `[PERS]` | Personal | No laboral |
 | `[?]` | Sin clasificar | Pendiente de que me digas el proyecto |
 
+**Regla del director:** este chat coordina, decide y delega. El trabajo se ejecuta en el chat del proyecto (por código). Aquí solo se actualiza este archivo.
+
 Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami llevan `estado:archivar-candidato`. No archivé ni borré nada.
 
 ---
@@ -31,7 +33,7 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 | Proyecto | Ya hecho | Pendiente / bloqueo | Chat donde seguir |
 |---|---|---|---|
 | **Sette** | Plan piloto de 8 semanas con 7 hitos (H1–H7), matriz de prioridades, backlog operativo, fases 2–4, propuesta para Lorena con inversión y alcance. **Aprobada** | Fecha de arranque. Lorena debe dar: usuario de Restobar, plantilla de importación, hojas de inventario, comandas de 2 días, recetario de 10 platos. Contratar a la auxiliar (~$800.000/mes, la paga Sette) para la semana 3 | `[SETTE] Revisión operativa…` |
-| **Corónate** | Plan, Propuesta, página "Sábados de Realeza" y deck. **Landing + panel construidos en local** (`coronate/`, ver `coronate/README.md`) | Reajustado el 9-nov con Tania: Fase 1 aprobada; **día de prueba sáb 14 nov** con base selecta; **lanzamiento oficial sáb 21 nov** con decoración de Navidad. Faltan datos de contacto (WhatsApp, dirección, horario), copy final y diseños | `[CORO] Coronate × Joyería` (chat de ~624k tokens: abrir uno nuevo) |
+| **Corónate** | Plan, Propuesta, "Sábados de Realeza", deck y landing + panel en local (rama `claude/wizardly-fermi-3wpram`, `coronate/`). **Encargo enviado al chat `[CORO]` el 9-nov** | Costos y retorno, diseño y copy navideño, guion y autorización de imagen para grabar lun 9 y mar 10, línea de tiempo y pendientes. Respuesta del chat al director al terminar | `[CORO] Coronate × Joyería` (permisos en modo "default": pedirá tu aprobación) |
 | **Tumbao** | Sistema funcionando: confirmación de reserva, asistente del negocio, asistente de clientes por WhatsApp, SALIR, informes 8 am / 8 pm, cupo sin pago, campañas autorizadas del 6 nov al 28 dic (tope $120.000), rutina diaria autónoma lun–sáb 1:17 pm | **La rutina autónoma está parada desde el 7-nov**: espera tu aprobación de un `Execute SQL` en Supabase (era una consulta SELECT de lectura). Sin ese clic no corre. Además ~10 decisiones tuyas abiertas (ver §2a) | `[TUM] tumbaobaila.com web + Supabase` |
 | **Joyería** | Tablero gerencial de ventas conectado a la hoja | 4 supuestos sin confirmar con Tanya: metas, facturado, años anteriores | `[JTS] Dashboard gerencial de ventas` |
 | **Loggro** | Guía del asesor, comparativo de mercado, Playbook Restobar. Piloto de agente en WhatsApp (Kapso): ya responde mensajes | Faltan el túnel y el webhook para que responda solo. Y 4 respuestas tuyas: 3 tareas concretas de Loggro, quién lo usa, de dónde salen los datos, qué puede hacer sin preguntarte | `[LOG] Número de teléfono y tareas Loggro` |
@@ -62,11 +64,12 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 | Tumbao (web + Beat) | $750.000/mes | Hoy solo monitoreo |
 | HolaDami | $0 | Solo gasto |
 
-**Corónate: reajuste acordado con Tania (9 nov).**
-- Fase 1: aprobada (día de prueba del 14 nov y preparación). **[CONFIRMAR]** si tiene costo; los documentos la tenían en $0.
-- Fase 2, campaña de temporada: **$1.500.000** (las asesoras envían los mensajes desde la línea actual; 6 sábados y los domingos de diciembre; semáforo semanal de ventas).
-- Fase 3, WhatsApp oficial verificado: **$2.000.000**, solo si los resultados son muy buenos.
-- Bono 3% (tope $1M) y operación mensual de $300.000 desde enero: no sé si siguen vigentes. **[CONFIRMAR]**
+**Corónate: acuerdo vigente (Damián, 9 nov).**
+- **Fase 1 = $1.500.000** de honorarios, incluida la campaña completa (prueba, lanzamiento del 21, sábados y domingos de diciembre, semáforo).
+- **Costos de insumos y logística: aparte, a cargo de la joyería** (shampoo por cliente, bebidas, hielo, agendas, bolsas, empaques, decoración, foto/video, personal extra). El chat `[CORO]` construye el apartado de costos y retorno (ROI por peso invertido).
+- **Fase siguiente = $2.000.000** (WhatsApp oficial verificado), solo si los resultados son muy buenos.
+- Bono 3% (tope $1M) y operación de $300.000/mes desde enero: sin confirmar. **[CONFIRMAR]**
+- **Meta de ventas nov + dic: $400 M** (el Plan Corónate tenía $320 M del 29 oct al 31 dic: el chat `[CORO]` debe reconciliarlo con números).
 
 Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0,75 + Tumbao 0,75) + Loggro $2,2M + comisión → **≈ $8,3M a $9,1M/mes**. Joyería + Corónate concentran el 37% del ingreso base.
 
@@ -89,7 +92,7 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 | **Sáb 21 nov** | **Lanzamiento oficial**: revelación de la vitrina, decoración de Navidad, música, cerveza y bebidas sin alcohol | Reajuste del 9-nov |
 | Vie 27 nov | Black Friday | Plan Corónate |
 | 28 nov; 5, 12, 19, 26 dic | Sábados de Realeza (con el 21 son 6) | idem |
-| Dom 6, 13, 20, 27 dic | Domingos de diciembre con cita. Domingo de noviembre por decidir | idem |
+| Dom 6, 13, 20, 27 dic | Domingos de diciembre. Normalmente atiende 1 asesora (puede haber 2). Damián va 2–3 h en la tarde. Domingo de noviembre por decidir | Damián, 9-nov |
 | Mar 8 dic | Festivo | idem |
 | 22–24 dic | En 2025 la joyería vendió ≈ $92 M en estos 3 días | Plan Corónate |
 | Vie 25 dic | Festivo, cerrado | idem |
@@ -213,12 +216,19 @@ Regla: **un chat = un resultado**. Títulos nuevos: `[CÓDIGO] verbo + objeto`.
 
 ## 7. Preguntas abiertas
 
-1. **Corónate:** ¿la Fase 1 tiene costo? ¿El bono de 3% y los $300.000 mensuales siguen? ¿El 21 es solo el evento o también el día en que salen las invitaciones? (asumí que salen del 16 al 20).
-2. **Sette:** ¿qué fecha arranca? ¿Lorena ya te dio los accesos? ¿El acompañamiento es presencial en Barrancabermeja o remoto?
-3. **Lunes 16 (festivo):** ¿Loggro cierra? Si sí, ese día sirve para el día de compras y cierre de Sette.
-4. **Domingos abiertos de Corónate (29 nov, 6, 13, 20, 27 dic):** ¿los atiendes tú o las asesoras?
-5. Los 5 chats `[?]`: Worker Cloudflare que reemplaza n8n, Chocamama, video de propuesta de optimización, certificado, Forjabot. ¿De qué proyecto son?
-6. **Dami:** recargar o pausar (tú lo miras).
-7. **Tumbao:** el chat de Beat (app de huella, AdminGym) sigue esperando que pruebes apagar AdminGym y des la marca del lector.
+**Corónate (decisiones de Damián/Tania):**
+1. El 21: quien PAGA el servicio y no cabe ese día, ¿se agenda martes/miércoles o se habilita otra máquina? ¿Precio del servicio pago?
+2. Snacks: ¿sí o no?
+3. Domingo de noviembre: ¿cuál se habilita? ¿Dos asesoras algún domingo?
+4. Prueba del 14: ¿se hace? ¿con qué grupo?
+5. Margen real de la joyería (para el ROI). Y valor de insumos (shampoo, bebidas, etc.).
+6. ¿Bono 3% y $300.000 mensuales siguen o no?
 
-Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 2 = $1,5M y Fase 3 = $2M.
+**Otros proyectos:**
+7. **Sette:** fecha de arranque, accesos de Lorena, ¿presencial o remoto?
+8. **Lunes 16 (festivo):** ¿Loggro cierra? Sirve para el día de compras y cierre de Sette.
+9. **Tumbao:** aprobar el `Execute SQL` (SELECT) pendiente; decisiones abiertas del plan.
+10. **Dami:** recargar Kapso o pausar.
+11. Los 5 chats `[?]`: ¿de qué proyecto son?
+
+Resueltas: Corónate es de Joyería; Beat es de Tumbao; Sette paga $2M/mes; Corónate Fase 1 = $1,5M con costos aparte; invitaciones del 16 al 20; domingos los atienden las asesoras.
