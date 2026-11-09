@@ -41,8 +41,8 @@ titulo('2. Precio por clase');
 
 titulo('3. Para quién es cada tiquetera y la franja de reservas');
 {
-  ok('la de 8: dos veces por semana o parte del mes; la de 4: empezar o una vez por semana',
-     /clases >= 8 \? 'Para venir dos veces por semana, sin horario fijo\.' : 'Para empezar o venir una vez por semana\.'/.test(men));
+  ok('la tiquetera NO se presenta como «una o dos veces por semana»: se usa cuando quieras dentro de los 30 días',
+     /Usa tus \$\{clases\} clases cuando quieras, sin horario fijo/.test(men) && !/veces por semana|vez por semana/i.test(men.slice(men.indexOf('function listaDePases'), men.indexOf('function cuposTxt'))));
   // 13 oct: la franja dice primero los cupos REALES de mensualidad (lo que más cayó en octubre) y la tiquetera queda de
   // segunda opción; sin cupos, la cuenta de la tiquetera como antes.
   ok('la franja de reservas pone primero los cupos reales de mensualidad (los dos horarios con menos cupos) y el precio del mes',
@@ -62,7 +62,7 @@ titulo('4. Nada suena a descuento');
 {
   const nuevo = [
     /Alrededor de \$\{pesos\(porClasePlan\(\)\)\}[^`]*/.exec(men)[0],
-    'Para venir dos veces por semana, sin horario fijo. Para empezar o venir una vez por semana.',
+    'Usa tus clases cuando quieras, sin horario fijo. Tienes 30 días para usarlas.',
     /cada clase te sale a <b>[^`]*/.exec(idx)[0],
   ].join(' ');
   ok('el texto nuevo no dice descuento, regalo, promoción, oferta ni «gratis»', !/descuento|regalo|promoci|oferta|gratis|últimos? cupos?/i.test(nuevo), nuevo.slice(0, 90));

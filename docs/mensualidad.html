@@ -1961,10 +1961,10 @@ const CONFIG = {
       pases.push({
         tipo: 'tq', clave: p.clave, nombre: 'Tiquetera', cant: `${clases} clases`, num: String(clases),
         precio, xc: `${pesos(Math.round(precio / (clases || 1)))} por clase`, sello: clases >= 8 ? 'Mejor precio' : '',
-        linea: clases >= 8 ? 'Para venir dos veces por semana, sin horario fijo.' : 'Para empezar o venir una vez por semana.',
+        linea: `Usa tus ${clases} clases cuando quieras, sin horario fijo.`,
         puntos: [
-          'Úsala en <b>cualquier horario</b>: reservas cada clase en la página con tu código.',
-          `Vigente <b>${esc(String(p.vigencia_dias))} días</b> desde la compra.`,
+          'Úsala en <b>cualquier horario y los días que quieras</b>: reservas cada clase en la página con tu código.',
+          `Tienes <b>${esc(String(p.vigencia_dias))} días</b> desde la compra para usar tus ${clases} clases. Cuando se acaben, ya no puedes entrar.`,
           ahorro > 0 ? `Ahorras <b>${pesos(ahorro)}</b> frente a pagar clase suelta.` : '',
           camp ? `<span class="extra-li">Completa tus ${clases} clases y <b>premiamos tu constancia</b> con ${extraTxt(clases)}.</span>` : '',
         ].filter(Boolean),
