@@ -30,7 +30,7 @@ window.CORO = {
   },
   // Fechas del evento. publico:false = solo se ofrece con ?p=1 en el link (clientes selectos del día de prueba).
   fechas: [
-    { f: '2026-11-14', tipo: 'prueba',   publico: false, etiqueta: 'Día de prueba · clientes selectos' },
+    { f: '2026-11-14', tipo: 'ensayo',   publico: false, etiqueta: 'Ensayo interno sin clientes' },
     { f: '2026-11-21', tipo: 'sabado',   publico: true,  etiqueta: 'Lanzamiento · la gran revelación' },
     { f: '2026-11-28', tipo: 'sabado',   publico: true,  etiqueta: 'Sábado de Black Friday' },
     { f: '2026-12-05', tipo: 'sabado',   publico: true,  etiqueta: 'Sábado de Realeza' },
@@ -58,7 +58,7 @@ window.CORO = {
     { f: '2026-11-11', t: '6 p.m.: tarjeta de invitación, flyer y primeras historias para aprobación de Tania', tipo: 'hito' },
     { f: '2026-11-12', t: '6 p.m.: reels R1 y R2 editados', tipo: 'hito' },
     { f: '2026-11-13', t: '6 p.m.: reels R3 y R4 editados; tarjetas listas para las asesoras', tipo: 'hito' },
-    { f: '2026-11-14', t: 'PRUEBA OPCIONAL con grupo pequeño · Tania en tienda cerrando ventas', tipo: 'evento' },
+    { f: '2026-11-14', t: 'ENSAYO INTERNO sin clientes: turnos, shampoo, bebidas y caída de la tela, con familiares o empleados', tipo: 'evento' },
     { f: '2026-11-15', t: 'Se publica la vitrina tapada y R1', tipo: 'redes' },
     { f: '2026-11-16', t: 'Festivo (joyería cerrada): Damián revisa y pule todo: invitación, tarjeta, landing, textos, lista y plantillas. Se publica R2 y "faltan 5"', tipo: 'hito' },
     { f: '2026-11-17', t: 'ARRANCAN LAS INVITACIONES de las asesoras (17 al 20) · R4 (test) · anuncio del servicio pago', tipo: 'hito' },
@@ -82,7 +82,7 @@ window.CORO = {
     'Tania aprueba el texto de la invitación y el shampoo de regalo',
     'Base de clientes con celular y marca premium cargada en el panel (antes del 16)',
     'Lunes 16 (festivo): Damián revisa invitación, tarjeta, landing, textos, lista y plantillas; todo pulido para salir el 17',
-    'Decidir si va la prueba del 14 y con qué clientes',
+    'Ensayo interno del sábado 14: quién hace de cliente, cronometrar cada turno',
     'Completar contacto en config.js (WhatsApp, dirección, horario)',
     'Vitrina tapada con tela o cortinas desde el 15 de nov',
     'Decoración de Navidad y moño en la fachada',

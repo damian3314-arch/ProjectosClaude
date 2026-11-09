@@ -89,7 +89,7 @@
   function primerNombre(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
   function horaBonita(h) { if (!h) return '[hora]'; var p = h.split(':'), H = +p[0]; return (H > 12 ? H - 12 : H) + ':' + p[1] + (H >= 12 ? ' p. m.' : ' a. m.'); }
   function horaCorta(h) { var p = h.split(':'), H = +p[0]; return (H > 12 ? H - 12 : H) + ':' + p[1] + (H >= 12 ? ' pm' : ' am'); }
-  function proximasFechas(c) { var t = U.today(); return C.fechas.filter(function (x) { return x.f >= t && (x.publico || c.premium); }); }
+  function proximasFechas(c) { var t = U.today(); return C.fechas.filter(function (x) { return x.f >= t && x.tipo !== 'ensayo' && (x.publico || c.premium); }); }
   function mensaje(paso, c) {
     var s = seg(c.id), fs = proximasFechas(c);
     var link = C.baseUrl ? '\n\nTu invitación: ' + C.baseUrl.replace(/\/$/, '') + '/?n=' + encodeURIComponent(primerNombre(c.nombre)) + (c.premium ? '&p=1' : '') : '';

@@ -149,7 +149,7 @@
     ].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num">' + k[1] + '</b><em>' + k[2] + '</em></div>'; }).join('');
 
     var ventaDia = S.get('ventaDia', {}) || {};
-    var rows = C.fechas.map(function (x) {
+    var rows = C.fechas.filter(function (x) { return x.tipo !== 'ensayo'; }).map(function (x) {
       var m = x.tipo === 'prueba' ? C.metasPrueba : C.metasDia;
       var cl = clientes.filter(function (c) { return c.cita && c.cita.f === x.f; });
       var citas = cl.filter(function (c) { return ['agendado', 'recordado', 'llego', 'compro'].indexOf(c.estado) >= 0; }).length;

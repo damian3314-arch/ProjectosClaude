@@ -20,7 +20,7 @@ python3 -m http.server 8080
 ```
 
 Abre `http://localhost:8080/index.html` y `http://localhost:8080/panel.html`.
-Link personalizado: `index.html?n=Carlos`. Día de prueba (14 nov): agrega `&p=1`.
+Link personalizado: `index.html?n=Carlos`. Invitado premium (shampoo de regalo): agrega `&p=1`.
 
 ## Lo primero que debes completar (`assets/config.js`)
 
