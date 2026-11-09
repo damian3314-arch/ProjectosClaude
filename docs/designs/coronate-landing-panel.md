@@ -1,7 +1,7 @@
 # Corónate: landing y panel de campaña
 
 - **Autor:** Claude (chat `[CORO]`), para Damián Barragán
-- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián.
+- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián. Decisiones tomadas: almacén = Cloudflare Worker + D1.
 - **Fecha:** 9 de noviembre de 2026
 - **Código revisado:** carpeta `coronate/` en la rama `claude/n8n-pdf-report-delay-1v4yym` (commit `d4476d3`). La rama `claude/wizardly-fermi-3wpram` tiene una copia **anterior** de `coronate/` (sin `asesoras.js`, `landing.css`, `creativo.html` ni `grabacion.html`): no sirve como referencia del estado actual.
 - **Artifacts revisados:** landing general, vista premium, panel y guía de grabación publicados en claude.ai.
@@ -72,7 +72,7 @@ Este documento revisa lo construido contra el requisito de Damián, deja a la vi
 
 Las preguntas con más de una respuesta defendible se le hacen a Damián **una a la vez**, empezando por la 1.
 
-1. **¿Dónde se guarda el estado compartido** (quién fue invitado, quién respondió, citas, venta del día)? Ver *Alternatives Considered*. Es la decisión que más cambia el plan.
+1. ~~¿Dónde se guarda el estado compartido?~~ **Decidido por Damián (9 nov): Cloudflare Worker + D1** (opción B). Crear la cuenta, la base y desplegar el Worker son acciones rojas: requieren su autorización explícita antes de ejecutarse.
 2. **¿Cómo entran las asesoras al panel?**
    - **(a)** Artifact privado de claude.ai, compartido con su correo. Cada asesora necesita cuenta.
    - **(b)** Página publicada en un dominio o en GitHub Pages con una clave. El HTML queda público y los datos van aparte.
@@ -226,7 +226,9 @@ Estas son las opciones para el almacén compartido (Open Question 1). Se present
   - Si se borran los datos del navegador, se pierde el avance; mitigarlo exige descargar la copia a diario.
 - **Falla cuando:** una asesora responde desde su celular, el computador se daña o alguien limpia el historial.
 
-*Rechazada por el autor:* ninguna. Las tres son defendibles según cuánto riesgo y trabajo acepte Damián.
+**Decisión (Damián, 9 nov): B.**
+- *A rechazada por Damián:* eligió B.
+- *C rechazada por Damián:* eligió B. Mientras el Worker no esté desplegado, C es el modo de respaldo: el panel sigue guardando en local.
 
 ### Otras decisiones ya tomadas y descartadas
 
