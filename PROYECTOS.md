@@ -35,7 +35,7 @@ Además cada chat tiene etiqueta `proy:<nombre>` para filtrar. Los 6 chats de de
 | **Corónate** | `[CORO] Coronate × Joyería` | Artifacts: Propuesta Corónate, Plan Corónate, Corónate para Tania, Sábados de Realeza (v10). Chat enorme: contexto ~624k tokens | **Abrir chat nuevo para la web** (ver §4) |
 | **Tumbao** | `[TUM] tumbaobaila.com web + Supabase` | **Bloqueado desde el 7-nov**: espera aprobación de un `Execute SQL` en Supabase. Artifact "Plan Tumbao Cierre 2026" | Revisar ese SQL y aprobar o negar (es 🔴 según CLAUDE.md §2) |
 | **HolaDami** | `[DAMI] Kapso + Alter (ventas WhatsApp)` | Alter: 197 envíos, 0 citas aceptadas. Kapso con US$0,12 de crédito y 2007/2000 mensajes → **no puede enviar más sin recarga**. Meta Ads pausada esperando decisión de SIM para WhatsApp Business | Decidir: recargar Kapso o pausar (ver pregunta 2) |
-| **Sette** | `[SETTE] Revisión operativa + propuesta CTO fraccional` | Artifacts "Plan Piloto Sette" y "Propuesta Sette Dolce Vita". Se discutió precio: $2M/mes con tope de horas es defendible | Definir alcance y tope de horas por escrito antes de empezar la semana 1 |
+| **Sette** | `[SETTE] Revisión operativa + propuesta CTO fraccional` | Artifacts "Plan Piloto Sette" y "Propuesta Sette Dolce Vita". Se discutió precio: $2M/mes con tope de horas es defendible | Honorarios aprobados: $2M/mes. Falta fijar por escrito alcance, tope de horas y fecha de pago antes de la semana 1 |
 
 Nota: en los chats el proyecto aparece como "Sete". Lo trato como Sette.
 
@@ -81,7 +81,7 @@ Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v
 
 | Nivel | Proyectos | Razón |
 |---|---|---|
-| Principal | Corónate, Sette | Tienen fecha límite (2 meses / 8 semanas) |
+| Principal | Corónate, Sette | Tienen fecha límite (2 meses / 8 semanas). Sette ya está pagado ($2M/mes) |
 | Sostener | Loggro | Es tu ingreso fijo; se alimenta con rutina, no con proyectos |
 | Mínimo viable | Joyería, Dami | Joyería: solo cerrar los 4 supuestos. Dami: decidir recarga o pausa |
 | Mantenimiento | Tumbao | Desbloquear el SQL y dejarlo estable |
@@ -117,4 +117,4 @@ Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v
 2. Dami: ¿recargas Kapso hoy, o pausas hasta revisar el mensaje que da 0 citas? (pendiente: lo miras tú)
 3. Los 5 chats `[?]` (Worker Cloudflare que reemplaza n8n, Chocamama, video de propuesta de optimización, certificado, Forjabot): ¿de qué proyecto son, o se archivan?
 4. ~~Beat / AdminGym~~ Resuelto: Beat es de Tumbao. Pendiente: el chat `[TUM] Beat: app Windows huella dactilar` espera que pruebes apagar AdminGym y me digas la marca/modelo del lector.
-5. ¿Sette cobra? ¿El piloto de 8 semanas tiene pago definido?
+5. ~~¿Sette cobra?~~ Resuelto: aprobaron **$2.000.000 COP/mes** de honorarios. Pendiente por escrito: tope de horas por mes, fecha de pago y qué pasa si el piloto se extiende más de 8 semanas.
