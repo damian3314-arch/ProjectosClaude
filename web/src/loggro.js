@@ -227,8 +227,10 @@ export async function morningBrief(env, h) {
   const dayEnd = `${new Date(Date.UTC(bogota.getUTCFullYear(), bogota.getUTCMonth(), bogota.getUTCDate() + 1)).toISOString().slice(0, 10)} 05:00:00`;
   const meetings = await q("SELECT a.start_utc, a.label, a.phone, l.name FROM agenda_busy a LEFT JOIN loggro_leads l ON l.phone = a.phone WHERE a.id LIKE 'hs:%' AND a.end_utc > a.start_utc AND a.start_utc >= ? AND a.start_utc < ? ORDER BY a.start_utc", dayStart, dayEnd);
   const followUps = await q("SELECT name, phone FROM loggro_leads WHERE follow_up IS NOT NULL AND follow_up <= ? AND follow_up >= date(?, '-3 days') AND state != 'optout' LIMIT 8", day, day);
-  const handoffs = await q("SELECT l.name, l.phone FROM agent_chats a JOIN loggro_leads l ON l.phone = a.chat_key WHERE a.stage = 'handoff' AND a.updated_at > datetime('now', '-2 days') LIMIT 8");
-  const hots = await q("SELECT name, phone FROM loggro_leads WHERE hot = 1 AND meeting_at IS NULL AND updated_at > datetime('now', '-2 days') LIMIT 8");
+  // Ventana de 7 días (antes 2): un aviso que no llegó no puede perderse por pasar dos días. Se excluye a quien ya tiene demo agendada.
+  const noDemo = "NOT EXISTS (SELECT 1 FROM agenda_busy b WHERE b.phone = l.phone AND b.id LIKE 'hs:%' AND b.end_utc > datetime('now'))";
+  const handoffs = await q(`SELECT l.name, l.phone FROM loggro_leads l JOIN agent_chats a ON a.chat_key = l.phone WHERE l.state != 'optout' AND ${noDemo} AND l.updated_at > datetime('now', '-7 days') AND (a.stage IN ('handoff', 'support', 'wants_quote') OR l.summary LIKE '%Para Damián%') LIMIT 8`);
+  const hots = await q(`SELECT l.name, l.phone FROM loggro_leads l WHERE l.hot = 1 AND l.state != 'optout' AND l.meeting_at IS NULL AND ${noDemo} AND l.updated_at > datetime('now', '-7 days') AND l.phone NOT IN (SELECT chat_key FROM agent_chats WHERE stage IN ('handoff', 'support', 'wants_quote')) LIMIT 8`);
   const hour = ms => { const t = new Date(ms - 5 * 3600e3), x = t.getUTCHours(); return `${x % 12 === 0 ? 12 : x % 12}:${String(t.getUTCMinutes()).padStart(2, '0')} ${x < 12 ? 'a. m.' : 'p. m.'}`; };
   const who = r => `${r.name || 'Sin nombre'} +${r.phone}`;
   const lines = [];
