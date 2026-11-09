@@ -1,7 +1,7 @@
 # Corónate: landing y panel de campaña
 
 - **Autor:** Claude (chat `[CORO]`), para Damián Barragán
-- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián. Decisiones tomadas: almacén = Cloudflare Worker + D1; acceso = página pública + clave por persona; landing = dominio propio.
+- **Estado:** Borrador para revisión. Se aprueba sección por sección con Damián. Decisiones tomadas: almacén = Cloudflare Worker + D1; acceso = página pública + clave por persona; landing = dominio propio; licor = landing de clientes igual, versión alterna sin cerveza para redes y pauta.
 - **Fecha:** 9 de noviembre de 2026
 - **Código revisado:** carpeta `coronate/` en la rama `claude/n8n-pdf-report-delay-1v4yym` (commit `d4476d3`). La rama `claude/wizardly-fermi-3wpram` tiene una copia **anterior** de `coronate/` (sin `asesoras.js`, `landing.css`, `creativo.html` ni `grabacion.html`): no sirve como referencia del estado actual.
 - **Artifacts revisados:** landing general, vista premium, panel y guía de grabación publicados en claude.ai.
@@ -271,7 +271,13 @@ Son de 100 a 200 mensajes manuales desde la línea actual.
 - "Corona" es una marca registrada de un tercero. Usarla como gancho de la campaña puede traer reclamos, y esto **no está verificado legalmente**.
 - La leyenda de alcohol está solo en el pie de la landing.
 
-Para anuncios pagados en Meta, el licor tiene restricciones de edad y de país que no están configuradas: el panel no hace pauta. Damián debe decidir si la botella se cambia por la joya o la vitrina como protagonista (Open Question nueva).
+Para anuncios pagados en Meta, el licor tiene restricciones de edad y de país que no están configuradas: el panel no hace pauta. 
+
+**Decisión (Damián, 9 nov):**
+- La landing que reciben los clientes queda **como está**: botella, frase y leyenda al pie.
+- Para redes y pauta se prepara una **versión alterna**: la joya al frente y un "detalle bien helado" que se entienda sin decir "cerveza" ni "Corona".
+
+Esa versión es la única que se usa en anuncios pagados. El riesgo por el uso de la marca sigue sin verificar.
 
 ### Rollout (Riesgos 6 y 7)
 
@@ -333,7 +339,7 @@ Ver *Detailed Implementation Plan*.
 |---|---|---|
 | `coronate/assets/config.js` | Cambia | Dirección, horario, agenda, `drive.carpeta`, precio pago y joya adicional, cuando Tania los dé. |
 | `coronate/assets/asesoras.js` | Cambia | Ritmo de envío: contador por hora y aviso al pasar de 30. Lista "no escribir" cargada con la base. |
-| `coronate/index.html`, `landing.css` | Cambia (si Damián decide) | Cambiar la botella por la joya o la vitrina como protagonista. |
+| `coronate/index.html`, `landing.css`, `landing.js` | Cambia | Variante `?v=redes`: héroe con la joya al frente, "detalle bien helado" sin mencionar cerveza ni marca, para pauta. La versión de clientes no cambia. |
 | `coronate/grabacion.html` | Cambia | Razón social, NIT y plazo cuando los dé Tania. |
 | `docs/designs/coronate-landing-panel.md` | Se mantiene | Este documento; se actualiza con cada decisión. |
 
