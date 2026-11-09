@@ -58,6 +58,66 @@ Lectura rápida:
 - La mayor ambición (Corónate = "centro neurálgico") es de lo que menos pagan por hora. Joyería es 52% de tus ingresos extra, así que Corónate importa por la relación con Joyería más que por sus $750.000.
 - Loggro te ocupa 8 h al día pero es solo 28% del ingreso base. Los proyectos pagan más del doble y compiten por las horas que quedan fuera de Loggro. La comisión de Loggro es la única variable que puede cambiar ese 28%: cuánto sube con el tiempo que le dedicas es un dato que aún falta.
 
+### Ingreso real con la comisión de Loggro
+
+| Mes | Comisión Loggro |
+|---|---|
+| Hace 2 meses | $1.200.000 |
+| Mes pasado | $400.000 |
+| Octubre (esperado) | $500.000 – $800.000 |
+| Promedio de los 3 | ≈ $750.000 (varía de $0,4M a $1,2M) |
+
+Ingreso total esperado: **≈ $8,3M (mes malo) a $9,1M (mes bueno)**, con base fija de $7,9M. La comisión es la única parte que no controlas; los proyectos son lo estable.
+
+---
+
+## 2c. Cronograma realista (9-nov-2026 → 3-ene-2027)
+
+**Supuestos que debes confirmar:** Sette y Corónate arrancan esta semana; el martes de Joyería es en la noche (no en horario Loggro); domingo libre; Dami congelado hasta que decidas.
+
+### Semana tipo (18 h/semana fuera de Loggro)
+
+| Día | Bloque | Proyecto |
+|---|---|---|
+| Lun | 2 h | Sette |
+| Mar | 4 h | Joyería (fijo) |
+| Mié | 2 h | Corónate |
+| Jue | 2 h | Sette |
+| Vie | 2 h | Corónate 1 h + Tumbao monitoreo 0,5 h + revisión semanal 0,5 h |
+| Sáb | 6 h | Joyería 2 h (baja de 6 a 2) + Sette 2 h + Corónate 2 h |
+| Dom | 0 | Descanso |
+
+| Proyecto | Horas/sem hoy → plan | Ingreso | Valor/hora aprox. |
+|---|---|---|---|
+| Joyería | 10 → **6** | $2,2M/mes | $51.000 → **$85.000** |
+| Sette | ? → 6 | $2,0M/mes | ≈ $77.000 |
+| Corónate | ? → 5 | $1,5M fase 1 (≈ 43 h) | ≈ $35.000 (el más bajo) |
+| Tumbao | ? → 0,5 | $0,75M/mes | monitoreo, muy alto |
+| Dami | ? → 0 | $0 | congelado |
+
+Corónate fase 2 ($2M) no tiene fecha ni alcance todavía.
+
+### Hitos por semana
+
+| Sem | Fechas | Sette | Corónate | Joyería / Tumbao / Dami |
+|---|---|---|---|---|
+| 1 | 9–15 nov | Alcance por escrito (entregables, tope de horas, fecha de pago) | Alcance fase 1 en 1 página: qué hace la web el día 1 y quién la usa | Joyería: cerrar 4 supuestos del tablero. Tumbao: resolver el SQL pendiente. Dami: decidir recarga o pausa |
+| 2 | 16–22 nov (lun 16 festivo*) | Levantamiento: inventario actual y proceso de compras | Estructura y contenido de la web | — |
+| 3 | 23–29 nov (Black Friday 27) | Datos base listos: maestro de productos, proveedores | Primera versión visible para Tanya | Joyería: probable pico de trabajo; protege el martes |
+| 4 | 30 nov–6 dic | Reglas de reposición y mínimos definidos | Ajustes con feedback de Tanya | — |
+| 5 | 7–13 dic (mar 8 festivo*) | Piloto de compras operando | Web v1 en línea | Joyería: temporada de diciembre |
+| 6 | 14–20 dic | Revisión del piloto con datos reales | Entrega fase 1 y cobro. Decisión de fase 2 ($2M) | — |
+| 7 | 21–27 dic (vie 25 festivo*) | Buffer / corrección | Buffer | Carga alta Joyería |
+| 8 | 28 dic–3 ene | Informe de resultados + propuesta de continuidad | Cierre | Revisión de todo el panel |
+
+\*Festivos de Colombia: verifica las fechas, no las he cotejado con calendario oficial.
+
+### Reglas del cronograma
+1. Sábado: máximo 6 h en total; Joyería no pasa de 2 h.
+2. Si un proyecto necesita más horas, otro cede esas horas. No se agregan horas.
+3. Viernes (30 min): ¿hubo entregable por proyecto esta semana? Si no, se mueve de semana o se recorta alcance.
+4. Si en semana 3 o 5 Joyería se desborda (temporada), Corónate cede horas y se negocia el hito, no el sábado de descanso.
+
 ---
 
 ## 3. Cómo pedir cosas (plantilla universal)
