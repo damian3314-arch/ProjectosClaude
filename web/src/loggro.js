@@ -241,6 +241,44 @@ export async function morningBrief(env, h) {
   return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
 }
 
+// Embudo de la semana (desde el lunes, hora de Bogotá): enviados → respondieron → calientes → link de agenda → demo agendada.
+// "Demo agendada" = reunión de HubSpot en agenda_busy con el teléfono de alguien que recibió un mensaje de Alter esta semana
+// (meeting_at no sirve: la rutina nunca lo llena porque la cita se agenda a mano).
+export async function weeklyFunnel(env, bogota) {
+  try {
+    const back = (bogota.getUTCDay() + 6) % 7; // 0 = lunes
+    const mon = new Date(Date.UTC(bogota.getUTCFullYear(), bogota.getUTCMonth(), bogota.getUTCDate() - back));
+    const from = `${mon.toISOString().slice(0, 10)} 05:00:00`;
+    const r = await env.DB.prepare(`SELECT COUNT(*) enviados,
+      SUM(CASE WHEN l.msg_count > 0 THEN 1 ELSE 0 END) respondieron,
+      SUM(CASE WHEN l.hot = 1 THEN 1 ELSE 0 END) calientes,
+      SUM(CASE WHEN a.agenda_sent > 0 THEN 1 ELSE 0 END) link,
+      SUM(CASE WHEN EXISTS (SELECT 1 FROM agenda_busy b WHERE b.phone = o.phone AND b.id LIKE 'hs:%' AND b.end_utc > b.start_utc) THEN 1 ELSE 0 END) demo
+      FROM outbox o LEFT JOIN loggro_leads l ON l.phone = o.phone LEFT JOIN agent_chats a ON a.chat_key = o.phone
+      WHERE o.status = 'sent' AND o.kind != 'recordatorio' AND o.sent_at >= ?`).bind(from).first();
+    if (!r?.enviados) return '';
+    return `📈 Semana: ${r.enviados} enviados → ${r.respondieron || 0} respondieron → ${r.calientes || 0} calientes → ${r.link || 0} con link de agenda → ${r.demo || 0} con demo en agenda.`;
+  } catch { return ''; }
+}
+
+// Alarma: una demo con teléfono que empieza en menos de 3 h y no tiene recordatorio en la bandeja (una sola vez por reunión)
+export async function reminderGuard(env, h) {
+  const bogota = new Date(Date.now() - 5 * 3600e3);
+  const hour = bogota.getUTCHours();
+  if (hour < 7 || hour >= 19) return 0;
+  const rows = (await env.DB.prepare(`SELECT a.id, a.start_utc, a.label FROM agenda_busy a
+    WHERE a.id LIKE 'hs:%' AND a.phone IS NOT NULL AND a.end_utc > a.start_utc
+      AND a.start_utc > datetime('now') AND a.start_utc <= datetime('now', '+3 hours')
+      AND NOT EXISTS (SELECT 1 FROM outbox o WHERE o.deal_id = 'meeting:' || substr(a.id, 4) AND o.kind = 'recordatorio' AND o.status IN ('queued', 'sending', 'sent'))
+      AND NOT EXISTS (SELECT 1 FROM events e WHERE e.session_id = 'recmiss' AND e.type = a.id)`).all().catch(() => ({ results: [] }))).results || [];
+  if (!rows.length) return 0;
+  for (const r of rows) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('recmiss', ?)").bind(r.id).run().catch(() => {});
+  const t = ms => new Date(new Date(r0(ms)).getTime() - 5 * 3600e3).toISOString().slice(11, 16);
+  const list = rows.map(r => `${(r.label || 'Demo').slice(0, 40)} a las ${t(r.start_utc)}`).join('; ');
+  return h.alertMessage(env, `⏰ Sin recordatorio en cola para: ${list}. Revisa si tienen link de Teams y teléfono en HubSpot; si quieres, avísale tú.`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+}
+const r0 = s => String(s).replace(' ', 'T') + 'Z';
+
 // Reporte del día para Damián (lo envía el cron de las 7 pm, una sola vez): qué salió, quién contestó, a quién llamar y a quién retomar
 export async function dailyReport(env, h) {
   const bogota = new Date(Date.now() - 5 * 3600e3);
@@ -257,8 +295,10 @@ export async function dailyReport(env, h) {
   const baja = replied.filter(r => r.state === 'optout');
   const queued = (await q("SELECT COUNT(*) n FROM outbox WHERE status = 'queued'"))[0]?.n || 0;
   const say = (t, k) => String(t || '').replace(/\s+/g, ' ').slice(0, k);
+  const funnel = await weeklyFunnel(env, bogota);
   const text = [
     `📊 Cierre del día (${day}): enviamos ${n('primer_contacto') + n('retomar')} mensajes (${n('primer_contacto')} leads nuevos, ${n('retomar')} perdidos POS). Respondieron ${replied.length}, bajas ${baja.length}. En cola para el próximo día hábil: ${queued}.`,
+    funnel,
     hot.length ? `🔥 Para llamar: ${hot.map(r => `${r.name || 'Sin nombre'} +${r.phone} (${say(r.summary, 90)})`).join(' | ')}` : 'Nadie para llamar de urgencia.',
     later.length ? `🗓 Pidieron que los retomemos: ${later.map(r => `${r.name || 'Sin nombre'} el ${r.follow_up}`).join(', ')}.` : '',
     `Todo quedó registrado en HubSpot.`,
