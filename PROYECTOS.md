@@ -14,11 +14,10 @@ Cada chat en claude.ai/code empieza con un código entre corchetes:
 | `[LOG]` | Loggro | Empleo tiempo completo, asesor de venta nueva |
 | `[JTS]` | Joyería Tanya Santiago | Rol CTO / asistente administrativo (dashboards, n8n, Sheets) |
 | `[CORO]` | Corónate (dentro de Joyería) | Proyecto de 2 meses de Joyería Tanya Santiago → web como centro de operación |
-| `[TUM]` | Tumbaobaila.com | Apoyo / laboratorio |
+| `[TUM]` | Tumbaobaila.com (incluye Beat) | Apoyo / laboratorio. Beat (retención de alumnos, caja, AdminGym) es el sistema de Tumbao |
 | `[DAMI]` | holadami.com | Asistente real + prospección (Alter) para Loggro y proyectos aparte |
 | `[SETTE]` | Sette | Piloto de 8 semanas: inventario, compras, orden de la casa |
 | `[SIS]` | Sistema | Configuración de Claude, skills, permisos, plugins |
-| `[BEAT]` | Beat (legado) | Gimnasio/AdminGym. No está en tu lista actual → ver pregunta 4 |
 | `[PERS]` | Personal | Cosas no laborales |
 | `[?]` | Sin clasificar | Necesito que me digas de qué proyecto son |
 
@@ -117,5 +116,5 @@ Los títulos nuevos: `[CÓDIGO] verbo + objeto` (ej. `[CORO] Construir landing v
 1. ~~¿Corónate es de Joyería?~~ Resuelto: sí, es de Joyería.
 2. Dami: ¿recargas Kapso hoy, o pausas hasta revisar el mensaje que da 0 citas? (pendiente: lo miras tú)
 3. Los 5 chats `[?]` (Worker Cloudflare que reemplaza n8n, Chocamama, video de propuesta de optimización, certificado, Forjabot): ¿de qué proyecto son, o se archivan?
-4. Beat / AdminGym: ¿sigue vivo o lo damos por cerrado?
+4. ~~Beat / AdminGym~~ Resuelto: Beat es de Tumbao. Pendiente: el chat `[TUM] Beat: app Windows huella dactilar` espera que pruebes apagar AdminGym y me digas la marca/modelo del lector.
 5. ¿Sette cobra? ¿El piloto de 8 semanas tiene pago definido?
