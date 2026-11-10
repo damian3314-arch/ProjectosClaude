@@ -141,3 +141,10 @@ body.landing { font-size: 16.5px; }
 }
 #test { scroll-margin-top: 90px; }
 .tocado .fl svg { animation: none; }
+/* Casilla dibujada: el visto se traza solo, una y otra vez, hasta que marcan la primera bandera */
+.tap .ck { width: 26px; height: 26px; vertical-align: -6px; margin-right: 6px; fill: none; stroke: var(--green); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; font-size: 0; }
+.tap .ck .v { stroke: var(--gold, #C9A44A); stroke-width: 3; stroke-dasharray: 16; stroke-dashoffset: 16; }
+@media (prefers-reduced-motion: no-preference) { .tap .ck .v { animation: trazo 2.2s ease-in-out infinite; } }
+@media (prefers-reduced-motion: reduce) { .tap .ck .v { stroke-dashoffset: 0; } }
+.tocado .tap .ck .v { animation: none; stroke-dashoffset: 0; }
+@keyframes trazo { 0% { stroke-dashoffset: 16; } 35%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 16; } }
