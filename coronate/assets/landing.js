@@ -77,11 +77,11 @@
   if (vip) {
     FL = FLV;
     var sh = $('test').querySelector('.sh');
-    sh.innerHTML = '<p class="eyebrow">El test del spa dorado</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Toca las banderas que te pasen con tus joyas de oro. ¡Solo te tomará un parpadeo!</p>';
+    sh.innerHTML = '<p class="eyebrow">El test del spa dorado</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Un test de esos que te toman un parpadeo, sobre tus joyas de oro.</p>';
   }
   var on = {};
   var hecho = false;
-  try { hecho = vip && localStorage.getItem('coro.l.done') === '1'; } catch (e) {}
+
   function renderFlags() {
     $('flags').innerHTML = FL.map(function (t, i) {
       return '<button type="button" class="fl" style="--i:' + i + '" data-i="' + i + '" aria-pressed="' + (!!on[i]) + '">' +
@@ -119,7 +119,6 @@
   function terminar() {
     if (!Object.keys(on).length) return;
     revelar();
-    try { localStorage.setItem('coro.l.done', '1'); } catch (e) {}
     avisar();
     setTimeout(function () { $('premio').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
   }
@@ -163,7 +162,6 @@
       '<div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
   }).join('');
 
-  if (vip && hecho) revelar();
 
   /* ----- preguntas ----- */
   var faq = [
