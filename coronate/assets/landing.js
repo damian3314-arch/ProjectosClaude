@@ -24,7 +24,7 @@
   /* ----- textos según el tipo de invitación ----- */
   if (vip) {
     /* Premium: primero la tarjeta personal y el test. El regalo se revela al terminarlo. */
-    $('kicker').textContent = 'Una invitación de Navidad';
+    $('kicker').textContent = 'Navidad 2026'; $('kicker').classList.add('mini');
     $('h1').innerHTML = nombre ? 'Hola ' + U.esc(nombre) + ', <em>tenemos algo para ti.</em>' : 'Tenemos <em>algo para ti.</em>';
     $('lede').textContent = 'Responde un breve test sobre tus joyas de oro y descubre de qué se trata.';
     $('chip').hidden = true;

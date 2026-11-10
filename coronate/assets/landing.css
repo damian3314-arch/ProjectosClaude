@@ -156,3 +156,25 @@ body.landing { font-size: 16.5px; }
   .btn.shine::after { animation: barrido 3.4s ease-in-out infinite; }
 }
 @keyframes barrido { 0% { left: -70%; } 45%, 100% { left: 130%; } }
+
+/* ===== Paleta única: verde profundo, crema y oro. El rojo queda solo en el moño. ===== */
+.xhero { background: radial-gradient(70% 45% at 85% 0%, rgba(201,164,74,.22), transparent 70%), linear-gradient(170deg, #22421F 0%, #16301A 60%, #0F2412 100%); }
+.xcta { background: radial-gradient(60% 60% at 100% 0%, rgba(201,164,74,.22), transparent 70%), #16301A; }
+.xtxt .eyebrow.mini { font-size: 10px; letter-spacing: .3em; opacity: .75; }
+/* Botones de WhatsApp en los colores de la casa (el logo basta para reconocerlo) */
+.landing .btn.wa { background: #F7F2E8; color: #16301A; box-shadow: inset 0 0 0 1.5px rgba(201,164,74,.9), 0 8px 22px rgba(0,0,0,.18); }
+.landing .btn.wa svg { width: 22px; height: 22px; flex: none; color: #22421F; }
+.landing .top .btn.wa { background: var(--green); color: #F7F2E8; box-shadow: none; }
+/* Banderas marcadas: oro en vez de rojo */
+.landing .fl { border-width: 1.5px; }
+.landing .fl[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold); }
+.landing .fl[aria-pressed="true"] svg { stroke: #9A7420; fill: var(--gold); }
+/* "Lo que te espera": una sola carta, como la de un buen restaurante */
+.landing .perks { display: block; background: #fff; border: 1px solid var(--line); border-radius: 26px; padding: 6px 22px; box-shadow: 0 14px 34px rgba(27,42,28,.06); }
+.landing .perk { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: baseline; background: none; border: 0; border-radius: 0; box-shadow: none; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.landing .perk:last-child { border-bottom: 0; }
+.landing .perk .ic { display: none; }
+.landing .perk > div:not(.ic) { display: contents; }
+.landing .perk h3 { grid-column: 1; font: 400 23px/1.15 var(--serif); color: var(--ink); }
+.landing .perk p { grid-column: 1 / -1; grid-row: 2; font-size: 15px; color: var(--muted); margin: 0; }
+.landing .perk .price { grid-column: 2; grid-row: 1; justify-self: end; margin: 0; padding: 0; background: none; border-radius: 0; font: italic 400 19px/1.15 var(--serif); letter-spacing: 0; color: #8A6418; white-space: nowrap; }
