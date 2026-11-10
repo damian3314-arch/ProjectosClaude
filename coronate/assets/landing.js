@@ -34,12 +34,12 @@
     $('chip').textContent = 'Shampoo de brillo ' + (P.shampoo || 'desde $20.000') + ' · hasta 3 joyas';
   }
   $('tk').textContent = (vip
-    ? 'Una invitación especial para ti ✦ haz tu test de la realeza ✦ sábado 21 de noviembre ✦ la vitrina más linda de la Navidad ✦ '
-    : 'Navidad es para brillar ✦ shampoo de brillo para tus joyas ✦ Corona bien fría ✦ sábado 21 de noviembre, de corrido ✦ oro 18k ✦ ').repeat(4);
+    ? 'Una invitación especial para ti\u2003✦\u2003descubre si tu oro necesita un spa\u2003✦\u2003sábado 21 de noviembre\u2003✦\u2003la vitrina más linda de la Navidad\u2003✦\u2003'
+    : 'Navidad es para brillar\u2003✦\u2003shampoo de brillo para tus joyas\u2003✦\u2003Corona bien fría\u2003✦\u2003sábado 21 de noviembre, de corrido\u2003✦\u2003oro 18k\u2003✦\u2003').repeat(4);
 
   /* ----- cuenta regresiva ----- */
   var faltan = U.daysUntil(C.campana.lanzamiento);
-  if (faltan >= 0) {
+  if (faltan >= 0 && !vip) {
     $('count').hidden = false;
     $('countN').textContent = faltan === 0 ? 'Hoy' : faltan;
     $('countT').textContent = faltan === 0 ? 'se abre el telón' : (faltan === 1 ? 'día para el ' : 'días para el ') + 'sábado 21';
@@ -77,7 +77,7 @@
   if (vip) {
     FL = FLV;
     var sh = $('test').querySelector('.sh');
-    sh.innerHTML = '<p class="eyebrow">El test de la realeza</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Toca lo que te pasa con tus joyas de oro. ¡Solo te tomará un parpadeo!</p>';
+    sh.innerHTML = '<p class="eyebrow">El test del spa dorado</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Toca las banderas que te pasen con tus joyas de oro. ¡Solo te tomará un parpadeo!</p>';
   }
   var on = {};
   var hecho = false;
@@ -88,7 +88,7 @@
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h12l-2.5 4L17 12H5"/></svg><span>' + U.esc(t) + '</span></button>';
     }).join('');
     Array.prototype.forEach.call($('flags').querySelectorAll('button'), function (b) {
-      b.onclick = function () { var i = +b.dataset.i; if (on[i]) delete on[i]; else on[i] = 1; renderFlags(); };
+      b.onclick = function () { var i = +b.dataset.i; if (on[i]) delete on[i]; else on[i] = 1; document.body.classList.add('tocado'); renderFlags(); };
     });
     var n = Object.keys(on).length;
     var v = n === 0 ? ['Marca lo que te pasa.', 'Sé honesto: aquí nadie te juzga. Casi.']
@@ -152,23 +152,19 @@
     vitrina: '<path d="M12 3l2.6 5.6L20 9.3l-4 4 1 5.7-5-2.8-5 2.8 1-5.7-4-4 5.4-.7Z"/>',
     oro: '<circle cx="12" cy="12" r="8"/><path d="M9 12h6M12 9v6"/>'
   };
+  if (vip) perks = [
+    ['arreglo', 'Soldadura de cadenas en oro', 'Dejamos tu cadena entera otra vez.', '$40.000'],
+    ['pulsera', 'Mantenimiento y tejido de pulseras', 'Renovamos tu pulsera o la tejemos a tu medida.', 'Desde $20.000'],
+    ['oro', 'Valoramos tus joyas', 'Con el precio internacional del oro actualizado, para que conozcas el valor de tu inversión.', 'Sin compromiso'],
+    ['vitrina', 'La vitrina de Navidad', 'Tréboles, corazones de esmeralda, candongas y argollas recién llegadas.', 'Oro 18k']
+  ];
   $('perks').innerHTML = perks.map(function (p, i) {
     return '<div class="perk" style="--i:' + i + '"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[p[0]] + '</svg></div>' +
       '<div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
   }).join('');
 
-  if (vip) {
-    var OT = [
-      ['arreglo', 'Soldadura de cadenas en oro', 'Dejamos tu cadena entera otra vez.', '$40.000'],
-      ['pulsera', 'Mantenimiento y tejido de pulseras', 'Renovamos o tejemos tu pulsera a tu medida.', 'Desde $20.000'],
-      ['shampoo', 'Limpieza con shampoo y brillo', 'Para todas las joyas que quieras limpiar además de tu regalo.', 'Desde $30.000']
-    ];
-    $('otrosList').innerHTML = OT.map(function (p, i) {
-      return '<div class="perk" style="--i:' + i + '"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[p[0]] + '</svg></div><div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
-    }).join('');
-    $('otrosNota').textContent = 'Valoramos tus joyas con el precio internacional del oro actualizado, para que conozcas el valor de tu inversión.';
-    if (hecho) { var ks = Object.keys(on); revelar(); }
-  }
+  if (vip && hecho) revelar();
+
   /* ----- preguntas ----- */
   var faq = [
     ['¿Cuánto cuesta?', vip
