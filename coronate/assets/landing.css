@@ -123,7 +123,7 @@ body.landing { font-size: 16.5px; }
 .vip-only { scroll-margin-top: 84px; }
 .xcta .mini { font-size: 14px; opacity: .8; margin-top: -4px; }
 /* Banda más lenta y con aire entre frases */
-.landing .ticker div { animation-duration: 110s; }
+.landing .ticker div { animation-duration: 70s; }
 .landing .ticker span { word-spacing: .15em; }
 /* Pista para marcar las banderas: casilla de checklist y flecha hacia abajo */
 .tap { text-align: center; font-weight: 700; color: var(--green); margin: 4px 0 12px; }
@@ -154,7 +154,5 @@ body.landing { font-size: 16.5px; }
 .btn.shine:active { transform: scale(.98); }
 @media (prefers-reduced-motion: no-preference) {
   .btn.shine::after { animation: barrido 3.4s ease-in-out infinite; }
-  .btn.shine { animation: brilla 2.4s ease-in-out infinite; }
 }
 @keyframes barrido { 0% { left: -70%; } 45%, 100% { left: 130%; } }
-@keyframes brilla { 0%, 100% { box-shadow: 0 10px 26px rgba(201,164,74,.45), inset 0 1px 0 rgba(255,255,255,.7); } 50% { box-shadow: 0 10px 34px rgba(255,214,110,.85), 0 0 0 5px rgba(255,226,150,.25), inset 0 1px 0 rgba(255,255,255,.7); } }
