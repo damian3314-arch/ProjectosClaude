@@ -112,8 +112,8 @@ body.landing { font-size: 16.5px; }
 
 /* Invitación premium: primero el test, después el regalo */
 .vip-only { display: none; }
-.vip.done .vip-only { display: block; }
-.vip:not(.done) .lockable, .vip:not(.done) .vip-after { display: none; }
+.done .vip-only { display: block; }
+body:not(.done) .lockable, body:not(.done) .vip-after { display: none; }
 .vip .vip-hide { display: none; }
 .xcta .gift { background: rgba(201,164,74,.18); border: 1px solid rgba(201,164,74,.5); color: #F7E7B4; border-radius: 999px; padding: 10px 18px; font-weight: 600; }
 .btn.ghost.light { color: #F7F2E8; border-color: rgba(247,242,232,.45); }
