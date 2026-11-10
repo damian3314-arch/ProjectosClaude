@@ -1,0 +1,88 @@
+diff --git a/coronate/assets/landing.css b/coronate/assets/landing.css
+index 2b924bc..c0bd1bb 100644
+--- a/coronate/assets/landing.css
++++ b/coronate/assets/landing.css
+@@ -180,3 +180,6 @@ body:not(.done) .lockable, body:not(.done) .vip-after { display: none; }
+ @keyframes aparece { from { opacity: 0; transform: translateY(24px) scale(.985); } to { opacity: 1; transform: none; } }
+ .done #premio .xcta { animation: aparece 1.2s cubic-bezier(.2,.7,.2,1) both; }
+ @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none; } .done #premio .xcta { animation: none; } }
++
++/* revisión 10-nov: objetivo táctil mínimo de 44 px en el botón superior */
++.landing .top .btn.wa.small { min-height: 44px; }
+diff --git a/coronate/assets/landing.js b/coronate/assets/landing.js
+index fae705d..6c6420d 100644
+--- a/coronate/assets/landing.js
++++ b/coronate/assets/landing.js
+@@ -11,12 +11,12 @@
+ 
+   Array.prototype.forEach.call(document.querySelectorAll('[data-c]'), function (el) {
+     var v = el.getAttribute('data-c').split('.').reduce(function (o, k) { return o && o[k]; }, C);
+-    if (v != null) el.textContent = v;
++    if (v != null) { el.textContent = v; if (/\[/.test(String(v))) el.style.display = 'none'; } /* dato sin confirmar: no se muestra */
+   });
+ 
+   /* ----- WhatsApp: todas las citas las agenda una asesora ----- */
+   var msg = vip
+-    ? 'Hola, soy ' + (nombre || '[tu nombre]') + '. Recibí la invitación especial de Joyería Tanya Santiago y quiero agendar mi turno para el shampoo de brillo de regalo.'
++    ? (nombre ? 'Hola, soy ' + nombre + '. ' : 'Hola. ') + 'Recibí la invitación especial de Joyería Tanya Santiago y quiero agendar mi turno para el shampoo de brillo de regalo.'
+     : 'Hola, quiero agendar mi turno para el shampoo de brillo de mis joyas en Joyería Tanya Santiago.';
+   var wa = C.contacto.whatsapp ? U.waLink(C.contacto.whatsapp, msg) : '#';
+   $('waTop').href = wa;
+@@ -68,8 +68,8 @@
+     });
+     var n = Object.keys(on).length;
+     $('verdict').innerHTML = '<div class="n num">' + n + '<span> / ' + FL.length + '</span></div>' +
+-      '<div><div class="t">' + (n ? 'Tu oro pide auxilio.' : 'Marca lo que te pasa.') + '</div><p>' + (n ? 'Toca «Ver mi resultado» y te contamos qué tenemos para ti.' : 'Marca al menos una bandera para ver tu resultado.') + '</p></div>' +
+-      '<button type="button" class="btn gold shine go" id="goRes"' + (n ? '' : ' disabled') + '>Ver mi resultado</button>';
++      '<div><div class="t">' + (n ? 'Tu oro pide auxilio.' : 'Marca lo que te pasa.') + '</div><p>' + (n ? 'Toca «Ver mi resultado» y te contamos qué tenemos para ti.' : 'Si ninguna te pasa, toca «Ver mi resultado» igual: tenemos algo para ti.') + '</p></div>' +
++      '<button type="button" class="btn gold shine go" id="goRes">Ver mi resultado</button>';
+     $('goRes').onclick = terminar;
+   }
+   /* ----- resultado: la invitación (premium, sin costo) o la oferta (general, con valor) ----- */
+@@ -79,20 +79,19 @@
+     $('premioH').innerHTML = (nombre ? U.esc(nombre) + ', tu oro pide ' : 'Tu oro pide ') + '<em>su día de brillo.</em>';
+     var txt, boton, envio;
+     if (vip) {
+-      txt = 'Hay clientes que ya son parte de la casa, y tú eres uno de ellos. El sábado 21 de noviembre queremos compartir un rato agradable contigo: trae hasta 3 de tus joyas favoritas y les devolvemos su brillo, sin ningún costo. Mientras tanto, disfrutas una Corona bien fría, cortesía de la casa.';
++      txt = 'Hay clientes que ya son parte de la casa, y tú eres uno de ellos. El sábado 21 de noviembre queremos compartir un rato agradable contigo: trae hasta 3 de tus joyas favoritas y les devolvemos su brillo, sin ningún costo. Mientras tanto, disfrutas una Corona bien fría (solo mayores de 18, con documento), cortesía de la casa.';
+       boton = '¡Claro que sí, no me lo pierdo!';
+-      envio = m + '¡Claro que sí, no me lo pierdo! Voy el sábado 21 de noviembre y me gustaría venir hacia las [hora]. ¿Me apartan el cupo?';
++      envio = m + '¡Claro que sí, no me lo pierdo! Voy el sábado 21 de noviembre. ¿Qué horas tienen disponibles para apartarme el cupo?';
+     } else {
+-      txt = 'Tus joyas merecen volver a brillar como el primer día. Te esperamos este sábado: el shampoo de brillo para hasta 3 joyas de oro tiene un valor de ' + (P.shampoo || '$30.000') + '. Mientras tanto, disfrutas una Corona bien fría, cortesía de la casa.';
++      txt = 'Tus joyas merecen volver a brillar como el primer día. Te esperamos cualquier sábado hasta el 26 de diciembre: el shampoo de brillo para hasta 3 joyas de oro tiene un valor de ' + (P.shampoo || '$30.000') + '. Mientras tanto, disfrutas una Corona bien fría (solo mayores de 18, con documento), cortesía de la casa.';
+       boton = '¡Quiero que mi oro brille!';
+-      envio = m + 'Hice el test del spa dorado y quiero llevar mis joyas al shampoo de brillo. Me gustaría ir este sábado hacia las [hora]. ¿Me apartan el cupo?';
++      envio = m + 'Hice el test del spa dorado y quiero llevar mis joyas al shampoo de brillo. ¿Qué sábados y qué horas tienen disponibles para apartarme el cupo?';
+     }
+     $('premioP').textContent = txt;
+     $('waConfT').textContent = boton;
+     if (C.contacto.whatsapp) $('waConf').href = U.waLink(C.contacto.whatsapp, envio);
+   }
+   function terminar() {
+-    if (!Object.keys(on).length) return;
+     revelar();
+     avisar();
+     setTimeout(function () { $('premio').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+diff --git a/coronate/index.html b/coronate/index.html
+index 0dac16b..e70facc 100644
+--- a/coronate/index.html
++++ b/coronate/index.html
+@@ -18,7 +18,7 @@
+ 
+   <div class="top">
+     <a class="mark" href="#inicio" aria-label="Joyería Tanya Santiago"><i>TS</i><span><b>Tanya Santiago</b><small>Joyería</small></span></a>
+-    <a class="btn wa small vip-after" id="waTop" href="#" target="_blank" rel="noopener">Agendar</a>
++    <a class="btn wa small" id="waTop" href="#" target="_blank" rel="noopener">Agendar</a>
+   </div>
+ 
+   <header class="xhero" id="inicio">
+@@ -109,7 +109,7 @@
+     <div class="perks" id="perks"></div>
+   </section>
+ 
+-  <section class="blk lockable" id="faq">
++  <section class="blk" id="faq">
+     <div class="sh"><p class="eyebrow">Dudas</p><h2>Lo que <em>más preguntan</em></h2></div>
+     <div id="faqList"></div>
+   </section>
