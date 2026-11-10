@@ -24,9 +24,9 @@
   /* ----- textos según el tipo de invitación ----- */
   if (vip) {
     /* Premium: primero la tarjeta personal y el test. El regalo se revela al terminarlo. */
-    $('kicker').textContent = nombre ? 'Hola, ' + nombre : 'Una invitación para ti';
-    $('h1').innerHTML = nombre ? 'Hola ' + U.esc(nombre) + ', <em>esto es para ti.</em>' : 'Esto es <em>para ti.</em>';
-    $('lede').textContent = 'Esta Navidad tenemos una invitación especial para ti. Antes de contártela, cuéntanos cómo está tu oro: solo te tomará un parpadeo.';
+    $('kicker').textContent = 'Una invitación de Navidad';
+    $('h1').innerHTML = nombre ? 'Hola ' + U.esc(nombre) + ', <em>tenemos algo para ti.</em>' : 'Tenemos <em>algo para ti.</em>';
+    $('lede').textContent = 'Responde un breve test sobre tus joyas de oro y descubre de qué se trata.';
     $('chip').hidden = true;
     $('ctaH').innerHTML = 'Tu turno te espera. <em>Escríbenos y lo apartamos.</em>';
     $('ctaP').textContent = 'Responde por WhatsApp y una asesora te agenda la hora, para tener todo listo cuando llegues. Puedes venir con alguien especial.';
@@ -34,7 +34,7 @@
     $('chip').textContent = 'Shampoo de brillo ' + (P.shampoo || 'desde $20.000') + ' · hasta 3 joyas';
   }
   $('tk').textContent = (vip
-    ? 'Una invitación especial para ti\u2003✦\u2003descubre si tu oro necesita un spa\u2003✦\u2003sábado 21 de noviembre\u2003✦\u2003la vitrina más linda de la Navidad\u2003✦\u2003'
+    ? 'Tu invitación de Navidad\u2003✦\u2003descubre si tu oro necesita un spa\u2003✦\u2003sábado 21 de noviembre\u2003✦\u2003la vitrina más linda de la Navidad\u2003✦\u2003'
     : 'Navidad es para brillar\u2003✦\u2003shampoo de brillo para tus joyas\u2003✦\u2003Corona bien fría\u2003✦\u2003sábado 21 de noviembre, de corrido\u2003✦\u2003oro 18k\u2003✦\u2003').repeat(4);
 
   /* ----- cuenta regresiva ----- */
@@ -77,7 +77,7 @@
   if (vip) {
     FL = FLV;
     var sh = $('test').querySelector('.sh');
-    sh.innerHTML = '<p class="eyebrow">El test del spa dorado</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Un test de esos que te toman un parpadeo, sobre tus joyas de oro.</p>';
+    sh.innerHTML = '<p class="eyebrow">El test del spa dorado</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Menos de un minuto, sin respuestas incorrectas.</p>';
   }
   var on = {};
   var hecho = false;
@@ -98,7 +98,7 @@
     if (vip) {
       $('verdict').innerHTML = '<div class="n num">' + n + '<span> / ' + FL.length + '</span></div>' +
         '<div><div class="t">' + (n ? 'Tu oro pide auxilio.' : 'Marca lo que te pasa.') + '</div><p>' + (n ? 'Toca «Ver mi resultado» y te contamos qué tenemos para ti.' : 'Toca al menos una bandera para ver tu resultado.') + '</p></div>' +
-        '<button type="button" class="btn gold go" id="goRes"' + (n ? '' : ' disabled') + '>Ver mi resultado</button>';
+        '<button type="button" class="btn gold shine go" id="goRes"' + (n ? '' : ' disabled') + '>Ver mi resultado</button>';
       if ($('goRes')) $('goRes').onclick = terminar;
       return;
     }

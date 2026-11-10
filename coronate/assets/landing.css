@@ -115,7 +115,6 @@ body.landing { font-size: 16.5px; }
 .vip.done .vip-only { display: block; }
 .vip:not(.done) .lockable, .vip:not(.done) .vip-after { display: none; }
 .vip .vip-hide { display: none; }
-.vip .cta .ghost { background: var(--gold, #C9A44A); color: #2A1D00; border-color: transparent; font-weight: 700; }
 .xcta .gift { background: rgba(201,164,74,.18); border: 1px solid rgba(201,164,74,.5); color: #F7E7B4; border-radius: 999px; padding: 10px 18px; font-weight: 600; }
 .btn.ghost.light { color: #F7F2E8; border-color: rgba(247,242,232,.45); }
 .landing .note { margin-top: 14px; text-align: center; font-size: 14px; opacity: .8; }
@@ -148,3 +147,14 @@ body.landing { font-size: 16.5px; }
 @media (prefers-reduced-motion: reduce) { .tap .ck .v { stroke-dashoffset: 0; } }
 .tocado .tap .ck .v { animation: none; stroke-dashoffset: 0; }
 @keyframes trazo { 0% { stroke-dashoffset: 16; } 35%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 16; } }
+
+/* Botón dorado con brillo que lo recorre */
+.btn.shine { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(135deg, #FBE8A6 0%, #E2BC5C 45%, #B98A2C 100%); color: #2A1D00; font-weight: 800; letter-spacing: .01em; box-shadow: 0 10px 26px rgba(201,164,74,.5), inset 0 1px 0 rgba(255,255,255,.7); }
+.btn.shine::after { content: ''; position: absolute; z-index: -1; top: 0; bottom: 0; left: -70%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.85), transparent); transform: skewX(-20deg); }
+.btn.shine:active { transform: scale(.98); }
+@media (prefers-reduced-motion: no-preference) {
+  .btn.shine::after { animation: barrido 3.4s ease-in-out infinite; }
+  .btn.shine { animation: brilla 2.4s ease-in-out infinite; }
+}
+@keyframes barrido { 0% { left: -70%; } 45%, 100% { left: 130%; } }
+@keyframes brilla { 0%, 100% { box-shadow: 0 10px 26px rgba(201,164,74,.45), inset 0 1px 0 rgba(255,255,255,.7); } 50% { box-shadow: 0 10px 34px rgba(255,214,110,.85), 0 0 0 5px rgba(255,226,150,.25), inset 0 1px 0 rgba(255,255,255,.7); } }
