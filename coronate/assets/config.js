@@ -20,7 +20,7 @@ window.CORO = {
   // Dirección que recibe el aviso "esta persona hizo el test" (Worker o Apps Script). Vacío = no se envía nada. Se conecta en el montaje.
   avisos: '',
   // Precios que ve el público general. Los invitados premium (?p=1) ven el shampoo de regalo.
-  precios: { shampoo: 'desde $20.000', reparacion: 'desde $30.000', pulsera: 'desde $30.000' },
+  precios: { shampoo: '$30.000', reparacion: '$40.000', pulsera: 'desde $20.000' },   // Tania, 10 nov: shampoo $30.000 (hasta 3 joyas), soldadura $40.000, pulseras desde $20.000
   agenda: {
     inicio: '09:30',              // primer turno
     fin: '19:00',                 // el último turno empieza a las 6:30 p. m.; se cierra 7:30 p. m.

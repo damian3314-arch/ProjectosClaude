@@ -29,6 +29,7 @@
     $('h1').innerHTML = nombre ? 'Hola ' + U.esc(nombre) + ', <em>tenemos algo para ti.</em>' : 'Tenemos <em>algo para ti.</em>';
     $('lede').textContent = 'Responde un breve test sobre tus joyas de oro y descubre de qué se trata.';
   } else {
+    $('kicker').textContent = 'Tu oro, tu corona';
     $('h1').innerHTML = 'Navidad es para <em>brillar.</em>';
     $('lede').textContent = 'Responde un breve test y descubre si tus joyas de oro necesitan su día de spa.';
   }
@@ -82,9 +83,9 @@
       boton = '¡Claro que sí, no me lo pierdo!';
       envio = m + '¡Claro que sí, no me lo pierdo! Voy el sábado 21 de noviembre y me gustaría venir hacia las [hora]. ¿Me apartan el cupo?';
     } else {
-      txt = 'Tus joyas merecen volver a brillar como el primer día. Te esperamos cualquier sábado, hasta el 26 de diciembre: el shampoo de brillo para hasta 3 joyas de oro tiene un valor ' + (P.shampoo || 'desde $20.000') + '. Mientras tanto, disfrutas una Corona bien fría, cortesía de la casa.';
+      txt = 'Tus joyas merecen volver a brillar como el primer día. Te esperamos este sábado: el shampoo de brillo para hasta 3 joyas de oro tiene un valor de ' + (P.shampoo || '$30.000') + '. Mientras tanto, disfrutas una Corona bien fría, cortesía de la casa.';
       boton = '¡Quiero que mi oro brille!';
-      envio = m + 'Hice el test del spa dorado y quiero llevar mis joyas al shampoo de brillo. Me gustaría ir el sábado [fecha] hacia las [hora]. ¿Me apartan el cupo?';
+      envio = m + 'Hice el test del spa dorado y quiero llevar mis joyas al shampoo de brillo. Me gustaría ir este sábado hacia las [hora]. ¿Me apartan el cupo?';
     }
     $('premioP').textContent = txt;
     $('waConfT').textContent = boton;
@@ -134,7 +135,7 @@
   var faq = [
     ['¿Cuánto cuesta?', vip
       ? 'Para ti, el shampoo de brillo de hasta 3 joyas de oro no tiene costo. Los demás servicios sí: soldadura de cadenas, $40.000; mantenimiento y tejido de pulseras, desde $20.000.'
-      : 'El shampoo de brillo de hasta 3 joyas de oro tiene un valor ' + (P.shampoo || 'desde $20.000') + '. La soldadura de cadenas, $40.000; el mantenimiento y tejido de pulseras, desde $20.000. La Corona es cortesía de la casa (solo mayores de 18).'],
+      : 'El shampoo de brillo de hasta 3 joyas de oro tiene un valor de ' + (P.shampoo || '$30.000') + '. La soldadura de cadenas, $40.000; el mantenimiento y tejido de pulseras, desde $20.000. La Corona es cortesía de la casa (solo mayores de 18).'],
     ['¿Tengo que agendar?', 'Sí, te lo recomendamos: los cupos son limitados. Escríbenos por WhatsApp y una asesora te aparta la hora.'],
     ['¿Puedo ir con alguien?', vip ? 'Claro, puedes venir con alguien especial.' : 'Claro. La cerveza es solo para mayores de 18, con documento.'],
     ['¿Reciben mi oro como parte de pago?', 'Sí, al precio del día, para tu próxima joya.'],

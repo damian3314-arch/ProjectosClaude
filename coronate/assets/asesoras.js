@@ -42,7 +42,7 @@
       cola: function (c, s) { return s.estado === 'porinvitar'; },
       despues: 'invitado', pieza: 'invitacion',
       premium: '🎄 {nombre}, esta Navidad tenemos una invitación especial para ti.\n\nQueremos agradecer tu fidelidad obsequiándote la limpieza de tres de tus joyas favoritas ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nAntes de contarte todo, selecciona tus experiencias con las joyas de oro en una encuesta que te toma un parpadeo.{link}\n\n📅 Te esperamos desde el sábado 21 de noviembre.',
-      general: 'Hola {nombre} ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nEsta Navidad llegan los *Sábados de Realeza*: dejamos tus joyas de oro como nuevas con un shampoo de brillo (hasta 3 joyas, desde $20.000), hacemos arreglos al momento y, mientras esperas, te atendemos con una Corona bien fría.\n\n📅 Desde el sábado 21 de noviembre, todos los sábados hasta el 26 de diciembre.{link}\n\n¿Te aparto un turno? Respóndeme con el día que te queda mejor.'
+      general: 'Hola {nombre} ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nEsta Navidad llegan los *Sábados de Realeza*: dejamos tus joyas de oro como nuevas con un shampoo de brillo (hasta 3 joyas, $30.000), hacemos arreglos al momento y, mientras esperas, te atendemos con una Corona bien fría.\n\n📅 Desde el sábado 21 de noviembre, todos los sábados hasta el 26 de diciembre.{link}\n\n¿Te aparto un turno? Respóndeme con el día que te queda mejor.'
     },
     seguimiento: {
       nombre: 'Seguimiento', icono: '🔁',
@@ -50,7 +50,7 @@
       cola: function (c, s) { return s.estado === 'invitado' || s.estado === 'seguimiento'; },
       despues: 'seguimiento', pieza: 'invitacion',
       premium: 'Hola {nombre}, soy {asesora} de Joyería Tanya Santiago 😊 Te escribo por si se te pasó la invitación: tu shampoo de brillo para hasta 3 joyas de oro es *de regalo* y los turnos de los sábados se están llenando.\n\n¿Qué día te aparto? Tengo espacio el {proximo}.',
-      general: 'Hola {nombre}, soy {asesora} de Joyería Tanya Santiago 😊 Te escribo por si se te pasó el mensaje: los Sábados de Realeza ya empiezan y los turnos se están llenando. Shampoo de brillo desde $20.000 y una Corona bien fría mientras esperas.\n\n¿Qué día te aparto? Tengo espacio el {proximo}.'
+      general: 'Hola {nombre}, soy {asesora} de Joyería Tanya Santiago 😊 Te escribo por si se te pasó el mensaje: los Sábados de Realeza ya empiezan y los turnos se están llenando. Shampoo de brillo $30.000 y una Corona bien fría mientras esperas.\n\n¿Qué día te aparto? Tengo espacio el {proximo}.'
     },
     confirmar: {
       nombre: 'Confirmar turno', icono: '📅',
@@ -58,8 +58,8 @@
       cola: function (c, s) { return s.estado === 'interesado' || (s.estado === 'agendado' && !enviado(s, 'confirmar')); },
       despues: null, pieza: 'turno',
       premium: '¡Listo, {nombre}! 👑 Tu turno quedó para el *{dia}* a las *{hora}*.\n\nTrae hasta 3 joyas de oro: el shampoo de brillo es de regalo. Te esperamos con una Corona bien fría.\n\n📍 {direccion}\n\nSi necesitas cambiar la hora, respóndeme por aquí. {asesora}',
-      premiumTest: 'Hola {nombre} 😊 Soy {asesora}, de Joyería Tanya Santiago. Vimos que hiciste tu test de la realeza y que tu oro pide brillo ✨\n\nHemos identificado que eres uno de nuestros clientes especiales y queremos confirmar: ¿nos acompañas el sábado 21? Puedes traer hasta 3 joyas y no tiene ningún costo.\n\nDe paso te recordamos nuestros otros servicios: soldadura de cadenas en oro ($40.000), mantenimiento y tejido de pulseras (desde $20.000) y limpieza con shampoo y brillo (desde $30.000). Y valoramos tus joyas con el precio internacional del oro.\n\n¿Qué hora te queda mejor? Tengo espacio el {proximo}.',
-      general: '¡Listo, {nombre}! 👑 Tu turno quedó para el *{dia}* a las *{hora}*.\n\nTrae tus joyas de oro (el shampoo de brillo es desde $20.000 por hasta 3 joyas). Te esperamos con una Corona bien fría.\n\n📍 {direccion}\n\nSi necesitas cambiar la hora, respóndeme por aquí. {asesora}'
+      premiumTest: 'Hola {nombre} 😊 Soy {asesora}, de Joyería Tanya Santiago. Vimos que hiciste tu test de la realeza y que tu oro pide brillo ✨\n\nHemos identificado que eres uno de nuestros clientes especiales y queremos confirmar: ¿nos acompañas el sábado 21? Puedes traer hasta 3 joyas y no tiene ningún costo.\n\nDe paso te recordamos nuestros otros servicios: soldadura de cadenas en oro ($40.000), mantenimiento y tejido de pulseras (desde $20.000) y limpieza con shampoo y brillo ($30.000). Y valoramos tus joyas con el precio internacional del oro.\n\n¿Qué hora te queda mejor? Tengo espacio el {proximo}.',
+      general: '¡Listo, {nombre}! 👑 Tu turno quedó para el *{dia}* a las *{hora}*.\n\nTrae tus joyas de oro (el shampoo de brillo es $30.000 por hasta 3 joyas). Te esperamos con una Corona bien fría.\n\n📍 {direccion}\n\nSi necesitas cambiar la hora, respóndeme por aquí. {asesora}'
     },
     recordatorio: {
       nombre: 'Recordatorio', icono: '⏰',
@@ -178,8 +178,8 @@
     var dia21 = U.fmtDate(lanz, true).replace(/^\S+\s/, '');
     var hor = /\[/.test(C.contacto.horario) ? 'jornada continua' : C.contacto.horario;
     if (tipo === 'invitacion' && prem) return { kicker: 'INVITACIÓN ESPECIAL', titulo: (nom || 'Para ti') + ',', sub: 'esta Navidad brillas tú', destacado: ['Shampoo de brillo DE REGALO', 'para hasta 3 joyas de oro'], lineas: ['Una Corona bien fría mientras esperas', 'La vitrina más linda de la Navidad', 'Desde el sábado ' + dia21], boton: 'Responde y te apartamos tu turno' };
-    if (tipo === 'invitacion') return { kicker: 'SÁBADOS DE REALEZA', titulo: 'Navidad es para brillar', sub: 'tu oro, tu corona', destacado: ['Shampoo de brillo desde $20.000', 'hasta 3 joyas de oro'], lineas: ['Arreglos al momento desde $30.000', 'Una Corona bien fría mientras esperas', 'Todos los sábados desde el ' + dia21], boton: 'Agenda tu turno por WhatsApp' };
-    if (tipo === 'turno') return { kicker: 'TU TURNO ESTÁ LISTO', titulo: nom ? nom + ', te esperamos' : 'Te esperamos', sub: 'como a la realeza', destacado: s && s.cita ? [U.fmtDate(s.cita.f, true), horaBonita(s.cita.h)] : ['Sábados de Realeza', hor], lineas: [prem ? 'Shampoo de brillo de regalo' : 'Shampoo de brillo desde $20.000', 'Trae hasta 3 joyas de oro', 'Una Corona bien fría te espera'], boton: 'Joyería Tanya Santiago' };
+    if (tipo === 'invitacion') return { kicker: 'SÁBADOS DE REALEZA', titulo: 'Navidad es para brillar', sub: 'tu oro, tu corona', destacado: ['Shampoo de brillo $30.000', 'hasta 3 joyas de oro'], lineas: ['Arreglos al momento desde $30.000', 'Una Corona bien fría mientras esperas', 'Todos los sábados desde el ' + dia21], boton: 'Agenda tu turno por WhatsApp' };
+    if (tipo === 'turno') return { kicker: 'TU TURNO ESTÁ LISTO', titulo: nom ? nom + ', te esperamos' : 'Te esperamos', sub: 'como a la realeza', destacado: s && s.cita ? [U.fmtDate(s.cita.f, true), horaBonita(s.cita.h)] : ['Sábados de Realeza', hor], lineas: [prem ? 'Shampoo de brillo de regalo' : 'Shampoo de brillo $30.000', 'Trae hasta 3 joyas de oro', 'Una Corona bien fría te espera'], boton: 'Joyería Tanya Santiago' };
     return { kicker: 'GRACIAS POR VENIR', titulo: nom ? 'Gracias, ' + nom : 'Gracias por venir', sub: 'tu oro, tu corona', destacado: ['Tu oro ya brilla como se merece', 'fue un gusto consentirlo'], lineas: ['Aquí estamos para lo que necesites', 'Todos los sábados hasta el 26 de diciembre'], boton: 'Joyería Tanya Santiago' };
   }
   function lienzo(tipo, c) {
@@ -307,7 +307,7 @@
       if (s.estado !== 'baja') chips.push(['baja', 'No escribir más']); else chips.push(['reactivar', 'Volver a activar']);
       return '<article class="cl' + (c.premium ? ' prem' : '') + (bloqueado ? ' off' : '') + '" data-id="' + c.id + '">' +
         '<div class="cl-h"><div><h4>' + esc(c.nombre) + '</h4><span class="tel num">' + esc(fmtTel(c.tel)) + '</span>' + (c.ok ? '' : ' <span class="pill bad">revisar número</span>') + '</div>' +
-        (c.premium ? '<span class="tag gold">👑 Premium · shampoo de regalo</span>' : '<span class="tag">General · desde $20.000</span>') + '</div>' +
+        (c.premium ? '<span class="tag gold">👑 Premium · shampoo de regalo</span>' : '<span class="tag">General · $30.000</span>') + '</div>' +
         '<p class="cl-s"><span class="st st-' + s.estado + '">' + esc(ESTADOS[s.estado]) + '</span> ' + esc(estadoTexto(c, s)) + (c.asesora ? ' · ' + esc(c.asesora) : '') + (s.nota ? ' · ' + esc(s.nota) : '') + '</p>' +
         '<div class="cl-a">' +
         (faltaCita ? '<button class="btn fill" data-a="agendar">📅 Primero agenda el turno</button>'
@@ -370,7 +370,7 @@
     var cupo = C.agenda.cuposPorBloque || 1;
     function pinta() {
       body.innerHTML = '<h3>Turno para ' + esc(primerNombre(c.nombre)) + '</h3>' +
-        '<p class="note">' + (c.premium ? '👑 Premium: shampoo de regalo.' : 'General: shampoo desde $20.000.') + ' Cupo: ' + cupo + ' personas cada ' + C.agenda.bloqueMin + ' min.</p>' +
+        '<p class="note">' + (c.premium ? '👑 Premium: shampoo de regalo.' : 'General: shampoo $30.000.') + ' Cupo: ' + cupo + ' personas cada ' + C.agenda.bloqueMin + ' min.</p>' +
         '<div class="ag-d">' + fs.map(function (x) { var oc = ocupados(x.f, '', c.id), tot = cupoDia(); return '<button type="button" data-f="' + x.f + '" aria-pressed="' + (x.f === sel.f) + '"><b>' + esc(U.fmtDate(x.f)) + '</b><small>' + (tot - oc) + ' libres</small></button>'; }).join('') + '</div>' +
         '<div class="ag-h">' + U.slots().map(function (h) { var oc = ocupados(sel.f, h, c.id), lleno = oc >= cupo; return '<button type="button" data-h="' + h + '" aria-pressed="' + (h === sel.h) + '"' + (lleno ? ' disabled' : '') + '>' + esc(horaCorta(h)) + '<small>' + (lleno ? 'lleno' : (cupo - oc) + ' libre' + (cupo - oc > 1 ? 's' : '')) + '</small></button>'; }).join('') + '</div>' +
         '<label style="margin-top:10px">Nota (opcional)<input id="agNota" value="' + esc(s.nota || '') + '" placeholder="Ej. trae 2 cadenas y una argolla"></label>' +
@@ -441,7 +441,7 @@
   var dirTxt = /\[/.test(C.contacto.direccion) ? '[DIRECCIÓN]' : C.contacto.direccion;
   var horTxt = /\[/.test(C.contacto.horario) ? '[HORARIO]' : C.contacto.horario;
   var RESP = [
-    ['¿Cuánto cuesta?', 'Si recibiste la invitación especial, el shampoo de brillo para hasta 3 joyas de oro es de regalo 🎁. Para los demás clientes es desde $20.000 por hasta 3 joyas. Los arreglos son desde $30.000 y siempre te decimos el valor antes de hacer cualquier cosa.'],
+    ['¿Cuánto cuesta?', 'Si recibiste la invitación especial, el shampoo de brillo para hasta 3 joyas de oro es de regalo 🎁. Para los demás clientes es $30.000 por hasta 3 joyas. Los arreglos son desde $30.000 y siempre te decimos el valor antes de hacer cualquier cosa.'],
     ['¿Qué es el shampoo de brillo?', 'Es una limpieza profunda para tus joyas de oro: les quitamos la suciedad del día a día (perfume, crema, sudor) y les devolvemos el brillo. Y de paso revisamos broches y piedras para que no se te pierda nada.'],
     ['¿Cuánto se demora?', 'Unos [CONFIRMAR: 20 a 30] minutos. Mientras tanto te atendemos con una Corona bien fría y puedes ver la vitrina de Navidad.'],
     ['¿Qué días y a qué hora?', 'Todos los sábados desde el 21 de noviembre hasta el 26 de diciembre, de corrido (' + horTxt + '). En diciembre también hay domingos con cita. ¿Qué día te aparto?'],
