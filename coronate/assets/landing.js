@@ -113,8 +113,7 @@
     $('premioH').innerHTML = (nombre ? U.esc(nombre) + ', tu oro pide ' : 'Tu oro pide ') + '<em>su día de brillo.</em>';
     $('premioP').textContent = 'Eres uno de nuestros clientes más especiales y queremos agradecer tu fidelidad. Trae hasta 3 de tus joyas favoritas el sábado 21 y te las dejamos brillando. Y mientras esperas, disfruta una Corona bien fría, cortesía de nuestra casa (solo mayores de 18).';
     if (C.contacto.whatsapp) {
-      $('waConf').href = U.waLink(C.contacto.whatsapp, m + 'Hice el test de la realeza y quiero confirmar mi asistencia el sábado 21 de noviembre con mis joyas (hasta 3), sin costo.');
-      $('waDet').href = U.waLink(C.contacto.whatsapp, m + 'Hice el test de la realeza y quiero más detalles de la invitación.');
+      $('waConf').href = U.waLink(C.contacto.whatsapp, m + '¡Claro que sí, no me lo pierdo! Voy el sábado 21 de noviembre y me gustaría venir hacia las [hora]. ¿Me apartan el cupo?');
     }
   }
   function terminar() {

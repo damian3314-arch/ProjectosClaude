@@ -127,3 +127,4 @@ body.landing { font-size: 16.5px; }
 .verdict .hint { grid-column: 1 / -1; font-size: 14px; opacity: .75; text-align: center; }
 .verdict .btn.go { width: 100%; }
 .vip-only { scroll-margin-top: 84px; }
+.xcta .mini { font-size: 14px; opacity: .8; margin-top: -4px; }
