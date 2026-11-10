@@ -11,12 +11,12 @@
 
   Array.prototype.forEach.call(document.querySelectorAll('[data-c]'), function (el) {
     var v = el.getAttribute('data-c').split('.').reduce(function (o, k) { return o && o[k]; }, C);
-    if (v != null) el.textContent = v;
+    if (v != null) { el.textContent = v; if (/\[/.test(String(v))) el.style.display = 'none'; } /* dato sin confirmar: no se muestra */
   });
 
   /* ----- WhatsApp: todas las citas las agenda una asesora ----- */
   var msg = vip
-    ? 'Hola, soy ' + (nombre || '[tu nombre]') + '. Recibí la invitación especial de Joyería Tanya Santiago y quiero agendar mi turno para el shampoo de brillo de regalo.'
+    ? (nombre ? 'Hola, soy ' + nombre + '. ' : 'Hola. ') + 'Recibí la invitación especial de Joyería Tanya Santiago y quiero agendar mi turno para el shampoo de brillo de regalo.'
     : 'Hola, quiero agendar mi turno para el shampoo de brillo de mis joyas en Joyería Tanya Santiago.';
   var wa = C.contacto.whatsapp ? U.waLink(C.contacto.whatsapp, msg) : '#';
   $('waTop').href = wa;

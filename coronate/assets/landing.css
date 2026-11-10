@@ -180,3 +180,5 @@ body:not(.done) .lockable, body:not(.done) .vip-after { display: none; }
 @keyframes aparece { from { opacity: 0; transform: translateY(24px) scale(.985); } to { opacity: 1; transform: none; } }
 .done #premio .xcta { animation: aparece 1.2s cubic-bezier(.2,.7,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none; } .done #premio .xcta { animation: none; } }
+/* Botón superior: alto mínimo de 44 px para tocarlo con facilidad */
+.landing .top .btn.wa.small { min-height: 44px; }
