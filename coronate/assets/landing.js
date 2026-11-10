@@ -111,7 +111,7 @@
     document.body.classList.add('done');
     var m = nombre ? 'Hola, soy ' + nombre + '. ' : 'Hola. ';
     $('premioH').innerHTML = (nombre ? U.esc(nombre) + ', tu oro pide ' : 'Tu oro pide ') + '<em>su día de brillo.</em>';
-    $('premioP').textContent = 'Haces parte de un grupo muy selecto de clientes de la casa, y esta Navidad queremos atenderte como te mereces. Ven el sábado 21 con hasta 3 de tus joyas favoritas: les devolvemos el brillo del primer día, por cuenta nuestra. Y mientras las consentimos, tú disfrutas una Corona bien fría, también cortesía de la casa.';
+    $('premioP').textContent = 'Hay clientes que ya son parte de la casa, y tú eres uno de ellos. El sábado 21 de noviembre queremos compartir un rato agradable contigo: trae hasta 3 de tus joyas favoritas y les devolvemos su brillo, sin ningún costo. Mientras tanto, disfrutas una Corona bien fría, cortesía de la casa.';
     if (C.contacto.whatsapp) {
       $('waConf').href = U.waLink(C.contacto.whatsapp, m + '¡Claro que sí, no me lo pierdo! Voy el sábado 21 de noviembre y me gustaría venir hacia las [hora]. ¿Me apartan el cupo?');
     }
