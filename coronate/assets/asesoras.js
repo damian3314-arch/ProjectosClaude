@@ -41,7 +41,7 @@
       ayuda: 'Primer mensaje. Aparecen los clientes a los que aún no se les ha escrito.',
       cola: function (c, s) { return s.estado === 'porinvitar'; },
       despues: 'invitado', pieza: 'invitacion',
-      premium: 'Hola {nombre} ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nTú eres de nuestros clientes más especiales y esta Navidad queremos consentirte: trae hasta 3 joyas de oro y te las dejamos brillando con un shampoo de brillo, *de regalo*. Mientras tanto disfrutas una Corona bien fría y conoces la vitrina más linda de la Navidad.\n\n📅 Desde el sábado 21 de noviembre, todos los sábados hasta el 26 de diciembre.{link}\n\n¿Te aparto un turno? Respóndeme con el día que te queda mejor.',
+      premium: '🎄 {nombre}, esta Navidad tenemos una invitación especial para ti.\n\nQueremos agradecer tu fidelidad obsequiándote la limpieza de tres de tus joyas favoritas ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nAntes de contarte todo, selecciona tus experiencias con las joyas de oro en una encuesta que te toma un parpadeo.{link}\n\n📅 Te esperamos desde el sábado 21 de noviembre.',
       general: 'Hola {nombre} ✨ Soy {asesora}, de Joyería Tanya Santiago.\n\nEsta Navidad llegan los *Sábados de Realeza*: dejamos tus joyas de oro como nuevas con un shampoo de brillo (hasta 3 joyas, desde $20.000), hacemos arreglos al momento y, mientras esperas, te atendemos con una Corona bien fría.\n\n📅 Desde el sábado 21 de noviembre, todos los sábados hasta el 26 de diciembre.{link}\n\n¿Te aparto un turno? Respóndeme con el día que te queda mejor.'
     },
     seguimiento: {
@@ -58,6 +58,7 @@
       cola: function (c, s) { return s.estado === 'interesado' || (s.estado === 'agendado' && !enviado(s, 'confirmar')); },
       despues: null, pieza: 'turno',
       premium: '¡Listo, {nombre}! 👑 Tu turno quedó para el *{dia}* a las *{hora}*.\n\nTrae hasta 3 joyas de oro: el shampoo de brillo es de regalo. Te esperamos con una Corona bien fría.\n\n📍 {direccion}\n\nSi necesitas cambiar la hora, respóndeme por aquí. {asesora}',
+      premiumTest: 'Hola {nombre} 😊 Soy {asesora}, de Joyería Tanya Santiago. Vimos que hiciste tu test de la realeza y que tu oro pide brillo ✨\n\nHemos identificado que eres uno de nuestros clientes especiales y queremos confirmar: ¿nos acompañas el sábado 21? Puedes traer hasta 3 joyas y no tiene ningún costo.\n\nDe paso te recordamos nuestros otros servicios: soldadura de cadenas en oro ($40.000), mantenimiento y tejido de pulseras (desde $20.000) y limpieza con shampoo y brillo (desde $30.000). Y valoramos tus joyas con el precio internacional del oro.\n\n¿Qué hora te queda mejor? Tengo espacio el {proximo}.',
       general: '¡Listo, {nombre}! 👑 Tu turno quedó para el *{dia}* a las *{hora}*.\n\nTrae tus joyas de oro (el shampoo de brillo es desde $20.000 por hasta 3 joyas). Te esperamos con una Corona bien fría.\n\n📍 {direccion}\n\nSi necesitas cambiar la hora, respóndeme por aquí. {asesora}'
     },
     recordatorio: {
@@ -92,9 +93,10 @@
   function proximasFechas(c) { var t = U.today(); return C.fechas.filter(function (x) { return x.f >= t && x.tipo !== 'ensayo' && (x.publico || c.premium); }); }
   function mensaje(paso, c) {
     var s = seg(c.id), fs = proximasFechas(c);
-    var link = C.baseUrl ? '\n\nTu invitación: ' + C.baseUrl.replace(/\/$/, '') + '/?n=' + encodeURIComponent(primerNombre(c.nombre)) + (c.premium ? '&p=1' : '') : '';
+    var link = C.baseUrl ? '\n\nTu invitación: ' + C.baseUrl.replace(/\/$/, '') + '/?n=' + encodeURIComponent(primerNombre(c.nombre)) + (c.premium ? '&p=1&k=' + U.codigo(c.id) : '') : '';
     var dir = /\[/.test(C.contacto.direccion) ? '[dirección de la joyería]' : C.contacto.direccion;
-    return textoPaso(paso, c.premium ? 'premium' : 'general')
+    var base = (paso === 'confirmar' && c.premium && !s.cita) ? PASOS.confirmar.premiumTest : textoPaso(paso, c.premium ? 'premium' : 'general');
+    return base
       .replace(/\{nombre\}/g, primerNombre(c.nombre))
       .replace(/\{asesora\}/g, ($('aseNombre').value || '').trim() || 'tu asesora')
       .replace(/\{link\}/g, link)
@@ -300,7 +302,7 @@
       if (['porinvitar', 'invitado', 'seguimiento', 'interesado', 'nointeresa'].indexOf(s.estado) >= 0) chips.push(['agendar', '📅 Agendar']);
       if (AGENDADOS.indexOf(s.estado) >= 0) { chips.push(['agendar', 'Cambiar turno'], ['llego', '✅ Llegó']); }
       if (s.estado === 'llego') chips.push(['compro', '💰 Compró']);
-      if (['invitado', 'seguimiento'].indexOf(s.estado) >= 0) chips.push(['interesado', '🙂 Respondió']);
+      if (['invitado', 'seguimiento'].indexOf(s.estado) >= 0) chips.push(['interesado', '🙂 Respondió o hizo el test']);
       if (['porinvitar', 'invitado', 'seguimiento', 'interesado'].indexOf(s.estado) >= 0) chips.push(['nointeresa', 'No le interesa']);
       if (s.estado !== 'baja') chips.push(['baja', 'No escribir más']); else chips.push(['reactivar', 'Volver a activar']);
       return '<article class="cl' + (c.premium ? ' prem' : '') + (bloqueado ? ' off' : '') + '" data-id="' + c.id + '">' +

@@ -18,7 +18,7 @@
 
   <div class="top">
     <a class="mark" href="#inicio" aria-label="Joyería Tanya Santiago"><i>TS</i><span><b>Tanya Santiago</b><small>Joyería</small></span></a>
-    <a class="btn wa small" id="waTop" href="#" target="_blank" rel="noopener">Agendar</a>
+    <a class="btn wa small vip-after" id="waTop" href="#" target="_blank" rel="noopener">Agendar</a>
   </div>
 
   <header class="xhero" id="inicio">
@@ -82,8 +82,8 @@
       <p class="chip" id="chip">Shampoo de brillo desde $20.000 · hasta 3 joyas</p>
       <div class="count" id="count" hidden><b id="countN">–</b><span id="countT"></span></div>
       <div class="cta">
-        <a class="btn wa" id="waHero" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.6 14.2c-.2.7-1.3 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.4 2.5 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.8-.1 1.4Z"/></svg>Agenda tu turno</a>
-        <a class="btn ghost" href="#test">Haz el test de la realeza</a>
+        <a class="btn wa vip-hide" id="waHero" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.6 14.2c-.2.7-1.3 1.3-1.9 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.4 2.5 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.8-.1 1.4Z"/></svg>Agenda tu turno</a>
+        <a class="btn ghost" id="goTest" href="#test">Haz el test de la realeza</a>
       </div>
     </div>
   </header>
@@ -96,12 +96,29 @@
     <div class="verdict" id="verdict" aria-live="polite"></div>
   </section>
 
-  <section class="blk" id="ruta">
+  <section class="blk vip-only" id="premio" aria-live="polite">
+    <div class="xcta">
+      <p class="eyebrow">Resultado de tu test</p>
+      <h2 id="premioH">Tu oro pide <em>su día de brillo.</em></h2>
+      <p id="premioP"></p>
+      <p class="gift">De regalo para ti · hasta 3 joyas · sin ningún costo</p>
+      <a class="btn wa" id="waConf" href="#" target="_blank" rel="noopener">Confirma tu asistencia</a>
+      <a class="btn ghost light" id="waDet" href="#" target="_blank" rel="noopener">Pide más detalles con una asesora</a>
+    </div>
+  </section>
+
+  <section class="blk vip-only" id="otros">
+    <div class="sh"><p class="eyebrow">Otros servicios</p><h2>Mientras estás aquí, <em>te contamos más.</em></h2></div>
+    <div class="perks" id="otrosList"></div>
+    <p class="note" id="otrosNota"></p>
+  </section>
+
+  <section class="blk lockable" id="ruta">
     <div class="sh"><p class="eyebrow">Lo que te espera</p><h2>Vienes por el brillo. <em>Te quedas por todo lo demás.</em></h2></div>
     <div class="perks" id="perks"></div>
   </section>
 
-  <section class="blk">
+  <section class="blk lockable">
     <div class="xcta">
       <p class="eyebrow">Sábado 21 de noviembre · de corrido</p>
       <h2 id="ctaH">Te apartamos tu turno <em>por WhatsApp.</em></h2>
@@ -110,7 +127,7 @@
     </div>
   </section>
 
-  <section class="blk" id="faq">
+  <section class="blk lockable" id="faq">
     <div class="sh"><p class="eyebrow">Dudas</p><h2>Lo que <em>más preguntan</em></h2></div>
     <div id="faqList"></div>
   </section>

@@ -114,3 +114,16 @@ body.landing { font-size: 16.5px; }
     @keyframes zoomin { from { opacity: .2; transform: scale(.9); } to { opacity: 1; transform: none; } }
   }
 }
+
+/* Invitación premium: primero el test, después el regalo */
+.vip-only { display: none; }
+.vip.done .vip-only { display: block; }
+.vip:not(.done) .lockable, .vip:not(.done) .vip-after { display: none; }
+.vip .vip-hide { display: none; }
+.vip .cta .ghost { background: var(--gold, #C9A44A); color: #2A1D00; border-color: transparent; font-weight: 700; }
+.xcta .gift { background: rgba(201,164,74,.18); border: 1px solid rgba(201,164,74,.5); color: #F7E7B4; border-radius: 999px; padding: 10px 18px; font-weight: 600; }
+.btn.ghost.light { color: #F7F2E8; border-color: rgba(247,242,232,.45); }
+.landing .note { margin-top: 14px; text-align: center; font-size: 14px; opacity: .8; }
+.verdict .hint { grid-column: 1 / -1; font-size: 14px; opacity: .75; text-align: center; }
+.verdict .btn.go { width: 100%; }
+.vip-only { scroll-margin-top: 84px; }

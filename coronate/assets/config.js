@@ -17,6 +17,8 @@ window.CORO = {
   },
   // URL pública donde quede publicada la landing. Si queda vacío, se usa la dirección actual del navegador.
   baseUrl: '',
+  // Dirección que recibe el aviso "esta persona hizo el test" (Worker o Apps Script). Vacío = no se envía nada. Se conecta en el montaje.
+  avisos: '',
   // Precios que ve el público general. Los invitados premium (?p=1) ven el shampoo de regalo.
   precios: { shampoo: 'desde $20.000', reparacion: 'desde $30.000', pulsera: 'desde $30.000' },
   agenda: {

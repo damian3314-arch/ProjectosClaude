@@ -23,17 +23,18 @@
 
   /* ----- textos según el tipo de invitación ----- */
   if (vip) {
-    $('kicker').textContent = nombre ? 'Invitación especial para ' + nombre : 'Invitación especial';
-    $('h1').innerHTML = nombre ? U.esc(nombre) + ', esta Navidad <em>brillas tú.</em>' : 'Esta Navidad <em>brillas tú.</em>';
-    $('lede').textContent = 'Eres uno de nuestros clientes más especiales y queremos agradecértelo. Trae hasta 3 joyas de oro y te las dejamos brillando, sin ningún costo. Mientras tanto, compartes con nosotros un rato agradable con una Corona bien fría.';
-    $('chip').textContent = 'De regalo para ti · hasta 3 joyas · sin costo';
+    /* Premium: primero la tarjeta personal y el test. El regalo se revela al terminarlo. */
+    $('kicker').textContent = nombre ? 'Hola, ' + nombre : 'Una invitación para ti';
+    $('h1').innerHTML = nombre ? 'Hola ' + U.esc(nombre) + ', <em>esto es para ti.</em>' : 'Esto es <em>para ti.</em>';
+    $('lede').textContent = 'Esta Navidad tenemos una invitación especial para ti. Antes de contártela, cuéntanos cómo está tu oro: solo te tomará un parpadeo.';
+    $('chip').hidden = true;
     $('ctaH').innerHTML = 'Tu turno te espera. <em>Escríbenos y lo apartamos.</em>';
     $('ctaP').textContent = 'Responde por WhatsApp y una asesora te agenda la hora, para tener todo listo cuando llegues. Puedes venir con alguien especial.';
   } else {
     $('chip').textContent = 'Shampoo de brillo ' + (P.shampoo || 'desde $20.000') + ' · hasta 3 joyas';
   }
   $('tk').textContent = (vip
-    ? 'Tu invitación especial ✦ shampoo de brillo de regalo ✦ Corona bien fría ✦ sábado 21 de noviembre ✦ la vitrina más linda de la Navidad ✦ '
+    ? 'Una invitación especial para ti ✦ haz tu test de la realeza ✦ sábado 21 de noviembre ✦ la vitrina más linda de la Navidad ✦ '
     : 'Navidad es para brillar ✦ shampoo de brillo para tus joyas ✦ Corona bien fría ✦ sábado 21 de noviembre, de corrido ✦ oro 18k ✦ ').repeat(4);
 
   /* ----- cuenta regresiva ----- */
@@ -66,7 +67,21 @@
     'El oro que se oscureció con el perfume y el sudor.',
     'No te acuerdas de la última vez que lo lavaste.'
   ];
+  var FLV = [
+    'Los aretes que no te quitas desde la primera comunión… ¡tienen olor a tradición!',
+    'Esa cadena opaca que se funde con el tono de tu piel porque ya perdió su brillo.',
+    'Los anillos que todavía tienen jabón pegado desde el día del «sí».',
+    'Los balines de esa manilla tejida que ya huelen a recuerdo.',
+    'El broche flojo que te tiene rezando para no perder tu joya.'
+  ];
+  if (vip) {
+    FL = FLV;
+    var sh = $('test').querySelector('.sh');
+    sh.innerHTML = '<p class="eyebrow">El test de la realeza</p><h2>Tu oro pide auxilio <em>si…</em></h2><p>Toca lo que te pasa con tus joyas de oro. ¡Solo te tomará un parpadeo!</p>';
+  }
   var on = {};
+  var hecho = false;
+  try { hecho = vip && localStorage.getItem('coro.l.done') === '1'; } catch (e) {}
   function renderFlags() {
     $('flags').innerHTML = FL.map(function (t, i) {
       return '<button type="button" class="fl" style="--i:' + i + '" data-i="' + i + '" aria-pressed="' + (!!on[i]) + '">' +
@@ -80,9 +95,44 @@
       : n <= 2 ? ['Nada grave, pero tu oro pide brillo.', 'Mejor ahora que en plena Navidad.']
       : n <= 5 ? ['Tu oro necesita su día de realeza.', 'Tráelo todo: te apartamos turno.']
       : ['Alerta dorada.', 'Trae todo. La Corona la ponemos nosotros.'];
+    if (vip) {
+      $('verdict').innerHTML = '<div class="n num">' + n + '<span> / ' + FL.length + '</span></div>' +
+        '<div><div class="t">' + (n ? 'Tu oro pide auxilio.' : 'Marca lo que te pasa.') + '</div><p>' + (n ? 'Toca «Ver mi resultado» y te contamos qué tenemos para ti.' : 'Toca al menos una bandera para ver tu resultado.') + '</p></div>' +
+        '<button type="button" class="btn gold go" id="goRes"' + (n ? '' : ' disabled') + '>Ver mi resultado</button>';
+      if ($('goRes')) $('goRes').onclick = terminar;
+      return;
+    }
     $('verdict').innerHTML = '<div class="n num">' + n + '<span> / ' + FL.length + '</span></div>' +
       '<div><div class="t">' + v[0] + '</div><p>' + v[1] + '</p></div>' +
       '<a class="btn wa" href="' + wa + '" target="_blank" rel="noopener">Agenda tu turno</a>';
+  }
+  /* ----- premium: resultado, regalo y aviso a las asesoras ----- */
+  function revelar() {
+    document.body.classList.add('done');
+    var m = nombre ? 'Hola, soy ' + nombre + '. ' : 'Hola. ';
+    $('premioH').innerHTML = (nombre ? U.esc(nombre) + ', tu oro pide ' : 'Tu oro pide ') + '<em>su día de brillo.</em>';
+    $('premioP').textContent = 'Eres uno de nuestros clientes más especiales y queremos agradecer tu fidelidad. Trae hasta 3 de tus joyas favoritas el sábado 21 y te las dejamos brillando. Y mientras esperas, disfruta una Corona bien fría, cortesía de nuestra casa (solo mayores de 18).';
+    if (C.contacto.whatsapp) {
+      $('waConf').href = U.waLink(C.contacto.whatsapp, m + 'Hice el test de la realeza y quiero confirmar mi asistencia el sábado 21 de noviembre con mis joyas (hasta 3), sin costo.');
+      $('waDet').href = U.waLink(C.contacto.whatsapp, m + 'Hice el test de la realeza y quiero más detalles de la invitación.');
+    }
+  }
+  function terminar() {
+    if (!Object.keys(on).length) return;
+    revelar();
+    try { localStorage.setItem('coro.l.done', '1'); } catch (e) {}
+    avisar();
+    setTimeout(function () { $('premio').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+  }
+  /* Avisa al panel de las asesoras (Worker o Apps Script) que esta persona hizo el test. Sin dirección configurada no envía nada. */
+  function avisar() {
+    var url = C.avisos || '';
+    if (!url) return;
+    try {
+      var body = JSON.stringify({ evento: 'test', k: q.get('k') || '', n: nombre, banderas: Object.keys(on).length, t: new Date().toISOString() });
+      if (navigator.sendBeacon) navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }));
+      else fetch(url, { method: 'POST', mode: 'no-cors', body: body, keepalive: true });
+    } catch (e) {}
   }
   renderFlags();
 
@@ -108,6 +158,18 @@
       '<div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
   }).join('');
 
+  if (vip) {
+    var OT = [
+      ['arreglo', 'Soldadura de cadenas en oro', 'Dejamos tu cadena entera otra vez.', '$40.000'],
+      ['pulsera', 'Mantenimiento y tejido de pulseras', 'Renovamos o tejemos tu pulsera a tu medida.', 'Desde $20.000'],
+      ['shampoo', 'Limpieza con shampoo y brillo', 'Para todas las joyas que quieras limpiar además de tu regalo.', 'Desde $30.000']
+    ];
+    $('otrosList').innerHTML = OT.map(function (p, i) {
+      return '<div class="perk" style="--i:' + i + '"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICO[p[0]] + '</svg></div><div><h3>' + p[1] + '</h3><p>' + p[2] + '</p></div><span class="price">' + p[3] + '</span></div>';
+    }).join('');
+    $('otrosNota').textContent = 'Valoramos tus joyas con el precio internacional del oro actualizado, para que conozcas el valor de tu inversión.';
+    if (hecho) { var ks = Object.keys(on); revelar(); }
+  }
   /* ----- preguntas ----- */
   var faq = [
     ['¿Cuánto cuesta?', vip

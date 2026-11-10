@@ -48,6 +48,12 @@
     return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2);
   }
 
+  /* Código corto y estable por cliente (a partir del celular) para el link; el panel lo usa para saber quién hizo el test sin poner el celular en la URL. */
+  function codigo(id) {
+    var h = 5381, t = String(id || '');
+    for (var i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
   function daysUntil(f) {
     var a = dateObj(today()), b = dateObj(f);
     return Math.round((b - a) / 864e5);
@@ -140,7 +146,7 @@
   }
 
   window.CoroUtil = {
-    S: S, esc: esc, uid: uid, normPhone: normPhone, waLink: waLink, dateObj: dateObj, fmtDate: fmtDate,
+    codigo: codigo, S: S, esc: esc, uid: uid, normPhone: normPhone, waLink: waLink, dateObj: dateObj, fmtDate: fmtDate,
     today: today, daysUntil: daysUntil, slots: slots, addMin: addMin, makeICS: makeICS, gcalLink: gcalLink,
     download: download, baseUrl: baseUrl, copy: copy, fechasPublicas: fechasPublicas
   };
