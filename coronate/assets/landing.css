@@ -100,13 +100,7 @@ body.landing { font-size: 16.5px; }
   /* al deslizar: la pieza se aleja y las secciones se construyen */
   @supports (animation-timeline: view()) {
     .xart svg { animation: parallax linear both; animation-timeline: view(); animation-range: exit 0% exit 100%; }
-    @keyframes parallax { to { transform: translateY(60px) scale(.9) rotate(-4deg); opacity: .4; } }
-    .fl, .perk { animation: slidein linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
-    .fl:nth-child(even), .perk:nth-child(even) { animation-name: slidein2; }
-    @keyframes slidein { from { opacity: 0; transform: translateX(-40px) scale(.96); } to { opacity: 1; transform: none; } }
-    @keyframes slidein2 { from { opacity: 0; transform: translateX(40px) scale(.96); } to { opacity: 1; transform: none; } }
-    .xcta { animation: zoomin linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
-    @keyframes zoomin { from { opacity: .2; transform: scale(.9); } to { opacity: 1; transform: none; } }
+    @keyframes parallax { to { transform: translateY(36px) scale(.96); opacity: .55; } }
   }
 }
 
@@ -123,7 +117,7 @@ body:not(.done) .lockable, body:not(.done) .vip-after { display: none; }
 .vip-only { scroll-margin-top: 84px; }
 .xcta .mini { font-size: 14px; opacity: .8; margin-top: -4px; }
 /* Banda más lenta y con aire entre frases */
-.landing .ticker div { animation-duration: 70s; }
+.landing .ticker div { animation: none; will-change: transform; }
 .landing .ticker span { word-spacing: .15em; }
 /* Pista para marcar las banderas: casilla de checklist y flecha hacia abajo */
 .tap { text-align: center; font-weight: 700; color: var(--green); margin: 4px 0 12px; }
@@ -178,3 +172,11 @@ body:not(.done) .lockable, body:not(.done) .vip-after { display: none; }
 .landing .perk h3 { grid-column: 1; font: 400 23px/1.15 var(--serif); color: var(--ink); }
 .landing .perk p { grid-column: 1 / -1; grid-row: 2; font-size: 15px; color: var(--muted); margin: 0; }
 .landing .perk .price { grid-column: 2; grid-row: 1; justify-self: end; margin: 0; padding: 0; background: none; border-radius: 0; font: italic 400 19px/1.15 var(--serif); letter-spacing: 0; color: #8A6418; white-space: nowrap; }
+
+/* ===== Transiciones finas: cada bloque aparece despacio al llegar a él ===== */
+.landing .sh, .landing .verdict { animation: none; }
+.rv { opacity: 0; transform: translateY(28px); transition: opacity 1.1s cubic-bezier(.2,.7,.2,1), transform 1.1s cubic-bezier(.2,.7,.2,1); }
+.rv.in { opacity: 1; transform: none; }
+@keyframes aparece { from { opacity: 0; transform: translateY(24px) scale(.985); } to { opacity: 1; transform: none; } }
+.done #premio .xcta { animation: aparece 1.2s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none; } .done #premio .xcta { animation: none; } }

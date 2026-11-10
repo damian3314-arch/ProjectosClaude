@@ -144,4 +144,29 @@
       : 'Todos los sábados hasta el 26 de diciembre, en jornada continua de 9:30 a. m. a 7:30 p. m.']
   ];
   $('faqList').innerHTML = faq.map(function (f) { return '<details class="faq"><summary>' + f[0] + '</summary><p>' + f[1] + '</p></details>'; }).join('');
+
+  /* ----- la página siempre abre en la portada ----- */
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  window.scrollTo(0, 0);
+  setTimeout(function () { if (!document.body.classList.contains('tocado')) window.scrollTo(0, 0); }, 120);
+  $('goTest').onclick = function (e) { e.preventDefault(); $('test').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+
+  /* ----- cada bloque aparece despacio al llegar a él ----- */
+  var rvs = document.querySelectorAll('.ticker, .landing .sh, #tap, #flags, #verdict, .perks, #faqList, .foot');
+  var quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if ('IntersectionObserver' in window && !quieto) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    Array.prototype.forEach.call(rvs, function (el) { el.classList.add('rv'); io.observe(el); });
+  }
+
+  /* ----- la banda de frases solo se desliza mientras la persona navega ----- */
+  var banda = document.querySelector('.ticker div');
+  if (banda && !quieto) {
+    var pend = false;
+    var mover = function () { pend = false; banda.style.transform = 'translateX(' + (-((window.scrollY || 0) * 0.35) % (banda.scrollWidth / 2)) + 'px)'; };
+    window.addEventListener('scroll', function () { if (!pend) { pend = true; requestAnimationFrame(mover); } }, { passive: true });
+  }
 })();
