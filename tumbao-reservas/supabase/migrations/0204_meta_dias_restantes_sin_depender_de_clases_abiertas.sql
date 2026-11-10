@@ -1,0 +1,8 @@
+-- 0204 · 10 nov (Damián): «faltan 10 días de clase y sobre eso recalcula el objetivo diario, está desfasado».
+-- El panel contaba como día de clase solo los días que YA tenían filas en `clases` hasta la última clase creada. Pero el horario de la
+-- semana se abre cada sábado y solo hay creadas, hacia adelante, las clases sueltas de martes y jueves (Rumba básica): el 10 de noviembre
+-- contó 10 días cuando quedaban 17 (lunes a sábado, sin el festivo del 16).
+-- Ahora cuenta un día si ya tiene clases O si es lunes a sábado y no es festivo. Aplicada en vivo con un bloque DO sobre admin_meta_mes:
+--   where exists (select 1 from clases c where (c.fecha_hora at time zone 'America/Bogota')::date = d::date)
+--      or (extract(isodow from d) <> 7 and not exists (select 1 from festivos f where f.fecha = d::date));
+-- Con $12.711.000 por vender y 17 días, el objetivo diario baja de $1.271.100 a ≈ $747.700.
