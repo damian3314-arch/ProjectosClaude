@@ -97,6 +97,11 @@ Ingreso base de proyectos: ≈ $5,7M/mes (Joyería 2,2 + Sette 2,0 + Corónate 0
 | 22–24 dic | En 2025 la joyería vendió ≈ $92 M en estos 3 días | Plan Corónate |
 | Vie 25 dic | Festivo, cerrado | idem |
 
+### Drive de Corónate (creado el 10-nov, cuenta del Taller de Joyería)
+Carpeta principal: https://drive.google.com/drive/folders/1F-9cc1i2AvCls6sMw5wfCIuZXD7uRIXM
+Subcarpetas: 01 Brief y guion · 02 Autorizaciones de imagen · 03 Material crudo (fotos y videos) · 04 Piezas finales (reels, historias, flyers) · 05 Tarjetas de invitación.
+Falta: **compartirla** con Giovanni y con Tania (el conector no cambia permisos) y pegar el link en `config.js › drive.carpeta` cuando se levante el congelamiento. No guardar en Drive la lista de clientes con teléfonos.
+
 ### Tu horario real (semana del 9 al 15 nov)
 
 | Día | Gimnasio (bloqueado 6–9) | Loggro | Chat Loggro | Libre para proyectos |
