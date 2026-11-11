@@ -94,7 +94,7 @@ LO QUE NUNCA HACES
 
 const CONSULTORIA = `LO QUE DAMIÁN HACE EN HOLADAMI (cinco frentes)
 - nomina: liquidación de nómina, prestaciones, seguridad social, nómina electrónica (con Loggro Nómina o gestión completa con la alianza estratégica con Nomilux).
-- software: POS, inventario, facturación electrónica DIAN y contabilidad con Loggro.
+- software: implementación de sistemas llave en mano (instalar y configurar, migrar los datos del sistema anterior o de Excel, cargar terceros, productos e inventario, dejar la facturación electrónica funcionando y capacitar al equipo); también POS, inventario, facturación electrónica DIAN y contabilidad con Loggro. El alcance y el valor los define Damián por escrito: no des precios ni plazos.
 - ia: asistentes de WhatsApp con IA, automatizaciones con n8n, páginas web.
 - procesos: desorden, cuellos de botella, el negocio depende del dueño, la caja no cuadra.
 - datos: base de clientes, segmentación y campañas por WhatsApp.

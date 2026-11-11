@@ -49,8 +49,17 @@ export function detectProducts(text) {
   return [...found];
 }
 
+// Interruptor general: con LOGGRO_OUTREACH = "off" el servidor no le escribe a ningún lead de Loggro (ni primer contacto, ni seguimiento,
+// ni respuestas de Alter) y tampoco le manda a Damián los avisos y reportes de esa campaña. Los chats los atiende él desde su WhatsApp.
+export const loggroOff = env => env.LOGGRO_OUTREACH === 'off';
+
 export async function handleLoggroInbound(env, ctx, h, inb, row) {
   if (row.state === 'optout') return;
+  if (loggroOff(env)) {
+    // Apagado: no se responde, pero una petición de baja sí queda registrada
+    if (STOP_RE.test(inb.text || '')) await env.DB.prepare("UPDATE loggro_leads SET state = 'optout', updated_at = datetime('now') WHERE phone = ?").bind(row.phone).run().catch(() => {});
+    return;
+  }
   if (row.last_msg_id === inb.id) return;
   const claim = await env.DB.prepare(`UPDATE loggro_leads SET last_msg_id = ?, msg_count = msg_count + 1, updated_at = datetime('now')
       WHERE phone = ? AND (last_msg_id IS NULL OR last_msg_id != ?)`).bind(inb.id, row.phone, inb.id).run();
@@ -343,7 +352,7 @@ const STOP_CODES = new Set([132001, 132000, 131048, 130429, 131056, 368]); // pl
 const BAD_NUMBER_CODES = new Set([131026, 131049, 131021]); // sin WhatsApp, Meta decidió no entregar, o es el mismo número
 
 export async function rescueSend(env) {
-  if (env.RESCATE_ENVIOS !== 'on' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  if (loggroOff(env) || env.RESCATE_ENVIOS !== 'on' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
   const bogota = new Date(Date.now() - 5 * 3600e3);
   const hour = bogota.getUTCHours();
   if (hour < RESCUE.from || hour >= RESCUE.to) return { sent: 0, reason: 'hora' };
@@ -414,7 +423,7 @@ function abTemplate(env, r) {
 export const OUTBOX = { from: 8, to: 19, perDay: 5, perRun: 4 }; // perRun: cada revisión (cada 5 min) envía pocos, para que salgan escalonados
 
 export async function outboxSend(env) {
-  if (env.OUTBOX_ENVIOS === 'off' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  if (loggroOff(env) || env.OUTBOX_ENVIOS === 'off' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
   const bogota = new Date(Date.now() - 5 * 3600e3);
   const hour = bogota.getUTCHours();
   if (hour < OUTBOX.from || hour >= OUTBOX.to) return { sent: 0, reason: 'hora' };

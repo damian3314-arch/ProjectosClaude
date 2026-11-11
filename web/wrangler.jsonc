@@ -38,6 +38,7 @@
     "OUTBOX_ALIAS": "{\"loggro_primer_contacto\":\"solicitud_loggro_en_proceso\",\"loggro_retomar\":\"loggro_retomar_v2\"}",      // p. ej. {"loggro_primer_contacto":"solicitud_loggro_en_proceso"} para cambiar de plantilla sin tocar la rutina
     "ALERT_OPEN_TEMPLATE": "alerta_nueva_solicitud",   // plantilla de utilidad aprobada: avisa a Damián cuando su ventana de 24 h está cerrada
     "ALERT_OPEN_TEXT": "on",                          // la plantilla lleva el resumen del aviso
+    "LOGGRO_OUTREACH": "off",  // "off": el servidor no le escribe a ningún lead de Loggro ni manda avisos de esa campaña. "on" la reactiva
     "RESCATE_ENVIOS": "off",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "AGENT_V2": "on",   // agente conversacional (chat como Damián); "off" vuelve al flujo de botones
     "BOOKING_URL_LOGGRO": "",

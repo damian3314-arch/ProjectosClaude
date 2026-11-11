@@ -9,7 +9,14 @@ Visitante ──► Página (public/) ──► Worker (src/worker.js)
                                      └─ Kapso: te avisa por WhatsApp (lead nuevo, sin contactar, resumen diario)
 ```
 
-Para publicar por primera vez: **`DEPLOY.md`**.
+Para publicar por primera vez: **`DEPLOY.md`**. Ojo: cada push a la rama `landing-personal` publica solo (Cloudflare Workers Builds).
+
+## Estado actual (noviembre 2026)
+
+- **Campaña de Loggro apagada** (`LOGGRO_OUTREACH = "off"` en `wrangler.jsonc`): el servidor no le escribe a ningún lead de Loggro, Alter no les responde y no salen reportes ni alarmas de esa campaña. Las peticiones de baja sí se registran. `"on"` la reactiva.
+- **Resumen diario al WhatsApp de trabajo**: una rutina lee HubSpot y deja el texto en `alert_queue` (`dest = 'brief'`); el Worker lo entrega. Ver `RUTINA-RESUMEN.md`.
+- **Páginas de entrada**: `/implementacion` (servicio de implementación y migración de sistemas, con su título, descripción y titular propios) y `/diagnostico`.
+- **Pendiente**: conectar en Kapso el número nuevo del asistente y cambiar `KAPSO_PHONE_NUMBER_ID` y `KAPSO_SENDER_NUMBER`; hoy el número conectado es el personal de Damián (coexistencia) y la página anuncia otra línea en "¿Esto es seguro?".
 
 ## Qué hace cada ruta
 

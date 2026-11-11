@@ -13,7 +13,7 @@
  */
 
 import { freeSlots } from './agenda.js';
-import { handleLoggroInbound, agentOn } from './loggro.js';
+import { handleLoggroInbound, agentOn, loggroOff } from './loggro.js';
 import { agentTurn, pauseForHuman } from './agent.js';
 
 const STALE_HOURS = 24;          // un formulario a medias se reinicia si pasaron más de 24 h
@@ -384,7 +384,7 @@ export async function nudgeIdle(env, h) {
       JOIN agent_log l ON l.id = (SELECT MAX(id) FROM agent_log WHERE chat_key = a.chat_key)
       WHERE l.role = 'assistant' AND a.stage = 'qualifying' AND a.hot = 0 AND a.paused_until IS NULL AND l.created_at > ? AND l.created_at <= ? LIMIT 50`).bind(since, firstBefore).all().catch(() => ({ results: [] }))).results || [];
   let sent = 0;
-  for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...(agentOn(env) ? [] : lg).map(x => ({ ...x, sid: `nudge:lg:${x.dest}` })), ...ag.map(x => ({ ...x, sid: `nudge:ag:${x.dest}` }))]) {
+  for (const r of [...ho.map(x => ({ ...x, sid: `nudge:wa:${x.dest}` })), ...(agentOn(env) || loggroOff(env) ? [] : lg).map(x => ({ ...x, sid: `nudge:lg:${x.dest}` })), ...ag.filter(x => !(loggroOff(env) && x.source === 'loggro')).map(x => ({ ...x, sid: `nudge:ag:${x.dest}` }))]) {
     const prev = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last FROM events WHERE session_id = ? AND type = 'nudge' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
     const n = prev?.n || 0;
     if (n >= 2) {
