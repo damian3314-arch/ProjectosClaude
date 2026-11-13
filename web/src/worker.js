@@ -564,13 +564,14 @@ function composeLeadMessage(lead, brief, header) {
   const link = (text) => `https://wa.me/${phone}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
   const build = ({ resumen, withOpening, textInLink }) => [
     `${header}: ${waSafe(lead.name, 60)} +${phone}`,
-    `${INTENT_NAMES[lead.intent] || 'Sin clasificar'} · ${LABELS.budget[lead.budget]} · ${LABELS.timing[lead.timing]} · ${LABELS.decider[lead.decider]}`,
+    // Un lead que dejó el formulario a medias puede no traer presupuesto, urgencia o quién decide: solo se muestra lo que hay
+    [INTENT_NAMES[lead.intent] || 'Sin clasificar', LABELS.budget[lead.budget], LABELS.timing[lead.timing], LABELS.decider[lead.decider]].filter(Boolean).join(' · '),
     resumen && `Resumen: ${resumen}`,
     brief.alertas?.length ? `Ojo: ${brief.alertas.slice(0, 3).map(a => waSafe(a, 80)).join('; ')}` : '',
     withOpening && `Apertura sugerida: ${apertura}`,
     `Escríbele: ${link(textInLink ? apertura : '')}`,
   ].filter(Boolean).join('\n');
-  const resumen = waSafe(brief.resumen, 300);
+  const resumen = waSafe(brief.resumen, 300).replace(/\.\s+\./g, '.'); // la plantilla a veces deja un ". ." al final
   const tries = [
     { resumen, withOpening: true, textInLink: true },
     { resumen, withOpening: false, textInLink: true },
