@@ -72,6 +72,7 @@ export default {
       return safe('bandeja', outboxSend(env)); // apagada con LOGGRO_OUTREACH = "off"
     }
     safe('ownerPush', ownerPush(env));
+    safe('radar', leadRadar(env)); // leads de la página sin contactar (no depende de la campaña de Loggro)
     if (loggroOff(env)) return; // sin campaña de Loggro no hay reportes, alarmas ni envíos de esa campaña
     const hour = new Date(Date.now() - BOGOTA_MS).getUTCHours();
     if (hour === 8) safe('resumen', morningBrief(env, agentHelpers()));
@@ -85,7 +86,7 @@ export default {
 async function route(request, env, ctx, url) {
     try {
       const path = url.pathname;
-      if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID) });
+      if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID), wa: /^\d{10,15}$/.test(String(env.ALTER_WHATSAPP || '')) ? String(env.ALTER_WHATSAPP) : null });
       if (request.method === 'POST' && path === '/api/chat') return await chat(request, env);
       if (request.method === 'POST' && path === '/api/agent') return await agentChat(request, env, ctx);
       if (request.method === 'POST' && path === '/api/transcribe') return await transcribe(request, env);
@@ -335,12 +336,15 @@ async function persistLead(env, ctx, lead, ipHash) {
 
   // Si llegan muchos leads de golpe (¿alguien automatizando?) se guardan igual, pero sin gastar IA ni avisar uno por uno:
   // el resumen de las 7 am y el panel los muestran.
-  // Solo los leads en caliente (prioridad A) avisan a Damián y gastan IA. B y C quedan guardados, con su resumen básico, para revisarlos en el panel o nutrirlos después.
+  // Todo lead real avisa a Damián (llegan pocos y cada uno es una persona que pidió hablar): el A con brief de IA, el B y el C con el resumen básico (sin gastar IA).
+  // Solo si entran más de LEADS_BURST en una hora (¿alguien automatizando?) se guardan sin aviso individual: los ve el radar de las 8 am y el panel.
   const burst = await env.DB.prepare("SELECT COUNT(*) AS n FROM leads WHERE created_at > datetime('now', '-1 hour')").first();
-  if (lead.tier !== 'A' || (burst?.n || 0) > LEADS_BURST) {
+  if ((burst?.n || 0) > LEADS_BURST) {
     ctx.waitUntil(env.DB.prepare('UPDATE leads SET brief = ?, brief_at = datetime(\'now\') WHERE id = ?').bind(JSON.stringify(fallbackBrief(lead)), lead.id).run().catch(() => {}));
-  } else {
+  } else if (lead.tier === 'A') {
     ctx.waitUntil(prepareAndNotify(env, lead).catch(err => console.error('prepareAndNotify', err?.message || 'desconocido')));
+  } else {
+    ctx.waitUntil(notifyBasic(env, lead).catch(err => console.error('notifyBasic', err?.message || 'desconocido')));
   }
   if (env.AUTO_CONTACT_LEADS === 'true' && lead.tier === 'A') ctx.waitUntil(contactLead(env, lead).catch(err => console.error('contactLead', err?.message || 'desconocido')));
 }
@@ -360,8 +364,15 @@ async function prepareAndNotify(env, lead) {
   await notifyOwner(env, lead, brief);
 }
 
+// Lead B o C: resumen de plantilla (sin IA) guardado y aviso igual de completo.
+async function notifyBasic(env, lead) {
+  const brief = fallbackBrief(lead);
+  await env.DB.prepare("UPDATE leads SET brief = ?, brief_at = datetime('now') WHERE id = ?").bind(JSON.stringify(brief), lead.id).run().catch(err => console.error('guardar brief', err?.message));
+  await notifyOwner(env, lead, brief);
+}
+
 /* ---------- /api/event (embudo, público) ---------- */
-const EVENT_TYPES = ['visit', 'start', 'intent', 'q_budget', 'q_timing', 'q_decider', 'contact_form', 'lead', 'mic_tap', 'audio_sent', 'chat_open'];
+const EVENT_TYPES = ['visit', 'start', 'intent', 'q_budget', 'q_timing', 'q_decider', 'contact_form', 'lead', 'mic_tap', 'audio_sent', 'chat_open', 'wa_click'];
 
 // Nunca falla ruidosamente: lo inválido se ignora y siempre responde 204.
 async function trackEvent(request, env) {
@@ -505,13 +516,37 @@ async function ownerPush(env) {
   }
 }
 
+/* ---------- Radar de leads de la página ----------
+ * Cada día a las 8 am (Bogotá, lunes a sábado): si hay leads de la página en estado "nuevo" (nadie los marcó como contactados) de hace más de 12 horas,
+ * un solo mensaje a Damián con quiénes son y el link para escribirles. Se repite cada día hasta que los marque en /admin; los de más de 14 días ya no se listan.
+ */
+export async function leadRadar(env) {
+  const bogota = new Date(Date.now() - BOGOTA_MS);
+  if (bogota.getUTCHours() !== 8 || bogota.getUTCDay() === 0) return { sent: 0 };
+  const dayStart = `${bogota.toISOString().slice(0, 10)} 05:00:00`;
+  if (await env.DB.prepare("SELECT 1 FROM events WHERE session_id = 'radar' AND type = 'lead_radar' AND created_at >= ?").bind(dayStart).first()) return { sent: 0 };
+  const { results } = await env.DB.prepare(`SELECT name, phone, intent, tier, created_at FROM leads
+      WHERE status = 'nuevo' AND created_at < datetime('now', '-12 hours') AND created_at > datetime('now', '-14 days')
+      ORDER BY tier, created_at LIMIT 6`).all();
+  if (!results?.length) return { sent: 0 };
+  const lines = results.map(r => {
+    const days = Math.max(1, Math.round((Date.now() - Date.parse(String(r.created_at).replace(' ', 'T') + 'Z')) / 86400e3));
+    const phone = String(r.phone).replace(/\D/g, '');
+    return `• ${waSafe(r.name, 40)} · ${INTENT_NAMES[r.intent] || 'Sin clasificar'} · ${r.tier} · hace ${days} d · https://wa.me/${phone}`;
+  });
+  const text = [`📬 ${results.length === 1 ? '1 lead de tu página sin contactar' : `${results.length} leads de tu página sin contactar`}:`, ...lines, 'Cuando les escribas, márcalos como contactados en holadami.com/admin y dejo de avisarte.'].join('\n').slice(0, 1000);
+  const ok = await alertMessage(env, text);
+  if (ok) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('radar', 'lead_radar')").run().catch(() => {});
+  return { sent: ok ? 1 : 0 };
+}
+
 /* ---------- WhatsApp vía Kapso ---------- */
 const TIER_ICON = { A: '🔥', B: '⭐', C: '🌱' };
 
 // Aviso de lead nuevo: prioridad, quién es, resumen y la apertura lista para copiar + link directo a WhatsApp.
 async function notifyOwner(env, lead, brief) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return;
-  const ok = await ownerMessage(env, composeLeadMessage(lead, brief, `${TIER_ICON[lead.tier]} Lead ${lead.tier} (${lead.points}/27)`));
+  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return;
+  const ok = await alertMessage(env, composeLeadMessage(lead, brief, `${TIER_ICON[lead.tier]} Lead ${lead.tier} (${lead.points}/27)`));
   if (ok) await env.DB.prepare("UPDATE leads SET notified_at = datetime('now') WHERE id = ?").bind(lead.id).run();
 }
 

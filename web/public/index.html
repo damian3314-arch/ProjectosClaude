@@ -253,6 +253,7 @@ body.chat-on .aura i{animation-duration:9s}
 
 .progress.on{display:block}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .5s,background .5s}
+.wa-alt{display:flex;justify-content:center;margin-top:16px}
 .scroll-hint{display:flex;justify-content:center;align-items:center;min-height:44px;margin-top:18px;color:var(--muted);font-size:14px}
 
 .cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:999px;padding:0 20px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--f-body);cursor:pointer;text-decoration:none;transition:background .5s,transform .15s}
@@ -377,6 +378,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
     </div>
     <ul class="facts"><li>Diagnóstico inicial sin costo</li><li>Te contacto yo, por WhatsApp</li><li>Tus datos solo para contactarte</li></ul>
     <p class="safe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Espacio seguro · conexión cifrada</span></p>
+    <p class="wa-alt" id="waAlt" hidden><a class="cta ghost" id="waCta" href="#" target="_blank" rel="noopener">Prefiero escribir por WhatsApp</a></p>
     <a class="scroll-hint" href="#soluciones">Mira lo que resuelvo ↓</a>
   </div>
 </section>
@@ -444,7 +446,7 @@ footer a{display:inline-flex;align-items:center;min-height:44px}
     <h2 data-fill>Lo que quizá te estás <em>preguntando</em>.</h2>
     <details data-rv="0">
       <summary>¿Esto es seguro? ¿De verdad eres tú?</summary>
-      <p>Sí. Soy Damián Barragán, una persona real: mi perfil, mi trayectoria y mis recomendaciones están en <a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a>. Esta página es mía y la línea de WhatsApp de HolaDami es la <b>+57 311 495 4430</b>.</p>
+      <p>Sí. Soy Damián Barragán, una persona real: mi perfil, mi trayectoria y mis recomendaciones están en <a href="https://www.linkedin.com/in/soydamianbarragan" target="_blank" rel="noopener">LinkedIn</a>. Esta página es mía.<span id="faqWa"></span></p>
       <p><b>Nunca te voy a pedir</b> contraseñas, el código de verificación de WhatsApp, claves del banco ni que me pagues por aquí. Si alguien te pide algo de eso diciendo que soy yo, no soy yo: no lo envíes y avísame.</p>
     </details>
     <details data-rv="0">
@@ -592,11 +594,11 @@ darkMQ.addEventListener && darkMQ.addEventListener('change', paintTheme);
 paintTheme();
 
 /* ===== BACKEND (Cloudflare Worker). Si no responde, la página funciona sola en modo demo. ===== */
-const API = { online:false };
+const API = { online:false, wa:null };
 const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2);
 const healthReady = (async () => {
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 2500);
-  try { const r = await fetch('/api/health', {signal: ctl.signal}); API.online = r.ok; } catch {}
+  try { const r = await fetch('/api/health', {signal: ctl.signal}); API.online = r.ok; if (r.ok) { const j = await r.json().catch(() => ({})); if (/^\d{10,15}$/.test(j.wa || '')) API.wa = j.wa; } } catch {}
   clearTimeout(to);
 })();
 async function api(path, body, isForm){
@@ -629,6 +631,15 @@ function attribution(){
   try { if (document.referrer){ const h = new URL(document.referrer).hostname; if (h && h !== location.hostname) u.referrer = h.slice(0, 100); } } catch {}
   return u;
 }
+/* Botón de WhatsApp y número en las dudas: solo aparecen cuando el servidor dice cuál es la línea de Alter (ALTER_WHATSAPP) */
+healthReady.then(() => {
+  if (!API.wa) return;
+  const n = API.wa, pretty = '+' + n.slice(0, 2) + ' ' + n.slice(2, 5) + ' ' + n.slice(5, 8) + ' ' + n.slice(8);
+  $('#waCta').href = 'https://wa.me/' + n + '?text=' + encodeURIComponent('Hola, vi tu página holadami.com y quiero contarte qué me está quitando tiempo en mi negocio.');
+  $('#waCta').onclick = () => track('wa_click');
+  $('#waAlt').hidden = false;
+  const f = $('#faqWa'); if (f) f.innerHTML = ' y la línea de WhatsApp de HolaDami es la <b>' + pretty + '</b>';
+});
 healthReady.then(() => { const utm = attribution(); track('visit', Object.keys(utm).length ? {utm} : {}); });
 
 /* ===== PESTAÑAS + PANEL ===== */

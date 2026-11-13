@@ -16,7 +16,13 @@ Para publicar por primera vez: **`DEPLOY.md`**. Ojo: cada push a la rama `landin
 - **Campaña de Loggro apagada** (`LOGGRO_OUTREACH = "off"` en `wrangler.jsonc`): el servidor no le escribe a ningún lead de Loggro, Alter no les responde y no salen reportes ni alarmas de esa campaña. Las peticiones de baja sí se registran. `"on"` la reactiva.
 - **Resumen diario al WhatsApp de trabajo**: una rutina lee HubSpot y deja el texto en `alert_queue` (`dest = 'brief'`); el Worker lo entrega. Ver `RUTINA-RESUMEN.md`.
 - **Páginas de entrada**: `/implementacion` (servicio de implementación y migración de sistemas, con su título, descripción y titular propios) y `/diagnostico`.
-- **Pendiente**: conectar en Kapso el número nuevo del asistente y cambiar `KAPSO_PHONE_NUMBER_ID` y `KAPSO_SENDER_NUMBER`; hoy el número conectado es el personal de Damián (coexistencia) y la página anuncia otra línea en "¿Esto es seguro?".
+- **Avisos de leads de la página**: todo lead (A, B o C) te avisa al momento al WhatsApp de trabajo (`LOGGRO_ALERT_WHATSAPP`); el B y el C con resumen básico, sin gastar IA. Además, cada día a las 8 am (lunes a sábado) un **radar** te lista los leads en estado `nuevo` de hace más de 12 horas, hasta que los marques como contactados en `/admin`.
+- **Cambio de número de Alter** (pendiente: el número nuevo). Cuando esté listo:
+  1. En Kapso, conectar el número nuevo **al mismo WABA** (así reutiliza las plantillas aprobadas: `aviso_lead`, `alerta_nueva_solicitud`, etc.).
+  2. Crear en Kapso el webhook del número nuevo → `https://holadami.com/api/whatsapp`, eventos `whatsapp.message.received` y `whatsapp.message.sent`, con el mismo secreto que ya tiene `KAPSO_WEBHOOK_SECRET`. El webhook actual está atado al número personal.
+  3. En `wrangler.jsonc`: `KAPSO_PHONE_NUMBER_ID` y `KAPSO_SENDER_NUMBER` = los del número nuevo; `ALTER_WHATSAPP` = el número nuevo (solo dígitos, con 57); `AGENT_ALLOWLIST` = `"off"` (con una línea propia, Alter atiende a cualquiera que escriba, no solo a quien diga "holadami").
+  4. Publicar. La página muestra sola el botón "Prefiero escribir por WhatsApp" y el número en "¿Esto es seguro?". Escribe tú al número una vez para abrir la ventana de 24 h y revisa que llegue un aviso al trabajo.
+  5. Con la línea nueva funcionando, desconectar la coexistencia del número personal en Kapso.
 
 ## Qué hace cada ruta
 
