@@ -1079,6 +1079,11 @@ const CONFIG = {
   .mini-t{margin:.75rem 0 .8rem;font-size:1.5rem;line-height:1.05;font-weight:800;letter-spacing:-.04em;color:#fff;text-wrap:balance}
   .mini-t .g{background:linear-gradient(100deg,#ffc14d,#ff6b35 45%,#ff2e8f);-webkit-background-clip:text;background-clip:text;color:transparent}
   .mini-hero .eq{height:1.8rem;margin:0}
+  a.mini-hero{display:block;text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;transition:transform .15s ease,border-color .2s}
+  a.mini-hero:active{transform:scale(.985)}
+  a.mini-hero:focus-visible{outline:2px solid #ff6fb1;outline-offset:3px}
+  .mini-ir{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.14);font-size:.88rem;font-weight:700;color:#ffb3d3}
+  .mini-ir b{font-size:1.1rem;color:#fff}
 </style>
 <script>
 /* Navidad 2026: la capa navideña se enciende sola del 1 de noviembre al 6 de enero (hora de Bogotá). ?navidad=1 la fuerza, ?navidad=0 la quita. */
@@ -1145,11 +1150,13 @@ const CONFIG = {
 
   <!-- ═══════ 0 · ¿Cómo vienes? ═══════ -->
   <section id="s0" class="on" aria-labelledby="t0">
-    <div class="mini-hero" id="mini-hero">
+    <!-- 13 nov (Damián): tocar las barritas lleva a la página que convence de llegar a 2027 con el hábito hecho. -->
+    <a class="mini-hero" id="mini-hero" href="2027.html" aria-label="Tu clase de hoy es el primer paso de tu 2027. Toca para ver cómo llegar con el hábito hecho">
       <span class="hero-chip"><span class="vivo"></span><span id="hero-cuenta">2027 está cerca</span></span>
       <p class="mini-t">Tu clase de hoy es el primer paso de tu <span class="g">2027</span>.</p>
       <div class="eq" id="eq" aria-hidden="true"></div>
-    </div>
+      <span class="mini-ir">Mira cómo llegar con el hábito hecho <b aria-hidden="true">→</b></span>
+    </a>
     <h2 id="t0">¿Cómo vienes?</h2>
     <p class="sub">De esto depende si te pedimos el soporte de pago.</p>
     <div class="opciones">

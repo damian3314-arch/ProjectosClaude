@@ -1004,22 +1004,12 @@ const CONFIG = {
      demás —cómo se reserva, cuánto dura, cómo se paga— va en las
      preguntas frecuentes, al final. Dos o tres pantallazos y listo. -->
 <section id="eleccion">
-  <!-- 29 oct (Damián): el bot manda a las alumnas a esta página y se quedaban perdidas. Quien YA es alumna o está
-       renovando entra por aquí: solo nombre y celular, y directo al pago. -->
-  <section class="hero" id="hero" aria-labelledby="hero-t">
-    <span class="hero-chip"><span class="vivo"></span><span id="hero-cuenta">2027 está cerca</span></span>
-    <h2 class="hero-t" id="hero-t">Este año, <span class="g">no empieces en enero.</span></h2>
-    <p class="hero-p">Cada 1 de enero prometes moverte… y en febrero ya lo dejaste. Esta vez llega a 2027 con el hábito <b>ya hecho</b>: empieza hoy, bailando.</p>
-    <div class="eq" id="eq" aria-hidden="true"></div>
-    <a class="btn hero-cta" href="#cta-pase" id="hero-ir">Quiero empezar hoy</a>
-    <p class="hero-nota">Horario fijo · todo el mes · cupos limitados por horario</p>
-  </section>
-  <div class="ticker" aria-hidden="true"><span>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b></span><span>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b>SUDA<b>✦</b>BAILA<b>✦</b>SANA<b>✦</b>REPITE<b>✦</b></span></div>
+  <!-- 13 nov (Damián): esta página abre directo en elegir pase. La persuasión del 2027 vive en /2027. -->
   <div class="renovar-caja" id="renovar-caja">
     <div><b>¿Ya bailas con Tumbao?</b><span>Si estás renovando tu plan, entra por aquí: más rápido.</span></div>
     <button type="button" id="btn-renovar">Renovar mi mensualidad</button>
   </div>
-  <h2 class="el-titulo">Elige tu pase</h2>
+  <h2 class="el-titulo" id="el-titulo">Elige tu pase</h2>
   <p class="sub el-sub">Desliza para ver las opciones.</p>
   <p class="campana-chip" id="campana" hidden></p>
   <div class="pases" id="tarjetas-eleccion" role="listbox" aria-label="Pases de Tumbao">
@@ -1038,26 +1028,6 @@ const CONFIG = {
     <h3>Regala movimiento esta Navidad</h3>
     <p>Compra una tiquetera de 4 u 8 clases para esa persona que quiere moverse más. Tú pagas y le mandas el código por WhatsApp: ella o él reserva cuando quiera, durante 30 días.</p>
     <button class="btn" type="button" id="btn-regalo">Regalar una tiquetera</button>
-  </section>
-  <section class="dolor rv" id="dolor">
-    <p class="sec-k">Sabemos cómo te ha ido</p>
-    <h2 class="sec-t">Lo has intentado. Esta vez cambia el plan.</h2>
-    <div class="dolor-lista">
-      <div class="dolor-card"><p class="yo">«Me inscribí con toda y a las 3 semanas ya no iba.»</p><p class="tu">Aquí no es una rutina: es <span>una rumba</span>. La hora se pasa volando y quieres volver.</p></div>
-      <div class="dolor-card"><p class="yo">«No tengo tiempo para organizarme.»</p><p class="tu">Horario fijo —7 am, 6 pm o 7 pm—. <span>Llegas y entras</span>, sin reservar ni pensar.</p></div>
-      <div class="dolor-card"><p class="yo">«Llego con la cabeza llena de estrés (y de pena).»</p><p class="tu">Baila pa' sanar: <span>sales con la cabeza liviana</span>. Y si nunca has bailado, aquí se empieza desde cero.</p></div>
-    </div>
-  </section>
-  <section class="ruta rv" id="ruta">
-    <p class="sec-k">Tu ruta a 2027</p>
-    <h2 class="sec-t">Llega a enero sin empezar de cero.</h2>
-    <ol class="ruta-lista">
-      <li><b>Hoy</b><span>Das el primer paso: tu cupo y tu horario quedan guardados.</span></li>
-      <li><b>Las primeras semanas</b><span>Dejas de obligarte: ir se vuelve costumbre.</span></li>
-      <li><b>Diciembre</b><span>Llegas a las fiestas con energía, no con culpa.</span></li>
-      <li><b>1 de enero de 2027</b><span>Mientras todos empiezan, tú ya llevas el hábito.</span></li>
-    </ol>
-    <div class="cuenta"><div class="n" id="cuenta-n">—</div><p id="cuenta-t">días para 2027</p></div>
   </section>
   <div class="faq" id="faq"></div>
 
@@ -2369,8 +2339,8 @@ const CONFIG = {
   if('IntersectionObserver' in window){
     var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
     document.querySelectorAll('.rv').forEach(function(el){io.observe(el)});
-    var barra=$('#barra-compra'),hero=$('#hero'),cta=$('#cta-pase'),elec=$('#eleccion');
-    var vHero=true,vCta=false;
+    var barra=$('#barra-compra'),hero=$('#el-titulo'),cta=$('#cta-pase'),elec=$('#eleccion');
+    var vHero=true,vCta=false; /* vHero: el título «Elige tu pase» a la vista = aún no hace falta la barra */
     var pinta=function(){var ver=!vHero&&!vCta&&elec&&!elec.hidden;barra.classList.toggle('on',ver);barra.setAttribute('aria-hidden',ver?'false':'true');};
     new IntersectionObserver(function(es){vHero=es[0].isIntersecting;pinta();}).observe(hero);
     new IntersectionObserver(function(es){vCta=es[0].isIntersecting;pinta();}).observe(cta);

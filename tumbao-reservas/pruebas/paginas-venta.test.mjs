@@ -68,5 +68,18 @@ titulo('4. Nada suena a descuento');
   ok('el texto nuevo no dice descuento, regalo, promoción, oferta ni «gratis»', !/descuento|regalo|promoci|oferta|gratis|últimos? cupos?/i.test(nuevo), nuevo.slice(0, 90));
 }
 
+titulo('5. Página del 2027 y /mensualidad directo a elegir pase');
+{
+  const p27 = readFileSync(new URL('../../docs/2027.html', import.meta.url), 'utf8');
+  ok('las barritas del inicio son un enlace a la página del 2027', /<a class="mini-hero"[^>]*href="2027\.html"/.test(idx) && /id="eq"/.test(idx));
+  ok('la franja de arriba sigue llevando a /mensualidad', /class="franja-promo" href="mensualidad\.html"/.test(idx));
+  ok('/mensualidad ya no abre con la cabecera del 2027, el ticker, «dolor» ni «ruta»', !/id="hero"|class="ticker"|id="dolor"|id="ruta"/.test(men));
+  ok('/mensualidad abre directo en elegir pase', men.indexOf('id="el-titulo"') > 0 && men.indexOf('id="tarjetas-eleccion"') > men.indexOf('id="el-titulo"'));
+  ok('la página del 2027 lleva a /mensualidad y muestra mensualidad y tiquetera de 8', (p27.match(/href="mensualidad\.html"/g) || []).length >= 3 && /TIQUETERA/.test(p27) && /MENSUALIDAD/.test(p27));
+  ok('la página del 2027 usa los cupos y precios reales de la API', /tumbao\/mensualidad/.test(p27) && /tiquetera/.test(p27) && /libres/.test(p27));
+  ok('la página del 2027 no promete descuentos, regalos ni premios', !/descuento|obsequio|regalo|gratis|gana un premio|recompensa/i.test(p27));
+  ok('la página del 2027 dice que no hay clases domingos ni festivos', /domingos y festivos/i.test(p27));
+}
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
 process.exit(fallos ? 1 : 0);
