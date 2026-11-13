@@ -18,6 +18,7 @@
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
 import { waOn, waSend, waVerify } from './wa.js';
+import { weeklyPlan } from './owner.js';
 import { webTurn, webContact } from './agent.js';
 import { sendHotAlert, dailyReport, morningBrief, reminderGuard, rescueSend, outboxSend, loggroOff, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
@@ -73,6 +74,7 @@ export default {
       return safe('bandeja', outboxSend(env)); // apagada con LOGGRO_OUTREACH = "off"
     }
     safe('ownerPush', ownerPush(env));
+    safe('plan', weeklyPlan(env, agentHelpers())); // lunes 8 am: plan semanal de Alter para Damián
     safe('radar', leadRadar(env)); // leads de la página sin contactar (no depende de la campaña de Loggro)
     if (loggroOff(env)) return; // sin campaña de Loggro no hay reportes, alarmas ni envíos de esa campaña
     const hour = new Date(Date.now() - BOGOTA_MS).getUTCHours();

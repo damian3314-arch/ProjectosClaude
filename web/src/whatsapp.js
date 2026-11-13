@@ -14,6 +14,7 @@
 
 import { freeSlots } from './agenda.js';
 import { waOn, waItems, waTranscribe } from './wa.js';
+import { ownerAssist } from './owner.js';
 import { handleLoggroInbound, agentOn, loggroOff } from './loggro.js';
 import { agentTurn, pauseForHuman } from './agent.js';
 
@@ -146,7 +147,10 @@ async function handleInbound(env, ctx, h, payload) {
   if ((ownerPhone && inb.from === ownerPhone) || (workPhone && inb.from === workPhone) || (env.OWNER_BSUID && inb.userId === String(env.OWNER_BSUID).trim())) {
     // Damián escribió (por ejemplo tocó "Ver avisos"): la ventana de 24 h queda abierta, se le entregan los avisos que estaban esperando y el agente calla
     await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('owner', 'owner_inbound')").run().catch(() => {});
-    return flushAlerts(env, h, [inb.from, inb.userId].filter(Boolean));
+    await flushAlerts(env, h, [inb.from, inb.userId].filter(Boolean)).catch(err => console.error('avisos', err?.message || 'desconocido'));
+    // Alter le contesta a su dueño: cómo va la página, leads pendientes y propuestas para conseguir clientes
+    if (inb.text) await ownerAssist(env, h, inb).catch(err => console.error('dueño', err?.message || 'desconocido'));
+    return;
   }
 
   // Si es un lead de Loggro al que Damián le escribió el primer mensaje, lo atiende el flujo de Loggro, nunca el de HolaDami
