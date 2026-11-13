@@ -4,7 +4,7 @@
  *   GET   /api/health      → estado
  *   POST  /api/chat        → la IA (OpenAI) entiende el problema y responde
  *   POST  /api/transcribe  → nota de voz → texto (OpenAI)
- *   POST  /api/lead        → guarda el lead, calcula prioridad, prepara el brief y avisa a Damián por WhatsApp (Kapso)
+ *   POST  /api/lead        → guarda el lead, calcula prioridad, prepara el brief y avisa a Damián por WhatsApp (WhatsApp)
  *   POST  /api/event       → eventos del embudo (visita, preguntas, formulario); responde siempre 204
  *   GET   /api/leads       → lista de leads con su brief (requiere ADMIN_TOKEN)
  *   PATCH /api/leads/:id   → estado y nota del lead (requiere ADMIN_TOKEN)
@@ -17,6 +17,7 @@
 
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
+import { waOn, waSend, waVerify } from './wa.js';
 import { webTurn, webContact } from './agent.js';
 import { sendHotAlert, dailyReport, morningBrief, reminderGuard, rescueSend, outboxSend, loggroOff, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
 
@@ -86,11 +87,12 @@ export default {
 async function route(request, env, ctx, url) {
     try {
       const path = url.pathname;
-      if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: !!(env.KAPSO_API_KEY && env.KAPSO_PHONE_NUMBER_ID), wa: /^\d{10,15}$/.test(String(env.ALTER_WHATSAPP || '')) ? String(env.ALTER_WHATSAPP) : null });
+      if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: waOn(env), wa: /^\d{10,15}$/.test(String(env.ALTER_WHATSAPP || '')) ? String(env.ALTER_WHATSAPP) : null });
       if (request.method === 'POST' && path === '/api/chat') return await chat(request, env);
       if (request.method === 'POST' && path === '/api/agent') return await agentChat(request, env, ctx);
       if (request.method === 'POST' && path === '/api/transcribe') return await transcribe(request, env);
       if (request.method === 'POST' && path === '/api/lead') return await createLead(request, env, ctx);
+      if (request.method === 'GET' && path === '/api/whatsapp') return waVerify(request, env);
       if (request.method === 'POST' && path === '/api/whatsapp') return await handleWhatsAppWebhook(request, env, ctx, agentHelpers());
       if (request.method === 'POST' && path === '/api/event') return await trackEvent(request, env);
       if (request.method === 'GET' && path === '/api/leads') return await listLeads(request, env);
@@ -540,12 +542,12 @@ export async function leadRadar(env) {
   return { sent: ok ? 1 : 0 };
 }
 
-/* ---------- WhatsApp vía Kapso ---------- */
+/* ---------- WhatsApp vía WhatsApp ---------- */
 const TIER_ICON = { A: '🔥', B: '⭐', C: '🌱' };
 
 // Aviso de lead nuevo: prioridad, quién es, resumen y la apertura lista para copiar + link directo a WhatsApp.
 async function notifyOwner(env, lead, brief) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return;
+  if (!waOn(env)) return;
   const ok = await alertMessage(env, composeLeadMessage(lead, brief, `${TIER_ICON[lead.tier]} Lead ${lead.tier} (${lead.points}/27)`));
   if (ok) await env.DB.prepare("UPDATE leads SET notified_at = datetime('now') WHERE id = ?").bind(lead.id).run();
 }
@@ -580,12 +582,12 @@ function composeLeadMessage(lead, brief, header) {
 // Texto libre solo funciona dentro de las 24 h desde que Damián le escribió al número; fuera de eso, plantilla aprobada.
 async function ownerMessage(env, text) {
   const tg = await telegram(env, text);
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return tg;
+  if (!waOn(env) || !(env.OWNER_BSUID || env.OWNER_WHATSAPP)) return tg;
   // WhatsApp ya puede identificar a Damián solo por un ID de usuario (BSUID, sin teléfono): la ventana de 24 h queda abierta para ese ID,
   // no para el número. Si OWNER_BSUID existe se escribe a ese ID; si no, al teléfono.
   const dest = env.OWNER_BSUID ? { recipient: String(env.OWNER_BSUID).trim() } : { to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') };
   if (dest.to && dest.to === selfNumber(env)) return tg; // WhatsApp no deja que un número se escriba a sí mismo
-  // Kapso acepta el texto libre aunque la ventana de 24 h esté cerrada y el fallo (131047) llega después: por eso la ventana se lleva a mano
+  // WhatsApp acepta el texto libre aunque la ventana de 24 h esté cerrada y el fallo (131047) llega después: por eso la ventana se lleva a mano
   // (cada mensaje de Damián al número la abre). Abierta → texto libre; cerrada → plantilla de utilidad con el resumen + el texto completo en la cola.
   if (await ownerWindowOpen(env) && await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: text, preview_url: false } })) return true;
   return (await queueAlert(env, dest, text)) || tg;
@@ -603,7 +605,7 @@ async function queueAlert(env, dest, text) {
     const recent = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'alert_open' AND created_at > datetime('now', '-20 hours')").bind(`alert:${key}`.slice(0, 64)).first();
     if (recent) return true; // ya se le avisó que hay avisos pendientes; los verá al responder
   }
-  const tpl = { name: env.ALERT_OPEN_TEMPLATE || 'avisos_pendientes', language: { code: env.KAPSO_TEMPLATE_LANG || 'es' } };
+  const tpl = { name: env.ALERT_OPEN_TEMPLATE || 'avisos_pendientes', language: { code: env.WA_TEMPLATE_LANG || 'es' } };
   if (withText) tpl.components = [{ type: 'body', parameters: [{ type: 'text', text: text.replace(/\s*\n\s*/g, ' · ').replace(/https?:\/\/\S+/g, '').slice(0, 220) }] }];
   const sent = await sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'template', template: tpl });
   if (sent) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'alert_open')").bind(`alert:${key}`.slice(0, 64)).run().catch(() => {});
@@ -616,7 +618,7 @@ async function ownerWindowOpen(env) {
   return !!r;
 }
 
-const selfNumber = env => String(env.KAPSO_SENDER_NUMBER || '').replace(/\D/g, '');
+const selfNumber = env => String(env.WA_SENDER_NUMBER || '').replace(/\D/g, '');
 
 // Canal de avisos que no depende de WhatsApp: un bot de Telegram propio (TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID como secretos)
 async function telegram(env, text) {
@@ -635,7 +637,7 @@ async function telegram(env, text) {
 // Con plantilla aprobada llega siempre; si no hay plantilla o falla, se intenta como texto libre (sirve con la ventana de 24 h abierta).
 async function alertMessage(env, text, templateName) {
   const tg = await telegram(env, text);
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return tg;
+  if (!waOn(env)) return tg;
   // Los avisos de Loggro van a UN solo destino: el número de trabajo (si existe). El BSUID del dueño y ese número son la misma persona: antes llegaba (o fallaba) dos veces.
   const dests = [];
   const work = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
@@ -672,9 +674,9 @@ const waSafeBrief = t => String(t || '').replace(/[\u0000-\u0009\u000B-\u001F]/g
 
 // Mensaje a un cliente real: apagado por defecto (AUTO_CONTACT_LEADS = "false").
 async function contactLead(env, lead) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID || !env.KAPSO_LEAD_TEMPLATE) return;
+  if (!waOn(env) || !env.WA_LEAD_TEMPLATE) return;
   const first = waSafe(lead.name, 40).split(' ')[0];
-  await sendWhatsApp(env, template({ to: lead.phone }, env.KAPSO_LEAD_TEMPLATE, env.KAPSO_TEMPLATE_LANG, [first, INTENT_NAMES[lead.intent] || 'tu negocio']));
+  await sendWhatsApp(env, template({ to: lead.phone }, env.WA_LEAD_TEMPLATE, env.WA_TEMPLATE_LANG, [first, INTENT_NAMES[lead.intent] || 'tu negocio']));
 }
 
 function template(dest, name, lang, params) {
@@ -687,22 +689,7 @@ function template(dest, name, lang, params) {
   };
 }
 
-async function sendWhatsApp(env, payload) {
-  try {
-    const res = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/messages`, {
-      method: 'POST',
-      headers: { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) {
-      // Solo el código y el motivo del error, con los números enmascarados: el envío y el resto de la respuesta traen teléfonos y texto del lead
-      const raw = await res.text().catch(() => '');
-      console.error('Kapso', res.status, raw.replace(/\d{5,}/g, '#').slice(0, 300));
-    }
-    return res.ok;
-  } catch (err) { console.error('Kapso', err?.name || 'error'); return false; } // un fallo de red no debe tumbar el resto del cron
-}
+const sendWhatsApp = async (env, payload) => (await waSend(env, payload)).ok;
 
 /* ---------- utilidades ---------- */
 function json(data, status = 200) {

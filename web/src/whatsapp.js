@@ -1,18 +1,19 @@
 /**
  * Agente de WhatsApp de HolaDami.
  *
- * Kapso entrega cada mensaje que llega al número (POST /api/whatsapp). El agente hace el mismo formulario que la página:
+ * WhatsApp entrega cada mensaje que llega al número (POST /api/whatsapp). El agente hace el mismo formulario que la página:
  * cuenta el problema → 3 preguntas con botones → lead. Guarda en la misma tabla `leads`, con la misma prioridad y el mismo
  * aviso a Damián; los de prioridad C solo quedan guardados.
  *
  * Reglas que no se negocian:
  *  - La firma del webhook se verifica antes de tocar nada.
  *  - Damián (OWNER_WHATSAPP / OWNER_BSUID) nunca entra al formulario: si él escribe, el agente calla.
- *  - Cuando el lead termina (estado "done"), el agente calla: la conversación sigue a mano, desde Kapso o desde la app.
+ *  - Cuando el lead termina (estado "done"), el agente calla: la conversación sigue a mano, desde tu WhatsApp o desde la app.
  *  - Lo que escribe la persona es DATO: nunca se ejecuta ni se reenvía a otra persona.
  */
 
 import { freeSlots } from './agenda.js';
+import { waOn, waItems, waTranscribe } from './wa.js';
 import { handleLoggroInbound, agentOn, loggroOff } from './loggro.js';
 import { agentTurn, pauseForHuman } from './agent.js';
 
@@ -48,54 +49,30 @@ const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero
 const GREETING_RE = /^\s*(hola|holi|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|hi|hello|buen d[ií]a|informaci[oó]n|info)\b[\s,.!¡?¿a-záéíóúñ]{0,25}$/i;
 
 export async function handleWhatsAppWebhook(request, env, ctx, h) {
-  // Sin el secreto de firma no se procesa nada: cualquiera podría escribirle al agente haciéndose pasar por Kapso
-  if (!env.KAPSO_WEBHOOK_SECRET) return new Response('Webhook no configurado', { status: 503 });
+  // Sin el secreto de la app no se procesa nada: cualquiera podría escribirle al agente haciéndose pasar por Meta
+  if (!env.WA_APP_SECRET) return new Response('Webhook no configurado', { status: 503 });
   const raw = await h.readText(request, 512 * 1024);
   if (raw == null) return new Response('Muy grande', { status: 413 });
-  // El secreto se pega a mano en dos paneles: un espacio o salto de línea de más no debe tumbar el agente
-  const signature = (request.headers.get('x-webhook-signature') || '').trim().replace(/^sha256=/i, '');
-  if (!(await validSignature(String(env.KAPSO_WEBHOOK_SECRET).trim(), raw, signature))) {
+  // El secreto se pega a mano: un espacio o salto de línea de más no debe tumbar el agente
+  const signature = (request.headers.get('x-hub-signature-256') || '').trim().replace(/^sha256=/i, '');
+  if (!(await validSignature(String(env.WA_APP_SECRET).trim(), raw, signature))) {
     console.error('webhook: firma inválida', signature ? `(llegó una firma de ${signature.length} caracteres)` : '(no llegó firma)');
     return new Response('Firma inválida', { status: 401 });
   }
-  const event = request.headers.get('x-webhook-event');
-  if (event !== 'whatsapp.message.received' && event !== 'whatsapp.message.sent') return new Response('OK');
-
   let body;
   try { body = JSON.parse(raw); } catch { return new Response('OK'); }
-  if (event === 'whatsapp.message.sent') {
-    // Si Damián escribe a mano (desde la bandeja o el celular), el agente calla 24 h en esa conversación
-    ctx.waitUntil(onSent(env, body).catch(err => console.error('sent', err?.message || 'desconocido')));
-    return new Response('OK');
-  }
-  const items = body?.batch === true && Array.isArray(body.data) ? body.data : [body];
-  // Se responde de una vez (Kapso espera 200 en menos de 10 s); el agente trabaja en segundo plano
+  const items = waItems(body); // los avisos de estado (entregado, leído) no traen mensajes y se ignoran
+  if (!items.length) return new Response('OK');
+  // Se responde de una vez (Meta espera 200 pronto); el agente trabaja en segundo plano
   ctx.waitUntil((async () => {
     for (const payload of items) {
-      try { await handleInbound(env, ctx, h, payload); } catch (err) { console.error('agente', err?.message || 'desconocido'); }
+      try {
+        if (payload.message?.type === 'audio') payload.message.transcript = await waTranscribe(env, payload.message.audio?.id);
+        await handleInbound(env, ctx, h, payload);
+      } catch (err) { console.error('agente', err?.message || 'desconocido'); }
     }
   })());
   return new Response('OK');
-}
-
-async function onSent(env, body) {
-  for (const p of body?.batch === true && Array.isArray(body.data) ? body.data : [body]) {
-    const m = p?.message;
-    const origin = String(m?.kapso?.origin || '');
-    if (!m || !origin || origin === 'cloud_api') continue; // lo que envía el propio agente o las plantillas no cuenta
-    const to = String(m.to || p.conversation?.phone_number || p.conversation?.contact_phone || '').replace(/\D/g, '');
-    if (!to) continue;
-    // Si Damián le escribe a mano el primer mensaje a un lead que estaba en la bandeja, cuenta como enviado y NO se pausa a Alter:
-    // así Alter atiende la respuesta de ese lead. En cualquier otro chat, lo que Damián escribe a mano pausa a Alter 24 h.
-    const q = await env.DB.prepare("SELECT id, deal_id, contact_id, name FROM outbox WHERE phone = ? AND status = 'queued' AND kind != 'recordatorio' ORDER BY id LIMIT 1").bind(to).first().catch(() => null);
-    if (q) {
-      await env.DB.prepare("UPDATE outbox SET status = 'sent', template = 'manual', sent_at = ?, wamid = ?, error = 'enviado a mano desde la app' WHERE id = ?").bind(sqlTime(Date.now()), String(m.id || ''), q.id).run();
-      await env.DB.prepare("INSERT OR IGNORE INTO loggro_leads (phone, deal_id, contact_id, name, state) VALUES (?, ?, ?, ?, 'sent')").bind(to, q.deal_id || null, q.contact_id || null, q.name || null).run();
-      await env.DB.prepare("UPDATE loggro_leads SET state = CASE WHEN state IN ('optout', 'done', 'agent') THEN state ELSE 'sent' END, campaign = 'primer_contacto', sent_at = datetime('now'), deal_id = COALESCE(?, deal_id), contact_id = COALESCE(?, contact_id), updated_at = datetime('now') WHERE phone = ?").bind(q.deal_id || null, q.contact_id || null, to).run();
-      continue;
-    }
-    await pauseForHuman(env, to);
-  }
 }
 
 // Entrega, ya con la ventana abierta, los avisos que quedaron esperando (guardados con su teléfono o con su BSUID)
@@ -121,12 +98,10 @@ async function validSignature(secret, raw, signature) {
   return diff === 0;
 }
 
-// Normaliza lo que manda Kapso (v2) a lo único que el agente necesita.
+// Normaliza un mensaje de Meta a lo único que el agente necesita.
 function parseInbound(p) {
   const m = p?.message;
   if (!m || !m.id) return null;
-  if (m.kapso?.direction === 'outbound') return null;
-  if (m.kapso?.origin === 'history_sync') return null; // historial importado al conectar la coexistencia: nunca se contesta
   let text = '', buttonId = '';
   if (m.type === 'text') text = m.text?.body || '';
   else if (m.type === 'interactive') {
@@ -137,11 +112,11 @@ function parseInbound(p) {
     buttonId = m.button?.payload || '';
     text = m.button?.text || '';
   } else if (m.type === 'audio') {
-    const t = m.kapso?.transcript;
+    const t = m.transcript; // lo pone el webhook tras transcribir la nota de voz
     text = typeof t === 'string' ? t : t?.text || '';
   }
   // Si llegó desde un anuncio de Meta (Click to WhatsApp), viene el dato del anuncio: se guarda para medir qué trae cada peso
-  const ref = m.referral || m.kapso?.referral;
+  const ref = m.referral;
   let ad = '';
   if (!ref && PREFILL_RE.test(text)) ad = JSON.stringify({ utm_source: 'meta_ads', utm_medium: 'whatsapp', utm_campaign: 'wa_link', utm_content: 'mensaje_anuncio' });
   if (ref && typeof ref === 'object') {
@@ -161,7 +136,7 @@ function parseInbound(p) {
 async function handleInbound(env, ctx, h, payload) {
   const inb = parseInbound(payload);
   if (!inb) return;
-  if (env.KAPSO_PHONE_NUMBER_ID && inb.phoneNumberId && inb.phoneNumberId !== String(env.KAPSO_PHONE_NUMBER_ID)) return;
+  if (env.WA_PHONE_NUMBER_ID && inb.phoneNumberId && inb.phoneNumberId !== String(env.WA_PHONE_NUMBER_ID)) return;
   const key = inb.from || inb.userId;
   if (!key) return;
 
@@ -354,7 +329,7 @@ function sendButtons(c, body, options) {
 
 /* ---------- Seguimiento si la persona deja de responder ----------
  * Mientras la ventana de 24 h está abierta, si alguien deja la conversación a medias se le escribe una vez a los 15 minutos
- * y otra 30 minutos después, en tono de Damián. 30 minutos más tarde el chat se cierra en la bandeja de Kapso y no se le insiste
+ * y otra 30 minutos después, en tono de Damián. 30 minutos más tarde el chat se cierra en la bandeja de WhatsApp y no se le insiste
  * más (si vuelve a escribir, el chat se reabre y el bot sigue donde iba).
  * Solo de 7 am a 9 pm (hora de Bogotá). Lo corre el cron cada 5 minutos.
  */
@@ -371,7 +346,7 @@ const NUDGE_FIRST = {
 };
 
 export async function nudgeIdle(env, h) {
-  if (!env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0 };
+  if (!waOn(env)) return { sent: 0 };
   const hour = new Date(Date.now() - 5 * 3600e3).getUTCHours();
   if (hour < 7 || hour >= 21) return { sent: 0 };
   const since = sqlTime(Date.now() - NUDGE_MAX_HOURS * 3600e3), firstBefore = sqlTime(Date.now() - NUDGE_FIRST_MIN * 60e3);
@@ -388,11 +363,11 @@ export async function nudgeIdle(env, h) {
     const prev = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last FROM events WHERE session_id = ? AND type = 'nudge' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
     const n = prev?.n || 0;
     if (n >= 2) {
-      // 30 minutos después del último recordatorio sin respuesta: se cierra el chat en la bandeja de Kapso (una sola vez)
+      // 30 minutos después del último recordatorio sin respuesta: se cierra el chat en la bandeja de WhatsApp (una sola vez)
       if (prev.last > sqlTime(Date.now() - NUDGE_SECOND_MIN * 60e3) || !/^\d+$/.test(r.dest)) continue;
       const closed = await env.DB.prepare("SELECT 1 FROM events WHERE session_id = ? AND type = 'chat_closed' AND created_at >= ?").bind(r.sid.slice(0, 64), r.updated_at).first();
       if (closed) continue;
-      if (await closeKapsoChat(env, r.dest)) {
+      {
         await env.DB.prepare("INSERT INTO events (session_id, type) VALUES (?, 'chat_closed')").bind(r.sid.slice(0, 64)).run();
         // Lead de Loggro que dejó de responder: queda anotado en HubSpot (la rutina lee 'done') sin marcarlo como caliente
         if (r.source === 'loggro') await env.DB.prepare(`UPDATE loggro_leads SET state = 'done', hot = 0, summary = 'Dejó de responder tras el seguimiento. ' || COALESCE(summary, ''), synced_state = NULL, updated_at = datetime('now') WHERE phone = ? AND state = 'agent'`).bind(r.dest).run();
@@ -415,19 +390,3 @@ export async function nudgeIdle(env, h) {
   }
   return { sent };
 }
-// Busca el chat activo de ese número en Kapso y lo marca como terminado (queda en "Ended" en la bandeja; si escribe, se reabre solo)
-async function closeKapsoChat(env, phone) {
-  try {
-    const headers = { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' };
-    const list = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/conversations?status=active&limit=5&phone_number=${encodeURIComponent('+' + phone)}`, { headers, signal: AbortSignal.timeout(10000) });
-    if (!list.ok) { console.error('Kapso chat list', list.status); return false; }
-    const ids = ((await list.json().catch(() => ({}))).data || []).map(c => c.id).filter(Boolean);
-    let ok = ids.length === 0; // si ya no está activo, no hay nada que cerrar
-    for (const id of ids) {
-      const res = await fetch(`https://api.kapso.ai/platform/v1/whatsapp/conversations/${encodeURIComponent(id)}`, { method: 'PATCH', headers, body: JSON.stringify({ whatsapp_conversation: { status: 'ended' } }), signal: AbortSignal.timeout(10000) });
-      if (res.ok) ok = true; else console.error('Kapso chat close', res.status);
-    }
-    return ok;
-  } catch (err) { console.error('Kapso chat close', err?.name || 'error'); return false; }
-}
-const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');

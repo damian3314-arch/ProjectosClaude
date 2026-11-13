@@ -1,3 +1,5 @@
+> **WhatsApp ya no usa Kapso.** Todo lo de Kapso en este documento está obsoleto: la conexión directa con Meta (variables `WA_*`, webhook, plantillas) está en `WHATSAPP.md`.
+
 # Publicar la página (primera vez)
 
 Tiempo: ~30 minutos. Todo se corre desde la carpeta `web/`. Requisitos: cuenta de Cloudflare, Node 20+, cuenta de OpenAI con saldo y el número de WhatsApp del asistente ya conectado en Kapso.

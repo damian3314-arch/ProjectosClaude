@@ -10,11 +10,12 @@
  *  - Se presenta como "el asistente de Damián". El primer mensaje lo firma Damián (plantilla); desde la primera respuesta se aclara.
  *  - Lo que escribe el lead es DATO. Nunca se ejecuta.
  *  - Los avisos a Damián solo salen entre las 9 am y las 9 pm (hora de Bogotá); fuera de horario esperan a la siguiente hora en punto.
- *  - Después de terminar, el asistente calla: sigue Damián a mano, desde Kapso.
+ *  - Después de terminar, el asistente calla: sigue Damián a mano, desde tu WhatsApp.
  */
 
 import { agentTurn } from './agent.js';
 import { slotLabel } from './agenda.js';
+import { waOn, waSend } from './wa.js';
 
 const MAX_MSGS = 30;
 const REPLY_ALERT_MINUTES = 30;
@@ -113,7 +114,7 @@ async function onDemo(c) {
   if (!msg) return;
   await save(c, { state: 'done', hot: 1, summary: 'Recordatorio de demo: se le envió la confirmación con el link.' });
   await sendText(c, msg);
-  return c.h.alertMessage(c.env, `📅 ${c.row.name || 'Tu cliente'} (+${c.row.phone}) respondió y ya le envié el link de la demo. Escribió: «${h2(c.h, c.inb.text, 120)}».`, c.env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  return c.h.alertMessage(c.env, `📅 ${c.row.name || 'Tu cliente'} (+${c.row.phone}) respondió y ya le envié el link de la demo. Escribió: «${h2(c.h, c.inb.text, 120)}».`, c.env.WA_ALERT_TEMPLATE);
 }
 
 const sizeOptions = product => (PRODUCTS[product] || PRODUCTS.pymes).sizes;
@@ -187,8 +188,8 @@ async function onAfterDone(c) {
   const last = c.row.reply_alert_at ? Date.parse(String(c.row.reply_alert_at).replace(' ', 'T') + 'Z') : 0;
   if (Date.now() - last < REPLY_ALERT_MINUTES * 60e3) return;
   await save(c, { reply_alert_at: new Date(Date.now()).toISOString().slice(0, 19).replace('T', ' ') });
-  const text = `💬 ${c.row.name || 'Un lead'} (+${c.row.phone}) escribió: «${h2(c.h, c.inb.text, 160)}». Responde desde tu bandeja de Kapso.`;
-  return c.h.alertMessage(c.env, text, c.env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  const text = `💬 ${c.row.name || 'Un lead'} (+${c.row.phone}) escribió: «${h2(c.h, c.inb.text, 160)}». Respóndele desde tu WhatsApp.`;
+  return c.h.alertMessage(c.env, text, c.env.WA_ALERT_TEMPLATE);
 }
 
 export const agentOn = env => env.AGENT_V2 === 'on' && !!env.OPENAI_API_KEY;
@@ -220,7 +221,7 @@ export function hotAlertText(row, ctx = {}) {
 export async function sendHotAlert(env, h, row) {
   const msgs = ((await env.DB.prepare('SELECT role, content FROM agent_log WHERE chat_key = ? ORDER BY id DESC LIMIT 6').bind(row.phone).all().catch(() => ({ results: [] }))).results) || [];
   const ctx = { lastUser: msgs.find(m => m.role === 'user')?.content, lastBot: msgs.find(m => m.role === 'assistant' && !m.content.startsWith('http') && !m.content.startsWith('Y esta es mi agenda'))?.content };
-  return h.alertMessage(env, hotAlertText(row, ctx), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  return h.alertMessage(env, hotAlertText(row, ctx), env.WA_ALERT_TEMPLATE);
 }
 
 // Resumen de la mañana (8 am, una vez): solo lo que pide su atención hoy. Si no hay nada, no manda nada (no quiere ruido).
@@ -249,7 +250,7 @@ export async function morningBrief(env, h) {
   if (followUps.length) lines.push(`🗓 Tocaba retomar: ${followUps.map(who).join(' · ')}`);
   await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'morning_brief')").run().catch(() => {});
   if (!lines.length) return false;
-  return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), env.WA_ALERT_TEMPLATE);
 }
 
 // Embudo de la semana (desde el lunes, hora de Bogotá): enviados → respondieron → calientes → link de agenda → demo agendada.
@@ -286,7 +287,7 @@ export async function reminderGuard(env, h) {
   for (const r of rows) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('recmiss', ?)").bind(r.id).run().catch(() => {});
   const t = ms => new Date(new Date(r0(ms)).getTime() - 5 * 3600e3).toISOString().slice(11, 16);
   const list = rows.map(r => `${(r.label || 'Demo').slice(0, 40)} a las ${t(r.start_utc)}`).join('; ');
-  return h.alertMessage(env, `⏰ Sin recordatorio en cola para: ${list}. Revisa si tienen link de Teams y teléfono en HubSpot; si quieres, avísale tú.`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  return h.alertMessage(env, `⏰ Sin recordatorio en cola para: ${list}. Revisa si tienen link de Teams y teléfono en HubSpot; si quieres, avísale tú.`, env.WA_ALERT_TEMPLATE);
 }
 const r0 = s => String(s).replace(' ', 'T') + 'Z';
 
@@ -315,7 +316,7 @@ export async function dailyReport(env, h) {
     `Todo quedó registrado en HubSpot.`,
   ].filter(Boolean).join('\n');
   await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'daily_report')").run().catch(() => {});
-  return h.alertMessage(env, text, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  return h.alertMessage(env, text, env.WA_ALERT_TEMPLATE);
 }
 
 function buildSummary(row, P) {
@@ -352,7 +353,7 @@ const STOP_CODES = new Set([132001, 132000, 131048, 130429, 131056, 368]); // pl
 const BAD_NUMBER_CODES = new Set([131026, 131049, 131021]); // sin WhatsApp, Meta decidió no entregar, o es el mismo número
 
 export async function rescueSend(env) {
-  if (loggroOff(env) || env.RESCATE_ENVIOS !== 'on' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  if (loggroOff(env) || env.RESCATE_ENVIOS !== 'on' || !waOn(env)) return { sent: 0, reason: 'off' };
   const bogota = new Date(Date.now() - 5 * 3600e3);
   const hour = bogota.getUTCHours();
   if (hour < RESCUE.from || hour >= RESCUE.to) return { sent: 0, reason: 'hora' };
@@ -382,17 +383,7 @@ export async function rescueSend(env) {
 
 async function sendTemplate(env, phone, name, param) {
   const params = (Array.isArray(param) ? param : [param]).map(x => ({ type: 'text', text: String(x).replace(/\s*\n\s*/g, ' ').slice(0, 200) }));
-  try {
-    const res = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(env.KAPSO_PHONE_NUMBER_ID)}/messages`, {
-      method: 'POST',
-      headers: { 'X-API-Key': env.KAPSO_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: params.length ? [{ type: 'body', parameters: params }] : [] } }),
-      signal: AbortSignal.timeout(10000),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) console.error('Rescate', res.status, body?.error?.code, String(body?.error?.message || '').replace(/\d{5,}/g, '#').slice(0, 200));
-    return { ok: res.ok, status: res.status, code: Number(body?.error?.code) || 0, wamid: body?.messages?.[0]?.id };
-  } catch (err) { console.error('Rescate', err?.name || 'error'); return { ok: false, status: 0, code: 0 }; }
+  return waSend(env, { messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: params.length ? [{ type: 'body', parameters: params }] : [] } });
 }
 
 // Lo usa el agente conversacional: aviso de lead caliente (con el horario de siempre) y aviso cuando un lead caliente vuelve a escribir
@@ -423,7 +414,7 @@ function abTemplate(env, r) {
 export const OUTBOX = { from: 8, to: 19, perDay: 5, perRun: 4 }; // perRun: cada revisión (cada 5 min) envía pocos, para que salgan escalonados
 
 export async function outboxSend(env) {
-  if (loggroOff(env) || env.OUTBOX_ENVIOS === 'off' || !env.KAPSO_API_KEY || !env.KAPSO_PHONE_NUMBER_ID) return { sent: 0, reason: 'off' };
+  if (loggroOff(env) || env.OUTBOX_ENVIOS === 'off' || !waOn(env)) return { sent: 0, reason: 'off' };
   const bogota = new Date(Date.now() - 5 * 3600e3);
   const hour = bogota.getUTCHours();
   if (hour < OUTBOX.from || hour >= OUTBOX.to) return { sent: 0, reason: 'hora' };

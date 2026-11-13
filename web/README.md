@@ -6,7 +6,7 @@ Página tipo chat + backend en Cloudflare. Todo vive en Cloudflare: la página, 
 Visitante ──► Página (public/) ──► Worker (src/worker.js)
                                      ├─ OpenAI: entiende el problema, transcribe notas de voz y prepara el brief
                                      ├─ D1: guarda leads, conversación y embudo
-                                     └─ Kapso: te avisa por WhatsApp (lead nuevo, sin contactar, resumen diario)
+                                     └─ WhatsApp Cloud API (Meta, directo): te avisa por WhatsApp (lead nuevo, sin contactar, resumen diario)
 ```
 
 Para publicar por primera vez: **`DEPLOY.md`**. Ojo: cada push a la rama `landing-personal` publica solo (Cloudflare Workers Builds).
@@ -17,12 +17,7 @@ Para publicar por primera vez: **`DEPLOY.md`**. Ojo: cada push a la rama `landin
 - **Resumen diario al WhatsApp de trabajo**: una rutina lee HubSpot y deja el texto en `alert_queue` (`dest = 'brief'`); el Worker lo entrega. Ver `RUTINA-RESUMEN.md`.
 - **Páginas de entrada**: `/implementacion` (servicio de implementación y migración de sistemas, con su título, descripción y titular propios) y `/diagnostico`.
 - **Avisos de leads de la página**: todo lead (A, B o C) te avisa al momento al WhatsApp de trabajo (`LOGGRO_ALERT_WHATSAPP`); el B y el C con resumen básico, sin gastar IA. Además, cada día a las 8 am (lunes a sábado) un **radar** te lista los leads en estado `nuevo` de hace más de 12 horas, hasta que los marques como contactados en `/admin`.
-- **Cambio de número de Alter** (pendiente: el número nuevo). Cuando esté listo:
-  1. En Kapso, conectar el número nuevo **al mismo WABA** (así reutiliza las plantillas aprobadas: `aviso_lead`, `alerta_nueva_solicitud`, etc.).
-  2. Crear en Kapso el webhook del número nuevo → `https://holadami.com/api/whatsapp`, eventos `whatsapp.message.received` y `whatsapp.message.sent`, con el mismo secreto que ya tiene `KAPSO_WEBHOOK_SECRET`. El webhook actual está atado al número personal.
-  3. En `wrangler.jsonc`: `KAPSO_PHONE_NUMBER_ID` y `KAPSO_SENDER_NUMBER` = los del número nuevo; `ALTER_WHATSAPP` = el número nuevo (solo dígitos, con 57); `AGENT_ALLOWLIST` = `"off"` (con una línea propia, Alter atiende a cualquiera que escriba, no solo a quien diga "holadami").
-  4. Publicar. La página muestra sola el botón "Prefiero escribir por WhatsApp" y el número en "¿Esto es seguro?". Escribe tú al número una vez para abrir la ventana de 24 h y revisa que llegue un aviso al trabajo.
-  5. Con la línea nueva funcionando, desconectar la coexistencia del número personal en Kapso.
+- **Alter con número propio (+57 333 402 1068), API de Meta directo, sin Kapso**: la guía de conexión (token, webhook, plantillas) está en `WHATSAPP.md`. Mientras `WA_PHONE_NUMBER_ID` y los secretos `WA_*` no estén puestos, la página funciona pero los avisos por WhatsApp no salen.
 
 ## Qué hace cada ruta
 
@@ -56,16 +51,16 @@ El sistema te ayuda a convertir; no agenda ni le escribe a los leads por su cuen
 
 **Embudo.** La página manda a `POST /api/event` una etapa por sesión: `visit`, `start`, `intent`, `q_budget`, `q_timing`, `q_decider`, `contact_form`; el servidor registra `lead` solo. De dónde llega cada visita se guarda como `utm_*` y, si no hay, el **dominio** de referencia (solo `google.com`, nunca la URL completa). `GET /api/stats` las cuenta como sesiones únicas, con los días en hora de Bogotá.
 
-**Empujón.** Cada hora, entre 7 am y 9 pm (Bogotá), el cron te avisa una sola vez por lead: lead A en `nuevo` hace más de 2 h, lead B hace más de 24 h (solo leads de la última semana). A las 7 am te llega el resumen del día anterior y los pendientes. Todo va a `OWNER_WHATSAPP`, nunca a un lead. Si marcas el lead como `contactado`, deja de avisar. Si Kapso falla, reintenta a la hora siguiente.
+**Empujón.** Cada hora, entre 7 am y 9 pm (Bogotá), el cron te avisa una sola vez por lead: lead A en `nuevo` hace más de 2 h, lead B hace más de 24 h (solo leads de la última semana). A las 7 am te llega el resumen del día anterior y los pendientes. Todo va a `OWNER_WHATSAPP`, nunca a un lead. Si marcas el lead como `contactado`, deja de avisar. Si WhatsApp falla, reintenta a la hora siguiente.
 
 | Variable | Para qué |
 |---|---|
 | `OPENAI_API_KEY` (secreto), `OPENAI_MODEL`, `OPENAI_TRANSCRIBE_MODEL` | El chat, el brief y las notas de voz (sin llave, la página usa palabras clave y el brief usa la plantilla) |
-| `KAPSO_API_KEY` (secreto), `KAPSO_PHONE_NUMBER_ID`, `OWNER_WHATSAPP` | Los avisos a ti |
-| `KAPSO_NOTIFY_TEMPLATE`, `KAPSO_TEMPLATE_LANG` | Plantilla Utility con **un** parámetro `{{1}}` (todo el aviso en una línea, hasta ~900 caracteres). Vacío = texto libre, que solo llega dentro de las 24 h desde que le escribiste al número. Para que el empujón y el resumen de las 7 am lleguen siempre, usa plantilla |
+| `WA_TOKEN`, `WA_APP_SECRET`, `WA_VERIFY_TOKEN` (secretos), `WA_PHONE_NUMBER_ID`, `LOGGRO_ALERT_WHATSAPP` (a quién se avisa) | WhatsApp directo con Meta (ver `WHATSAPP.md`) |
+| `WA_NOTIFY_TEMPLATE`, `WA_TEMPLATE_LANG` | Plantilla Utility con **un** parámetro `{{1}}` (todo el aviso en una línea, hasta ~900 caracteres). Vacío = texto libre, que solo llega dentro de las 24 h desde que le escribiste al número. Para que el empujón y el resumen de las 7 am lleguen siempre, usa plantilla |
 | `ADMIN_TOKEN` (secreto) | Leads, cambios de estado y métricas |
 | `IP_SALT` (secreto) | Sal para guardar las IP como huella, no como número |
-| `AUTO_CONTACT_LEADS`, `KAPSO_LEAD_TEMPLATE` | Siguen apagados (`"false"`). Es el único camino que escribiría a un lead: no lo prendas |
+| `AUTO_CONTACT_LEADS`, `WA_LEAD_TEMPLATE` | Siguen apagados (`"false"`). Es el único camino que escribiría a un lead: no lo prendas |
 | `BOOKING_URL_LOGGRO`, `BOOKING_URL_PERSONAL` | Opcionales (ver Agenda) |
 
 ## Seguridad y límites

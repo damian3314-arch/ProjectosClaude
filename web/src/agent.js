@@ -107,7 +107,7 @@ export async function agentTurn(c) {
     console.error('agente', err?.message || 'desconocido');
     // Sin IA no se deja a la persona hablando sola: se avisa a Damián y se le dice que él la contacta
     if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
-    else if (c.source === 'loggro') await c.h.alertMessage(env, `⚠️ ${c.row?.name || 'Un lead'} (+${c.row?.phone}) escribió y la IA falló: «${c.h.clean(content, 120)}». Respóndele desde Kapso.`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+    else if (c.source === 'loggro') await c.h.alertMessage(env, `⚠️ ${c.row?.name || 'Un lead'} (+${c.row?.phone}) escribió y la IA falló: «${c.h.clean(content, 120)}». Respóndele desde tu WhatsApp.`, env.WA_ALERT_TEMPLATE);
     return;
   }
 
@@ -180,7 +180,7 @@ async function escalateToDamian(c, out, content, why) {
     draft && `Borrador de Alter (no enviado): «${say(draft)}»`,
     c.row?.deal_id && `Negocio: https://app.hubspot.com/contacts/21089075/deal/${c.row.deal_id}`,
     `Respóndele tú por tu número directo: https://wa.me/${phone}`,
-  ].filter(Boolean).join('\n'), env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  ].filter(Boolean).join('\n'), env.WA_ALERT_TEMPLATE);
 }
 
 async function meetingSilence(c, guard, content) {
@@ -190,7 +190,7 @@ async function meetingSilence(c, guard, content) {
   if (Date.now() - last < 20 * 60e3) return; // un aviso cada 20 minutos por persona
   await env.DB.prepare("UPDATE loggro_leads SET reply_alert_at = datetime('now') WHERE phone = ?").bind(c.row?.phone || key).run().catch(() => {});
   const say = String(content).replace(/\s+/g, ' ').slice(0, 200);
-  await c.h.alertMessage(env, `📅 ${c.row?.name || 'Un cliente'} (+${c.row?.phone || key}) respondió: «${say}». ${guard.detail} No le contesté: respóndele tú por tu número directo. https://wa.me/${c.row?.phone || key}`, env.KAPSO_LOGGRO_ALERT_TEMPLATE);
+  await c.h.alertMessage(env, `📅 ${c.row?.name || 'Un cliente'} (+${c.row?.phone || key}) respondió: «${say}». ${guard.detail} No le contesté: respóndele tú por tu número directo. https://wa.me/${c.row?.phone || key}`, env.WA_ALERT_TEMPLATE);
 }
 
 async function loadChat(c) {
@@ -355,7 +355,7 @@ async function persistHoladami(c, chat, { out, hot, product, summary, facts, new
   await env.DB.prepare('UPDATE leads SET budget = ?, timing = ?, decider = ?, points = ?, tier = ?, action = ?, problem = ? WHERE id = ?')
     .bind(fields.budget, fields.timing, fields.decider, fields.points, fields.tier, fields.action, c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500), st.lead_id).run();
   if (fields.tier === 'A' && prev?.tier !== 'A') {
-    await c.h.alertMessage(env, `🔥 HolaDami: ${c.h.clean(facts.contact_name || c.inb.name, 40) || 'Un lead'} (+${phone}) es prioridad A. ${summary} Escríbele: https://wa.me/${phone}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+    await c.h.alertMessage(env, `🔥 HolaDami: ${c.h.clean(facts.contact_name || c.inb.name, 40) || 'Un lead'} (+${phone}) es prioridad A. ${summary} Escríbele: https://wa.me/${phone}`.replace(/\s+/g, ' '), env.WA_NOTIFY_TEMPLATE);
   }
 }
 
@@ -438,6 +438,6 @@ async function persistWeb(c, chat, { out, hot, facts, summary, q }) {
   await env.DB.prepare('UPDATE leads SET budget = ?, timing = ?, decider = ?, points = ?, tier = ?, action = ?, problem = ? WHERE id = ?')
     .bind(f.budget, f.timing, f.decider, f.points, f.tier, f.action, c.h.clean([facts.business_type, facts.pain, summary].filter(Boolean).join(' · '), 1500), facts.lead_id).run();
   if (f.tier === 'A' && prev?.tier !== 'A') {
-    await c.h.alertMessage(env, `🔥 HolaDami (chat de la página): ${c.h.clean(facts.contact_name, 40) || 'Un lead'}${prev?.phone ? ` +${prev.phone}` : ''} es prioridad A. ${summary}${prev?.phone ? ` Escríbele: https://wa.me/${prev.phone}` : ''}`.replace(/\s+/g, ' '), env.KAPSO_NOTIFY_TEMPLATE);
+    await c.h.alertMessage(env, `🔥 HolaDami (chat de la página): ${c.h.clean(facts.contact_name, 40) || 'Un lead'}${prev?.phone ? ` +${prev.phone}` : ''} es prioridad A. ${summary}${prev?.phone ? ` Escríbele: https://wa.me/${prev.phone}` : ''}`.replace(/\s+/g, ' '), env.WA_NOTIFY_TEMPLATE);
   }
 }

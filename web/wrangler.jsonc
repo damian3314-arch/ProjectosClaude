@@ -25,17 +25,19 @@
     "AGENT_MODEL": "gpt-6.1-terra",   // el cerebro de Alter (conversa y califica); si la cuenta no lo tiene, cae a OPENAI_MODEL. Más barato: "gpt-6-luna"
     "AGENT_REASONING": "low",         // none | low | medium | high: más razonamiento = más lento y más caro
     "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
-    "KAPSO_PHONE_NUMBER_ID": "1424669820725157",
-    "KAPSO_SENDER_NUMBER": "573015373964",   // el número del bot: los avisos nunca se envían a este mismo número
-    "KAPSO_NOTIFY_TEMPLATE": "aviso_lead",
-    "KAPSO_LOGGRO_ALERT_TEMPLATE": "aviso_lead",   // utilidad (más barata que aviso_loggro, que Meta pasó a marketing)
-    "KAPSO_LEAD_TEMPLATE": "",
-    "KAPSO_TEMPLATE_LANG": "es",
+    // WhatsApp: API de Meta directo (ver WHATSAPP.md). Secretos que van aparte: WA_TOKEN, WA_APP_SECRET, WA_VERIFY_TOKEN.
+    "WA_PHONE_NUMBER_ID": "",    // id del número de Alter en Meta (WhatsApp Manager → el número → "Identificador del número de teléfono"), NO el teléfono
+    "WA_SENDER_NUMBER": "573334021068",   // el número de Alter: los avisos nunca se envían a este mismo número
+    "WA_NOTIFY_TEMPLATE": "aviso_lead",
+    "WA_ALERT_TEMPLATE": "aviso_lead",
+    "WA_LEAD_TEMPLATE": "",
+    "WA_TEMPLATE_LANG": "es",
+    "AGENT_ALLOWLIST": "off",   // línea propia de Alter: atiende a cualquiera que escriba (antes solo a quien dijera "holadami")
     "AUTO_CONTACT_LEADS": "false",
     "AGENDA_HOURS": "9,10,11,14,15,16", // horas de inicio que Alter puede ofrecer para demos (Colombia, lunes a viernes, sin festivos)
     "OUTBOX_PER_DAY": "150",
     "OUTBOX_PER_RUN": "10",    // cuántos primeros mensajes salen en cada revisión (cada 5 min): así cada ola sale escalonada   // tope diario de primeros mensajes por plantilla mientras el número nuevo se calienta
-    "OUTBOX_ALIAS": "{\"loggro_primer_contacto\":\"solicitud_loggro_en_proceso\",\"loggro_retomar\":\"loggro_retomar_v2\"}",      // p. ej. {"loggro_primer_contacto":"solicitud_loggro_en_proceso"} para cambiar de plantilla sin tocar la rutina
+    "OUTBOX_ALIAS": "{}",      // p. ej. {"loggro_primer_contacto":"solicitud_loggro_en_proceso"} para cambiar de plantilla sin tocar la rutina
     "ALERT_OPEN_TEMPLATE": "alerta_nueva_solicitud",   // plantilla de utilidad aprobada: avisa a Damián cuando su ventana de 24 h está cerrada
     "ALERT_OPEN_TEXT": "on",                          // la plantilla lleva el resumen del aviso
     "ALTER_WHATSAPP": "",      // número público de Alter (solo dígitos, con 57). Vacío = la página no muestra botón ni número. Se llena cuando el número nuevo esté conectado en Kapso
