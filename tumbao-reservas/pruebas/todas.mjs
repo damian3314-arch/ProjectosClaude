@@ -70,6 +70,7 @@ const SUITES = [
   'plantillas-imagen',
   'encuesta-masiva',
   'calendario-campanas',
+  'promo-dia-invitados',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',
