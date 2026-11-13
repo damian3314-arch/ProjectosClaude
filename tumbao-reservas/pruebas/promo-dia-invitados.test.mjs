@@ -19,5 +19,14 @@ titulo('2. La base cobra, la página solo lo muestra');
 ok('promo_total_cupos devuelve 24000 solo con n = 2 y clase dentro del rango, y es apagable', /promo_total_cupos/.test(mig) && /activa/.test(mig));
 ok('precio_del_grupo y tomar_cupos la usan', /precio_del_grupo/.test(mig) && /tomar_cupos/.test(mig));
 
+titulo('3. Timba (asistente interno) contesta lo de la promo, cupos y asistencias');
+{
+  const w = leer('../../tumbao-caja/src/index.js');
+  const a = w.slice(w.indexOf('const INSTRUCCIONES_AGENTE'), w.indexOf('const HERRAMIENTAS_AGENTE'));
+  ok('conoce la promo de 2 cupos por $24.000 y cómo contar sus reservas (grupos)', /promo_dos_cupos/.test(a) && /24000/.test(a) && /grupo_id/.test(a));
+  ok('sabe contar cupos libres y asistencias', /cupo_total . cupo_tomado/.test(a) && /asistencias/.test(a) && /reserva_id/.test(a));
+  ok('sabe contar planes y tiqueteras, y usa ventas_entre para la plata', /mensualidades_resumen/.test(a) && /tiqueteras/.test(a) && /ventas_entre/.test(a));
+}
+
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);
