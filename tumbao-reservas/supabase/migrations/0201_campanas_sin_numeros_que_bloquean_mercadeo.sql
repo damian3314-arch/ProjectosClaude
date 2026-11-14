@@ -1,0 +1,4 @@
+-- 0201 · Rutina 3 nov: la encuesta falló en 45 números con el error 131050 (la persona apagó los mensajes de mercadeo de Tumbao en
+-- WhatsApp). Meta no cobra el fallo, pero ensucia el % de entregas. campana_publico ya no incluye a quien tuvo 131050 en 60 días.
+-- Aplicada en vivo con un bloque DO que agrega la condición después del filtro de wa_bajas.
+--   and not exists (select 1 from wa_avisos a where right(a.telefono,10) = b.t and a.entrega_error like '131050%' and a.creado_at > now() - interval '60 days')

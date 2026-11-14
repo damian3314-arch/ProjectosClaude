@@ -1,0 +1,7 @@
+-- 0203 · Rutina 9 nov: el freno apagó las ventas a las 10:40 (9 de 20 aperturas fallaron). No era el pago: eran números que no
+-- reciben mercadeo (131026 sin WhatsApp, 131049 Meta no entrega por «salud del ecosistema», 131050 apagaron el mercadeo).
+-- ventas_seleccion ya no incluye a quien tuvo uno de esos tres errores en 60 días (76 números hoy). Aplicada en vivo con un bloque DO
+-- que agrega, antes del order by final:
+--   where not exists (select 1 from wa_avisos x where right(x.telefono,10) = right(u.tel,10)
+--                      and x.entrega_error ~ '^(131026|131049|131050)' and x.creado_at > now() - interval '60 days')
+-- Volver a encender wa_ventas sigue siendo decisión de Damián.

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Flyers de pases · Tumbao</title>
+<style>
+  @font-face{font-family:'Outfit';font-weight:100 900;src:url(outfit-latin-wght.woff2) format('woff2')}
+  :root{--bg:#0f0a18;--tx:#fff;--tx2:#cdbfdc;--na:#ff7a3d;--ro:#ff3d8b;--line:rgba(255,255,255,.14)}
+  *{box-sizing:border-box;margin:0}
+  body{background:#000;font-family:'Outfit',system-ui,sans-serif;color:var(--tx)}
+  .pieza{width:1080px;height:1780px;position:relative;overflow:hidden;padding:64px 64px 56px;display:flex;flex-direction:column;gap:38px;
+    background:radial-gradient(900px 700px at 90% -5%,rgba(255,61,139,.30),transparent 60%),radial-gradient(900px 800px at -10% 105%,rgba(255,122,61,.22),transparent 60%),var(--bg)}
+  .cab{display:flex;align-items:center;justify-content:space-between}
+  .cab img{height:84px}
+  .cab span{font-size:30px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx2);font-weight:600}
+  /* la tarjeta, igual que en la página */
+  .tarjeta{position:relative;height:660px;border-radius:44px;overflow:hidden;padding:52px 56px;display:flex;flex-direction:column;
+    background-size:cover;background-position:center;box-shadow:0 30px 70px rgba(0,0,0,.55),0 0 0 2px rgba(255,255,255,.10)}
+  .tarjeta::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,10,24,.55) 0%,rgba(15,10,24,.25) 40%,rgba(15,10,24,.88) 100%)}
+  .tarjeta>*{position:relative}
+  .t-top{display:flex;justify-content:space-between;align-items:flex-start}
+  .t-marca{font-size:30px;letter-spacing:.2em;font-weight:700;color:rgba(255,255,255,.92)}
+  .chip-oro{width:130px;height:92px;border-radius:20px;background:linear-gradient(135deg,#e9c47a,#b88a3d);box-shadow:inset 0 0 0 4px rgba(255,255,255,.25)}
+  .chip-oro::after{content:"";display:block;margin:22px auto 0;width:78px;height:46px;border-radius:12px;border:4px solid rgba(60,35,10,.55)}
+  .sello{position:absolute;right:56px;top:190px;background:linear-gradient(135deg,#ffb48a,#ff8a5c);color:#2b1204;font-weight:800;font-size:32px;letter-spacing:.06em;padding:14px 34px;border-radius:99px;text-transform:uppercase}
+  .t-nombre{margin-top:24px;font-size:50px;font-weight:600;color:rgba(255,255,255,.88)}
+  .t-cant{font-size:116px;font-weight:800;line-height:1;letter-spacing:-.03em}
+  .t-pie{margin-top:auto;display:flex;align-items:baseline;gap:26px}
+  .t-precio{font-size:104px;font-weight:800;letter-spacing:-.02em}
+  .t-xc{font-size:42px;color:rgba(255,255,255,.82);font-weight:600}
+  /* condiciones */
+  h2{font-size:44px;font-weight:800;letter-spacing:-.01em}
+  h2 em{font-style:normal;background:linear-gradient(90deg,var(--na),var(--ro));-webkit-background-clip:text;background-clip:text;color:transparent}
+  ul{list-style:none;padding:0;display:grid;gap:22px}
+  li{display:grid;grid-template-columns:54px 1fr;gap:20px;align-items:start;font-size:37px;line-height:1.28;color:#f1e9f7}
+  li b{color:#fff}
+  .ic{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--na),var(--ro));display:grid;place-items:center;font-size:32px;font-weight:800;color:#26101a}
+  .premio{border:2px solid rgba(255,122,61,.55);background:rgba(255,122,61,.10);border-radius:28px;padding:26px 32px;font-size:36px;line-height:1.28}
+  .premio b{color:#ffb48a}
+  .pie{margin-top:auto;display:grid;gap:14px;text-align:center}
+  .cta{background:linear-gradient(90deg,var(--na),var(--ro));color:#26101a;font-weight:800;font-size:44px;border-radius:99px;padding:26px 40px}
+  .pie small{font-size:30px;color:var(--tx2)}
+</style></head>
+<body>
+<div class="pieza" id="pieza"></div>
+<script>
+const FOTOS = { mensualidad: 'pase-mensualidad.jpg', '8': 'pase-8.jpg', '4': 'pase-4.jpg' };
+const pesos = n => '$' + Number(n).toLocaleString('es-CO');
+const SUELTA = 15000;
+const PASES = {
+  mensualidad: {
+    foto: FOTOS.mensualidad, nombre: 'Mensualidad', cant: 'Todo el mes', precio: 125000, xc: '≈ $5.000 por clase', sello: '',
+    titulo: 'Así funciona tu <em>mensualidad</em>',
+    puntos: [
+      ['✓', 'Entras a todas tus clases de <b>lunes a sábado</b>, sin domingos ni festivos.'],
+      ['✓', 'De lunes a viernes <b>no reservas</b>: solo llegas y entras en tu horario.'],
+      ['✓', 'El <b>sábado</b> sí se aparta cupo, con la Rumba terapia incluida.'],
+      ['✓', 'Es un <b>horario fijo</b> todo el mes: 7:00 am, 6:00 pm o 7:00 pm. Cada horario tiene cupo limitado.'],
+      ['✓', 'Sale a <b>≈ $5.000 por clase</b> si vienes a todas (la suelta vale ' + pesos(SUELTA) + ').'],
+      ['✓', 'Pagas por transferencia desde la página; apenas confirmamos el pago, queda activa.'],
+    ],
+    premio: '', cta: 'Quiero mi mensualidad', url: 'tumbaobaila.com/mensualidad',
+  },
+  '8': {
+    foto: FOTOS['8'], nombre: 'Tiquetera', cant: '8 clases', precio: 96000, xc: '$12.000 por clase', sello: 'Mejor precio',
+    titulo: 'Así funciona tu <em>tiquetera de 8</em>',
+    puntos: [
+      ['✓', 'Usa tus 8 clases <b>cuando quieras</b>, sin horario fijo.'],
+      ['✓', 'Úsala en <b>cualquier horario y los días que quieras</b>: reservas cada clase en la página con tu código.'],
+      ['✓', 'Cada reserva descuenta <b>una clase</b>.'],
+      ['✓', 'Tienes <b>30 días</b> desde la compra para usar tus 8 clases. Cuando se acaben, ya no puedes entrar.'],
+      ['✓', 'Ahorras <b>' + pesos(8 * SUELTA - 96000) + '</b> frente a pagar clase suelta.'],
+      ['✓', 'Pagas por transferencia; apenas confirmamos, te llega tu código por WhatsApp.'],
+    ],
+    premio: 'Completa tus 8 clases y <b>premiamos tu constancia</b> con 2 clases más.',
+    cta: 'Quiero la de 8 clases', url: 'tumbaobaila.com/mensualidad',
+  },
+  '4': {
+    foto: FOTOS['4'], nombre: 'Tiquetera', cant: '4 clases', precio: 52000, xc: '$13.000 por clase', sello: '',
+    titulo: 'Así funciona tu <em>tiquetera de 4</em>',
+    puntos: [
+      ['✓', 'Usa tus 4 clases <b>cuando quieras</b>, sin horario fijo.'],
+      ['✓', 'Úsala en <b>cualquier horario y los días que quieras</b>: reservas cada clase en la página con tu código.'],
+      ['✓', 'Cada reserva descuenta <b>una clase</b>.'],
+      ['✓', 'Tienes <b>30 días</b> desde la compra para usar tus 4 clases. Cuando se acaben, ya no puedes entrar.'],
+      ['✓', 'Ahorras <b>' + pesos(4 * SUELTA - 52000) + '</b> frente a pagar clase suelta.'],
+      ['✓', 'Pagas por transferencia; apenas confirmamos, te llega tu código por WhatsApp.'],
+    ],
+    premio: 'Completa tus 4 clases y <b>premiamos tu constancia</b> con 1 clase más.',
+    cta: 'Quiero la de 4 clases', url: 'tumbaobaila.com/mensualidad',
+  },
+};
+const id = new URLSearchParams(location.search).get('f') || 'mensualidad';
+const p = PASES[id];
+document.getElementById('pieza').innerHTML = `
+  <div class="cab"><img src="logo-tumbao.png" alt="Tumbao"><span>Baila pa' sanar</span></div>
+  <div class="tarjeta" style="background-image:url(${p.foto})">
+    <div class="t-top"><span class="t-marca">TUMBAO · PASE</span><div class="chip-oro"></div></div>
+    ${p.sello ? `<div class="sello">${p.sello}</div>` : ''}
+    <div class="t-nombre">${p.nombre}</div>
+    <div class="t-cant">${p.cant}</div>
+    <div class="t-pie"><span class="t-precio">${pesos(p.precio)}</span><span class="t-xc">${p.xc}</span></div>
+  </div>
+  <h2>${p.titulo}</h2>
+  <ul>${p.puntos.map(([i, t]) => `<li><span class="ic">${i}</span><span>${t}</span></li>`).join('')}</ul>
+  ${p.premio ? `<div class="premio">🎟️ ${p.premio}</div>` : ''}
+  <div class="pie"><div class="cta">${p.cta}</div><small>${p.url} · Reserva en un minuto</small></div>`;
+</script></body></html>
