@@ -5519,7 +5519,7 @@ const CONFIG = {
         `<div class="k">${esc(k)}</div>` +
         `<div class="pista">${esc(pista)}</div>` +
       `</div>`
-    ).join('') + tarjetaBanco();
+    ).join('') + tarjetaBanco() + tarjetaPromo();
 
     // Sin cifras el contenedor sigue reservando el hueco del grid y deja
     // una franja vacía entre los movimientos y el cierre.
@@ -5596,6 +5596,30 @@ const CONFIG = {
      aparece el miércoles hace que cualquier resta día-contra-día dé un
      negativo que no significa nada. Lo que se mide es el inventario:
      cuánta plata sigue sin dueño. */
+  /* 14 nov (Damián): «que el cierre me muestre cuántos clientes pagaron con la tarifa de $24.000 y que se vea claro quién
+     reservó y pagó esa tarifa». Viene de caja_del_dia().promo (0207). Los repetidos —la misma gente comprando la promo dos
+     veces el mismo día— salen marcados para revisar. Si no hubo promo ese día, no sale nada. */
+  function tarjetaPromo() {
+    const pr = cajaDatos && cajaDatos.promo;
+    if (!pr || !(Number(pr.grupos_pagados) + Number(pr.grupos_sin_pagar) > 0)) return '';
+    const lista = Array.isArray(pr.lista) ? pr.lista : [];
+    const hayRep = lista.some(x => x.repetida);
+    const filas = lista.map(x =>
+      `<div style="display:flex;justify-content:space-between;gap:.6rem;padding:.3rem 0;border-top:1px solid var(--line);font-size:.8rem;text-align:left">` +
+        `<span>${esc(x.hora)} · ${esc(x.quienes)}` +
+          `<br><small style="color:var(--tx-3)">${esc(x.remitente ? 'pagó ' + x.remitente : (x.pagada ? 'pagada' : 'SIN PAGAR'))} · reservó ${esc(x.cuando)}` +
+          `${x.no_vinieron ? ' · no vino ' + esc(x.no_vinieron) : ''}</small></span>` +
+        `<span style="white-space:nowrap">${esc(pesos(x.cop))}${x.repetida ? ' <b style="color:var(--gold)" title="La misma gente aparece en otra compra de la promo hoy: revisar">⚠ repetida</b>' : ''}</span>` +
+      `</div>`).join('');
+    return `<div class="tile banco ${hayRep || Number(pr.grupos_sin_pagar) ? 'ojo' : 'bueno'}" style="grid-column:1/-1">` +
+      `<div class="n">${esc(pr.grupos_pagados)} ${Number(pr.grupos_pagados) === 1 ? 'pareja' : 'parejas'} con la promo</div>` +
+      `<div class="k">${esc(pr.personas_pagadas)} personas · ${esc(pesos(pr.cop_pagado))} cobrados a $24.000 por 2 (la tarifa normal sumaría ${esc(pesos(Number(pr.cop_pagado) + Number(pr.descuento_cop)))})</div>` +
+      (Number(pr.grupos_sin_pagar) ? `<div class="pista">${esc(pr.grupos_sin_pagar)} reserva(s) con la promo sin pagar todavía</div>` : '') +
+      (hayRep ? '<div class="pista">⚠ Hay compras repetidas de la promo: confirma que no se pagó dos veces</div>' : '') +
+      `<div style="margin-top:.4rem">${filas}</div>` +
+    `</div>`;
+  }
+
   function tarjetaBanco() {
     const b = cajaDatos && cajaDatos.banco;
     // Si la migración 0027 todavía no está aplicada, esto no existe y la
@@ -5977,6 +6001,12 @@ const CONFIG = {
 
       grupo('Reservas por página') +
       g('  ' + unidad(pagN, 'cupo'), pesos(pag)) +
+      // 14 nov: de esos cupos, los que pagaron la tarifa de la promo 2 por $24.000 (ya vienen contados a lo que se cobró).
+      ((d.promo && Number(d.promo.grupos_pagados) > 0)
+        ? g('  Promo 2x$24.000: ' + unidad(Number(d.promo.grupos_pagados), 'pareja'), pesos(d.promo.cop_pagado)) +
+          (d.promo.lista || []).filter(x => x.pagada).map(x =>
+            `<div class="peq">  ${esc(x.hora)} ${esc(x.quienes)}${x.repetida ? ' (REPETIDA)' : ''}</div>`).join('')
+        : '') +
 
       grupo('Reservas manuales') +
       g('  ' + unidad(manoN, 'cupo'), pesos(mano)) +

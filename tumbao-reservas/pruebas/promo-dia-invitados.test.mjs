@@ -23,9 +23,20 @@ titulo('3. Timba (asistente interno) contesta lo de la promo, cupos y asistencia
 {
   const w = leer('../../tumbao-caja/src/index.js');
   const a = w.slice(w.indexOf('const INSTRUCCIONES_AGENTE'), w.indexOf('const HERRAMIENTAS_AGENTE'));
-  ok('conoce la promo de 2 cupos por $24.000 y cómo contar sus reservas (grupos)', /promo_dos_cupos/.test(a) && /24000/.test(a) && /grupo_id/.test(a));
+  ok('conoce la promo de 2 cupos por $24.000 y cómo contar sus reservas (grupos)', /promo_dos_cupos/.test(a) && /24\.000/.test(a) && /grupo_id/.test(a) && /promo_del_dia/.test(a));
   ok('sabe contar cupos libres y asistencias', /cupo_total . cupo_tomado/.test(a) && /asistencias/.test(a) && /reserva_id/.test(a));
   ok('sabe contar planes y tiqueteras, y usa ventas_entre para la plata', /mensualidades_resumen/.test(a) && /tiqueteras/.test(a) && /ventas_entre/.test(a));
+}
+
+titulo('4. El cierre cuenta lo cobrado y /admin muestra quién pagó la promo');
+{
+  const m7 = leer('../supabase/migrations/0207_promo_visible_en_cierre_y_admin.sql');
+  const adm = leer('../../docs/admin.html');
+  ok('valor_reserva usa precio_del_grupo entre las personas del grupo', /function public\.valor_reserva/.test(m7) && /precio_del_grupo\(r\.id\)/.test(m7));
+  ok('caja_del_dia y ventas_entre dejan de sumar precio_cop por persona', /sum\(valor_reserva\(r\.id\)\)/.test(m7) && /caja_del_dia\(text,date\)/.test(m7) && /ventas_entre\(date,date\)/.test(m7));
+  ok('el cierre trae la sección promo, con repetidas marcadas', /''promo'', promo_del_dia\(v_dia\)/.test(m7) && /'repetida'/.test(m7));
+  ok('/admin enseña la tarjeta de la promo en el cierre y en la tirilla', /function tarjetaPromo/.test(adm) && /\+ tarjetaPromo\(\)/.test(adm) && /Promo 2x\$24\.000/.test(adm));
+  ok('no borra nada: sin DROP ni DELETE', !/\bdrop\s+(table|function|index)|\bdelete\s+from/i.test(m7.replace(/--.*$/gm, '')));
 }
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
