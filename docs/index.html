@@ -48,7 +48,9 @@ const CONFIG = {
   MINUTOS_ESPERA: 3,
   // 13 nov · Día de invitados: 2 cupos de clase suelta por $24.000 en las clases del viernes 13. Es el espejo de
   // ajustes.promo_dos_cupos en la base: la base es la que cobra (precio_del_grupo), esto solo lo muestra.
-  PROMO_DOS: { cupos: 2, precio: 24000, desde: '2026-11-13', hasta: '2026-11-13', hasta_visible: '2026-11-14T00:00:00-05:00' },
+  // 17 nov: ¡Llegaron los aguinaldos! 2 por $24.000 el miércoles 18 y el viernes 20 (el jueves 19 NO). `dias` manda; el 13 queda
+  // para que lo ya reservado se siga leyendo bien.
+  PROMO_DOS: { cupos: 2, precio: 24000, dias: ['2026-11-13', '2026-11-18', '2026-11-20'], hasta_visible: '2026-11-21T00:00:00-05:00' },
   // Para decir «a $5.000 la clase»: el mismo número que usa la página de mensualidad (CLASES_MES_REF).
   CLASES_MES_REF: 25,
   // Cuánto se le guarda el cupo a quien reserva y todavía no avisa que
@@ -1011,7 +1013,14 @@ const CONFIG = {
   .promo-pop.on{display:flex}
   .promo-pop .caja{position:relative;width:min(420px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;
     border-radius:22px;overflow:hidden;background:#1b0f2a;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 2px rgba(255,255,255,.12)}
-  .promo-pop img{display:block;width:100%;height:auto;min-height:0;object-fit:contain;flex:0 1 auto;max-height:calc(100dvh - 150px)}
+  .promo-cuerpo{padding:2.2rem 1.4rem 1rem;text-align:center;background:radial-gradient(120% 80% at 80% 0%,rgba(255,46,143,.35),transparent 60%),radial-gradient(90% 70% at 0% 100%,rgba(255,122,61,.28),transparent 60%),#1b0f2a}
+  .promo-cuerpo p{margin:0}
+  .promo-cuerpo .pk{font-size:.8rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#ffb3d3}
+  .promo-cuerpo .pt{margin:.5rem 0 .3rem;font-size:2rem;line-height:1.05;font-weight:800;letter-spacing:-.03em;color:#fff}
+  .promo-cuerpo .pt b{background:linear-gradient(100deg,#ffc14d,#ff6b35 45%,#ff2e8f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:2.7rem}
+  .promo-cuerpo .pd{font-weight:700;color:#fff}
+  .promo-cuerpo .ph{margin-top:.2rem;color:#cdbfdc}
+  .promo-cuerpo .pn{margin-top:.8rem;font-size:.85rem;color:#a99bb8}
   .promo-pop .acciones{display:grid;gap:8px;padding:12px 14px 14px}
   .promo-pop .cta{border:0;border-radius:99px;padding:14px 18px;font:700 1rem/1.2 inherit;color:#26101a;cursor:pointer;
     background:linear-gradient(90deg,#ff7a3d,#ff3d8b)}
@@ -1915,7 +1924,7 @@ const CONFIG = {
   // otro tipo de pase: precio de siempre.
   function promoAplica(){
     const P = CONFIG.PROMO_DOS;
-    return !!(P && tipo === 'suelta' && diaActivo && diaActivo >= P.desde && diaActivo <= P.hasta);
+    return !!(P && tipo === 'suelta' && diaActivo && P.dias.indexOf(diaActivo) >= 0);
   }
   function totalGrupo(){
     const unit = (elegida && elegida.precio_cop) || 0;
@@ -1942,7 +1951,7 @@ const CONFIG = {
     g.hidden = tipo !== 'suelta';
     if (tipo === 'suelta') g.innerHTML = cuantos > 1
       ? (promoAplica() && cuantos === CONFIG.PROMO_DOS.cupos
-          ? `${cuantos} personas · <b>${esc(pesos(total))}</b> <s>${esc(pesos((elegida.precio_cop || 0) * cuantos))}</s> · Día de invitados` +
+          ? `${cuantos} personas · <b>${esc(pesos(total))}</b> <s>${esc(pesos((elegida.precio_cop || 0) * cuantos))}</s> · Aguinaldos 2×$24.000` +
             ` · pagas todo junto, en un solo pago`
           : `${cuantos} personas × ${esc(pesos(elegida.precio_cop || 0))} = <b>${esc(pesos(total))}</b>` +
             ` · pagas todo junto, en un solo pago`)
@@ -2754,10 +2763,16 @@ const CONFIG = {
   var eq=$('#eq');if(eq){for(var i=0;i<30;i++){var b=document.createElement('i');b.style.animationDuration=(0.7+Math.random()*0.9).toFixed(2)+'s';b.style.animationDelay=(-Math.random()*1.5).toFixed(2)+'s';eq.appendChild(b);}}
 }catch(e){}})();
 </script>
-<div class="promo-pop" id="promo-pop" role="dialog" aria-modal="true" aria-label="Día de invitados: 2 personas por $24.000" hidden>
+<div class="promo-pop" id="promo-pop" role="dialog" aria-modal="true" aria-label="Aguinaldos: 2 personas por $24.000, miércoles 18 y viernes 20" hidden>
   <div class="caja">
     <button class="x" type="button" id="promo-x" aria-label="Cerrar">×</button>
-    <img src="img/promo-dia-de-invitados.jpg" alt="Llegaron los aguinaldos. Mañana viernes, día de invitados: 2 personas por $24.000. Tripleta con Fabián, 7 am, 6 pm y 7 pm." width="901" height="1600">
+    <div class="promo-cuerpo">
+      <p class="pk">¡Llegaron los aguinaldos! 🎁</p>
+      <p class="pt">2 personas por <b>$24.000</b></p>
+      <p class="pd">Miércoles 18 y viernes 20 de noviembre</p>
+      <p class="ph">7:00 a. m. · 6:00 p. m. · 7:00 p. m.</p>
+      <p class="pn">Reserva las dos personas juntas, en clase suelta.</p>
+    </div>
     <div class="acciones">
       <button class="cta" type="button" id="promo-cta">Reservar 2 cupos por $24.000</button>
       <button class="no" type="button" id="promo-no">Ahora no</button>
@@ -2765,10 +2780,10 @@ const CONFIG = {
   </div>
 </div>
 <script>
-/* 13 nov · Día de invitados. Pop-up una sola vez por navegador mientras la promo esté vigente (hasta el fin del 13 de
-   noviembre, hora de Bogotá). Reservar lleva al viernes 13; el precio de 2 cupos lo cobra la base, no esta página. */
+/* 17 nov · Aguinaldos 2×$24.000 (miércoles 18 y viernes 20). Pop-up una sola vez por navegador mientras la promo esté vigente (hasta el fin del 20,
+   hora de Bogotá). Reservar lleva al próximo día de la promo; el precio de 2 cupos lo cobra la base, no esta página. */
 (function(){try{
-  var P = { hasta: Date.parse('2026-11-14T00:00:00-05:00'), dia: '2026-11-13', llave: 'tumbao_promo_invitados_1113' };
+  var P = { hasta: Date.parse('2026-11-21T00:00:00-05:00'), dias: ['2026-11-18', '2026-11-20'], llave: 'tumbao_promo_aguinaldos_1118' };
   if (Date.now() >= P.hasta) return;
   var pop = document.getElementById('promo-pop');
   if (!pop) return;
@@ -2785,12 +2800,14 @@ const CONFIG = {
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && pop.classList.contains('on')) cerrar(); });
   document.getElementById('promo-cta').addEventListener('click', function(){
     cerrar();
-    // Lleva a «Clase suelta» y, cuando los días cargan, salta al viernes 13 (hasta 8 s de espera).
+    // Lleva a «Clase suelta» y, cuando los días cargan, salta al próximo día de la promo (hasta 8 s de espera).
     var op = document.querySelector('.opcion[data-tipo="suelta"]');
     if (op) op.click();
     var intentos = 0;
     var t = setInterval(function(){
-      var b = document.querySelector('#dias .dia[data-fecha="' + P.dia + '"]');
+      var hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+      var prox = P.dias.filter(function(d){ return d >= hoy; })[0] || P.dias[0];
+      var b = document.querySelector('#dias .dia[data-fecha="' + prox + '"]');
       if (b) { clearInterval(t); b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       else if (++intentos > 40) clearInterval(t);
     }, 200);
