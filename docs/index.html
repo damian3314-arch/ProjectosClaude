@@ -1007,6 +1007,17 @@ const CONFIG = {
      La página conserva su identidad (neón del salón). Navidad = luces de hada arriba, luces desenfocadas y nieve mínima.
      ?navidad=1 la fuerza, ?navidad=0 la quita. Solo transform y opacidad; se apaga con reduced-motion. */
   .guirnalda{display:none}
+  /* 17 nov · aguinaldos: etiqueta en el día, nota en el contador y franja de arriba */
+  .dia{position:relative}
+  .dia-promo{display:block;margin-top:.25rem;padding:.12rem .4rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;color:#2b1204;background:linear-gradient(135deg,#ffd0a8,#ff9a5c)}
+  .promo-nota{margin:0;padding:.7rem .85rem;border-radius:12px;font-size:.88rem;line-height:1.4;background:rgba(255,193,77,.12);border:1px solid rgba(255,193,77,.4);color:var(--tx)}
+  .promo-nota b{color:#ffc14d}
+  .franja-aguinaldos{display:flex;align-items:center;gap:.7rem;width:100%;margin:0 0 .8rem;padding:.75rem .9rem;border:1px solid rgba(255,193,77,.5);border-radius:16px;cursor:pointer;text-align:left;font:inherit;color:var(--tx);
+    background:linear-gradient(135deg,rgba(255,122,61,.22),rgba(255,46,143,.18))}
+  .franja-aguinaldos .ico{font-size:1.4rem;flex:none}
+  .franja-aguinaldos .tx{flex:1;font-size:.86rem;line-height:1.35;color:var(--tx-2)}
+  .franja-aguinaldos .tx b{color:#ffc14d}
+  .franja-aguinaldos .ir{font-weight:800;color:#fff}
   /* 13 nov · pop-up del Día de invitados */
   .promo-pop{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:16px;
     background:rgba(8,4,16,.78);backdrop-filter:blur(3px)}
@@ -1133,6 +1144,11 @@ const CONFIG = {
   <!-- La invitación a tiquetera y mensualidad va justo debajo del
        logo: es lo primero que se lee. Solo se ve en el paso 1; mientras
        alguien está pagando su clase no se le pone nada encima. -->
+  <button class="franja-aguinaldos" type="button" id="franja-aguinaldos" hidden>
+    <span class="ico" aria-hidden="true">🎁</span>
+    <span class="tx"><b>¡Llegaron los aguinaldos!</b> Cada 2 personas, <b>$24.000</b> · miércoles 18 y viernes 20. 4 por $48.000, 6 por $72.000, 8 por $96.000.</span>
+    <span class="ir" aria-hidden="true">→</span>
+  </button>
   <a class="franja-promo" href="mensualidad.html" id="franja-promo">
     <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
     <span class="tx" id="franja-promo-tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
@@ -1236,6 +1252,7 @@ const CONFIG = {
           <button type="button" class="mas" id="cuantos-mas" aria-label="Una persona más">+</button>
           <span class="hint" id="cuantos-hint"></span>
         </div>
+        <p class="promo-nota" id="promo-nota" hidden>🎁 <b>Aguinaldos:</b> cada 2 personas pagan <b>$24.000</b>. 4 por $48.000 · 6 por $72.000 · 8 por $96.000. ¡Trae a tu parche!</p>
         <p class="grupo-total" id="grupo-total"></p>
       </div>
 
@@ -1782,7 +1799,9 @@ const CONFIG = {
       const dow = new Intl.DateTimeFormat('es-CO',{weekday:'short',timeZone:'UTC'}).format(f).replace('.','');
       const mes = new Intl.DateTimeFormat('es-CO',{month:'short',timeZone:'UTC'}).format(f).replace('.','');
       return `<button class="dia" type="button" data-fecha="${d.fecha}" aria-pressed="false">
-                <span class="dow">${dow}</span><span class="num">${dd}</span><span class="mes">${mes}</span>
+                <span class="dow">${dow}</span><span class="num">${dd}</span><span class="mes">${mes}</span>${
+                (CONFIG.PROMO_DOS && CONFIG.PROMO_DOS.dias.indexOf(d.fecha) >= 0 && Date.now() < Date.parse(CONFIG.PROMO_DOS.hasta_visible))
+                  ? '<span class="dia-promo">2×$24.000</span>' : ''}
               </button>`;
     }).join('');
     $$('#dias .dia').forEach(b => b.addEventListener('click', () => elegirDia(b.dataset.fecha)));
@@ -1874,6 +1893,7 @@ const CONFIG = {
     $('#cuantos').value = String(cuantos);
     $('#cuantos-menos').disabled = cuantos <= 1;
     $('#cuantos-mas').disabled   = cuantos >= tope;
+    { const pn = $('#promo-nota'); if (pn) pn.hidden = !promoAplica(); }
     // El tope solo se menciona cuando de verdad está frenando algo. Si
     // quedan 12 y el freno es 8, decir "quedan 8" es mentira; decir
     // "quedan 12" y luego no dejar pasar de 8 es peor.
@@ -1929,7 +1949,11 @@ const CONFIG = {
   function totalGrupo(){
     const unit = (elegida && elegida.precio_cop) || 0;
     const normal = unit * cuantos;
-    if (promoAplica() && cuantos === CONFIG.PROMO_DOS.cupos) return Math.min(CONFIG.PROMO_DOS.precio, normal);
+    // Cada pareja (2 cupos) paga $24.000: 4 personas = $48.000, 6 = $72.000, 8 = $96.000. Si sobra uno (3, 5, 7) ese paga lo normal.
+    if (promoAplica() && cuantos >= CONFIG.PROMO_DOS.cupos){
+      const P = CONFIG.PROMO_DOS, pares = Math.floor(cuantos / P.cupos);
+      return Math.min(pares * P.precio + (cuantos - pares * P.cupos) * unit, normal);
+    }
     return normal;
   }
 
@@ -1950,8 +1974,8 @@ const CONFIG = {
     const g = $('#grupo-total');
     g.hidden = tipo !== 'suelta';
     if (tipo === 'suelta') g.innerHTML = cuantos > 1
-      ? (promoAplica() && cuantos === CONFIG.PROMO_DOS.cupos
-          ? `${cuantos} personas · <b>${esc(pesos(total))}</b> <s>${esc(pesos((elegida.precio_cop || 0) * cuantos))}</s> · Aguinaldos 2×$24.000` +
+      ? (promoAplica() && total < (elegida.precio_cop || 0) * cuantos
+          ? `${cuantos} personas · <b>${esc(pesos(total))}</b> <s>${esc(pesos((elegida.precio_cop || 0) * cuantos))}</s> · Aguinaldos: cada 2 personas $24.000` +
             ` · pagas todo junto, en un solo pago`
           : `${cuantos} personas × ${esc(pesos(elegida.precio_cop || 0))} = <b>${esc(pesos(total))}</b>` +
             ` · pagas todo junto, en un solo pago`)
@@ -2763,18 +2787,18 @@ const CONFIG = {
   var eq=$('#eq');if(eq){for(var i=0;i<30;i++){var b=document.createElement('i');b.style.animationDuration=(0.7+Math.random()*0.9).toFixed(2)+'s';b.style.animationDelay=(-Math.random()*1.5).toFixed(2)+'s';eq.appendChild(b);}}
 }catch(e){}})();
 </script>
-<div class="promo-pop" id="promo-pop" role="dialog" aria-modal="true" aria-label="Aguinaldos: 2 personas por $24.000, miércoles 18 y viernes 20" hidden>
+<div class="promo-pop" id="promo-pop" role="dialog" aria-modal="true" aria-label="Aguinaldos: cada 2 personas $24.000, miércoles 18 y viernes 20" hidden>
   <div class="caja">
     <button class="x" type="button" id="promo-x" aria-label="Cerrar">×</button>
     <div class="promo-cuerpo">
       <p class="pk">¡Llegaron los aguinaldos! 🎁</p>
-      <p class="pt">2 personas por <b>$24.000</b></p>
+      <p class="pt">Cada 2 personas por <b>$24.000</b></p>
       <p class="pd">Miércoles 18 y viernes 20 de noviembre</p>
       <p class="ph">7:00 a. m. · 6:00 p. m. · 7:00 p. m.</p>
-      <p class="pn">Reserva las dos personas juntas, en clase suelta.</p>
+      <p class="pn">4 por $48.000 · 6 por $72.000 · 8 por $96.000. Reserva a todos juntos, en clase suelta.</p>
     </div>
     <div class="acciones">
-      <button class="cta" type="button" id="promo-cta">Reservar 2 cupos por $24.000</button>
+      <button class="cta" type="button" id="promo-cta">Reservar con la promo</button>
       <button class="no" type="button" id="promo-no">Ahora no</button>
     </div>
   </div>
@@ -2798,8 +2822,7 @@ const CONFIG = {
   document.getElementById('promo-no').addEventListener('click', cerrar);
   pop.addEventListener('click', function(e){ if (e.target === pop) cerrar(); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && pop.classList.contains('on')) cerrar(); });
-  document.getElementById('promo-cta').addEventListener('click', function(){
-    cerrar();
+  function irALaPromo(){
     // Lleva a «Clase suelta» y, cuando los días cargan, salta al próximo día de la promo (hasta 8 s de espera).
     var op = document.querySelector('.opcion[data-tipo="suelta"]');
     if (op) op.click();
@@ -2811,7 +2834,10 @@ const CONFIG = {
       if (b) { clearInterval(t); b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       else if (++intentos > 40) clearInterval(t);
     }, 200);
-  });
+  }
+  document.getElementById('promo-cta').addEventListener('click', function(){ cerrar(); irALaPromo(); });
+  var fr = document.getElementById('franja-aguinaldos');
+  if (fr){ fr.hidden = false; fr.addEventListener('click', irALaPromo); }
   // Los navegadores automáticos (las pruebas de la página) no ven el pop-up para que no tape los botones; con ?promo=1 se fuerza.
   var forzar = /[?&]promo=1\b/.test(location.search);
   if (forzar || (!visto && !navigator.webdriver)) setTimeout(abrir, 700);

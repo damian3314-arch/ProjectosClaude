@@ -5612,8 +5612,8 @@ const CONFIG = {
         `<span style="white-space:nowrap">${esc(pesos(x.cop))}${x.repetida ? ' <b style="color:var(--gold)" title="La misma gente aparece en otra compra de la promo hoy: revisar">⚠ repetida</b>' : ''}</span>` +
       `</div>`).join('');
     return `<div class="tile banco ${hayRep || Number(pr.grupos_sin_pagar) ? 'ojo' : 'bueno'}" style="grid-column:1/-1">` +
-      `<div class="n">${esc(pr.grupos_pagados)} ${Number(pr.grupos_pagados) === 1 ? 'pareja' : 'parejas'} con la promo</div>` +
-      `<div class="k">${esc(pr.personas_pagadas)} personas · ${esc(pesos(pr.cop_pagado))} cobrados a $24.000 por 2 (la tarifa normal sumaría ${esc(pesos(Number(pr.cop_pagado) + Number(pr.descuento_cop)))})</div>` +
+      `<div class="n">${esc(pr.personas_pagadas)} personas con la promo</div>` +
+      `<div class="k">${esc(pr.grupos_pagados)} ${Number(pr.grupos_pagados) === 1 ? 'compra' : 'compras'} · ${esc(pesos(pr.cop_pagado))} cobrados a $24.000 por cada 2 personas (la tarifa normal sumaría ${esc(pesos(Number(pr.cop_pagado) + Number(pr.descuento_cop)))})</div>` +
       (Number(pr.grupos_sin_pagar) ? `<div class="pista">${esc(pr.grupos_sin_pagar)} reserva(s) con la promo sin pagar todavía</div>` : '') +
       (hayRep ? '<div class="pista">⚠ Hay compras repetidas de la promo: confirma que no se pagó dos veces</div>' : '') +
       `<div style="margin-top:.4rem">${filas}</div>` +
@@ -6003,7 +6003,7 @@ const CONFIG = {
       g('  ' + unidad(pagN, 'cupo'), pesos(pag)) +
       // 14 nov: de esos cupos, los que pagaron la tarifa de la promo 2 por $24.000 (ya vienen contados a lo que se cobró).
       ((d.promo && Number(d.promo.grupos_pagados) > 0)
-        ? g('  Promo 2x$24.000: ' + unidad(Number(d.promo.grupos_pagados), 'pareja'), pesos(d.promo.cop_pagado)) +
+        ? g('  Promo 2x$24.000: ' + unidad(Number(d.promo.personas_pagadas), 'persona'), pesos(d.promo.cop_pagado)) +
           (d.promo.lista || []).filter(x => x.pagada).map(x =>
             `<div class="peq">  ${esc(x.hora)} ${esc(x.quienes)}${x.repetida ? ' (REPETIDA)' : ''}</div>`).join('')
         : '') +

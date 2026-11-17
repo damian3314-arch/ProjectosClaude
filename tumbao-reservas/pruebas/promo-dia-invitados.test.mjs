@@ -8,7 +8,8 @@ const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.lengt
 
 titulo('1. La página');
 ok('la promo es de exactamente 2 cupos, $24.000, solo el 13, 18 y 20 de noviembre (el 19 no)', /PROMO_DOS: \{ cupos: 2, precio: 24000, dias: \['2026-11-13', '2026-11-18', '2026-11-20'\]/.test(idx));
-ok('el total usa la promo solo con 2 cupos de suelta ese día (3 cupos siguen a precio normal)', /function promoAplica/.test(idx) && /cuantos === CONFIG\.PROMO_DOS\.cupos\) return Math\.min\(CONFIG\.PROMO_DOS\.precio, normal\)/.test(idx));
+ok('el total usa la promo por parejas (4 = $48.000, 6, 8) solo en clase suelta de los días de la promo', /function promoAplica/.test(idx) && /pares \* P\.precio \+ \(cuantos - pares \* P\.cupos\) \* unit/.test(idx));
+ok('la página hace publicidad: franja arriba, etiqueta en los días y nota en el contador', /id="franja-aguinaldos"/.test(idx) && /dia-promo/.test(idx) && /id="promo-nota"/.test(idx) && /4 por \$48\.000/.test(idx));
 ok('el resumen, la cuenta y el botón leen totalGrupo()', (idx.match(/totalGrupo\(\)/g) || []).length >= 3);
 ok('el pop-up existe, dice los días y se puede cerrar de tres formas', /Miércoles 18 y viernes 20/.test(idx) && /id="promo-x"/.test(idx) && /id="promo-no"/.test(idx) && /e\.target === pop/.test(idx));
 ok('sale una sola vez por navegador y deja de salir al terminar el 20 de noviembre', /tumbao_promo_aguinaldos_1118/.test(idx) && /Date\.parse\('2026-11-21T00:00:00-05:00'\)/.test(idx));
@@ -28,7 +29,11 @@ titulo('3. Timba (asistente interno) contesta lo de la promo, cupos y asistencia
   ok('sabe contar planes y tiqueteras, y usa ventas_entre para la plata', /mensualidades_resumen/.test(a) && /tiqueteras/.test(a) && /ventas_entre/.test(a));
 }
 
-titulo('3b. Aguinaldos: la base acepta varios días');
+titulo('3b. Aguinaldos: la base acepta varios días y grupos grandes');
+{
+  const m9 = leer('../supabase/migrations/0209_promo_por_parejas.sql');
+  ok('promo_total_cupos cobra por parejas y deja el sobrante a precio normal', /pares := p_n \/ k/.test(m9) && /least\(pares \*/.test(m9));
+}
 {
   const m8 = leer('../supabase/migrations/0208_promo_aguinaldos_18_y_20.sql');
   ok('promo_total_cupos lee la lista «fechas» y la promo queda para el 13, 18 y 20', /jsonb_array_elements_text\(v->'fechas'\)/.test(m8) && /"fechas":\["2026-11-13","2026-11-18","2026-11-20"\]/.test(m8));
