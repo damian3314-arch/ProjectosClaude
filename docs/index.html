@@ -1018,12 +1018,6 @@ const CONFIG = {
   .guirnalda{display:none}
   /* 17 nov · aguinaldos: etiqueta en el día, nota en el contador y franja de arriba */
   .dia{position:relative}
-  .aviso-dia{margin:.2rem 0 .9rem;padding:.85rem 1rem;border-radius:16px;border:1px solid rgba(255,111,177,.45);
-    background:linear-gradient(135deg,rgba(255,46,143,.2),rgba(143,61,255,.18));font-size:.92rem;line-height:1.45;color:var(--tx-2)}
-  .aviso-dia .t{display:block;margin-bottom:.2rem;font-size:1.02rem;font-weight:800;color:#fff}
-  .aviso-dia b{color:#fff}
-  .aviso-dia .op{display:block;margin-top:.45rem;color:#ffc14d;font-weight:600}
-  .resumen .aviso-corto{display:block;margin-top:.35rem;font-size:.82rem;color:#ffc14d}
   .dia-promo{display:block;margin-top:.25rem;padding:.12rem .4rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;color:#2b1204;background:linear-gradient(135deg,#ffd0a8,#ff9a5c)}
   .promo-nota{margin:0;padding:.7rem .85rem;border-radius:12px;font-size:.88rem;line-height:1.4;background:rgba(255,193,77,.12);border:1px solid rgba(255,193,77,.4);color:var(--tx)}
   .promo-nota b{color:#ffc14d}
@@ -1234,7 +1228,6 @@ const CONFIG = {
     <h2 id="t1">¿Cuándo quieres bailar?</h2>
     <p class="sub" id="sub-horario"></p>
     <div class="dias" id="dias" role="group" aria-label="Elige el día"></div>
-    <div class="aviso-dia" id="aviso-dia" role="note" hidden></div>
     <div class="clases" id="clases" aria-live="polite">
       <div class="skel"></div><div class="skel"></div><div class="skel"></div>
     </div>
@@ -1843,20 +1836,39 @@ const CONFIG = {
     const a = CONFIG.AVISOS_DIA && CONFIG.AVISOS_DIA[fecha];
     return (a && Date.now() < Date.parse(a.hasta)) ? a : null;
   }
-  // En el resumen el aviso corto solo va con las clases de la noche (6 y 7 p. m.), no con la de las 7 a. m. ni la de las 5 p. m.
-  function avisoParaClase(fecha, c){
-    const a = avisoDelDia(fecha);
-    return (a && c && /^\s*[67]:00\s*p\.?\s*m/i.test(String(c.hora || ''))) ? a : null;
+  // El aviso de un día va en un pop-up (no dentro del paso a paso, que ya recarga): sale al elegir ese día, una vez por visita.
+  // Los navegadores automáticos (las pruebas) no lo ven para que no tape los botones; con ?aviso=1 se fuerza.
+  function avisoPopDelDia(fecha){
+    const av = avisoDelDia(fecha), pop = $('#aviso-pop');
+    if (!av || !pop) return;
+    const forzar = /[?&]aviso=1\b/.test(location.search);
+    if (!forzar && navigator.webdriver) return;
+    const llave = 'tumbao_aviso_' + fecha;
+    if (!forzar){ try { if (sessionStorage.getItem(llave) === '1') return; } catch (e) {} }
+    $('#aviso-pop-cuerpo').innerHTML =
+      `<p class="pk">${av.emoji} ${esc(av.titulo)}</p>` +
+      `<p class="pd">${av.texto}</p>` +
+      (av.opcional ? `<p class="pn" style="color:#ffc14d;font-weight:600">${esc(av.opcional)}</p>` : '');
+    pop.hidden = false; pop.classList.add('on');
+    try { sessionStorage.setItem(llave, '1'); } catch (e) {}
   }
+  // El marcado del pop-up está al final de la página: los clics se atienden desde el documento para no depender del orden.
+  (function(){
+    const cerrar = () => { const pop = $('#aviso-pop'); if (pop){ pop.classList.remove('on'); pop.hidden = true; } };
+    document.addEventListener('click', e => {
+      const pop = $('#aviso-pop');
+      if (!pop || !pop.classList.contains('on')) return;
+      if (e.target === pop || (e.target.closest && e.target.closest('#aviso-pop-ok, #aviso-pop-x'))) cerrar();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
+  })();
 
   function elegirDia(fecha){
     diaActivo = fecha;
     $$('#dias .dia').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fecha === fecha)));
     const dia = dias.find(d => d.fecha === fecha);
     if (!dia) return;
-    { const av = avisoDelDia(fecha), caja = $('#aviso-dia');
-      if (caja){ caja.hidden = !av;
-        caja.innerHTML = av ? `<span class="t">${av.emoji} ${esc(av.titulo)}</span>${av.texto}${av.opcional ? `<span class="op">${esc(av.opcional)}</span>` : ''}` : ''; } }
+    avisoPopDelDia(fecha);
 
     $('#clases').innerHTML = dia.clases.map(c => {
       const libres = Math.max(c.cupos_disponibles, 0);
@@ -1998,7 +2010,7 @@ const CONFIG = {
            ? ' · ' + (cuantos > 1
                ? `${cuantos} cupos · ${pesos(total)}`
                : pesos(elegida.precio_cop) + ' por persona')
-           : ''}</span>` + (avisoParaClase(diaActivo, elegida) ? `<span class="aviso-corto">${avisoParaClase(diaActivo, elegida).emoji} ${esc(avisoParaClase(diaActivo, elegida).corto)}${avisoParaClase(diaActivo, elegida).opcional ? ' · ' + esc(avisoParaClase(diaActivo, elegida).opcional) : ''}</span>` : '');
+           : ''}</span>` ;
     // La cuenta clara, ahí mismo donde se elige la cantidad: es donde la
     // persona se da cuenta de que va a transferir 45 y no 15.
     const g = $('#grupo-total');
@@ -2817,6 +2829,15 @@ const CONFIG = {
   var eq=$('#eq');if(eq){for(var i=0;i<30;i++){var b=document.createElement('i');b.style.animationDuration=(0.7+Math.random()*0.9).toFixed(2)+'s';b.style.animationDelay=(-Math.random()*1.5).toFixed(2)+'s';eq.appendChild(b);}}
 }catch(e){}})();
 </script>
+<div class="promo-pop" id="aviso-pop" role="dialog" aria-modal="true" aria-label="Aviso de la clase" hidden>
+  <div class="caja">
+    <button class="x" type="button" id="aviso-pop-x" aria-label="Cerrar">×</button>
+    <div class="promo-cuerpo" id="aviso-pop-cuerpo"></div>
+    <div class="acciones">
+      <button class="cta" type="button" id="aviso-pop-ok">Entendido</button>
+    </div>
+  </div>
+</div>
 <div class="promo-pop" id="promo-pop" role="dialog" aria-modal="true" aria-label="Aguinaldos: cada 2 personas $24.000, miércoles 18 y viernes 20" hidden>
   <div class="caja">
     <button class="x" type="button" id="promo-x" aria-label="Cerrar">×</button>
