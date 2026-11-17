@@ -41,6 +41,11 @@ titulo('3b. Aguinaldos: la base acepta varios días y grupos grandes');
   ok('Timba ofrece la promo solo el miércoles 18 y el viernes 20', /miércoles 18 y el viernes 20/.test(w) && !/solo el viernes 13 de noviembre/.test(w));
 }
 
+titulo('3c. Aviso del simulacro navideño (jueves 19)');
+ok('al elegir el jueves 19 se avisa de los horarios 6:00-7:00 y 7:30-8:30 y del antojito opcional, y se repite en el resumen',
+   /'2026-11-19':\s*\{[\s\S]*6:00 a 7:00 p\. m\.[\s\S]*7:30 a 8:30 p\. m\.[\s\S]*trae tu antojito/.test(idx) && /id="aviso-dia"/.test(idx) && /aviso-corto/.test(idx) && /function avisoDelDia/.test(idx));
+ok('Timba sabe del simulacro', /SIMULACRO NAVIDEÑO/.test(leer('../../tumbao-caja/src/asistente.js')) && /SIMULACRO NAVIDEÑO/.test(leer('../../tumbao-caja/src/ventas.js')));
+
 titulo('4. El cierre cuenta lo cobrado y /admin muestra quién pagó la promo');
 {
   const m7 = leer('../supabase/migrations/0207_promo_visible_en_cierre_y_admin.sql');

@@ -50,6 +50,15 @@ const CONFIG = {
   // ajustes.promo_dos_cupos en la base: la base es la que cobra (precio_del_grupo), esto solo lo muestra.
   // 17 nov: ¡Llegaron los aguinaldos! 2 por $24.000 el miércoles 18 y el viernes 20 (el jueves 19 NO). `dias` manda; el 13 queda
   // para que lo ya reservado se siga leyendo bien.
+  // 17 nov: avisos por día para quien está reservando. Se ven al elegir ese día y otra vez en el resumen. `hasta`: se apagan solos.
+  AVISOS_DIA: {
+    '2026-11-19': {
+      emoji: '🎄', titulo: 'Simulacro navideño', hasta: '2026-11-20T00:00:00-05:00',
+      texto: 'Bailaremos al ritmo del sabor de la Navidad. Este jueves las clases de la noche son de <b>6:00 a 7:00 p. m.</b> y de <b>7:30 a 8:30 p. m.</b>',
+      opcional: 'Opcional: trae tu antojito para compartir con tus compañeros.',
+      corto: 'Simulacro navideño: 6:00 a 7:00 p. m. y 7:30 a 8:30 p. m.'
+    }
+  },
   PROMO_DOS: { cupos: 2, precio: 24000, dias: ['2026-11-13', '2026-11-18', '2026-11-20'], hasta_visible: '2026-11-21T00:00:00-05:00' },
   // Para decir «a $5.000 la clase»: el mismo número que usa la página de mensualidad (CLASES_MES_REF).
   CLASES_MES_REF: 25,
@@ -1009,6 +1018,12 @@ const CONFIG = {
   .guirnalda{display:none}
   /* 17 nov · aguinaldos: etiqueta en el día, nota en el contador y franja de arriba */
   .dia{position:relative}
+  .aviso-dia{margin:.2rem 0 .9rem;padding:.85rem 1rem;border-radius:16px;border:1px solid rgba(255,111,177,.45);
+    background:linear-gradient(135deg,rgba(255,46,143,.2),rgba(143,61,255,.18));font-size:.92rem;line-height:1.45;color:var(--tx-2)}
+  .aviso-dia .t{display:block;margin-bottom:.2rem;font-size:1.02rem;font-weight:800;color:#fff}
+  .aviso-dia b{color:#fff}
+  .aviso-dia .op{display:block;margin-top:.45rem;color:#ffc14d;font-weight:600}
+  .resumen .aviso-corto{display:block;margin-top:.35rem;font-size:.82rem;color:#ffc14d}
   .dia-promo{display:block;margin-top:.25rem;padding:.12rem .4rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;color:#2b1204;background:linear-gradient(135deg,#ffd0a8,#ff9a5c)}
   .promo-nota{margin:0;padding:.7rem .85rem;border-radius:12px;font-size:.88rem;line-height:1.4;background:rgba(255,193,77,.12);border:1px solid rgba(255,193,77,.4);color:var(--tx)}
   .promo-nota b{color:#ffc14d}
@@ -1219,6 +1234,7 @@ const CONFIG = {
     <h2 id="t1">¿Cuándo quieres bailar?</h2>
     <p class="sub" id="sub-horario"></p>
     <div class="dias" id="dias" role="group" aria-label="Elige el día"></div>
+    <div class="aviso-dia" id="aviso-dia" role="note" hidden></div>
     <div class="clases" id="clases" aria-live="polite">
       <div class="skel"></div><div class="skel"></div><div class="skel"></div>
     </div>
@@ -1822,11 +1838,25 @@ const CONFIG = {
     c.lugar,
   ].filter(Boolean).join(' · ');
 
+  // El aviso de un día solo se muestra mientras esté vigente.
+  function avisoDelDia(fecha){
+    const a = CONFIG.AVISOS_DIA && CONFIG.AVISOS_DIA[fecha];
+    return (a && Date.now() < Date.parse(a.hasta)) ? a : null;
+  }
+  // En el resumen el aviso corto solo va con las clases de la noche (6 y 7 p. m.), no con la de las 7 a. m. ni la de las 5 p. m.
+  function avisoParaClase(fecha, c){
+    const a = avisoDelDia(fecha);
+    return (a && c && /^\s*[67]:00\s*p\.?\s*m/i.test(String(c.hora || ''))) ? a : null;
+  }
+
   function elegirDia(fecha){
     diaActivo = fecha;
     $$('#dias .dia').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fecha === fecha)));
     const dia = dias.find(d => d.fecha === fecha);
     if (!dia) return;
+    { const av = avisoDelDia(fecha), caja = $('#aviso-dia');
+      if (caja){ caja.hidden = !av;
+        caja.innerHTML = av ? `<span class="t">${av.emoji} ${esc(av.titulo)}</span>${av.texto}${av.opcional ? `<span class="op">${esc(av.opcional)}</span>` : ''}` : ''; } }
 
     $('#clases').innerHTML = dia.clases.map(c => {
       const libres = Math.max(c.cupos_disponibles, 0);
@@ -1968,7 +1998,7 @@ const CONFIG = {
            ? ' · ' + (cuantos > 1
                ? `${cuantos} cupos · ${pesos(total)}`
                : pesos(elegida.precio_cop) + ' por persona')
-           : ''}</span>`;
+           : ''}</span>` + (avisoParaClase(diaActivo, elegida) ? `<span class="aviso-corto">${avisoParaClase(diaActivo, elegida).emoji} ${esc(avisoParaClase(diaActivo, elegida).corto)}${avisoParaClase(diaActivo, elegida).opcional ? ' · ' + esc(avisoParaClase(diaActivo, elegida).opcional) : ''}</span>` : '');
     // La cuenta clara, ahí mismo donde se elige la cantidad: es donde la
     // persona se da cuenta de que va a transferir 45 y no 15.
     const g = $('#grupo-total');
