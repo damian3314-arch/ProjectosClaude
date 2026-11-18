@@ -28,6 +28,14 @@ Cada chat lleva etiqueta `proy:<nombre>`. Los 6 chats de deploy viejos de Dami l
 
 ---
 
+## Cambios del 18 nov (dicho por Damián)
+
+- **Corónate: pausado y probablemente no se haga.** Sin lanzamiento del 21 nov ni invitaciones. Efecto: sale el ingreso de Corónate (Fase 1 $1,5 M) y la campaña ya no ayuda a la meta de nov–dic de la joyería. Pendiente: avisar al chat `[CORO]`, y decidir qué pasa con los costos ya hechos y con el evento del calendario del 21 nov.
+- **Sette:** Lorena abre **Sette Crepas** (nuevo punto de venta) y Damián ayudará con cosas pequeñas. Riesgo: alcance fuera del pago de $2 M (~22 h/mes). Regla propuesta: tope semanal y registro de horas.
+- **Paola** asiste a Damián (paga él, ~$700–800 mil al mes). Puede preparar y consolidar; no envía mensajes a clientes ni empleadas, no mueve dinero, no toca nómina sin su OK.
+- Capacitaciones: Nicole (cajera de Sette) y Jimmy (café Kaffa, caja de Loggro) las dicta un compañero de Loggro; Damián solo coordina y confirma que se conecten.
+- Ingreso base de proyectos sin Corónate ≈ $4,95 M/mes (Joyería 2,2 + Sette 2,0 + Tumbao 0,75); con Loggro ≈ $7,9 M/mes en promedio, antes de pagar a Paola.
+
 ## 2. Estado real por proyecto (lo hecho vs. lo pendiente)
 
 | Proyecto | Ya hecho | Pendiente / bloqueo | Chat donde seguir |
