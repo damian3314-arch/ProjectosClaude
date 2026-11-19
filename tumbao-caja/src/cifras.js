@@ -209,7 +209,9 @@ export function esConteoDeMensualidades(texto) {
   const t = String(texto || '').toLowerCase();
   if (!t || t.length > 160) return false;
   if (/vend|ingres|plata|\$|pes[oa]s|mes\b|semana|ayer|venc|renov|precio|cuest|valor|lista de espera|cupos?\b|clase|suelta|tiquet/.test(t)) return false;
-  const cuantos = /(cu[aá]nt[oa]s\b|cantidad|n[uú]mero|total)/.test(t);
+  // 19 nov: «Regáleme mensualidades activas» no traía «cuántas» y llegó al modelo, que contó solo las vigentes (51) mientras la
+  // página mostraba las que ocupan cupo. Ahora también cuentan los verbos de pedir el dato y «activas/vigentes/hay/hoy».
+  const cuantos = /(cu[aá]nt[oa]s\b|cantidad|n[uú]mero|total|reg[aá]l|d[aá]me|d[ií]me|d[ií]game|m[uú]estr|p[aá]same|mand[ae]|cu[aá]les|\bhay\b|tenemos|activ[oa]s?|vigentes?|\bhoy\b)/.test(t);
   const sujeto = /(mensualidad|afiliad|activ[oa]s?|vigentes?|inscrit|plan(es)?\b)/.test(t);
   return cuantos && sujeto;
 }

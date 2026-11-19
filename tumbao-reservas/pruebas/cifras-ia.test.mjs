@@ -116,6 +116,11 @@ titulo('4. Mensualidades: una sola verdad (8 oct: «58» y luego 26 / 20 / 23 co
     { hora: '19:00', etiqueta: '7:00 pm', vigentes: 15, en_gracia: 8, ocupan_cupo: 23, libres_pagina: 0 }] };
   const t = textoMensualidades(resumen);
   ok('la pregunta de Damián se contesta sin modelo', esConteoDeMensualidades('Cuantos activos en mensualidad hay?'));
+  ok('«Regáleme mensualidades activas» (19 nov) también se contesta sin modelo',
+     ['Regaleme mensualidades activas', 'Dame las mensualidades de hoy', 'Muéstrame las mensualidades vigentes', 'mensualidades hoy']
+       .every(esConteoDeMensualidades));
+  ok('lo que pregunta por plata, renovaciones o precio NO se atrapa',
+     !['Cuánto vale la mensualidad', 'quiero renovar mi mensualidad', 'ventas de mensualidades de la semana'].some(esConteoDeMensualidades));
   ok('lo demás NO se desvía (ventas, vencimientos, cupos de clase, precio, seguimiento)',
      !['cuántas mensualidades vendimos este mes', 'cuántas mensualidades vencen esta semana', 'cuántos cupos hay el jueves 5 pm', 'cuánto vale la mensualidad', 'En cada horario?']
        .some(esConteoDeMensualidades));
