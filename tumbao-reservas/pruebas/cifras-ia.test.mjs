@@ -114,7 +114,12 @@ titulo('4. Mensualidades: una sola verdad (8 oct: «58» y luego 26 / 20 / 23 co
     { hora: '07:00', etiqueta: '7:00 am', vigentes: 24, en_gracia: 2, ocupan_cupo: 26, libres_pagina: 9 },
     { hora: '18:00', etiqueta: '6:00 pm', vigentes: 19, en_gracia: 1, ocupan_cupo: 20, libres_pagina: 0 },
     { hora: '19:00', etiqueta: '7:00 pm', vigentes: 15, en_gracia: 8, ocupan_cupo: 23, libres_pagina: 0 }] };
-  const t = textoMensualidades(resumen);
+  const t = textoMensualidades(resumen, 'mensualidades en gracia y lo que ocupa cupo');
+  { const sin = textoMensualidades(resumen, 'Regaleme mensualidades activas');
+    ok('sin que pregunten por la gracia, NO se menciona (solo activas y cupos de la página)',
+       /Activas/.test(sin) && !/gracia/i.test(sin) && !/Ocupan cupo/.test(sin) && /Cupos que la página/.test(sin) && /58/.test(sin));
+    const con = textoMensualidades(resumen, 'cuántas mensualidades están en gracia');
+    ok('si preguntan por la gracia o por lo que ocupa cupo, sí se da', /En gracia/.test(con) && /Ocupan cupo/.test(con)); }
   ok('la pregunta de Damián se contesta sin modelo', esConteoDeMensualidades('Cuantos activos en mensualidad hay?'));
   ok('«Regáleme mensualidades activas» (19 nov) también se contesta sin modelo',
      ['Regaleme mensualidades activas', 'Dame las mensualidades de hoy', 'Muéstrame las mensualidades vigentes', 'mensualidades hoy']

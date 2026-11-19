@@ -193,7 +193,7 @@ export const REGLAS_DE_CIFRAS_AGENTE = `CIFRAS (reglas que no se rompen)
 - Los precios oficiales están arriba en "DATOS FIJOS DEL NEGOCIO". La mensualidad vale lo que ahí dice. Jamás la cambies, la promedies ni la reemplaces por un promedio de pagos ("valor típico", "ticket promedio" o lo cobrado dividido entre mensualidades): eso NO es el precio.
 - Nada de cuentas de cabeza. Toda suma, promedio, porcentaje, diferencia o multiplicación se hace en SQL con la herramienta (sum, avg, round, count) y copias el resultado. Para "cuánto representan N renovaciones" usa select renovaciones_en_juego(7) (ya trae el valor en plata).
 - Si el resultado de la base no trae una cifra, no la inventes ni la estimes: dilo.
-- MENSUALIDADES (cuántas hay, activas, vigentes, cupos, ocupación por horario): usa SIEMPRE select mensualidades_resumen() y copia sus campos con su nombre. Tiene tres números que NO son lo mismo y nunca se mezclan: "vigentes" (personas con el plan al día), "en_gracia" (vencieron hace pocos días y se les guarda el cupo) y "ocupan_cupo" (vigentes + en gracia: lo que cuenta la página contra el tope). Los totales ya vienen sumados (total_vigentes, total_en_gracia, total_ocupan_cupo): no los sumes ni los restes tú. Si en una misma respuesta pones un número por horario y un total, el total tiene que ser el de la MISMA columna. Si te dicen que la página muestra otro número, explica con esas tres columnas cuál es cuál, sin inventar.`;
+- MENSUALIDADES (cuántas hay, activas, vigentes, cupos, ocupación por horario): usa SIEMPRE select mensualidades_resumen() y copia sus campos con su nombre. Tiene tres números que NO son lo mismo y nunca se mezclan: "vigentes" (personas con el plan al día), "en_gracia" (vencieron hace pocos días y se les guarda el cupo) y "ocupan_cupo" (vigentes + en gracia: lo que cuenta la página contra el tope). Los totales ya vienen sumados (total_vigentes, total_en_gracia, total_ocupan_cupo): no los sumes ni los restes tú. Si en una misma respuesta pones un número por horario y un total, el total tiene que ser el de la MISMA columna. NO menciones a las personas «en gracia» ni «ocupan_cupo» si no te preguntan por eso: por defecto da solo las activas (vigentes). Si te dicen que la página muestra otro número o preguntan por la gracia o los cupos, explica con esas tres columnas cuál es cuál, sin inventar.`;
 
 
 /* ── 0159 · mensualidades: una sola verdad ───────────────────────────────────────────────────────────────
@@ -220,12 +220,24 @@ const AM = { '07:00': '7 am', '18:00': '6 pm', '19:00': '7 pm' };
 const num = (n) => `*${Number(n) || 0}*`;
 
 /** El texto exacto, armado solo con lo que trae mensualidades_resumen(): nadie suma ni redondea. */
-export function textoMensualidades(r) {
+/** ¿La pregunta menciona la gracia o lo que ocupa cupo? Solo entonces se da esa parte (Damián, 19 nov). */
+export function piden_gracia(texto) {
+  return /gracia|vencid|ocupan|ocupad|cupo|p[aá]gina/i.test(String(texto || ''));
+}
+export function textoMensualidades(r, texto) {
   if (!r || !Array.isArray(r.por_horario)) return null;
   const hs = r.por_horario;
   const et = (h) => h.etiqueta ? String(h.etiqueta).replace(/^(\d{1,2}):00\s*(am|pm)$/i, '$1 $2').toLowerCase() : (AM[h.hora] || h.hora);
   const lin = (campo) => hs.map((h) => `${et(h)}: ${num(h[campo])}`).join(' · ');
   const libres = hs.filter((h) => h.libres_pagina != null).map((h) => `${et(h)}: ${num(h.libres_pagina)}`).join(' · ');
+  if (!piden_gracia(texto)) {
+    return [
+      '*Mensualidades activas hoy*',
+      '',
+      `• *Activas* (plan al día): ${num(r.total_vigentes)} → ${lin('vigentes')}`,
+      libres ? `• *Cupos que la página puede vender hoy*: ${libres}` : null,
+    ].filter((x) => x !== null).join('\n');
+  }
   return [
     '*Mensualidades hoy*',
     '',

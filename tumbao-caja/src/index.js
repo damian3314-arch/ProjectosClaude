@@ -4066,7 +4066,7 @@ async function agenteWA(request, env, origen) {
         : modo === 'completo'
           ? 'Listo: todos los informes saldrán completos, como antes. Si quieres volver a los tranquilos, escríbeme "informes mixtos".'
           : 'Listo: vuelvo al ritmo mixto. Completos los lunes y miércoles en la mañana y los viernes en la noche; los demás días, tranquilos. Escribe *detalle* cuando quieras todo.';
-    } else if (esConteoDeMensualidades(m.texto) && (respuesta = textoMensualidades(await rpc(env, 'mensualidades_resumen', {}).catch(() => null)))) {
+    } else if (esConteoDeMensualidades(m.texto) && (respuesta = textoMensualidades(await rpc(env, 'mensualidades_resumen', {}).catch(() => null), m.texto))) {
       // 0159: «¿cuántas mensualidades hay?» no pasa por el modelo: el texto sale de mensualidades_resumen(), sin cuentas de cabeza.
     } else if (!env.OPENAI_API_KEY) {
       respuesta = 'Todavía no tengo cerebro conectado: falta la llave OPENAI_API_KEY en el Worker.';
