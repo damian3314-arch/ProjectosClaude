@@ -108,19 +108,19 @@ begin
                   E'  v_aviso    text := null;\n  v_motivo   text := left(btrim(coalesce(p_motivo, '''')), 200);\n');
   d := replace(d, E'  select * into v_reserva from reservas\n   where codigo = upper(trim(p_codigo)) for update;',
                   E'  if length(v_motivo) < 5 then\n'
-                  E'    return jsonb_build_object(''ok'', false, ''error'', ''MOTIVO_OBLIGATORIO'',\n'
-                  E'      ''mensaje'', ''Escribe por qué liberas este cupo (mínimo 5 letras).'');\n'
-                  E'  end if;\n\n'
-                  E'  select * into v_reserva from reservas\n   where codigo = upper(trim(p_codigo)) for update;');
+                  || E'    return jsonb_build_object(''ok'', false, ''error'', ''MOTIVO_OBLIGATORIO'',\n'
+                  || E'      ''mensaje'', ''Escribe por qué liberas este cupo (mínimo 5 letras).'');\n'
+                  || E'  end if;\n\n'
+                  || E'  select * into v_reserva from reservas\n   where codigo = upper(trim(p_codigo)) for update;');
   d := replace(d, 'caja_anular(p_token, v_reserva.cobro_mov_id)',
                   'caja_anular(p_token, v_reserva.cobro_mov_id, ''Reserva '' || v_reserva.codigo || '' liberada: '' || v_motivo)');
   d := replace(d, E'           resuelta_at   = now(),\n           updated_at    = now()\n     where coalesce(grupo_id, id) = v_grupo',
                   E'           resuelta_at   = now(),\n           motivo_rechazo = v_motivo,\n           updated_at    = now()\n     where coalesce(grupo_id, id) = v_grupo');
   d := replace(d, E'  return jsonb_build_object(''ok'', true, ''estado'', ''rechazada'',\n    ''codigo'', v_reserva.codigo, ''nombre'', v_reserva.nombre,',
                   E'  perform auditar(v_admin, ''liberar_reserva'', v_reserva.codigo, v_reserva.clase_id, v_reserva.nombre, v_devuelto, v_motivo,\n'
-                  E'                  jsonb_build_object(''estado_antes'', v_reserva.estado, ''origen'', v_reserva.origen, ''cupos'', v_n,\n'
-                  E'                                     ''tenia_pago'', v_reserva.pago_id is not null, ''referencia'', v_reserva.referencia_pago));\n\n'
-                  E'  return jsonb_build_object(''ok'', true, ''estado'', ''rechazada'',\n    ''codigo'', v_reserva.codigo, ''nombre'', v_reserva.nombre,');
+                  || E'                  jsonb_build_object(''estado_antes'', v_reserva.estado, ''origen'', v_reserva.origen, ''cupos'', v_n,\n'
+                  || E'                                     ''tenia_pago'', v_reserva.pago_id is not null, ''referencia'', v_reserva.referencia_pago));\n\n'
+                  || E'  return jsonb_build_object(''ok'', true, ''estado'', ''rechazada'',\n    ''codigo'', v_reserva.codigo, ''nombre'', v_reserva.nombre,');
   if d !~ 'p_motivo text' or d !~ 'MOTIVO_OBLIGATORIO' or d !~ 'motivo_rechazo = v_motivo' or d !~ 'auditar\(v_admin, ''liberar_reserva''' or d !~ 'liberada: ' then
     raise exception 'parche de admin_rechazar no aplicó';
   end if;
@@ -141,8 +141,8 @@ begin
   d := pg_get_functiondef('public.admin_deshacer(text,text)'::regprocedure);
   d := replace(d, E'  return jsonb_build_object(''ok'', true,\n    ''codigo'',  v_reserva.codigo,',
                   E'  perform auditar(v_admin, ''deshacer'', v_reserva.codigo, v_reserva.clase_id, v_reserva.nombre, null,\n'
-                  E'                  ''Deshizo: '' || v_reserva.estado || '' → '' || v_reserva.estado_antes, null);\n'
-                  E'  return jsonb_build_object(''ok'', true,\n    ''codigo'',  v_reserva.codigo,');
+                  || E'                  ''Deshizo: '' || v_reserva.estado || '' → '' || v_reserva.estado_antes, null);\n'
+                  || E'  return jsonb_build_object(''ok'', true,\n    ''codigo'',  v_reserva.codigo,');
   if d !~ 'auditar\(v_admin, ''deshacer''' then raise exception 'parche de admin_deshacer no aplicó'; end if;
   execute d;
 end $do$;
