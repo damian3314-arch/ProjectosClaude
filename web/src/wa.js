@@ -73,3 +73,40 @@ export async function waTranscribe(env, mediaId) {
     return res.ok ? String((await res.json()).text || '').trim() : '';
   } catch (err) { console.error('audio', err?.name || 'error'); return ''; }
 }
+
+/* ---------- Revisión de salud (no envía mensajes) ----------
+ * GET /api/health?deep=1 → ¿el token lee el número y la cuenta de WhatsApp? ¿cuándo vence? ¿tiene los permisos? Guarda 60 s en memoria.
+ * Devuelve solo estados y códigos de error (sin tokens ni teléfonos).
+ */
+let lastCheck = { at: 0, v: null };
+export async function waCheck(env) {
+  if (lastCheck.v && Date.now() - lastCheck.at < 60000) return lastCheck.v;
+  const out = { configured: waOn(env), number: null, account: null, token: null };
+  const get = async path => {
+    try {
+      const r = await fetch(`${GRAPH}/${path}`, { headers: { authorization: `Bearer ${env.WA_TOKEN}` }, signal: AbortSignal.timeout(8000) });
+      const b = await r.json().catch(() => ({}));
+      return r.ok ? { ok: true, data: b } : { ok: false, code: b?.error?.code ?? r.status, subcode: b?.error?.error_subcode ?? null, message: String(b?.error?.message || '').replace(/\d{5,}/g, '#').slice(0, 140) };
+    } catch (err) { return { ok: false, code: 0, message: err?.name || 'error' }; }
+  };
+  if (out.configured) {
+    const n = await get(`${encodeURIComponent(env.WA_PHONE_NUMBER_ID)}?fields=status,quality_rating,name_status`);
+    out.number = n.ok ? { ok: true, status: n.data.status, name_status: n.data.name_status } : n;
+    if (env.WA_WABA_ID) {
+      // primary_funding_id es el dato de pagos de la cuenta: si el token no tiene acceso, aquí sale el mismo error (#10) que al enviar
+      const a = await get(`${encodeURIComponent(env.WA_WABA_ID)}?fields=account_review_status,primary_funding_id`);
+      out.account = a.ok ? { ok: true, review: a.data.account_review_status, funding: !!a.data.primary_funding_id } : a;
+    }
+    if (env.WA_APP_ID && env.WA_APP_SECRET) {
+      try {
+        const r = await fetch(`${GRAPH}/debug_token?input_token=${encodeURIComponent(env.WA_TOKEN)}&access_token=${encodeURIComponent(`${env.WA_APP_ID}|${String(env.WA_APP_SECRET).trim()}`)}`, { signal: AbortSignal.timeout(8000) });
+        const d = (await r.json().catch(() => ({}))).data || {};
+        const scopes = d.scopes || [];
+        out.token = { valid: !!d.is_valid, type: d.type || null, expires_at: d.expires_at ?? null, // 0 = no vence
+          scopes_ok: ['whatsapp_business_messaging', 'whatsapp_business_management'].every(x => scopes.includes(x)) };
+      } catch { out.token = { valid: false }; }
+    }
+  }
+  lastCheck = { at: Date.now(), v: out };
+  return out;
+}

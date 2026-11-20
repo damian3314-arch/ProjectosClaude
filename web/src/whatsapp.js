@@ -76,10 +76,10 @@ export async function handleWhatsAppWebhook(request, env, ctx, h) {
   return new Response('OK');
 }
 
-// Entrega, ya con la ventana abierta, los avisos que quedaron esperando (guardados con su teléfono o con su BSUID)
+// Entrega, ya con la ventana abierta, los avisos que quedaron esperando (solo los de los últimos 2 días: uno viejo ya no sirve y no debe llegar de golpe) (guardados con su teléfono o con su BSUID)
 async function flushAlerts(env, h, keys) {
   const marks = keys.map(() => '?').join(',');
-  const rows = (await env.DB.prepare(`SELECT id, dest, text FROM alert_queue WHERE dest IN (${marks}) AND sent_at IS NULL ORDER BY id LIMIT 15`).bind(...keys.map(String)).all().catch(() => ({ results: [] }))).results || [];
+  const rows = (await env.DB.prepare(`SELECT id, dest, text FROM alert_queue WHERE dest IN (${marks}) AND sent_at IS NULL AND created_at > datetime('now', '-2 days') ORDER BY id LIMIT 15`).bind(...keys.map(String)).all().catch(() => ({ results: [] }))).results || [];
   for (const r of rows) {
     const dest = /^\d+$/.test(r.dest) ? { to: r.dest } : { recipient: r.dest };
     if (await h.sendWhatsApp(env, { messaging_product: 'whatsapp', ...dest, type: 'text', text: { body: r.text.slice(0, 1024), preview_url: false } })) {
@@ -394,3 +394,5 @@ export async function nudgeIdle(env, h) {
   }
   return { sent };
 }
+
+const sqlTime = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');

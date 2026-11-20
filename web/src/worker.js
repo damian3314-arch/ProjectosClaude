@@ -17,7 +17,7 @@
 
 import { generateBrief, fallbackBrief } from './brief.js';
 import { handleWhatsAppWebhook, nudgeIdle } from './whatsapp.js';
-import { waOn, waSend, waVerify } from './wa.js';
+import { waOn, waSend, waVerify, waCheck } from './wa.js';
 import { weeklyPlan } from './owner.js';
 import { webTurn, webContact } from './agent.js';
 import { sendHotAlert, dailyReport, morningBrief, reminderGuard, rescueSend, outboxSend, loggroOff, ALERT_FROM_HOUR, ALERT_TO_HOUR } from './loggro.js';
@@ -89,6 +89,7 @@ export default {
 async function route(request, env, ctx, url) {
     try {
       const path = url.pathname;
+      if (path === '/api/health' && url.searchParams.get('deep') === '1') return json({ ok: true, wa_check: await waCheck(env) });
       if (path === '/api/health') return json({ ok: true, ai: !!env.OPENAI_API_KEY, whatsapp: waOn(env), wa: /^\d{10,15}$/.test(String(env.ALTER_WHATSAPP || '')) ? String(env.ALTER_WHATSAPP) : null });
       if (request.method === 'POST' && path === '/api/chat') return await chat(request, env);
       if (request.method === 'POST' && path === '/api/agent') return await agentChat(request, env, ctx);
