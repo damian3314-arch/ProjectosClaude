@@ -1215,6 +1215,7 @@ const CONFIG = {
     margin-bottom:.85rem;font-variant-numeric:tabular-nums;
   }
   .caja-modal input:focus{outline:none;border-color:var(--gold)}
+  .caja-modal select{width:100%;margin-bottom:.2rem}
   .medios{display:flex;gap:.5rem;margin-bottom:.9rem}
   .medio{
     flex:1;padding:.65rem;border-radius:10px;background:var(--bg-3);
@@ -2521,6 +2522,12 @@ const CONFIG = {
       <p class="ap-pista" id="ap-medio-pista">Entra al cajón y suma en el cierre de hoy.</p>
     </div>
 
+    <div id="ap-comprobante-caja" hidden>
+      <label for="ap-comprobante">N.º del comprobante de la transferencia <span class="req">*</span></label>
+      <input id="ap-comprobante" type="text" maxlength="40" placeholder="Ej: M12345678 o el número que sale en la captura"
+             autocomplete="off">
+    </div>
+
     <label for="ap-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="ap-nota" type="text" maxlength="80" placeholder="Ej: pagó por Nequi la mamá"
            autocomplete="off">
@@ -3458,11 +3465,13 @@ const CONFIG = {
     $('#ap-medio-pista').textContent =
       apMedio === 'efectivo'      ? 'La plata ya está en el cajón. Suma en el cierre de hoy.'
     : apMedio === 'en_puerta'     ? 'No entra todavía: entra cuando le marques la entrada. Si no viene, no se cobra.'
-    : apMedio === 'transferencia' ? 'Ya está en el banco. No entra al cajón.'
+    : apMedio === 'transferencia' ? 'Ya está en el banco. No entra al cajón. Escribe el número del comprobante.'
     :                               'Escoge una: de esto depende que el arqueo cuadre.';
     // Con plan no se cobra nada, así que preguntar cómo pagó sobra y
     // confunde.
     $('#ap-caja-medio').hidden = apTipo === 'miembro';
+    // 19 nov: con transferencia se pide el número del comprobante; sin él no se apunta.
+    $('#ap-comprobante-caja').hidden = !(apMedio === 'transferencia' && apTipo !== 'miembro');
   };
 
   $('#puerta-apuntar').addEventListener('click', abrirApuntar);
@@ -3500,6 +3509,7 @@ const CONFIG = {
     $('#ap-nombre').value = '';
     $('#ap-tel').value = '';
     $('#ap-nota').value = '';
+    $('#ap-comprobante').value = '';
     $('#ap-plan-manual').hidden = true;
     $('#modal-apuntar').hidden = false;
     $('#ap-nombre').focus();
@@ -3553,6 +3563,14 @@ const CONFIG = {
       return;
     }
 
+    // 19 nov: sin número de comprobante no se apunta una transferencia (Postgres también lo exige y no deja repetirlo).
+    const comprobante = $('#ap-comprobante').value.trim();
+    if (apTipo !== 'miembro' && apMedio === 'transferencia' && comprobante.replace(/\s/g, '').length < 4) {
+      nota('Falta el comprobante', 'mal', 'Escribe el número del comprobante de la transferencia.');
+      marcar('#ap-comprobante');
+      return;
+    }
+
     b.disabled = true;
     const antes = b.textContent;
     b.textContent = 'Apuntando…';
@@ -3561,6 +3579,7 @@ const CONFIG = {
         clase_id: puerta.clase.clase_id,
         nombre, telefono: tel, tipo: apTipo,
         nota: $('#ap-nota').value.trim() || null,
+        comprobante: apMedio === 'transferencia' ? comprobante : null,
         // Solo va cuando hay algo que cobrar. Con plan no se paga en la
         // puerta, y mandar un medio ahí sería pedirle a Postgres que
         // registre un ingreso que nadie entregó.
@@ -3846,6 +3865,46 @@ const CONFIG = {
     }
   }
 
+  /* 19 nov (auditoría de caja, pedido de Damián): NADA se libera ni se anula sin decir por qué. Esta ventana pide el motivo y lo
+     devuelve escrito; si cancelan, devuelve null y no se hace nada. El servidor lo exige igual (mín. 5 letras) y lo deja
+     en la auditoría con el nombre de quien lo hizo. */
+  const MOTIVOS = {
+    liberar: ['No envió el comprobante', 'El pago no aparece en el banco', 'La persona canceló', 'Reserva duplicada', 'Me equivoqué al apuntar', 'Otro'],
+    anular:  ['Error al digitar', 'Se registró dos veces', 'Era transferencia, no efectivo', 'El cliente no pagó / se devolvió', 'Otro'],
+  };
+  function pedirMotivo(titulo, detalleHtml, cual) {
+    return new Promise(listo => {
+      const m = document.createElement('div');
+      m.className = 'modal';
+      m.innerHTML =
+        `<div class="caja-modal">` +
+        `<h3><span class="pin" style="background:var(--bad)"></span>${esc(titulo)}</h3>` +
+        `<p style="margin:0 0 .8rem;font-size:.9rem;color:var(--tx-2)">${detalleHtml}</p>` +
+        `<label for="mot-sel">¿Por qué?</label>` +
+        `<select id="mot-sel"><option value="">Escoge el motivo…</option>` +
+        MOTIVOS[cual].map(x => `<option>${esc(x)}</option>`).join('') + `</select>` +
+        `<label for="mot-txt" style="margin-top:.7rem">Cuéntanos qué pasó <span class="suave" id="mot-req">(opcional)</span></label>` +
+        `<input id="mot-txt" type="text" maxlength="150" placeholder="Ej: la señora dijo que no vendría" autocomplete="off">` +
+        `<div class="modal-pie"><button class="btn" id="mot-no" type="button">Cancelar</button>` +
+        `<button class="btn primario" id="mot-ok" type="button" disabled>Continuar</button></div></div>`;
+      document.body.appendChild(m);
+      const sel = m.querySelector('#mot-sel'), txt = m.querySelector('#mot-txt'), ok = m.querySelector('#mot-ok');
+      const armado = () => {
+        const otro = sel.value === 'Otro';
+        m.querySelector('#mot-req').textContent = otro ? '(obligatorio)' : '(opcional)';
+        ok.disabled = !sel.value || (otro && txt.value.trim().length < 5);
+      };
+      const cerrar = v => { m.remove(); listo(v); };
+      sel.addEventListener('change', armado);
+      txt.addEventListener('input', armado);
+      m.querySelector('#mot-no').addEventListener('click', () => cerrar(null));
+      m.addEventListener('click', e => { if (e.target === m) cerrar(null); });
+      ok.addEventListener('click', () =>
+        cerrar(sel.value === 'Otro' ? txt.value.trim() : (sel.value + (txt.value.trim() ? ': ' + txt.value.trim() : ''))));
+      sel.focus();
+    });
+  }
+
   async function soltarCupo(fila, boton, p) {
     // Esto sí se pregunta. Marcar una entrada de más se arregla volviendo
     // a tocar el botón; soltar un cupo en una clase llena se lo lleva
@@ -3853,16 +3912,17 @@ const CONFIG = {
     // La plata se nombra ANTES de preguntar. "¿Seguro?" a secas no dice
     // que además vas a sacar 15.000 de la caja, y esa es justo la parte
     // que hay que pensar dos veces.
-    if (!confirm(
-          `¿Liberar el cupo de ${p.nombre} (${p.codigo})?\n\n` +
-          `La reserva queda rechazada y el puesto vuelve a estar a la venta.` +
-          (p.cobrado_cop
-            ? `\n\nOJO: se le cobraron ${pesos(p.cobrado_cop)} en efectivo. ` +
-              `Van a salir de la caja de hoy.`
-            : ''))) return;
+    const motivo = await pedirMotivo(
+      `¿Liberar el cupo de ${p.nombre}?`,
+      `La reserva ${esc(p.codigo)} queda rechazada y el puesto vuelve a estar a la venta.` +
+      (p.cobrado_cop
+        ? ` <b>OJO:</b> se le cobraron ${esc(pesos(p.cobrado_cop))} en efectivo. Van a salir de la caja de hoy.`
+        : ''),
+      'liberar');
+    if (!motivo) return;
     boton.disabled = true;
     try {
-      const r = await api('rechazar', { codigo: p.codigo });
+      const r = await api('rechazar', { codigo: p.codigo, motivo });
       if (r.aviso_caja) {
         // El cupo se soltó igual, pero el ingreso sigue en la caja: casi
         // siempre porque el día ya se cerró o el cobro fue de otro día.
@@ -4815,9 +4875,10 @@ const CONFIG = {
     const bNo = document.createElement('button');
     bNo.className = 'btn mal';
     bNo.textContent = '✕ Rechazar';
-    bNo.addEventListener('click', () => {
-      if (!confirm(`¿Rechazar la reserva de ${r.nombre}? El cupo queda libre.`)) return;
-      resolver(el, r, 'rechazar', null);
+    bNo.addEventListener('click', async () => {
+      const motivo = await pedirMotivo(`¿Rechazar la reserva de ${r.nombre}?`, 'El cupo queda libre.', 'liberar');
+      if (!motivo) return;
+      resolver(el, r, 'rechazar', null, null, motivo);
     });
 
     acc.append(ref, bOk, bNo);
@@ -4879,11 +4940,11 @@ const CONFIG = {
     tic();
   }
 
-  async function resolver(tarjeta, r, accion, pagoId, referencia) {
+  async function resolver(tarjeta, r, accion, pagoId, referencia, motivo) {
     tarjeta.querySelectorAll('button').forEach(b => b.disabled = true);
     try {
       const res = await api(accion, { codigo: r.codigo, pago_id: pagoId,
-                                      referencia: referencia || null });
+                                      referencia: referencia || null, motivo: motivo || null });
       // Se guarda en la reserva, no solo en el DOM: así el resultado y su
       // enlace de WhatsApp sobreviven a que alguien use el buscador.
       r._resuelto = {
@@ -5519,7 +5580,7 @@ const CONFIG = {
         `<div class="k">${esc(k)}</div>` +
         `<div class="pista">${esc(pista)}</div>` +
       `</div>`
-    ).join('') + tarjetaBanco() + tarjetaPromo();
+    ).join('') + tarjetaBanco() + tarjetaPromo() + tarjetaAuditoria();
 
     // Sin cifras el contenedor sigue reservando el hueco del grid y deja
     // una franja vacía entre los movimientos y el cierre.
@@ -5618,6 +5679,32 @@ const CONFIG = {
       (hayRep ? '<div class="pista">⚠ Hay compras repetidas de la promo: confirma que no se pagó dos veces</div>' : '') +
       `<div style="margin-top:.4rem">${filas}</div>` +
     `</div>`;
+  }
+
+  /* 19 nov (auditoría de caja): lo que hay que mirar antes de cerrar. Viene de caja_del_dia().auditoria (0210): quién liberó o
+     rechazó qué reserva y por qué, qué se anuló de la caja, quién entró sin cobro registrado y qué comprobante se repitió. */
+  function tarjetaAuditoria() {
+    const a = cajaDatos && cajaDatos.auditoria;
+    if (!a) return '';
+    const lib = Array.isArray(a.liberadas) ? a.liberadas : [];
+    const anu = Array.isArray(a.anulaciones) ? a.anulaciones : [];
+    const sr  = Array.isArray(a.recepcion_sin_respaldo) ? a.recepcion_sin_respaldo : [];
+    const rep = Array.isArray(a.comprobantes_repetidos) ? a.comprobantes_repetidos : [];
+    if (!lib.length && !anu.length && !sr.length && !rep.length) return '';
+    const fila = (txt, ojo) =>
+      `<div style="padding:.3rem 0;border-top:1px solid var(--line);font-size:.8rem;text-align:left${ojo ? ';color:var(--gold)' : ''}">${txt}</div>`;
+    const filas =
+      sr.map(x => fila(`⚠ ${esc(x.nombre)} (${esc(x.clase_hora)}) entró sin cobro registrado · ${esc(x.codigo)}`, true)).join('') +
+      rep.map(x => fila(`⚠ Comprobante ${esc(x.referencia)} usado en ${esc(x.compras)} compras: ${esc(x.quienes)}`, true)).join('') +
+      lib.map(x => fila(`${esc(x.hora)} · ${esc(x.nombre)} (${esc(x.clase_hora || '')}) ${esc(x.estado)}` +
+        `${x.quien ? ' por ' + esc(x.quien) : ' (automático)'} — ${x.motivo ? esc(x.motivo) : '<b>SIN MOTIVO</b>'}${x.tuvo_pago ? ' · tenía pago' : ''}`, !x.motivo)).join('') +
+      anu.map(x => fila(`${esc(x.hora)} · Anuló ${esc(nombreConcepto(x.concepto))} ${esc(pesos(x.valor_cop))}` +
+        `${x.quien ? ' · ' + esc(x.quien) : ''} — ${x.motivo ? esc(x.motivo) : '<b>SIN MOTIVO</b>'}`, !x.motivo)).join('');
+    const n = Number(a.por_revisar || 0);
+    return `<div class="tile banco ${n ? 'ojo' : 'bueno'}" style="grid-column:1/-1">` +
+      `<div class="n">${n ? n + ' por revisar' : 'Todo con respaldo'}</div>` +
+      `<div class="k">Cupos liberados, anulaciones y entradas sin cobro de hoy · ${lib.length} liberadas · ${anu.length} anulaciones</div>` +
+      `<div style="margin-top:.4rem">${filas}</div></div>`;
   }
 
   function tarjetaBanco() {
@@ -6739,9 +6826,11 @@ const CONFIG = {
 
     const an = ev.target.closest('[data-anular]');
     if (an) {
+      const motivo = await pedirMotivo('¿Anular este movimiento?', 'Sale de la caja de hoy y queda registrado quién lo anuló y por qué.', 'anular');
+      if (!motivo) return;
       an.disabled = true;
       try {
-        const r = await alWorker('anular', { id: an.dataset.anular });
+        const r = await alWorker('anular', { id: an.dataset.anular, motivo });
         nota('Anulado', 'bien',
              `${nombreConcepto(r.concepto)} ${pesos(r.valor_cop)}` +
              (r.libero_pago ? ' · el depósito vuelve a la lista' : ''));

@@ -368,8 +368,11 @@ const ADMIN = {
                                 p_referencia: TXT(b.referencia, 60) || null }) },
   // El panel manda pago_id también aquí, pero rechazar no lo usa: no hay
   // nada que enlazar cuando se descarta.
+  // 19 nov (auditoría de caja): nada se libera sin decir por qué. Postgres lo exige también (0210).
   rechazar:   { fn: 'admin_rechazar',
-                args: (b) => ({ p_codigo: TXT(b.codigo, 40) }) },
+                args: (b) => (String(TXT(b.motivo, 200) || '').trim().length >= 5
+                  ? { p_codigo: TXT(b.codigo, 40), p_motivo: String(TXT(b.motivo, 200)).trim() }
+                  : { _error: 'MOTIVO_OBLIGATORIO' }) },
   // Pagó y no vino. No suelta el cupo ni toca la plata: abre un crédito
   // de tres días para usar esa clase otro día.
   no_vino:    { fn: 'admin_marcar_no_vino',
@@ -1008,8 +1011,8 @@ async function pagina(request, env, ruta, origen, ctx) {
         confirmada: 'Pago confirmado. Tu cupo esta asegurado.',
         verificando: 'Estamos esperando la confirmacion del banco.',
         pendiente_validacion: 'No pudimos confirmar tu pago automaticamente. ' +
-          'Tu cupo sigue apartado: comparte el soporte por WhatsApp y lo ' +
-          'validamos a mano.',
+          'Comparte el soporte de pago por WhatsApp para validarlo: si no ' +
+          'lo compartes, tu cupo se libera.',
         pendiente_pago: 'Falta registrar el pago.',
         rechazada: 'No pudimos validar el pago. Escribenos por WhatsApp.',
         expirada: 'Se solto el cupo por falta de pago.',
@@ -4606,7 +4609,9 @@ export default {
         const args = cual.args(b);
         if (args._error) {
           return json({ ok: false, error: args._error,
-            mensaje: 'Faltan datos o no se reconocen. Recarga la página.' }, 400, origen);
+            mensaje: args._error === 'MOTIVO_OBLIGATORIO'
+              ? 'Escribe por qué (mínimo 5 letras).'
+              : 'Faltan datos o no se reconocen. Recarga la página.' }, 400, origen);
         }
         // El tablero es lo que mira recepción durante el turno: si ahí
         // los cupos están viejos, se le dice a alguien que no hay puesto
@@ -4837,7 +4842,10 @@ export default {
           p_nombre: String(b.nombre || '').slice(0, 80),
           p_telefono: String(b.telefono || '').slice(0, 20),
           p_tipo: b.tipo === 'miembro' ? 'miembro' : 'suelta',
-          p_nota: b.nota ? String(b.nota).slice(0, 80) : null,
+          // Con transferencia, la «nota» ES el número del comprobante (0210): Postgres lo exige y no deja repetirlo.
+          p_nota: (String(b.medio || '').toLowerCase() === 'transferencia' && b.comprobante)
+            ? String(b.comprobante).slice(0, 60)
+            : (b.nota ? String(b.nota).slice(0, 80) : null),
           // Cómo pagó. De esto depende que el arqueo cuadre: si fue en
           // efectivo, admin_crear_reserva registra el movimiento de caja
           // en la misma llamada, y esa plata deja de depender de que
@@ -4911,7 +4919,13 @@ export default {
         if (!/^[0-9a-f-]{36}$/i.test(id)) {
           return json({ ok: false, error: 'ID_INVALIDO' }, 400, origen);
         }
-        r = await rpc(env, 'caja_anular', { p_token: token, p_id: id });
+        // 19 nov: no se anula nada sin decir por qué (mínimo 5 letras). Postgres lo vuelve a exigir.
+        const motivoAnular = String(b.motivo || '').trim().slice(0, 200);
+        if (motivoAnular.length < 5) {
+          return json({ ok: false, error: 'MOTIVO_OBLIGATORIO',
+            mensaje: 'Escribe por qué anulas este movimiento (mínimo 5 letras).' }, 400, origen);
+        }
+        r = await rpc(env, 'caja_anular', { p_token: token, p_id: id, p_motivo: motivoAnular });
 
       } else if (ruta === '/api/cerrar') {
         const contado = parseInt(String(b.contado ?? '').replace(/[^\d]/g, ''), 10);

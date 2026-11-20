@@ -71,6 +71,7 @@ const SUITES = [
   'encuesta-masiva',
   'calendario-campanas',
   'promo-dia-invitados',
+  'auditoria-caja',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',
