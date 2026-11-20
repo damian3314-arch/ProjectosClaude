@@ -44,6 +44,18 @@ ok('dice el plazo de 3 días y que no pierde el pago', /tienes 3 días desde el 
 ok('si no se puede, explica por qué y lleva a WhatsApp', /id="wa3"/.test(pag) && /d\.mensaje/.test(pag));
 ok('la página de reservas enlaza a reprogramar (arriba y en la pantalla final)', (idx.match(/href="reprogramar\.html"/g) || []).length >= 2);
 
+titulo('3b. Tiquetera: se mueve antes de la clase, no después (0212)');
+{
+  const m12 = leer('../supabase/migrations/0212_reprogramar_tiquetera_antes_de_la_clase.sql').replace(/--.*$/gm, '');
+  ok('una clase de tiquetera que todavía no empieza se puede mover; si ya pasó, se perdió',
+     /r\.tipo = 'tiquetera' and c\.fecha_hora <= now\(\) then 'ES_TIQUETERA'/.test(m12) && /r\.tipo not in \('suelta', 'tiquetera'\) then 'ES_MIEMBRO'/.test(m12));
+  ok('el saldo de la tiquetera queda igual: se devuelve la clase, tomar_cupo la vuelve a descontar, y si falla se restituye',
+     /clases_usadas = greatest\(clases_usadas - 1, 0\)/.test(m12) && /'tiquetera', v_tiq\.codigo/.test(m12) && /clases_usadas = clases_usadas \+ 1/.test(m12));
+  ok('la clase vieja queda rechazada y enlazada (reprogramada_a) y su cupo se libera; la nueva cae antes de que venza la tiquetera',
+     /estado = 'rechazada', estado_antes = 'confirmada', reprogramada_a = v_id/.test(m12) && /tiquetera_vence/.test(m12));
+  ok('la página dice «hasta que empiece tu clase» y que no gasta otra clase', /Puedes cambiarla hasta que empiece tu clase/.test(pag) && /No gastas otra clase de tu tiquetera/.test(pag));
+}
+
 titulo('4. Franja del día (sábado 21)');
 ok('hay una franja que solo vive el día que se pone, con una línea por día, y lleva a reservar ese día',
    /id="franja-dia"/.test(idx) && /var FRANJAS = \[/.test(idx) && /dia: '2026-11-21'/.test(idx) && /x\.dia === hoy/.test(idx) && /#dias \.dia\[data-fecha="' \+ f\.dia/.test(idx));

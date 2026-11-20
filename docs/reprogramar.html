@@ -155,7 +155,9 @@
         return;
       }
       $('#res').innerHTML = cabeza;
-      $('#plazo').textContent = rs.vence ? 'Tienes plazo hasta el ' + new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(rs.vence + 'T12:00:00Z')) + ' para reprogramarla.' : '';
+      $('#plazo').textContent = rs.clase_paso === false
+        ? 'Puedes cambiarla hasta que empiece tu clase.' + (rs.tipo === 'tiquetera' ? ' No gastas otra clase de tu tiquetera.' : '')
+        : (rs.vence ? 'Tienes plazo hasta el ' + new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(rs.vence + 'T12:00:00Z')) + ' para reprogramarla.' : '');
       pintarClases(d.clases || []);
       mostrar('#p2');
     } catch (e) {
