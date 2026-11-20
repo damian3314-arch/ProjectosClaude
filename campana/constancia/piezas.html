@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Piezas · Tu constancia suma</title>
+<!--
+  Piezas para redes de la campaña de constancia (25 oct 2026). Fondos: fotos REALES del salón (campana/salon). Se DIBUJAN aquí (el texto lo escribe el navegador, sale
+  exacto con tildes) y `sacar.mjs` las exporta a PNG en salida/. Una pieza por URL: piezas.html?p=c1 … ?p=h3.
+  Regla de la campaña: tiquetera de 4 clases → 1 clase adicional al completarla; de 8 → 2. Aplica a todas las tiqueteras.
+  Se dice «clase adicional», nunca premio, regalo ni gratis.
+-->
+<style>
+  @font-face{font-family:'Outfit';font-weight:100 900;src:url(outfit-latin-wght.woff2) format('woff2')}
+  :root{--naranja:#ff7a1f;--naranja-2:#ffa14f;--ambar:#ffb347;--negro:#050505;--tx:#fbf6f0;--tx-2:#cbbfb1}
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#000}
+  body{font-family:'Outfit',system-ui,sans-serif;color:var(--tx)}
+  .pieza{position:relative;overflow:hidden;width:1080px;height:1350px;background:var(--negro);isolation:isolate}
+  .pieza.historia{height:1920px}
+  .fondo{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .velo{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,5,5,.15) 0%,rgba(5,5,5,.55) 45%,rgba(5,5,5,.96) 78%)}
+  .resplandor{position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 45% at 50% -8%,rgba(255,122,31,.38),transparent 70%)}
+  .logo{position:absolute;top:70px;left:50%;transform:translateX(-50%);width:270px}
+  .cont{position:absolute;left:90px;right:90px;bottom:110px}
+  .ceja{display:inline-block;font-size:30px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--naranja-2);margin-bottom:26px}
+  h1{font-size:118px;line-height:.95;letter-spacing:-.045em;font-weight:900}
+  h1 em{font-style:normal;color:var(--naranja)}
+  h2{font-size:84px;line-height:1;letter-spacing:-.04em;font-weight:850}
+  .sub{font-size:40px;line-height:1.3;color:var(--tx-2);margin-top:28px;font-weight:500}
+  .sub b{color:var(--tx);font-weight:800}
+  .num-pag{position:absolute;top:84px;right:90px;font-size:28px;font-weight:700;color:var(--tx-2);letter-spacing:.1em}
+  .desliza{position:absolute;bottom:60px;right:90px;font-size:30px;font-weight:700;color:var(--naranja-2)}
+  .web{display:inline-flex;align-items:center;gap:18px;margin-top:44px;padding:26px 40px;border-radius:999px;
+    font-size:40px;font-weight:800;color:#1a0a02;background:linear-gradient(180deg,#ffb35e,#ff7a1f);box-shadow:0 18px 40px -10px rgba(255,122,31,.7)}
+  .letra{font-size:26px;color:#8f8272;margin-top:30px;line-height:1.35}
+
+  /* el pase, igual que en la página */
+  .pase{position:relative;overflow:hidden;isolation:isolate;width:820px;aspect-ratio:1.586;border-radius:46px;color:#fff;
+    background:linear-gradient(150deg,#1b1410 0%,#0b0806 72%);box-shadow:inset 0 2px 0 rgba(255,255,255,.08),0 50px 90px -40px rgba(255,122,31,.65)}
+  .pase .foto{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center}
+  .pase .foto::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.84) 0%,rgba(0,0,0,.45) 60%,rgba(0,0,0,.12) 100%)}
+  .pase svg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+  .pase .cinta{fill:none;stroke-linecap:round}
+  .pase .marca-p{position:absolute;top:44px;left:52px;font-size:22px;font-weight:800;letter-spacing:.28em;opacity:.85}
+  .pase .chip{position:absolute;top:36px;right:48px;width:84px;height:60px;border-radius:14px;background:linear-gradient(135deg,#f6d38a,#c99540);box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+  .pase .nom{position:absolute;top:118px;left:52px;font-size:34px;font-weight:700;opacity:.9}
+  .pase .cant{position:absolute;top:158px;left:50px;font-size:92px;font-weight:850;letter-spacing:-.045em;line-height:1}
+  .pase .precio{position:absolute;bottom:46px;left:52px;font-size:66px;font-weight:850;letter-spacing:-.03em}
+  .pase .xc{position:absolute;bottom:58px;left:330px;font-size:28px;font-weight:600;opacity:.85}
+  .pase .sello{position:absolute;top:118px;right:48px;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:10px 20px;border-radius:99px;color:#1a0a02;background:var(--ambar)}
+  .pase .mas{position:absolute;bottom:40px;right:44px;font-size:30px;font-weight:850;padding:14px 22px;border-radius:18px;color:#1a0a02;background:#fff}
+  .pases{position:absolute;left:50%;transform:translateX(-50%);display:grid;gap:40px;justify-items:center}
+  .pases.chico{transform:translateX(-50%) scale(.8);transform-origin:top center;gap:34px}
+
+  /* pasos de la constancia */
+  .clases{display:flex;gap:22px;margin-top:46px}
+  .clases i{width:96px;height:96px;border-radius:50%;border:4px solid rgba(255,161,79,.5);display:grid;place-items:center}
+  .clases i.ok{background:var(--naranja);border-color:var(--naranja)}
+  .clases i.ok::after{content:"";width:34px;height:18px;margin-top:-8px;border-left:7px solid #1a0a02;border-bottom:7px solid #1a0a02;transform:rotate(-45deg)}
+  .clases i.extra{border-style:dashed;border-color:var(--ambar);color:var(--ambar);font-size:44px;font-weight:900}
+  .tabla{margin-top:50px;display:grid;gap:22px}
+  .fila{display:flex;align-items:center;justify-content:space-between;padding:34px 44px;border-radius:30px;background:rgba(255,255,255,.05);border:2px solid rgba(255,161,79,.25)}
+  .fila .izq{font-size:44px;font-weight:800}
+  .fila .der{font-size:44px;font-weight:900;color:var(--naranja)}
+
+  /* ── 29 oct · versión navideña de los anuncios (sin cosas encimadas: cada bloque vive en su franja) ── */
+  :root{--oro:#ffd479;--rojo:#e0243a}
+  .fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+  .n-logo{position:absolute;left:50%;transform:translateX(-50%);width:250px}
+  .n-franja-sup{position:absolute;left:0;right:0;top:0;height:470px;z-index:-1;background:linear-gradient(180deg,#050505 0%,rgba(5,5,5,.96) 52%,rgba(5,5,5,0) 100%)}
+  .n-velo{position:absolute;inset:0;z-index:-1;background:rgba(5,5,5,.38)}
+  .n-bloque{position:absolute;left:90px;right:90px}
+  .n-bloque .ceja{margin-bottom:20px}
+  .n-bloque h1{font-size:104px}
+  .n-bloque h2{font-size:84px}
+  .n-bloque .sub{font-size:36px;margin-top:22px}
+  .n-bloque .web{margin-top:34px;padding:24px 38px;font-size:38px}
+  .n-oro{color:var(--oro)}
+  .n-cinta{display:inline-flex;align-items:center;gap:12px;padding:10px 22px;border-radius:99px;font-size:26px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:#2a0a05;background:linear-gradient(180deg,#ffe7a8,#ffc14d);box-shadow:0 10px 26px -8px rgba(255,193,77,.7)}
+  .n-cinta i{width:12px;height:12px;border-radius:50%;background:var(--rojo);box-shadow:0 0 0 3px rgba(224,36,58,.25)}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<script>
+const CINTAS = `<svg viewBox="0 0 320 202" preserveAspectRatio="none" aria-hidden="true">
+  <path class="cinta" d="M-30 170 C 60 120, 110 210, 190 140 S 300 40, 360 80" stroke="#ff7a1f" stroke-width="12" opacity=".75"/>
+  <path class="cinta" d="M-20 120 C 70 60, 140 170, 220 100 S 320 10, 360 30" stroke="#ffb347" stroke-width="5" opacity=".6"/>
+  <path class="cinta" d="M-10 200 C 80 150, 150 230, 240 170 S 330 110, 370 140" stroke="#ffa14f" stroke-width="2.2" opacity=".5"/></svg>`;
+const pase = ({ foto, nom, cant, precio, xc, sello, mas }) => `
+  <div class="pase">${foto ? `<div class="foto" style="background-image:url('${foto}')"></div>` : ''}${CINTAS}
+    <span class="marca-p">TUMBAO · PASE</span><span class="chip"></span>
+    ${sello ? `<span class="sello">${sello}</span>` : ''}
+    <span class="nom">${nom}</span><span class="cant">${cant}</span>
+    <span class="precio">${precio}</span>${xc ? `<span class="xc">${xc}</span>` : ''}
+    ${mas ? `<span class="mas">${mas}</span>` : ''}
+  </div>`;
+const P8 = { foto: 'pase-8.jpg', nom: 'Tiquetera', cant: '8 clases', precio: '$96.000', xc: '$12.000 por clase', sello: 'Mejor precio' };
+const P4 = { foto: 'pase-4.jpg', nom: 'Tiquetera', cant: '4 clases', precio: '$52.000', xc: '$13.000 por clase' };
+const PM = { foto: 'pase-mensualidad.jpg', nom: 'Mensualidad', cant: 'Todo el mes', precio: '$125.000', xc: '≈ $5.000 por clase' };
+const WEB = '<span class="web">tumbaobaila.com/mensualidad</span>';
+const WA = '<span class="web">Escríbenos por WhatsApp</span>';
+const LETRA = '<p class="letra">Clases adicionales al completar todas las clases de tu tiquetera: 1 con la de 4 y 2 con la de 8. Valen 30 días. Aplica a todas las tiqueteras.</p>';
+
+
+// Brillo navideño: guirnalda de luces arriba, nieve fina y destellos dorados. Todo en un SVG detrás del texto.
+const navidad = (W, H, { nieve = 46, destellos = [], semilla = 7, evitar = [] } = {}) => {
+  let r = semilla; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  const colores = ['#ffd479', '#ff5a4d', '#ff9a3c', '#fff2cf', '#ffd479', '#ff6b81'];
+  const hilo = (x) => 78 + Math.sin((x / W) * Math.PI * 3) * 20;   // el cable se descuelga entre luces
+  let luces = '<path d="M-10 70 ' + Array.from({ length: 28 }, (_, i) => { const x = (i + 1) * (W + 20) / 28; return `L${x.toFixed(0)} ${hilo(x).toFixed(0)}`; }).join(' ') + '" fill="none" stroke="#2a1a10" stroke-width="5" stroke-linecap="round"/>';
+  for (let i = 0; i < 15; i++) {
+    const x = 40 + i * (W - 80) / 14, y = hilo(x) + 22, c = colores[i % colores.length];
+    luces += `<line x1="${x}" y1="${hilo(x)}" x2="${x}" y2="${y - 10}" stroke="#2a1a10" stroke-width="4"/>
+      <circle cx="${x}" cy="${y + 8}" r="38" fill="${c}" opacity=".16"/><circle cx="${x}" cy="${y + 8}" r="22" fill="${c}" opacity=".3"/>
+      <ellipse cx="${x}" cy="${y + 6}" rx="11" ry="16" fill="${c}"/><ellipse cx="${x - 3}" cy="${y}" rx="3.5" ry="6" fill="#fff" opacity=".7"/>`;
+  }
+  let copos = '';
+  for (let i = 0; i < nieve; i++) {
+    const x = rnd() * W, y = 150 + rnd() * (H - 150), t = 2 + rnd() * 4.5;
+    if (evitar.some(([a, b, c, d]) => x > a - 14 && x < c + 14 && y > b - 14 && y < d + 14)) continue;
+    copos += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${t.toFixed(1)}" fill="#fff" opacity="${(.25 + rnd() * .5).toFixed(2)}"/>`;
+  }
+  const estrella = (x, y, k) => `<g transform="translate(${x} ${y}) scale(${k})"><circle r="46" fill="#ffd479" opacity=".14"/>
+      <path d="M0 -34 C3 -10 10 -3 34 0 C10 3 3 10 0 34 C-3 10 -10 3 -34 0 C-10 -3 -3 -10 0 -34Z" fill="#ffe7a8"/><circle r="4" fill="#fff"/></g>`;
+  return `<svg class="fx" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${copos}${luces}${destellos.map(d => estrella(d[0], d[1], d[2])).join('')}</svg>`;
+};
+
+const PIEZAS = {
+  // ── Carrusel «Tu constancia suma» (1080 × 1350) ───────────────────────────
+  c1: `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt=""><span class="num-pag">1/5</span>
+        <div class="cont"><span class="ceja">Esta semana</span><h1>Tu constancia<br><em>suma.</em></h1>
+        <p class="sub">Cumple todas las clases de tu tiquetera y recibe <b>clases adicionales</b>.</p></div>
+        <span class="desliza">Desliza →</span></div>`,
+  c2: `<div class="pieza"><div class="resplandor"></div><span class="num-pag">2/5</span>
+        <div class="cont" style="top:120px;bottom:auto"><span class="ceja">Paso 1</span><h2>Elige tu tiquetera</h2></div>
+        <div class="pases chico" style="top:360px">${pase(P8)}${pase(P4)}</div></div>`,
+  c3: `<div class="pieza"><div class="resplandor"></div><span class="num-pag">3/5</span>
+        <div class="cont" style="bottom:auto;top:430px"><span class="ceja">Paso 2</span><h2>Reserva cada clase<br>cuando te sirva</h2>
+        <p class="sub">En cualquier horario, con tu código, en <b>tumbaobaila.com</b>.<br>Tienes <b>30 días</b> para usarla.</p>
+        <div class="clases"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>`,
+  c4: `<div class="pieza"><div class="resplandor"></div><span class="num-pag">4/5</span>
+        <div class="cont" style="bottom:auto;top:430px"><span class="ceja">Paso 3</span><h2>Baila y completa<br><em style="font-style:normal;color:var(--naranja)">todas</em> tus clases</h2>
+        <p class="sub">Tu constancia y tu disciplina se notan.</p>
+        <div class="clases"><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="ok"></i><i class="extra">+1</i></div></div></div>`,
+  c5: `<div class="pieza"><div class="resplandor"></div><img class="logo" src="logo-tumbao.png" alt=""><span class="num-pag">5/5</span>
+        <div class="cont"><span class="ceja">Y te sumamos clases</span><h2>Clases adicionales<br>por tu constancia</h2>
+        <div class="tabla"><div class="fila"><span class="izq">Tiquetera de 4 clases</span><span class="der">+1 clase</span></div>
+        <div class="fila"><span class="izq">Tiquetera de 8 clases</span><span class="der">+2 clases</span></div></div>
+        ${WEB}${LETRA}</div></div>`,
+
+  // ── Publicaciones fijas (1080 × 1350) ───────────────────────────────────
+  f1: `<div class="pieza"><div class="resplandor"></div><img class="logo" src="logo-tumbao.png" alt="">
+        <div class="pases" style="top:300px">${pase({ ...P8, mas: '+2 clases' })}</div>
+        <div class="cont"><span class="ceja">Esta semana · constancia</span><h2>Completa tus 8 clases<br>y te sumamos <em style="font-style:normal;color:var(--naranja)">2 más</em></h2>${WEB}</div></div>`,
+  f2: `<div class="pieza"><div class="resplandor"></div><img class="logo" src="logo-tumbao.png" alt="">
+        <div class="pases" style="top:300px">${pase({ ...P4, mas: '+1 clase' })}</div>
+        <div class="cont"><span class="ceja">Esta semana · constancia</span><h2>Completa tus 4 clases<br>y te sumamos <em style="font-style:normal;color:var(--naranja)">1 más</em></h2>${WEB}</div></div>`,
+
+  // ── 29 oct · «Noviembre se baila»: anuncios que abren WhatsApp (sin ofertas: solo la mensualidad y la tiquetera con sus precios de siempre) ──
+  r1: `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="">
+        <div class="cont"><span class="ceja">Barrancabermeja · Tumbao</span><h1>Noviembre<br><em>se baila.</em></h1>
+        <p class="sub">Mensualidad <b>$125.000</b>: todas tus clases de lunes a sábado, a <b>≈ $5.000 cada una</b>.</p>${WA}</div></div>`,
+  r2: `<div class="pieza"><div class="resplandor"></div><img class="logo" src="logo-tumbao.png" alt="">
+        <div class="cont" style="top:230px;bottom:auto"><span class="ceja">Tú eliges cómo bailar</span><h2>Elige cómo<br>bailar noviembre</h2></div>
+        <div class="pases" style="top:500px">${pase(PM)}</div>
+        <div class="cont" style="bottom:70px"><p class="sub" style="margin-top:0">También tiquetera de <b>4 y 8 clases</b>.</p>${WA}</div></div>`,
+
+  // ── 29 oct · versión navideña (cada bloque en su franja: logo, foto, texto y botón no se pisan) ──
+  n1: `<div class="pieza"><div class="fondo" style="background-image:url(salon.jpg)"></div><div class="velo"></div><div class="n-franja-sup" style="height:400px"></div>
+        <div class="n-velo" style="background:rgba(5,5,5,.1)"></div>${navidad(1080, 1350, { nieve: 70, destellos: [[930, 470, 1], [140, 560, .6], [985, 700, .5]], evitar: [[60, 730, 1020, 1300], [380, 130, 700, 270]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:150px">
+        <div class="n-bloque" style="bottom:84px"><span class="n-cinta"><i></i>Noviembre en Tumbao</span><h1 style="margin-top:22px">Noviembre<br><em>se baila.</em></h1>
+        <p class="sub">Mensualidad <b>$125.000</b>: todas tus clases de lunes a sábado, a <b class="n-oro">≈ $5.000 cada una</b>.</p>${WA}</div></div>`,
+  n2: `<div class="pieza"><div class="resplandor"></div>
+        ${navidad(1080, 1350, { nieve: 60, destellos: [[930, 330, .9], [70, 560, .5], [1000, 1130, .7]], semilla: 11, evitar: [[80, 290, 780, 570], [160, 580, 920, 1070], [80, 1090, 720, 1300], [380, 130, 700, 270]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:150px">
+        <div class="n-bloque" style="top:300px"><span class="n-cinta"><i></i>Tú eliges cómo bailar</span><h2 style="margin-top:20px">Elige cómo<br>bailar noviembre</h2></div>
+        <div class="pases" style="top:590px;transform:translateX(-50%) scale(.9);transform-origin:top center">${pase(PM)}</div>
+        <div class="n-bloque" style="bottom:60px"><p class="sub" style="margin-top:0">También tiquetera de <b class="n-oro">4 y 8 clases</b>.</p>${WA}</div></div>`,
+  n3: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div><div class="n-velo" style="background:rgba(5,5,5,.5)"></div><div class="n-franja-sup" style="height:620px"></div>
+        ${navidad(1080, 1920, { nieve: 80, destellos: [[975, 1010, .8], [70, 1010, .5], [990, 1290, .6]], semilla: 5, evitar: [[150, 450, 930, 960], [80, 1010, 900, 1580], [380, 270, 700, 400]] })}
+        <img class="n-logo" src="logo-tumbao.png" alt="" style="top:290px">
+        <div class="pases" style="top:470px;transform:translateX(-50%) scale(.92);transform-origin:top center">${pase(PM)}</div>
+        <div class="n-bloque" style="top:1030px"><span class="n-cinta"><i></i>Arranca noviembre</span><h1 style="margin-top:22px">Bailemos<br><em>noviembre.</em></h1>
+        <p class="sub">Todas tus clases de lunes a sábado. Escríbenos y te ayudamos a elegir tu horario.</p>${WA}</div></div>`,
+
+  // ── Historias (1080 × 1920) ─────────────────────────────────────────────
+  h1: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
+        <div class="pases chico" style="top:420px">${pase({ ...P8, mas: '+2 clases' })}${pase({ ...P4, mas: '+1 clase' })}</div>
+        <div class="cont" style="bottom:220px"><span class="ceja">Tu constancia suma</span><h2>Completa tu tiquetera y recibe clases adicionales</h2>${WEB}</div></div>`,
+  h2: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-halloween.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
+        <div class="cont" style="bottom:260px"><span class="ceja">🎃 Jueves 29 de octubre</span><h1>Clases de<br><em>Halloween</em></h1>
+        <p class="sub">Una clase para soltarse, reír y bailar en Tumbao. Aparta tu cupo desde hoy: los cupos se llenan.</p>
+        <span class="web">tumbaobaila.com</span></div></div>`,
+  r3: `<div class="pieza historia"><div class="fondo" style="background-image:url(salon-alto.jpg)"></div><div class="velo"></div>
+        <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
+        <div class="pases" style="top:520px">${pase(PM)}</div>
+        <div class="cont" style="bottom:240px"><span class="ceja">Arranca noviembre</span><h1>Bailemos<br><em>noviembre.</em></h1>
+        <p class="sub">Todas tus clases de lunes a sábado. Escríbenos y te ayudamos a elegir tu horario.</p>${WA}</div></div>`,
+  h3: `<div class="pieza historia"><div class="resplandor"></div>
+        <img class="logo" src="logo-tumbao.png" alt="" style="top:120px">
+        <div class="pases" style="top:620px">${pase(PM)}</div>
+        <div class="cont" style="bottom:240px"><span class="ceja">Mensualidad</span><h2>Todo el mes,<br>tu horario fijo</h2>
+        <p class="sub">De lunes a viernes llegas y entras, sin reservar. Sale a <b>≈ $5.000 por clase</b> si vienes a todas.</p>${WEB}</div></div>`,
+};
+
+// Versión para el anuncio que abre la página (mientras el número de Timba se vincula a la página de anuncios): el botón dice la dirección.
+const aWeb = h => h.replace('Escríbenos por WhatsApp', 'tumbaobaila.com/mensualidad')
+  .replace('Escríbenos y te ayudamos a elegir tu horario.', 'Elige tu horario y apártalo en un minuto.');
+PIEZAS.w1 = aWeb(PIEZAS.n1); PIEZAS.w2 = aWeb(PIEZAS.n2); PIEZAS.w3 = aWeb(PIEZAS.n3);
+const id = new URLSearchParams(location.search).get('p') || 'c1';
+document.getElementById('raiz').innerHTML = PIEZAS[id] || '';
+window.LISTAS = Object.keys(PIEZAS);
+</script>
+</body>
+</html>

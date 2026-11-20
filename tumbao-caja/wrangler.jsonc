@@ -1,0 +1,96 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-caja",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "observability": { "enabled": true },
+
+  // Que `wrangler deploy` no borre las variables puestas a mano en el
+  // dashboard (p. ej. WHATSAPP_TOKEN si se guardó como variable y no
+  // como secreto). Los secretos nunca se borran; las variables sí.
+  "keep_vars": true,
+
+  // OJO: LOS CRON NO DISPARAN EN ESTA CUENTA.
+  //
+  // Se dejaron registrados a propósito, pero NO son el mecanismo que
+  // corre hoy.
+  //
+  // Desde el 17 de agosto los cupos vencidos los suelta el propio
+  // Worker, en soltarVencidos(): se llama antes de leer los horarios y
+  // antes del tablero de recepción, como mucho una vez cada cinco
+  // minutos. No hace falta reloj y sale mejor que el que había —con el
+  // cron de n8n un cupo abandonado a las 3:05 seguía bloqueado hasta las
+  // 4:00—, así que el workflow "Tumbao · Liberar cupos vencidos" se
+  // apagó: eran 17 ejecuciones al día, ~510 al mes de un plan de 2.500.
+  //
+  // Lo que se comprobó el 17 de agosto:
+  //   · los dos horarios quedan registrados (la API /schedules los
+  //     devuelve, y `wrangler deploy` los lista)
+  //   · a las 15:00 y a las 16:00 UTC no hubo ni una invocación —ni log
+  //     ni error— mientras n8n sí disparó en el mismo segundo
+  //   · con un cron de prueba CADA MINUTO, siete minutos seguidos sin
+  //     una sola invocación
+  //   · confirmado por la API de analítica, que cuenta invocaciones
+  //     aunque no haya log: cero
+  //
+  // O sea que no es la expresión ni el `scheduled` de abajo: es que en
+  // esta cuenta no se están ejecutando. La causa quedó sin encontrar.
+  //
+  // 9 oct (0163): se agregó "*/10 * * * *" y scheduled() ahora anota un
+  // latido (ajustes.cf_cron_ultimo / cf_cron_total) y corre el freno
+  // automático de las ventas. Si cf_cron_total sube, el reloj de Cloudflare
+  // ya funciona en esta cuenta; si se queda en 0, el freno igual corre cada
+  // hora desde el centinela (pg_cron).
+  //
+  // Se dejan puestos porque el día que empiecen a funcionar, esto ya
+  // está listo y solo habría que apagar el de n8n. Y si arrancaran solos
+  // no rompen nada: liberar_cupos_expirados() es idempotente, así que
+  // convivir con n8n es inofensivo.
+  "triggers": {
+    "crons": ["0 11-23 * * *", "0 0-3 * * *", "*/10 * * * *"]
+  },
+
+  // Para leer la captura del comprobante sin salir de Cloudflare.
+  // No hace falta llave de nadie: es un binding.
+  "ai": { "binding": "AI" },
+
+  // 0119: el debrief del lunes le pide a tumbao-opina lo que la gente
+  // contó en la semana. Por binding, sin secreto: la ruta interna de
+  // opina solo responde a este hostname, que no existe en internet.
+  "services": [{ "binding": "OPINA", "service": "tumbao-opina" }],
+
+  "vars": {
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co",
+    // El webhook de n8n que revisa Gmail al instante cuando alguien dice
+    // "ya pagué", en vez de esperar al sondeo de fondo. No es secreto:
+    // sin el token de abajo no hace nada.
+    "N8N_REVISAR_URL": "https://barragan.app.n8n.cloud/webhook/tumbao/revisar-pago-ahora",
+    // WhatsApp Cloud API (0101). No son secretos: el token sí, y va en
+    // el dashboard como WHATSAPP_TOKEN.
+    "WHATSAPP_PHONE_ID": "1439328619255544",
+    "WHATSAPP_WABA_ID": "1402860685313558",
+    "WHATSAPP_APP_ID": "1655314906206509",
+    // El cerebro del asistente de WhatsApp (0102). Cambiar de modelo es
+    // cambiar esta línea; si el de arriba falla, responde el respaldo.
+    "MODELO_AGENTE": "gpt-6-luna",
+    "ESFUERZO_AGENTE": "low",
+    "MODELO_RESPALDO": "gpt-4o-mini"
+  }
+  // SECRETOS — se ponen en el dashboard, nunca aquí:
+  //   SUPABASE_SERVICE_KEY
+  //   OPENAI_API_KEY       (para leer comprobantes; sin ella se usa un
+  //                         modelo más flojo, ver leerComprobante())
+  //   WHATSAPP_TOKEN       (token permanente del usuario del sistema de
+  //                         Meta, app BotTumbao; sin él no sale ningún
+  //                         aviso y la cola se queda quieta)
+  //   WHATSAPP_APP_SECRET  (la clave secreta de la app BotTumbao; con
+  //                         ella se comprueba que lo que llega a
+  //                         /wa/webhook viene de verdad de Meta)
+  //   N8N_REVISAR_TOKEN    (el mismo valor que el onlyRunIf del webhook
+  //                         "Revisar ahora" en n8n; sin él, el aviso
+  //                         simplemente no se manda — el sondeo de fondo
+  //                         sigue cruzando el pago igual, solo más lento)
+  //
+  // Sin SUPABASE_SERVICE_KEY el Worker responde 503 con un mensaje claro
+  // en vez de fallar raro: así se sabe al instante que falta la llave.
+}

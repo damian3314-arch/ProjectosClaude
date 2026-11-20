@@ -1,0 +1,43 @@
+name: Desplegar la página (docs/)
+
+# El panel de admin y la página pública de reservas viven en docs/ y se
+# publican como Cloudflare Pages, proyecto "tumbao". No estaba conectado
+# a GitHub — cada cambio necesitaba que alguien corriera
+# `wrangler pages deploy` a mano con el token pegado en el chat. Con esto,
+# cada push a la rama de trabajo que toque docs/ se publica solo.
+#
+# Requiere el mismo secreto que deploy-caja.yml:
+#   Settings → Secrets and variables → Actions → CLOUDFLARE_API_TOKEN
+#
+# OJO CON --branch=main: sin esto, wrangler adivina la rama de git (aquí
+# siempre es la de trabajo, claude/tumbao-reservas-n8n-831zit) y Cloudflare
+# publica eso como VISTA PREVIA -- en una URL con el nombre de la rama,
+# nunca en tumbaobaila.com. Así estuvo pasando desde el primer despliegue
+# manual de esta sesión: el código llegaba a Cloudflare, pero nunca a la
+# página que Damián de verdad mira. `--branch=main` le dice a Cloudflare
+# "esto ES la rama de producción", sin importar en qué rama de git esté
+# corriendo quien despliega.
+
+on:
+  push:
+    branches: [claude/tumbao-reservas-n8n-831zit]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: bf3b8e522cb09f86017e2ac7c0d16ea8
+          wranglerVersion: '4.126.0'
+          command: pages deploy docs --project-name=tumbao --branch=main

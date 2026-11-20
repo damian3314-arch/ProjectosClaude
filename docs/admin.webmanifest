@@ -1,0 +1,17 @@
+{
+  "name": "Tumbao · Panel",
+  "short_name": "Tumbao",
+  "description": "El panel de Tumbao: clases, caja, mensualidades y la meta del mes.",
+  "lang": "es-CO",
+  "start_url": "/admin",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0b0f",
+  "theme_color": "#0d0b0f",
+  "icons": [
+    { "src": "img/panel-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/panel-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/panel-512-mascara.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

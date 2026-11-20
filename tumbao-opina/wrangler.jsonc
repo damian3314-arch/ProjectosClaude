@@ -1,0 +1,62 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-opina",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+
+  // La página del chat se sirve como archivos estáticos desde el mismo
+  // Worker. Un solo despliegue, sin CORS y sin un Pages aparte.
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  // El enlace se manda por WhatsApp. Un workers.dev en un chat parece
+  // spam y la gente no lo abre; opina.tumbaobaila.com sí se ve como la
+  // academia. El de workers.dev sigue vivo, no se rompe nada.
+  "routes": [
+    { "pattern": "opina.tumbaobaila.com", "custom_domain": true }
+  ],
+  // Poner `routes` apaga workers.dev por defecto. Se deja encendido: es
+  // la dirección que aparece en el LEEME y en las notas, y apagarla
+  // rompería cualquier enlace ya compartido sin avisar.
+  "workers_dev": true,
+
+  // El motor del bot cuando no hay llave de OpenAI. Corre en Cloudflare,
+  // no necesita cuenta de nadie más, y es lo que hace que el bot
+  // converse de verdad en vez de recitar tres preguntas fijas.
+  //
+  // El plan gratis trae 10.000 neuronas al día. Una conversación de las
+  // de aquí gasta del orden de decenas, así que una campaña entera de
+  // WhatsApp cabe de sobra sin pagar nada.
+  "ai": { "binding": "AI" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tumbao-opina",
+      "database_id": "fec50988-bedc-4cf8-bc73-917c12a5b279"
+    }
+  ],
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    // Modelos baratos a propósito: esto son conversaciones cortas, no
+    // razonamiento. La campaña completa de 40 personas sale por menos
+    // de un dólar.
+    "MODELO_CHAT": "gpt-4o-mini",
+    "MODELO_VOZ": "whisper-1",
+    // Id de la hoja de Google. Se llena cuando exista.
+    "HOJA_ID": ""
+  }
+
+  // SECRETOS — se ponen en el dashboard, nunca en este archivo:
+  //   TOKEN_REPORTE    para abrir /leer
+  //   OPENAI_API_KEY   opcional, ver abajo
+  //   GOOGLE_SA_JSON   la cuenta de servicio, para escribir en la hoja
+  //
+  // OPENAI_API_KEY ya NO hace falta para que el bot funcione. Con el
+  // binding `ai` de arriba conversa, transcribe las notas de voz y saca
+  // la ficha por su cuenta. Si algún día se pone la llave, el bot se
+  // pasa solo a OpenAI —da una conversación algo mejor— sin tocar nada
+  // más. Sin GOOGLE_SA_JSON todo se guarda en D1 y la hoja se
+  // sincroniza después.
+}
