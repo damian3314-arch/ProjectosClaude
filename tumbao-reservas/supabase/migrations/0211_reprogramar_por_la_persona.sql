@@ -59,7 +59,7 @@ create or replace function public._reprogramar_mensaje(p_error text, p_vence dat
 returns text language sql immutable as $$
   select case p_error
     when 'NO_CONFIRMADA' then 'Esa reserva no está confirmada, así que no hay una clase pagada para mover. Escríbenos por WhatsApp y lo revisamos.'
-    when 'ES_TIQUETERA' then 'Esa clase salió de tu tiquetera: reserva otra con tu código de tiquetera en la página, sin necesidad de reprogramar.'
+    when 'ES_TIQUETERA' then 'Esa clase salió de tu tiquetera. Escríbenos por WhatsApp con tu código y te la movemos sin que pierdas la clase.'
     when 'ES_MIEMBRO' then 'Con tu mensualidad no necesitas reprogramar: vienes a tu horario.'
     when 'YA_REPROGRAMADA' then 'Esta clase ya la moviste a otro día. Revisa tu código nuevo.'
     when 'YA_ES_REPROGRAMACION' then 'Esta clase ya es una reprogramación: solo se puede mover una vez. Escríbenos por WhatsApp si te surgió algo.'

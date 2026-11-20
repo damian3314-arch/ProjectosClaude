@@ -44,5 +44,9 @@ ok('dice el plazo de 3 días y que no pierde el pago', /tienes 3 días desde el 
 ok('si no se puede, explica por qué y lleva a WhatsApp', /id="wa3"/.test(pag) && /d\.mensaje/.test(pag));
 ok('la página de reservas enlaza a reprogramar (arriba y en la pantalla final)', (idx.match(/href="reprogramar\.html"/g) || []).length >= 2);
 
+titulo('4. Franja del día (sábado 21)');
+ok('hay una franja que solo vive el día que se pone, con una línea por día, y lleva a reservar ese día',
+   /id="franja-dia"/.test(idx) && /var FRANJAS = \[/.test(idx) && /dia: '2026-11-21'/.test(idx) && /x\.dia === hoy/.test(idx) && /#dias \.dia\[data-fecha="' \+ f\.dia/.test(idx));
+
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);
