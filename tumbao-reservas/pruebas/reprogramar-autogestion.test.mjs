@@ -17,6 +17,8 @@ ok('hace falta el código Y los últimos 4 números del celular, y no dice cuál
 ok('solo clase suelta confirmada y pagada (pago, cobro, comprobante o pago del grupo)',
    /r\.estado <> 'confirmada' then 'NO_CONFIRMADA'/.test(sql) && /r\.tipo = 'tiquetera' then 'ES_TIQUETERA'/.test(sql) && /r\.tipo <> 'suelta' then 'ES_MIEMBRO'/.test(sql)
    && /not v_pago then 'SIN_PAGO'/.test(sql) && /r\.cobro_mov_id is not null or r\.referencia_pago is not null/.test(sql));
+ok('las clases con la promo 2 por $24.000 NO se reprograman y el mensaje lo dice',
+   /valor_reserva\(r\.id\) < coalesce\(c\.precio_cop, 0\) then 'ES_PROMO'/.test(sql) && /when 'ES_PROMO' then 'Las clases de la promoción[^']*no se pueden reprogramar/.test(sql));
 ok('el plazo son 3 días desde el día de la clase', /v_vence := v_dia \+ 3/.test(sql) && /v_hoy > v_vence then 'VENCIDA'/.test(sql));
 ok('si ya entró a la clase no se mueve, y solo se mueve una vez',
    /exists \(select 1 from asistencias a where a\.reserva_id = r\.id\) then 'YA_ASISTIO'/.test(sql)

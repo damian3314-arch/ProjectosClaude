@@ -3,6 +3,8 @@
 -- Reglas:
 --  · Solo clase suelta CONFIRMADA y pagada (pago de la página, cobro en caja, comprobante apuntado o pago de su grupo).
 --  · Tiene 3 días: desde el día de la clase (hora de Bogotá) hasta 3 días después. Puede mover antes de la clase o después si no vino.
+--  · Las clases con la promoción (2 por $24.000, Aguinaldos) NO se reprograman: son especiales (Damián, 19 nov). Se reconocen porque lo que
+--    vale la reserva (valor_reserva, 0207) es menos que el precio de la clase. La página les dice que no aplica.
 --  · Si ya entró a esa clase (asistencia marcada) no se puede. Se mueve UNA sola vez: la clase reprogramada ya no se vuelve a mover.
 --  · La clase nueva nace confirmada y sin pago propio (la plata ya entró con la vieja), igual que la reprogramación de recepción
 --    (origen 'reprogramada', viene_de). Si la vieja todavía no pasaba, su cupo se libera para otra persona.
@@ -45,6 +47,7 @@ begin
         when r.tipo <> 'suelta' then 'ES_MIEMBRO'
         when r.reprogramada_a is not null then 'YA_REPROGRAMADA'
         when r.origen = 'reprogramada' or r.viene_de is not null then 'YA_ES_REPROGRAMACION'
+        when valor_reserva(r.id) < coalesce(c.precio_cop, 0) then 'ES_PROMO'
         when not v_pago then 'SIN_PAGO'
         when exists (select 1 from asistencias a where a.reserva_id = r.id) then 'YA_ASISTIO'
         when v_hoy > v_vence then 'VENCIDA'
@@ -60,6 +63,7 @@ returns text language sql immutable as $$
     when 'ES_MIEMBRO' then 'Con tu mensualidad no necesitas reprogramar: vienes a tu horario.'
     when 'YA_REPROGRAMADA' then 'Esta clase ya la moviste a otro día. Revisa tu código nuevo.'
     when 'YA_ES_REPROGRAMACION' then 'Esta clase ya es una reprogramación: solo se puede mover una vez. Escríbenos por WhatsApp si te surgió algo.'
+    when 'ES_PROMO' then 'Las clases de la promoción (2 personas por $24.000) son especiales y no se pueden reprogramar. Si tienes una duda, escríbenos por WhatsApp.'
     when 'SIN_PAGO' then 'Todavía no vemos el pago de esta reserva. Compártenos el soporte por WhatsApp para validarlo y luego la reprogramas.'
     when 'YA_ASISTIO' then 'Esa clase ya la tomaste, no se puede reprogramar.'
     when 'VENCIDA' then 'El plazo para reprogramar esta clase terminó el ' || to_char(p_vence, 'DD/MM') || ' (son 3 días desde la clase). Escríbenos por WhatsApp y vemos qué se puede hacer.'
