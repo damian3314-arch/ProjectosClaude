@@ -46,11 +46,12 @@ ok('la página y el Worker le dicen claro que, sin soporte, el cupo se libera',
    /si no lo compartes, tu cupo se libera/.test(idx) && (idx.match(/si no lo compartes, tu cupo se libera/g) || []).length >= 2
    && /si no\s*\+?\s*'lo compartes, tu cupo se libera/.test(w.replace(/\s+/g, ' ').replace(/' \+ '/g, '')) || /tu cupo se libera/.test(w));
 
-titulo('4. El cierre trae «por revisar»');
-ok('auditoria_del_dia junta liberadas, anulaciones, recepción sin respaldo y comprobantes repetidos',
+titulo('4. El registro queda, el cierre no cambia');
+ok('auditoria_del_dia existe para consultar liberadas, anulaciones, recepción sin respaldo y comprobantes repetidos',
    /function public\.auditoria_del_dia/.test(sql) && /'recepcion_sin_respaldo'/.test(sql) && /'comprobantes_repetidos'/.test(sql) && /'por_revisar'/.test(sql));
-ok('caja_del_dia la devuelve y el panel la pinta en el cierre',
-   /''auditoria'', auditoria_del_dia\(v_dia\)/.test(mig) && /function tarjetaAuditoria/.test(adm) && /tarjetaPromo\(\) \+ tarjetaAuditoria\(\)/.test(adm));
+ok('el cierre NO se toca: caja_del_dia no se parcha y el panel no pinta tarjeta de auditoría',
+   !/caja_del_dia/.test(sql) && !/tarjetaAuditoria/.test(adm));
+ok('Timba sabe consultar el registro (caja_auditoria)', /caja_auditoria/.test(w) && /auditoria_del_dia\('AAAA-MM-DD'\)/.test(w));
 ok('no borra nada: sin DROP ni DELETE', !/\bdrop\s+(table|function|index|column)|\bdelete\s+from/i.test(sql));
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);

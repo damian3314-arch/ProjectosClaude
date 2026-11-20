@@ -6,8 +6,9 @@
 --     entrada) o transferencia CON número de comprobante (que no se haya usado antes). Con plan, como siempre.
 --  3) Una reserva que dijo haber pagado (verificando / pendiente_validacion) y NO manda el soporte por WhatsApp en N minutos
 --     (ajustes.validacion_max_min, por defecto 30) se libera sola. Si sí mandó imagen o documento, queda para la cajera.
---  4) auditoria_del_dia(dia): lo que hay que mirar antes de cerrar (liberadas y rechazadas con quién y por qué, anulaciones de caja,
---     recepción sin respaldo, comprobantes repetidos). caja_del_dia la devuelve en 'auditoria'.
+--  4) auditoria_del_dia(dia): consulta para cuando haya que validar algo (liberadas y rechazadas con quién y por qué, anulaciones de caja,
+--     recepción sin respaldo, comprobantes repetidos). NO se muestra en el cierre (Damián, 19 nov): el registro queda guardado en
+--     caja_auditoria y se consulta cuando haga falta (Timba lo puede leer).
 -- No borra datos. Sin DROP ni DELETE.
 
 -- ── 1 · el registro ──────────────────────────────────────────────────────────────────────────────
@@ -416,13 +417,3 @@ returns jsonb language sql stable security definer set search_path to 'public','
 $$;
 revoke all on function public.auditoria_del_dia(date) from public, anon, authenticated;
 grant execute on function public.auditoria_del_dia(date) to service_role;
-
--- caja_del_dia: el cierre trae la auditoría.
-do $do$
-declare d text;
-begin
-  d := pg_get_functiondef('public.caja_del_dia(text,date)'::regprocedure);
-  d := replace(d, E'    ''promo'', promo_del_dia(v_dia),', E'    ''promo'', promo_del_dia(v_dia),\n    ''auditoria'', auditoria_del_dia(v_dia),');
-  if d !~ 'auditoria_del_dia' then raise exception 'parche de caja_del_dia no aplicó'; end if;
-  execute d;
-end $do$;

@@ -5580,7 +5580,7 @@ const CONFIG = {
         `<div class="k">${esc(k)}</div>` +
         `<div class="pista">${esc(pista)}</div>` +
       `</div>`
-    ).join('') + tarjetaBanco() + tarjetaPromo() + tarjetaAuditoria();
+    ).join('') + tarjetaBanco() + tarjetaPromo();
 
     // Sin cifras el contenedor sigue reservando el hueco del grid y deja
     // una franja vacía entre los movimientos y el cierre.
@@ -5679,32 +5679,6 @@ const CONFIG = {
       (hayRep ? '<div class="pista">⚠ Hay compras repetidas de la promo: confirma que no se pagó dos veces</div>' : '') +
       `<div style="margin-top:.4rem">${filas}</div>` +
     `</div>`;
-  }
-
-  /* 19 nov (auditoría de caja): lo que hay que mirar antes de cerrar. Viene de caja_del_dia().auditoria (0210): quién liberó o
-     rechazó qué reserva y por qué, qué se anuló de la caja, quién entró sin cobro registrado y qué comprobante se repitió. */
-  function tarjetaAuditoria() {
-    const a = cajaDatos && cajaDatos.auditoria;
-    if (!a) return '';
-    const lib = Array.isArray(a.liberadas) ? a.liberadas : [];
-    const anu = Array.isArray(a.anulaciones) ? a.anulaciones : [];
-    const sr  = Array.isArray(a.recepcion_sin_respaldo) ? a.recepcion_sin_respaldo : [];
-    const rep = Array.isArray(a.comprobantes_repetidos) ? a.comprobantes_repetidos : [];
-    if (!lib.length && !anu.length && !sr.length && !rep.length) return '';
-    const fila = (txt, ojo) =>
-      `<div style="padding:.3rem 0;border-top:1px solid var(--line);font-size:.8rem;text-align:left${ojo ? ';color:var(--gold)' : ''}">${txt}</div>`;
-    const filas =
-      sr.map(x => fila(`⚠ ${esc(x.nombre)} (${esc(x.clase_hora)}) entró sin cobro registrado · ${esc(x.codigo)}`, true)).join('') +
-      rep.map(x => fila(`⚠ Comprobante ${esc(x.referencia)} usado en ${esc(x.compras)} compras: ${esc(x.quienes)}`, true)).join('') +
-      lib.map(x => fila(`${esc(x.hora)} · ${esc(x.nombre)} (${esc(x.clase_hora || '')}) ${esc(x.estado)}` +
-        `${x.quien ? ' por ' + esc(x.quien) : ' (automático)'} — ${x.motivo ? esc(x.motivo) : '<b>SIN MOTIVO</b>'}${x.tuvo_pago ? ' · tenía pago' : ''}`, !x.motivo)).join('') +
-      anu.map(x => fila(`${esc(x.hora)} · Anuló ${esc(nombreConcepto(x.concepto))} ${esc(pesos(x.valor_cop))}` +
-        `${x.quien ? ' · ' + esc(x.quien) : ''} — ${x.motivo ? esc(x.motivo) : '<b>SIN MOTIVO</b>'}`, !x.motivo)).join('');
-    const n = Number(a.por_revisar || 0);
-    return `<div class="tile banco ${n ? 'ojo' : 'bueno'}" style="grid-column:1/-1">` +
-      `<div class="n">${n ? n + ' por revisar' : 'Todo con respaldo'}</div>` +
-      `<div class="k">Cupos liberados, anulaciones y entradas sin cobro de hoy · ${lib.length} liberadas · ${anu.length} anulaciones</div>` +
-      `<div style="margin-top:.4rem">${filas}</div></div>`;
   }
 
   function tarjetaBanco() {
