@@ -181,8 +181,9 @@ await conEspejo({ NUNCA_LLEGA: '1', MINUTOS_ESPERA: '0.15' }, async () => {
      (await p.locator('#ok-wa').innerText()).trim());
 
   const cuerpo = await p.locator('#s5').innerText();
-  ok('sin dejarla creyendo que perdió el cupo',
-     /cupo sigue apartado/i.test(cuerpo));
+  // 19 nov (Damián, auditoría de caja): ahora se le dice CLARO que, sin el soporte por WhatsApp, el cupo se libera (0210).
+  ok('le dice claro qué hacer y qué pasa si no lo hace: sin soporte, el cupo se libera',
+     /soporte de pago por\s+WhatsApp/i.test(cuerpo) && /si no lo compartes, tu cupo se libera/i.test(cuerpo));
   ok('el WhatsApp del pie de página sigue a la mano', await p.locator('#f-wa').isVisible());
   ok('aquí no se le ofrecen planes: primero se resuelve el pago', !(await p.locator('#oferta-tiq').isVisible()));
 
