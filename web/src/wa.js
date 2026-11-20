@@ -102,8 +102,11 @@ export async function waCheck(env) {
         const r = await fetch(`${GRAPH}/debug_token?input_token=${encodeURIComponent(env.WA_TOKEN)}&access_token=${encodeURIComponent(`${env.WA_APP_ID}|${String(env.WA_APP_SECRET).trim()}`)}`, { signal: AbortSignal.timeout(8000) });
         const d = (await r.json().catch(() => ({}))).data || {};
         const scopes = d.scopes || [];
-        out.token = { valid: !!d.is_valid, type: d.type || null, expires_at: d.expires_at ?? null, // 0 = no vence
-          scopes_ok: ['whatsapp_business_messaging', 'whatsapp_business_management'].every(x => scopes.includes(x)) };
+        // granular_scopes dice sobre QUÉ cuentas de WhatsApp (ids, no secretos) tiene permiso el token: si la de Alter no está ahí, Meta responde el error (#10)
+        const targets = {};
+        for (const g of d.granular_scopes || []) if (String(g.scope).startsWith('whatsapp_business')) targets[g.scope] = (g.target_ids || []).slice(0, 10);
+        out.token = { valid: !!d.is_valid, type: d.type || null, app_id: d.app_id || null, user_id: d.user_id || null, expires_at: d.expires_at ?? null, // 0 = no vence
+          scopes_ok: ['whatsapp_business_messaging', 'whatsapp_business_management'].every(x => scopes.includes(x)), targets };
       } catch { out.token = { valid: false }; }
     }
   }
