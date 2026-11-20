@@ -1016,6 +1016,9 @@ const CONFIG = {
      La página conserva su identidad (neón del salón). Navidad = luces de hada arriba, luces desenfocadas y nieve mínima.
      ?navidad=1 la fuerza, ?navidad=0 la quita. Solo transform y opacidad; se apaga con reduced-motion. */
   .guirnalda{display:none}
+  .reprog-link{margin:.5rem 0 0;font-size:.84rem;text-align:center}
+  .reprog-link a{color:var(--tx-2);text-decoration:none;border-bottom:1px dashed var(--line-2)}
+  .reprog-link b{color:var(--gold)}
   /* 17 nov · aguinaldos: etiqueta en el día, nota en el contador y franja de arriba */
   .dia{position:relative}
   .dia-promo{display:block;margin-top:.25rem;padding:.12rem .4rem;border-radius:99px;font-size:.62rem;font-weight:800;letter-spacing:.02em;white-space:nowrap;color:#2b1204;background:linear-gradient(135deg,#ffd0a8,#ff9a5c)}
@@ -1148,6 +1151,7 @@ const CONFIG = {
   <header>
     <h1 class="marca"><img src="img/logo-tumbao.png" alt="Tumbao, baila pa' sanar" width="521" height="196" fetchpriority="high"></h1>
     <p class="tagline">Reserva tu clase en un minuto</p>
+    <p class="reprog-link"><a href="reprogramar.html">¿Ya reservaste y no puedes ir? <b>Reprograma tu clase</b></a></p>
   </header>
 
   <!-- La invitación a tiquetera y mensualidad va justo debajo del
@@ -1483,6 +1487,7 @@ const CONFIG = {
       </div>
 
       <a class="btn-ghost" id="ok-wa" href="#" style="margin-bottom:.6rem">Escribirnos por WhatsApp</a>
+      <p class="reprog-link" id="ok-reprog" style="margin:0 0 .6rem">¿Te surge algo? <a href="reprogramar.html"><b>Reprograma tu clase</b></a> con tu código.</p>
       <button class="btn-ghost" type="button" id="otra">Reservar otra clase</button>
     </div>
   </section>

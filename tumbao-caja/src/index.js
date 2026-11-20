@@ -1231,6 +1231,29 @@ async function pagina(request, env, ruta, origen, ctx) {
       return json(r, 200, origen);
     }
 
+    /* 19 nov (Damián): la persona reprograma su clase suelta ya pagada con el código de su reserva y los últimos 4 números de su
+     * celular, sin pasar por recepción (0211). Tiene 3 días desde el día de la clase. Postgres decide todo; aquí solo se limpia lo
+     * que llega. Las dos rutas devuelven el mismo mensaje si el código y los números no coinciden: no dicen cuál de los dos falló. */
+    if ((ruta === '/tumbao/reprogramar/consulta' || ruta === '/tumbao/reprogramar') && metodo === 'POST') {
+      const codigo = txt(b.codigo, 12).toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const c4 = txt(b.celular4, 25).replace(/\D/g, '').slice(-4);
+      if (codigo.length < 4 || c4.length !== 4) {
+        return json({ ok: false, error: 'DATOS_INVALIDOS',
+          mensaje: 'Escribe el código de tu reserva y los últimos 4 números de tu celular.' }, 400, origen);
+      }
+      if (ruta === '/tumbao/reprogramar/consulta') {
+        await soltarVencidos(env);   // los cupos que se enseñan ya llevan descontados los que acaban de vencer
+        const r = await rpc(env, 'reprogramar_consulta', { p_codigo: codigo, p_celular4: c4 });
+        return json(r && typeof r === 'object' ? r : { ok: false, error: 'FALLA' }, r && r.ok === false ? 404 : 200, origen);
+      }
+      const clase = String(b.clase_id || '');
+      if (!/^[0-9a-f-]{36}$/i.test(clase)) {
+        return json({ ok: false, error: 'CLASE_INVALIDA', mensaje: 'Escoge una de las clases de la lista.' }, 400, origen);
+      }
+      const r = await rpc(env, 'reprogramar_propia', { p_codigo: codigo, p_celular4: c4, p_clase_id: clase });
+      return json(r && typeof r === 'object' ? r : { ok: false, error: 'FALLA' }, r && r.ok === false ? 409 : 200, origen);
+    }
+
     return json({ ok: false, error: 'NO_EXISTE' }, 404, origen);
 
   } catch (e) {
