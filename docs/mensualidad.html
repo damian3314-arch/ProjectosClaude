@@ -2063,6 +2063,14 @@ const CONFIG = {
     }
     mostrarDetalle(0, false);
     pintarFaq();
+    // 20 nov: la página de 2027 manda a la persona con el pase que le conviene ya al frente (?pase=mensualidad | 8 | 4).
+    try {
+      const q = new URLSearchParams(location.search).get('pase');
+      if (q) {
+        const i = pasesActuales.findIndex(x => (q === 'mensualidad' ? x.tipo === 'mensualidad' : String(x.num) === q));
+        if (i > 0) { cajas[i].scrollIntoView({ block: 'nearest', inline: 'center' }); mostrarDetalle(i, false); }
+      }
+    } catch (e) {}
   }
 
   async function cargarPaquetes() {

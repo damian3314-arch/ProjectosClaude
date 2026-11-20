@@ -56,9 +56,8 @@ titulo('3b. Tiquetera: se mueve antes de la clase, no después (0212)');
   ok('la página dice «hasta que empiece tu clase» y que no gasta otra clase', /Puedes cambiarla hasta que empiece tu clase/.test(pag) && /No gastas otra clase de tu tiquetera/.test(pag));
 }
 
-titulo('4. Franja del día (sábado 21)');
-ok('hay una franja que solo vive el día que se pone, con una línea por día, y lleva a reservar ese día',
-   /id="franja-dia"/.test(idx) && /var FRANJAS = \[/.test(idx) && /dia: '2026-11-21'/.test(idx) && /x\.dia === hoy/.test(idx) && /#dias \.dia\[data-fecha="' \+ f\.dia/.test(idx));
+titulo('4. Reservas limpia');
+ok('la página de reservas no tiene franjas ni tarjetas arriba (la franja del día se quitó)', !/id="franja-dia"/.test(idx) && !/var FRANJAS = \[/.test(idx));
 
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

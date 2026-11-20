@@ -1016,6 +1016,11 @@ const CONFIG = {
      La página conserva su identidad (neón del salón). Navidad = luces de hada arriba, luces desenfocadas y nieve mínima.
      ?navidad=1 la fuerza, ?navidad=0 la quita. Solo transform y opacidad; se apaga con reduced-motion. */
   .guirnalda{display:none}
+  a.opcion{display:flex;text-decoration:none;color:inherit}
+  .opcion-plan{border-style:dashed}
+  .plan-pista{display:block;margin:.5rem 0 0;padding:.55rem .8rem;border-radius:12px;font-size:.84rem;line-height:1.35;text-decoration:none;color:var(--tx-2);
+    background:rgba(255,193,77,.08);border:1px dashed rgba(255,193,77,.4)}
+  .plan-pista b{color:#ffc14d}
   .reprog-link{margin:.5rem 0 0;font-size:.84rem;text-align:center}
   .reprog-link a{color:var(--tx-2);text-decoration:none;border-bottom:1px dashed var(--line-2)}
   .reprog-link b{color:var(--gold)}
@@ -1157,22 +1162,6 @@ const CONFIG = {
   <!-- La invitación a tiquetera y mensualidad va justo debajo del
        logo: es lo primero que se lee. Solo se ve en el paso 1; mientras
        alguien está pagando su clase no se le pone nada encima. -->
-  <button class="franja-aguinaldos" type="button" id="franja-dia" hidden>
-    <span class="ico" aria-hidden="true" id="franja-dia-ico">🎶</span>
-    <span class="tx" id="franja-dia-tx"></span>
-    <span class="ir" aria-hidden="true">→</span>
-  </button>
-  <button class="franja-aguinaldos" type="button" id="franja-aguinaldos" hidden>
-    <span class="ico" aria-hidden="true">🎁</span>
-    <span class="tx"><b>¡Llegaron los aguinaldos!</b> Cada 2 personas, <b>$24.000</b> · miércoles 18 y viernes 20. 4 por $48.000, 6 por $72.000, 8 por $96.000.</span>
-    <span class="ir" aria-hidden="true">→</span>
-  </button>
-  <a class="franja-promo" href="mensualidad.html" id="franja-promo">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
-    <span class="tx" id="franja-promo-tx">¿Vienes seguido? Con la <b>tiquetera</b> compras varias clases de una
-      y ahorras, o aparta tu <b>mensualidad</b> con horario fijo.</span>
-    <span class="flecha" aria-hidden="true">→</span>
-  </a>
 
   <!-- La clase nueva. Nace oculta y la enciende CONFIG.NUEVA. -->
   <div class="nueva-clase" id="nueva-clase" hidden>
@@ -1193,13 +1182,6 @@ const CONFIG = {
 
   <!-- ═══════ 0 · ¿Cómo vienes? ═══════ -->
   <section id="s0" class="on" aria-labelledby="t0">
-    <!-- 13 nov (Damián): tocar las barritas lleva a la página que convence de llegar a 2027 con el hábito hecho. -->
-    <a class="mini-hero" id="mini-hero" href="2027.html" aria-label="Tu clase de hoy es el primer paso de tu 2027. Toca para ver cómo llegar con el hábito hecho">
-      <span class="hero-chip"><span class="vivo"></span><span id="hero-cuenta">2027 está cerca</span></span>
-      <p class="mini-t">Tu clase de hoy es el primer paso de tu <span class="g">2027</span>.</p>
-      <div class="eq" id="eq" aria-hidden="true"></div>
-      <span class="mini-ir">Mira cómo llegar con el hábito hecho <b aria-hidden="true">→</b></span>
-    </a>
     <h2 id="t0">¿Cómo vienes?</h2>
     <p class="sub">De esto depende si te pedimos el soporte de pago.</p>
     <div class="opciones">
@@ -1224,7 +1206,17 @@ const CONFIG = {
           <span class="des">Ya la pagaste. Reserva con tu código, sin pagar otra vez.</span>
         </span>
       </button>
+      <!-- 20 nov (Damián): la página es para reservar. Los planes se invitan como una opción más, con el ahorro a la vista, y llevan
+           directo a su página. El texto se completa con los precios y cupos reales (pintarFranjaPromo). -->
+      <a class="opcion opcion-plan" href="mensualidad.html" id="franja-promo">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="#ph-ticket"/></svg>
+        <span>
+          <span class="tit">Quiero un plan <span class="etq-nueva">Ahorra</span></span>
+          <span class="des" id="franja-promo-tx">Mensualidad o tiquetera: cada clase te sale por mucho menos.</span>
+        </span>
+      </a>
     </div>
+    <p class="reprog-link" style="margin-top:1rem"><a href="2027.html">✨ <b>Llega a 2027 con el hábito hecho</b> · mira cómo</a></p>
     <div class="aviso info" style="margin-top:1.2rem">
       Si tienes mensualidad, tus clases <b>entre semana</b> ya están cubiertas:
       no necesitas reservar, solo llegar. El <b>sábado</b> sí hay que apartar cupo.
@@ -1272,6 +1264,7 @@ const CONFIG = {
         </div>
         <p class="promo-nota" id="promo-nota" hidden>🎁 <b>Aguinaldos:</b> cada 2 personas pagan <b>$24.000</b>. 4 por $48.000 · 6 por $72.000 · 8 por $96.000. ¡Trae a tu parche!</p>
         <p class="grupo-total" id="grupo-total"></p>
+        <a class="plan-pista" id="plan-pista" href="mensualidad.html" hidden></a>
       </div>
 
       <div>
@@ -2009,10 +2002,21 @@ const CONFIG = {
     return normal;
   }
 
+  // Una sola línea, solo con clase suelta y solo si los precios cargaron: lo que cuesta cada clase con un plan.
+  function pintarPlanPista(){
+    const a = $('#plan-pista');
+    if (!a) return;
+    const pc = Number(window.planPorClase) || 0;
+    const ver = tipo === 'suelta' && pc > 0 && elegida && Number(elegida.precio_cop) > pc;
+    a.hidden = !ver;
+    if (ver) a.innerHTML = `💡 Con la mensualidad esta clase te sale a ≈ <b>${pesos(pc)}</b> · <b>Ver planes →</b>`;
+  }
+
   function pintarResumen(){
     if (!elegida) return;
     const dia = dias.find(d => d.fecha === diaActivo) || {};
     const total = totalGrupo();
+    pintarPlanPista();
     $('#resumen').innerHTML =
       `<strong>${esc(cap(elegida.etiqueta || dia.etiqueta || ''))} · ${esc(elegida.hora)}</strong>
        <span>${esc([tituloClase(elegida), metaClase(elegida)].filter(Boolean).join(' · '))}${
@@ -2656,11 +2660,14 @@ const CONFIG = {
     const porClaseTiq = mejor ? Math.round(mejor.precio_cop / mejor.clases) : 0;
     if (m){
       // Primero los horarios con menos cupos: ahí está la urgencia de verdad.
-      const horas = m.horas.slice().sort((a, b) => a.libres - b.libres).slice(0, 2)
-        .map(h => `<b>${h.libres} ${h.libres === 1 ? 'cupo' : 'cupos'} a las ${esc(h.etiqueta)}</b>`);
+      const justos = m.horas.slice().sort((a, b) => a.libres - b.libres)[0];
+      const porClasePlan = Math.round(m.valor / CONFIG.CLASES_MES_REF / 100) * 100;
+      window.planPorClase = porClasePlan;
       $('#franja-promo-tx').innerHTML =
-        `Mensualidad: quedan ${horas.join(' y ')}. Todo el mes por <b>${pesos(m.valor)}</b>.` +
-        (mejor ? ` O tiquetera desde <b>${pesos(porClaseTiq)}</b> la clase.` : '');
+        `Mensualidad ≈ <b>${pesos(porClasePlan)}</b> por clase` +
+        (mejor ? ` · tiquetera desde <b>${pesos(porClaseTiq)}</b>` : '') +
+        (justos && justos.libres <= 5 ? ` · ¡quedan ${justos.libres} a las ${esc(justos.etiqueta)}!` : '');
+      pintarPlanPista();
       return;
     }
     if (!mejor) return;
@@ -2837,33 +2844,6 @@ const CONFIG = {
   var dias=Math.round((Date.parse('2027-01-01T12:00:00-05:00')-Date.parse(hoy+'T12:00:00-05:00'))/86400000);
   if(dias>0){var c=$('#hero-cuenta');if(c)c.textContent='Faltan '+dias+' días para 2027';var n=$('#cuenta-n');if(n)n.textContent=dias;var t=$('#cuenta-t');if(t)t.textContent=dias===1?'día para 2027: cada clase cuenta':'días para 2027: cada clase cuenta';}
   var eq=$('#eq');if(eq){for(var i=0;i<30;i++){var b=document.createElement('i');b.style.animationDuration=(0.7+Math.random()*0.9).toFixed(2)+'s';b.style.animationDelay=(-Math.random()*1.5).toFixed(2)+'s';eq.appendChild(b);}}
-}catch(e){}})();
-</script>
-<script>
-/* 19 nov · «Franja del día»: un mensaje corto arriba que solo vive el día que se pone (hora de Bogotá), y al tocarlo lleva a
-   reservar ese día. Para agregar otro, una línea más en FRANJAS. Nunca sale junto a la de los aguinaldos (esa termina el 20). */
-(function(){try{
-  var FRANJAS = [
-    { dia: '2026-11-21', emoji: '🎶',
-      html: '<b>Sábado de rumba</b> · clases a las 8:00 y 9:00 a. m. Reserva tu cupo y baila con tu parche.' }
-  ];
-  var hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
-  var f = FRANJAS.filter(function(x){ return x.dia === hoy; })[0];
-  var b = document.getElementById('franja-dia');
-  if (!f || !b) return;
-  document.getElementById('franja-dia-ico').textContent = f.emoji;
-  document.getElementById('franja-dia-tx').innerHTML = f.html;
-  b.hidden = false;
-  b.addEventListener('click', function(){
-    var op = document.querySelector('.opcion[data-tipo="suelta"]');
-    if (op) op.click();
-    var intentos = 0;
-    var t = setInterval(function(){
-      var d = document.querySelector('#dias .dia[data-fecha="' + f.dia + '"]');
-      if (d) { clearInterval(t); d.click(); d.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-      else if (++intentos > 40) clearInterval(t);
-    }, 200);
-  });
 }catch(e){}})();
 </script>
 <div class="promo-pop" id="aviso-pop" role="dialog" aria-modal="true" aria-label="Aviso de la clase" hidden>

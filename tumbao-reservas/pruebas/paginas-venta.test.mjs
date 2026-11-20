@@ -45,15 +45,13 @@ titulo('3. Para quién es cada tiquetera y la franja de reservas');
      /Usa tus \$\{clases\} clases cuando quieras, sin horario fijo/.test(men) && !/veces por semana|vez por semana/i.test(men.slice(men.indexOf('function listaDePases'), men.indexOf('function cuposTxt'))));
   // 13 oct: la franja dice primero los cupos REALES de mensualidad (lo que más cayó en octubre) y la tiquetera queda de
   // segunda opción; sin cupos, la cuenta de la tiquetera como antes.
-  ok('la franja de reservas pone primero los cupos reales de mensualidad (los dos horarios con menos cupos) y el precio del mes',
+  ok('la invitación a los planes (opción «Quiero un plan») trae el precio por clase de la mensualidad y, si quedan pocos, el horario más justo',
      /async function pintarFranjaPromo/.test(idx) && /await cuposMensualidad\(\)/.test(idx) &&
-     /sort\(\(a, b\) => a\.libres - b\.libres\)\.slice\(0, 2\)/.test(idx) &&
-     /`Mensualidad: quedan \$\{horas\.join\(' y '\)\}\. Todo el mes por <b>\$\{pesos\(m\.valor\)\}<\/b>\.`/.test(idx));
-  ok('sin cupos, la cuenta real de los paquetes del sistema (precio por clase y ahorro)',
-     /tiquetera\/paquetes/.test(idx) && /cada clase te sale a <b>\$\{pesos\(porClaseTiq\)\}<\/b>/.test(idx) && /\(ahorras \$\{pesos\(ahorro\)\}\)/.test(idx));
+     /sort\(\(a, b\) => a\.libres - b\.libres\)\[0\]/.test(idx) &&
+     /`Mensualidad ≈ <b>\$\{pesos\(porClasePlan\)\}<\/b> por clase`/.test(idx) && /justos\.libres <= 5/.test(idx));
   ok('si nada carga, se queda el texto de siempre (sin datos no se escribe nada)',
      /if \(!mejor\) return;/.test(idx) && /cuposMensualidad\(\)\.catch\(\(\) => null\)/.test(idx)
-     && /¿Vienes seguido\? Con la <b>tiquetera<\/b> compras varias clases de una/.test(idx));
+     && /Mensualidad o tiquetera: cada clase te sale por mucho menos\./.test(idx));
   ok('se llama DESPUÉS de declarar paquetesTiq (let): antes daría «aún no definida»',
      idx.indexOf('let paquetesTiq') > 0 && idx.indexOf('\n  pintarFranjaPromo();') > idx.indexOf('let paquetesTiq'));
 }
@@ -71,14 +69,22 @@ titulo('4. Nada suena a descuento');
 titulo('5. Página del 2027 y /mensualidad directo a elegir pase');
 {
   const p27 = readFileSync(new URL('../../docs/2027.html', import.meta.url), 'utf8');
-  ok('las barritas del inicio son un enlace a la página del 2027', /<a class="mini-hero"[^>]*href="2027\.html"/.test(idx) && /id="eq"/.test(idx));
-  ok('la franja de arriba sigue llevando a /mensualidad', /class="franja-promo" href="mensualidad\.html"/.test(idx));
+  ok('la página de reservas ya no tiene tarjetas arriba: abre directo en «¿Cómo vienes?»',
+     !/<a class="mini-hero"/.test(idx) && !/<button class="franja-aguinaldos"/.test(idx) && !/<a class="franja-promo"/.test(idx)
+     && idx.indexOf('id="t0"') > 0 && idx.indexOf('id="t0"') < idx.indexOf('data-tipo="miembro"'));
+  ok('los planes se invitan como una opción más (lleva a /mensualidad) y hay un enlace discreto a /2027',
+     /<a class="opcion opcion-plan" href="mensualidad\.html" id="franja-promo">/.test(idx) && /href="2027\.html"/.test(idx));
+  ok('al elegir clase suelta sale una línea con lo que cuesta cada clase con la mensualidad, que lleva a los planes',
+     /id="plan-pista" href="mensualidad\.html"/.test(idx) && /function pintarPlanPista/.test(idx));
   ok('/mensualidad ya no abre con la cabecera del 2027, el ticker, «dolor» ni «ruta»', !/id="hero"|class="ticker"|id="dolor"|id="ruta"/.test(men));
   ok('/mensualidad abre directo en elegir pase', men.indexOf('id="el-titulo"') > 0 && men.indexOf('id="tarjetas-eleccion"') > men.indexOf('id="el-titulo"'));
-  ok('la página del 2027 lleva a /mensualidad y muestra mensualidad y tiquetera de 8', (p27.match(/href="mensualidad\.html"/g) || []).length >= 3 && /TIQUETERA/.test(p27) && /MENSUALIDAD/.test(p27));
+  ok('la página del 2027 es un simulador: eliges cuántas veces por semana y ves tus clases a 2027, lo que ahorras y tu plan, con enlace directo al pase',
+     /id="veces"/.test(p27) && /mensualidad\.html\?pase=mensualidad/.test(p27) && /mensualidad\.html\?pase=8/.test(p27) && /TIQUETERA/.test(p27) && /MENSUALIDAD/.test(p27));
+  ok('/mensualidad abre ya con el pase que trae ?pase= (mensualidad, 8 o 4)', /new URLSearchParams\(location\.search\)\.get\('pase'\)/.test(men) && /mostrarDetalle\(i, false\)/.test(men));
   ok('la página del 2027 usa los cupos y precios reales de la API', /tumbao\/mensualidad/.test(p27) && /tiquetera/.test(p27) && /libres/.test(p27));
   ok('la página del 2027 no promete descuentos, regalos ni premios', !/descuento|obsequio|regalo|gratis|gana un premio|recompensa/i.test(p27));
-  ok('la página del 2027 dice que no hay clases domingos ni festivos', /domingos y festivos/i.test(p27));
+  ok('la página del 2027 casi no tiene texto (la gente no lee): menos de 130 palabras fijas',
+     p27.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length < 130);
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo bien');
