@@ -73,6 +73,7 @@ const SUITES = [
   'promo-dia-invitados',
   'auditoria-caja',
   'reprogramar-autogestion',
+  'valor-especial',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',

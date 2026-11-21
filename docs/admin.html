@@ -2528,6 +2528,18 @@ const CONFIG = {
              autocomplete="off">
     </div>
 
+    <!-- 21 nov (Damián): a veces se cobra otro valor (tarifa especial, ej. $12.000). El valor que pongas es el que entra a
+         la caja, al cierre y a las ventas; el motivo es obligatorio y queda en la auditoría. -->
+    <div id="ap-valor-caja">
+      <button class="medio" id="ap-especial" type="button">💲 Cobró otro valor</button>
+      <div id="ap-especial-campos" hidden>
+        <label for="ap-valor">Valor que pagó <span class="req">*</span></label>
+        <input id="ap-valor" type="number" inputmode="numeric" min="1000" max="100000" step="500" placeholder="Ej: 12000" autocomplete="off">
+        <label for="ap-valor-motivo">¿Por qué ese valor? <span class="req">*</span></label>
+        <input id="ap-valor-motivo" type="text" maxlength="100" placeholder="Ej: tarifa especial, convenio, cortesía" autocomplete="off">
+      </div>
+    </div>
+
     <label for="ap-nota">Nota <span class="suave">(opcional)</span></label>
     <input id="ap-nota" type="text" maxlength="80" placeholder="Ej: pagó por Nequi la mamá"
            autocomplete="off">
@@ -3472,7 +3484,18 @@ const CONFIG = {
     $('#ap-caja-medio').hidden = apTipo === 'miembro';
     // 19 nov: con transferencia se pide el número del comprobante; sin él no se apunta.
     $('#ap-comprobante-caja').hidden = !(apMedio === 'transferencia' && apTipo !== 'miembro');
+    // 21 nov: el valor especial solo existe con clase suelta.
+    $('#ap-valor-caja').hidden = apTipo === 'miembro';
   };
+  const pintarEspecial = (on) => {
+    $('#ap-especial').classList.toggle('on', on);
+    $('#ap-especial-campos').hidden = !on;
+    if (!on) { $('#ap-valor').value = ''; $('#ap-valor-motivo').value = ''; }
+  };
+  $('#ap-especial').addEventListener('click', () => {
+    pintarEspecial($('#ap-especial-campos').hidden);
+    if (!$('#ap-especial-campos').hidden) $('#ap-valor').focus();
+  });
 
   $('#puerta-apuntar').addEventListener('click', abrirApuntar);
   $('#ap-cancelar').addEventListener('click', cerrarApuntar);
@@ -3510,6 +3533,7 @@ const CONFIG = {
     $('#ap-tel').value = '';
     $('#ap-nota').value = '';
     $('#ap-comprobante').value = '';
+    pintarEspecial(false);
     $('#ap-plan-manual').hidden = true;
     $('#modal-apuntar').hidden = false;
     $('#ap-nombre').focus();
@@ -3571,11 +3595,29 @@ const CONFIG = {
       return;
     }
 
+    // 21 nov: valor especial (solo suelta). Postgres lo vuelve a exigir.
+    let valorEsp = null, motivoValor = null;
+    if (apTipo !== 'miembro' && !$('#ap-especial-campos').hidden) {
+      valorEsp = parseInt($('#ap-valor').value, 10);
+      motivoValor = $('#ap-valor-motivo').value.trim();
+      if (!(valorEsp >= 1000 && valorEsp <= 100000)) {
+        nota('Falta el valor', 'mal', 'Escribe cuánto pagó, entre $1.000 y $100.000.');
+        marcar('#ap-valor');
+        return;
+      }
+      if (motivoValor.length < 3) {
+        nota('Falta el motivo', 'mal', 'Di por qué es ese valor: queda en el registro.');
+        marcar('#ap-valor-motivo');
+        return;
+      }
+    }
+
     b.disabled = true;
     const antes = b.textContent;
     b.textContent = 'Apuntando…';
     try {
       const r = await alWorker('reserva', {
+        valor: valorEsp, motivo_valor: motivoValor,
         clase_id: puerta.clase.clase_id,
         nombre, telefono: tel, tipo: apTipo,
         nota: $('#ap-nota').value.trim() || null,
@@ -3619,6 +3661,7 @@ const CONFIG = {
           `${esc(r.nombre)} queda apuntada. Código ${esc(r.codigo)}.` +
           (r.plan_manual === true
             ? ' <b>Quedó con plan puesto a mano</b>: AdminGym todavía no la muestra.' : '') +
+          (r.valor_especial === true ? ` <b>Valor especial: ${pesos(r.precio_cop)}</b> (la clase vale ${pesos(r.precio_normal)}).` : '') +
           (r.efectivo_registrado === true
             ? ` Entraron ${pesos(r.precio_cop)} en efectivo a la caja.` : '') +
           // Que quede dicho: esa plata todavía no está, y la forma de

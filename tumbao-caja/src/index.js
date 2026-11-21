@@ -4866,6 +4866,9 @@ export default {
           p_nombre: String(b.nombre || '').slice(0, 80),
           p_telefono: String(b.telefono || '').slice(0, 20),
           p_tipo: b.tipo === 'miembro' ? 'miembro' : 'suelta',
+          // 21 nov (0213): valor especial al apuntar (ej. $12.000). Solo clase suelta; Postgres valida rango y exige el motivo.
+          p_valor: (b.tipo !== 'miembro' && Number.isInteger(Number(b.valor)) && Number(b.valor) > 0) ? Number(b.valor) : null,
+          p_motivo_valor: (b.tipo !== 'miembro' && b.motivo_valor) ? String(b.motivo_valor).slice(0, 100) : null,
           // Con transferencia, la «nota» ES el número del comprobante (0210): Postgres lo exige y no deja repetirlo.
           p_nota: (String(b.medio || '').toLowerCase() === 'transferencia' && b.comprobante)
             ? String(b.comprobante).slice(0, 60)
