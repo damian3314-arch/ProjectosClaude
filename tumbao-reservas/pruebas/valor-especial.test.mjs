@@ -23,5 +23,9 @@ ok('el Worker manda valor y motivo, solo con clase suelta', /p_valor: \(b\.tipo 
 ok('admin: botón «Cobró otro valor» con valor y motivo obligatorios, solo con clase suelta',
    /id="ap-especial"/.test(adm) && /id="ap-valor"/.test(adm) && /id="ap-valor-motivo"/.test(adm) && /Falta el motivo/.test(adm)
    && /\$\('#ap-valor-caja'\)\.hidden = apTipo === 'miembro'/.test(adm) && /valor: valorEsp, motivo_valor: motivoValor/.test(adm));
+ok('caja → Ingreso · Clase suelta: «Cobró otro valor» desbloquea el Valor (solo efectivo) y se apaga con transferencia',
+   /id="cant-otro"/.test(adm) && /campo\.readOnly = aplica && !cajaValorLibre/.test(adm) && /if \(cajaMedio === 'transferencia'\) cajaValorLibre = false/.test(adm));
+ok('si el total no es cantidad × precio, el motivo es obligatorio y se escribe en la nota del movimiento',
+   /\+valor !== cajaCantidad \* \(cajaElegido\.v \|\| 0\)/.test(adm) && /Tarifa especial \(normal /.test(adm) && /nota: notaFinal/.test(adm));
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

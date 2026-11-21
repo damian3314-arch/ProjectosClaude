@@ -2376,6 +2376,10 @@ const CONFIG = {
         <button class="cnt" type="button" id="cant-mas" aria-label="Una más">+</button>
       </div>
       <p class="ap-pista" id="cant-resumen">1 clase suelta · $15.000</p>
+      <!-- 21 nov (Damián): a veces se cobra otro valor (tarifa especial, ej. $12.000 por clase). Con esto el campo Valor se
+           desbloquea; si el total no es cantidad × precio, la nota con el motivo es obligatoria y queda en el movimiento. -->
+      <button class="medio" id="cant-otro" type="button">💲 Cobró otro valor</button>
+      <p class="ap-pista" id="cant-otro-pista" hidden>Escribe abajo cuánto pagaron en total y, en la nota, por qué (tarifa especial, convenio…). Queda en el registro.</p>
     </div>
 
     <label for="modal-valor">Valor</label>
@@ -6988,6 +6992,7 @@ const CONFIG = {
      valida nada: se impide llegar. */
   const TOPE_CANTIDAD = 50;
   let cajaCantidad = 1;
+  let cajaValorLibre = false;   // 21 nov: «Cobró otro valor» (solo efectivo)
   const conContador = x => !!x && x.c === 'clase_suelta';
 
   // Pinta el contador y, de paso, el valor: con el contador puesto el
@@ -6998,12 +7003,17 @@ const CONFIG = {
     const aplica = conContador(cajaElegido);
     $('#modal-cantidad').hidden = !aplica;
     const campo = $('#modal-valor');
-    campo.readOnly = aplica;
+    // Una transferencia va atada al depósito del banco: ahí el valor no se inventa.
+    if (cajaMedio === 'transferencia') cajaValorLibre = false;
+    campo.readOnly = aplica && !cajaValorLibre;
+    $('#cant-otro').hidden = !aplica || cajaMedio === 'transferencia';
+    $('#cant-otro').classList.toggle('on', cajaValorLibre);
+    $('#cant-otro-pista').hidden = !(aplica && cajaValorLibre);
     if (!aplica) return;
 
     const precio = cajaElegido.v || 0;
-    const total = cajaCantidad * precio;
-    campo.value = String(total);
+    const total = cajaValorLibre ? (+String($('#modal-valor').value || '').replace(/\D/g, '') || 0) : cajaCantidad * precio;
+    if (!cajaValorLibre) campo.value = String(total);
     $('#cant-n').textContent = String(cajaCantidad);
     $('#cant-menos').disabled = cajaCantidad <= 1;
     $('#cant-mas').disabled = cajaCantidad >= TOPE_CANTIDAD;
@@ -7018,6 +7028,12 @@ const CONFIG = {
     cajaCantidad = Math.min(TOPE_CANTIDAD, Math.max(1, cajaCantidad + paso));
     pintarCantidad();
   };
+  $('#cant-otro').addEventListener('click', () => {
+    cajaValorLibre = !cajaValorLibre;
+    pintarCantidad();   // al apagarlo vuelve a cantidad × precio
+    if (cajaValorLibre) { $('#modal-valor').focus(); $('#modal-valor').select(); }
+  });
+  $('#modal-valor').addEventListener('input', () => { if (cajaValorLibre) pintarCantidad(); });
   $('#cant-menos').addEventListener('click', () => moverCantidad(-1));
   $('#cant-mas').addEventListener('click', () => moverCantidad(1));
 
@@ -7043,6 +7059,7 @@ const CONFIG = {
     let valor = pago ? pago.valor : (x.v || 0);
 
     cajaCantidad = 1;
+    cajaValorLibre = false;
     if (conContador(x)) {
       // Viniendo de un depósito, la cantidad se deduce de lo que llegó:
       // $45.000 en clases sueltas son tres personas, y obligar a subir el
@@ -7074,6 +7091,7 @@ const CONFIG = {
     // siguiente cobro naciera cobrando tres clases sin que nadie lo
     // pidiera. El campo se desbloquea aquí mismo por lo mismo.
     cajaCantidad = 1;
+    cajaValorLibre = false;
     // Y el "no está en la lista" no se hereda: cada cobro lo decide de
     // nuevo quien lo registra.
     cajaSinDeposito = false;
@@ -7096,6 +7114,11 @@ const CONFIG = {
       // El banco ya manda sus depósitos: se dice justo cuando se elige
       // transferencia, que es cuando importa.
       $('#modal-pista-medio').hidden = cajaMedio !== 'transferencia';
+      if (conContador(cajaElegido)) {
+        // Con transferencia no hay «otro valor»: vuelve a cantidad × precio. Si no estaba activo, el valor no se toca.
+        if (cajaMedio === 'transferencia' && cajaValorLibre) { cajaValorLibre = false; pintarCantidad(); }
+        else $('#cant-otro').hidden = cajaMedio === 'transferencia';
+      }
       // Un cajón no transfiere: si el gasto salió por transferencia,
       // salió de la caja mayor y no hay nada que escoger.
       if (cajaMedio === 'transferencia') cajaOrigen = 'caja_mayor';
@@ -7324,6 +7347,18 @@ const CONFIG = {
       return;
     }
 
+    // 21 nov: otro valor distinto de cantidad × precio => el motivo es obligatorio y se escribe en el movimiento.
+    let notaFinal = $('#modal-nota').value;
+    if (conContador(cajaElegido) && cajaValorLibre && cajaMedio !== 'transferencia'
+        && +valor !== cajaCantidad * (cajaElegido.v || 0)) {
+      if (notaFinal.trim().length < 3) {
+        nota('Falta el motivo', 'mal', 'Escribe en la nota por qué es ese valor (tarifa especial, convenio…): queda en el registro.');
+        marcar('#modal-nota');
+        return;
+      }
+      notaFinal = 'Tarifa especial (normal ' + pesos(cajaCantidad * (cajaElegido.v || 0)) + '): ' + notaFinal.trim();
+    }
+
     // Se guarda antes de cerrar: cerrarModal() pone cajaElegido en null,
     // y leerlo después reventaba con "Cannot read properties of null".
     // El movimiento sí quedaba grabado, pero la pantalla decía que no.
@@ -7341,7 +7376,7 @@ const CONFIG = {
     try {
       await alWorker('registrar', {
         sentido: cajaElegido.s, concepto: cajaElegido.c,
-        valor, medio: cajaMedio, nota: $('#modal-nota').value,
+        valor, medio: cajaMedio, nota: notaFinal,
         pago_id: cajaMedio === 'transferencia' ? cajaPago : null,
         cantidad,
         // Solo en un gasto: en un ingreso no significa nada y mandarlo
