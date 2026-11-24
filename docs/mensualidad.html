@@ -39,7 +39,7 @@ const CONFIG = {
   CLASES_MES_REF: 25,
   /* Premio por constancia (la dueña lo aprobó el 1 nov): quien cumple TODAS las clases de su tiquetera recibe clases
      más como premio. Solo tiquetera. Sin fecha de fin: `hasta` solo existe para apagarla a mano. */
-  CAMPANA: { activa: true, desde: '2026-11-01', hasta: '2027-12-31' },
+  CAMPANA: { activa: true, desde: '2026-11-01', hasta: '2026-11-30' },  // 24 nov (Damián): no convive con la promo de 45 días, que empieza el 1 de diciembre para esta oferta
   // Clases adicionales al completar la tiquetera (Damián, 25 oct): 1 en la de 4 clases, 2 en la de 8. Aplica a todas, nuevas o viejas.
   EXTRA: (clases) => (Number(clases) >= 8 ? 2 : 1),
   // Fotos de fondo de cada pase (opcional). Ruta dentro de docs/, p. ej. 'img/pase-4.jpg'. Vacío = arte gráfico.

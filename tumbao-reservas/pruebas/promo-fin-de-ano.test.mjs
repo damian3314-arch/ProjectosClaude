@@ -33,5 +33,12 @@ ok('los días de cierre entran como festivos (para que no se abran clases) y no 
 ok('Timba (asistente, ventas y agente del dueño) conoce la promo y sus fechas',
    ['asistente.js', 'ventas.js', 'index.js'].every(f => /PROMOCIÓN DE FIN DE AÑO[\s\S]{0,400}45 días calendario[\s\S]{0,700}15 de enero[\s\S]{0,200}14 de febrero/.test(leer('../../tumbao-caja/src/' + f))));
 ok('/admin: la tiquetera apuntada a mano nace con 45 días durante la promo', /tiq-vigencia"\)\.value="45"/.test(adm) && /"2026-11-24"/.test(adm));
+{
+  const m16 = leer('../supabase/migrations/0216_constancia_solo_hasta_el_30_de_noviembre.sql').replace(/--.*$/gm, '');
+  ok('la clase adicional por constancia solo cuenta para tiqueteras pagadas hasta el 30 de noviembre (las ya compradas la conservan)',
+     /pase_constancia_hasta', '2026-11-30'/.test(m16) && /coalesce\(t\.pagado_en, t\.creada_en\)/.test(m16) && /CAMPANA: \{ activa: true, desde: '2026-11-01', hasta: '2026-11-30' \}/.test(men));
+  ok('Timba no ofrece la constancia en compras nuevas desde el 1 de diciembre',
+     ['asistente.js', 'ventas.js'].every(f => /SOLO PARA TIQUETERAS COMPRADAS HASTA EL 30 DE NOVIEMBRE DE 2026/.test(leer('../../tumbao-caja/src/' + f))));
+}
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);

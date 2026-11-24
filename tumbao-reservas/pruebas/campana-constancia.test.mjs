@@ -15,7 +15,7 @@ const mens = readFileSync(new URL('../../docs/mensualidad.html', import.meta.url
 
 titulo('1. La clase adicional por constancia se desmontó (26 oct, la dueña no la aprobó)');
 ok('la página anuncia las clases de obsequio: 1 con la de 4 y 2 con la de 8', /EXTRA: \(clases\) => \(Number\(clases\) >= 8 \? 2 : 1\)/.test(mens) && /clase más/.test(mens) && /clases más/.test(mens) && /premiamos tu constancia/.test(mens));
-ok('no se promete como descuento ni se pone fecha de fin cercana', !/descuento/i.test(mens.match(/CAMPANA:[^\n]*/)[0]) && /hasta: '2027-12-31'/.test(mens));
+ok('no se promete como descuento ni se pone fecha de fin cercana', !/descuento/i.test(mens.match(/CAMPANA:[^\n]*/)[0]) && /hasta: '2026-11-30'/.test(mens));
 
 titulo('1b. Los pases');
 ok('la mensualidad va primero y cada producto es un pase con su botón', mens.indexOf("tipo: 'mensualidad'") < mens.indexOf('for (const p of [...tiqPaquetes]') && /class="pase /.test(mens) && /id="btn-pase" data-elegir=/.test(mens));
