@@ -74,6 +74,7 @@ const SUITES = [
   'auditoria-caja',
   'reprogramar-autogestion',
   'valor-especial',
+  'promo-fin-de-ano',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',

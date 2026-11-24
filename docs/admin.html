@@ -2308,7 +2308,8 @@ const CONFIG = {
           <label class="topes-campo"><span>Número de clases</span>
             <input type="number" min="1" max="20" step="1" id="tiq-clases" value="4"></label>
           <label class="topes-campo"><span>Vigencia (días)</span>
-            <input type="number" min="1" max="365" step="1" id="tiq-vigencia" value="30"></label>
+            <input type="number" min="1" max="365" step="1" id="tiq-vigencia" value="30">
+            <script>/* 24 nov: durante la promo de fin de año (compras 24 nov – 31 dic) la tiquetera nace con 45 días. */(function(){var h=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Bogota"}).format(new Date());if(h>="2026-11-24"&&h<="2026-12-31")document.getElementById("tiq-vigencia").value="45";})();</script></label>
           <label class="topes-campo"><span>Cuánto pagó</span>
             <input type="number" min="1000" step="1000" id="tiq-precio" value="52000"></label>
           <!-- 0111: la venta entra al cierre del día. Se pide cómo pagó

@@ -2026,7 +2026,7 @@ const CONFIG = {
       ['¿Cómo reservo mis clases con la tiquetera?',
        'Entra a <a href="https://tumbaobaila.com">tumbaobaila.com</a>, elige <b>Tengo tiquetera</b>, escribe tu código y aparta la clase. Cada reserva descuenta una clase.'],
       ['¿Cuánto me dura?',
-       'La mensualidad, el mes. La tiquetera, <b>30 días</b> desde la compra.'],
+       (window.PROMO_FDA ? 'Con la promo de fin de año, tanto la mensualidad como la tiquetera duran <b>' + window.PROMO_FDA.dias + ' días</b> desde la compra (compras hasta el 31 de diciembre).' : 'La mensualidad, el mes. La tiquetera, <b>30 días</b> desde la compra.')],
       ['¿Cómo pago?',
        'Por transferencia, desde aquí mismo: eliges tu pase, dejas tus datos y te mostramos los datos de pago. Apenas confirmamos el pago queda activo (con la tiquetera te llega tu código).'],
     ];
@@ -2357,5 +2357,6 @@ const CONFIG = {
   [['#hero-ir','#cta-pase'],['#barra-ir','#cta-pase']].forEach(function(p){var a=$(p[0]);if(a)a.addEventListener('click',function(ev){ev.preventDefault();var d=$(p[1]);if(d)d.scrollIntoView({behavior:'smooth',block:'center'});});});
 }catch(e){}})();
 </script>
+<script src="promo-fin-de-ano.js" data-modo="hero" defer></script>
 </body>
 </html>
