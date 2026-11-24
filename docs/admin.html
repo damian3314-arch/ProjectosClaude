@@ -2388,6 +2388,9 @@ const CONFIG = {
          distintas —"3 personas" y $30.000— y entonces ninguna de las dos
          serviría para cuadrar el día. -->
     <input id="modal-valor" type="text" inputmode="numeric" placeholder="15.000" autocomplete="off">
+    <!-- 24 nov (Damián): si hay depósitos del banco sin asociar, la cajera lo ve SIEMPRE al registrar un ingreso y tiene que
+         comprobar si lo que registra es ese dinero (para enlazarlo y no contarlo dos veces). Si el valor coincide con uno, se dice cuál. -->
+    <div class="aviso ojo" id="modal-pendientes" hidden></div>
     <div class="medios">
       <button class="medio on" data-medio="efectivo">💵 Efectivo</button>
       <button class="medio" data-medio="transferencia">📲 Transferencia</button>
@@ -6995,11 +6998,33 @@ const CONFIG = {
   let cajaValorLibre = false;   // 21 nov: «Cobró otro valor» (solo efectivo)
   const conContador = x => !!x && x.c === 'clase_suelta';
 
+  // 24 nov: aviso de depósitos pendientes por asociar. Se repinta con el valor, el medio y al abrir el modal.
+  function pintarAvisoPendientes() {
+    const box = $('#modal-pendientes');
+    if (!box) return;
+    const libres = (cajaDatos && cajaDatos.pagos_libres) || [];
+    if (!cajaElegido || cajaElegido.s !== 'ingreso' || cajaPago || !libres.length) { box.hidden = true; return; }
+    const monto = p => Number(p.saldo_cop != null ? p.saldo_cop : p.valor_cop) || 0;
+    const v = Number(String($('#modal-valor').value || '').replace(/\D/g, '')) || 0;
+    const iguales = v > 0 ? libres.filter(p => monto(p) === v) : [];
+    const total = libres.reduce((t, p) => t + monto(p), 0);
+    let html = `<b>⚠ Hay ${libres.length} ${libres.length === 1 ? 'depósito' : 'depósitos'} del banco sin asociar (${esc(pesos(total))}).</b> ` +
+               `Antes de guardar, revisa si el dinero que estás registrando es uno de ellos: si lo es, escógelo abajo para enlazarlo.`;
+    if (iguales.length) {
+      html += `<br><b>Existe un depósito pendiente por ${esc(pesos(v))}:</b> ` +
+        iguales.slice(0, 3).map(p => `${esc(p.remitente || 'sin remitente')} (${esc(p.cuando || '')})`).join(' · ') +
+        `. ¿Es este mismo pago?`;
+    }
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
   // Pinta el contador y, de paso, el valor: con el contador puesto el
   // valor SIEMPRE es cantidad × precio y el campo se bloquea. Es la
   // decisión de fondo — un solo número mandando, para que el monto y la
   // cuenta de gente no puedan contradecirse.
   function pintarCantidad() {
+    setTimeout(pintarAvisoPendientes, 0);
     const aplica = conContador(cajaElegido);
     $('#modal-cantidad').hidden = !aplica;
     const campo = $('#modal-valor');
@@ -7033,7 +7058,7 @@ const CONFIG = {
     pintarCantidad();   // al apagarlo vuelve a cantidad × precio
     if (cajaValorLibre) { $('#modal-valor').focus(); $('#modal-valor').select(); }
   });
-  $('#modal-valor').addEventListener('input', () => { if (cajaValorLibre) pintarCantidad(); });
+  $('#modal-valor').addEventListener('input', () => { if (cajaValorLibre) pintarCantidad(); else pintarAvisoPendientes(); });
   $('#cant-menos').addEventListener('click', () => moverCantidad(-1));
   $('#cant-mas').addEventListener('click', () => moverCantidad(1));
 
@@ -7083,6 +7108,7 @@ const CONFIG = {
     pintarDepositos();
     pintarOrigen();
     $('#modal-caja').hidden = false;
+    pintarAvisoPendientes();
     setTimeout(() => $('#modal-valor').focus(), 60);
   }
   const cerrarModal = () => {
@@ -7126,7 +7152,7 @@ const CONFIG = {
       // Al cambiar de efectivo a transferencia aparece la lista; al
       // volver a efectivo se olvida el depósito, que si no quedaría
       // enlazado a un cobro en billetes.
-      cajaPago = null;
+      cajaPago = null; pintarAvisoPendientes();
       cajaSinDeposito = false;
       pintarDepositos();
     });
@@ -7240,7 +7266,7 @@ const CONFIG = {
       b.classList.toggle('on', cajaPago === b.dataset.pago);
       b.addEventListener('click', () => {
         const ya = cajaPago === b.dataset.pago;
-        cajaPago = ya ? null : b.dataset.pago;
+        cajaPago = ya ? null : b.dataset.pago; pintarAvisoPendientes();
         // Escoger un depósito deshace el "no está en la lista": si al
         // final se guarda con depósito, no hay nada que buscar a mano.
         cajaSinDeposito = false;
@@ -7290,7 +7316,7 @@ const CONFIG = {
   // transferencia sin depósito: `cajaSinDeposito` es la constancia de
   // que alguien lo decidió mirando la lista, no de que se le olvidó.
   $('#modal-sin-deposito').addEventListener('click', () => {
-    cajaPago = null;
+    cajaPago = null; pintarAvisoPendientes();
     cajaSinDeposito = true;
     $('#modal-depositos').querySelectorAll('[data-pago]').forEach(o => o.classList.remove('on'));
     $('#modal-sin-deposito').classList.add('on');

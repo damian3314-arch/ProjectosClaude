@@ -27,5 +27,10 @@ ok('caja → Ingreso · Clase suelta: «Cobró otro valor» desbloquea el Valor 
    /id="cant-otro"/.test(adm) && /campo\.readOnly = aplica && !cajaValorLibre/.test(adm) && /if \(cajaMedio === 'transferencia'\) cajaValorLibre = false/.test(adm));
 ok('si el total no es cantidad × precio, el motivo es obligatorio y se escribe en la nota del movimiento',
    /\+valor !== cajaCantidad \* \(cajaElegido\.v \|\| 0\)/.test(adm) && /Tarifa especial \(normal /.test(adm) && /nota: notaFinal/.test(adm));
+ok('al registrar un ingreso en caja, si hay depósitos del banco sin asociar, la cajera ve el aviso y, si el valor coincide, cuál existe',
+   /id="modal-pendientes"/.test(adm) && /function pintarAvisoPendientes/.test(adm) && /depósitos? del banco sin asociar/.test(adm.replace(/\$\{[^}]*\}/g, '')) && /Existe un depósito pendiente por/.test(adm));
+ok('el aviso se repinta al abrir el modal, al cambiar el valor y al escoger o soltar un depósito',
+   /pintarAvisoPendientes\(\);\s*setTimeout\(\(\) => \$\('#modal-valor'\)\.focus/.test(adm) && /else pintarAvisoPendientes\(\)/.test(adm) && (adm.match(/cajaPago = [^;]*; pintarAvisoPendientes\(\);/g) || []).length >= 3);
+ok('los depósitos sin asociar se ven 14 días (0214)', /interval ''14 days''/.test(leer('../supabase/migrations/0214_depositos_pendientes_14_dias.sql')));
 console.log(`\n${fallos ? '✗ ' + fallos + ' con problemas' : '✓ todo bien'}`);
 process.exit(fallos ? 1 : 0);
