@@ -23,7 +23,8 @@ const RES = { ok: true, hoy: '2026-10-29', primer_caja: '2026-08-10',
   plata_mes: { entro_cop: 11567000, salio_cop: 7400000, utilidad_cop: 4167000 }, plata_mes_antes: { entro_cop: 9000000 },
   plata_semana: { entro_cop: 3100000 }, plata_semana_antes: { entro_cop: 2800000 }, gastos_mes: [{ concepto: 'profesores', cop: 3000000 }] };
 const META = { ok: true, mes: '2026-10', hoy: '2026-10-29', meta_cop: 16000000, meta_definida_para: '2026-10', vendido_cop: 11567000,
-  falta_cop: 4433000, pct: 72, dias_restantes: 3, por_dia_cop: 1477667, cumplida: false, puede_cambiar: true };
+  falta_cop: 4433000, pct: 72, dias_restantes: 3, por_dia_cop: 1477667, ritmo_dia_cop: 500000, dias_pasados: 21, proyeccion_cop: 13067000, proyeccion_pct: 82, falta_proyectada_cop: 2933000,
+  cumplida: false, puede_cambiar: true };
 const CL = (n, t, d, a) => ({ nombre: n, telefono: t, dias: d, plata_cop: d * 15000, ultima: '2026-10-27', afiliada: a });
 const RANK = { ok: true, clientes: [CL('Ana ConPlan', '3001111111', 9, false), CL('Beatriz Libre', '3002222222', 8, false), CL('Carla Afiliada', '3003333333', 7, true),
   CL('Diana Libre', '3004444444', 6, false), CL('Eva Libre', '3005555555', 5, false), CL('Flor Libre', '3006666666', 4, false), CL('Gina Libre', '3007777777', 3, false), CL('Hilda Libre', '3008888888', 2, false)] };
@@ -64,15 +65,16 @@ titulo('1. La meta del mes');
 {
   const { p, errs } = await abrir();
   const t = (await p.locator('#meta-resumen').innerText()).replace(/\s+/g, ' ');
-  ok('lo primero del resumen: cuánto FALTA por vender', /Falta por vender \$4\.433\.000/.test(t), t);
-  ok('con lo vendido, la meta y el porcentaje', /Vendido \$11\.567\.000 de \$16\.000\.000 · 72 %/.test(t));
-  ok('y el ritmo: días de clase que quedan y cuánto por día', /Quedan 3 días de clase/.test(t) && /\$1\.477\.667 por día/.test(t));
+  ok('lo primero del resumen: lo VENDIDO (25 nov, Damián), antes de lo que falta', /Vendido \$11\.567\.000/.test(t) && t.indexOf('Vendido') < t.indexOf('faltan'), t);
+  ok('con el porcentaje, la meta y cuánto falta', /72 % de \$16\.000\.000 · faltan \$4\.433\.000/.test(t));
+  ok('lo que se necesita por día y los días de clase que quedan', /Para llegar: \$1\.477\.667 por día · quedan 3 días de clase/.test(t));
+  ok('y hasta cuánto se llega con el ritmo de ahora, y cuánto faltaría', /Con el ritmo de ahora \(\$500\.000 por día\) llegas a \$13\.067\.000 · 82 % de la meta · faltarían \$2\.933\.000/.test(t), t);
   ok('la barra de avance lleva el 72 %', (await p.locator('#meta-resumen .barra i').getAttribute('style')).includes('72%'));
   ok('el propietario puede cambiar la meta', await p.locator('#meta-resumen [data-cambiar-meta]').count() === 1);
   const r = (await p.locator('#fichas-resumen').innerText()).replace(/\s+/g, ' ');
   ok('el resumen ya no habla de lo que sale ni de lo que «queda»', !/queda/i.test(r) && !/salidas/i.test(r) && !/profesores/i.test(r), r);
   await p.click('#tab-mas'); await p.click('#tab-tablero'); await p.waitForTimeout(400);
-  ok('el tablero también la lleva, en pequeño', /Falta por vender \$4\.433\.000/.test((await p.locator('#meta-tablero').innerText()).replace(/\s+/g, ' ')));
+  ok('el tablero también la lleva, en pequeño', /Vendido \$11\.567\.000/.test((await p.locator('#meta-tablero').innerText()).replace(/\s+/g, ' ')));
   ok('sin errores de JS', errs.length === 0, errs.join(' | '));
   await p.close();
 }

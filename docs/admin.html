@@ -651,6 +651,11 @@ const CONFIG = {
   .meta-card .pie{font-size:.78rem;color:var(--tx-2);font-variant-numeric:tabular-nums}
   .meta-card .ritmo{margin-top:.55rem;padding-top:.55rem;border-top:1px solid var(--line);font-size:.85rem;color:var(--tx-2)}
   .meta-card .ritmo b{color:var(--gold);font-variant-numeric:tabular-nums}
+  .meta-card .pie .falta-n{color:var(--gold);font-weight:700}
+  .meta-card .proy{margin-top:.45rem;font-size:.82rem;color:var(--tx-2);font-variant-numeric:tabular-nums}
+  .meta-card .proy b{color:var(--tx)}
+  .meta-card .proy.si b{color:var(--ok)}
+  .meta-card .proy.no b{color:var(--gold)}
   .meta-card.lista{border-color:rgba(74,222,128,.5);background:linear-gradient(150deg,rgba(74,222,128,.14),var(--bg-2))}
   .meta-card.lista .falta b{color:var(--ok)}
   .meta-card.chica{padding:.7rem .9rem}
@@ -7475,6 +7480,14 @@ const CONFIG = {
     catch (_) { traido.delete('meta'); /* sin la tarjeta: el resto del panel sigue igual */ }
   }
 
+  // Hasta cuánto se llega si sigue la tendencia (lo vendido por día de clase en los días ya completos del mes).
+  function proyeccion(m) {
+    if (m.proyeccion_cop == null || m.ritmo_dia_cop == null) return '';
+    const llega = Number(m.proyeccion_cop) >= Number(m.meta_cop);
+    return `<div class="proy ${llega ? 'si' : 'no'}">Con el ritmo de ahora (${esc(pesos(m.ritmo_dia_cop))} por día) llegas a <b>${esc(pesos(m.proyeccion_cop))}</b> · ${esc(String(m.proyeccion_pct))} % de la meta` +
+      (llega ? ' · ¡se llega!' : ` · faltarían ${esc(pesos(m.falta_proyectada_cop))}`) + '</div>';
+  }
+
   function pintarMeta() {
     const m = metaMes;
     for (const id of ['meta-resumen', 'meta-tablero']) {
@@ -7500,12 +7513,12 @@ const CONFIG = {
            <div class="barra"><i style="width:100%"></i></div>
            <div class="pie">Meta ${esc(pesos(m.meta_cop))} · vas ${esc(pesos(Number(m.vendido_cop) - Number(m.meta_cop)))} por encima</div>${heredada}`
         : `<div class="cab">Meta de ${esc(mes)}<span class="sp"></span>${cambiar}</div>
-           <div class="falta">Falta por vender<b>${esc(pesos(m.falta_cop))}</b></div>
+           <div class="falta">Vendido<b>${esc(pesos(m.vendido_cop))}</b></div>
            <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
-           <div class="pie">Vendido ${esc(pesos(m.vendido_cop))} de ${esc(pesos(m.meta_cop))} · ${pct} %</div>
+           <div class="pie">${pct} % de ${esc(pesos(m.meta_cop))} · <b class="falta-n">faltan ${esc(pesos(m.falta_cop))}</b></div>
            <div class="ritmo">${Number(m.dias_restantes) > 0
-             ? `${m.dias_restantes === 1 ? 'Queda 1 día de clase' : `Quedan ${m.dias_restantes} días de clase`} · <b>${esc(pesos(m.por_dia_cop))}</b> por día`
-             : 'Hoy es el último día'}</div>${heredada}`;
+             ? `Para llegar: <b>${esc(pesos(m.por_dia_cop))}</b> por día · ${m.dias_restantes === 1 ? 'queda 1 día de clase' : `quedan ${m.dias_restantes} días de clase`}`
+             : 'Hoy es el último día'}</div>${proyeccion(m)}${heredada}`;
       el.hidden = false;
     }
   }
