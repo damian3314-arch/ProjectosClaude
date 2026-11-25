@@ -75,6 +75,7 @@ const SUITES = [
   'reprogramar-autogestion',
   'valor-especial',
   'promo-fin-de-ano',
+  'pendientes-solo-planes',
   'opina-panel',
   'campana-rescate-mes',
   'salidas-timba',
