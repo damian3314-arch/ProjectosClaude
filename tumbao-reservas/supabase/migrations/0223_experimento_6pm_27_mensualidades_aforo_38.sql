@@ -1,0 +1,4 @@
+-- 0223 · Experimento 6 pm, versión final (Damián, 26 nov): máx. 27 mensualidades + 11 sueltas = aforo 38.
+-- Hoy 26 nov queda como estaba (aforo 40, tope 28); desde el 27 nov a las 5 am rige 27 y aforo 38.
+-- Aplicada en vivo: ajustes.experimento_6pm con "extra":4 y "excepciones":{"2026-11-26":6}; techo_clase()
+-- lee las excepciones; cron 'experimento-6pm-tope-27' (27 nov 5 am Bogotá) baja el tope a 18:00=27 y se quita solo.
