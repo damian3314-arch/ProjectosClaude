@@ -72,6 +72,7 @@ const SUITES = [
   'calendario-campanas',
   'promo-dia-invitados',
   'auditoria-caja',
+  'experimento-6pm',
   'reprogramar-autogestion',
   'valor-especial',
   'promo-fin-de-ano',
