@@ -41,6 +41,9 @@ titulo('3. Sin soporte por WhatsApp, el cupo se libera');
 ok('verificando / pendiente_validacion sin pago y sin imagen o documento por WhatsApp se liberan solas',
    /r\.estado in \('verificando', 'pendiente_validacion'\)/.test(sql) && /m\.tipo in \('image', 'document'\)/.test(sql)
    && /validacion_max_min/.test(sql) && /estado = 'expirada', motivo_rechazo = 'Sin soporte por WhatsApp/.test(sql));
+ok('0221: no libera nada antes de las 5:00 pm de Bogotá (la recepcionista llega 4:30)',
+   (() => { const m = leer('../supabase/migrations/0221_liberar_sin_soporte_desde_las_5pm.sql');
+     return /liberar_sin_soporte_desde/.test(m) && /'17:00'/.test(m) && />= v_desde/.test(m) && /America\/Bogota/.test(m); })());
 ok('devuelve el cupo a la clase y deja la huella', /cupo_tomado = greatest\(0, c\.cupo_tomado - p\.n\)/.test(sql) && /'liberar_sin_soporte'/.test(sql));
 ok('la página y el Worker le dicen claro que, sin soporte, el cupo se libera',
    /si no lo compartes, tu cupo se libera/.test(idx) && (idx.match(/si no lo compartes, tu cupo se libera/g) || []).length >= 2
