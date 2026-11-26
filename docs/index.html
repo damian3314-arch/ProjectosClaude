@@ -59,7 +59,9 @@ const CONFIG = {
       corto: 'Simulacro navideño: 6:00 a 7:00 p. m. y 7:30 a 8:30 p. m.'
     }
   },
-  PROMO_DOS: { cupos: 2, precio: 24000, dias: ['2026-11-13', '2026-11-18', '2026-11-20'], hasta_visible: '2026-11-21T00:00:00-05:00' },
+  PROMO_DOS: { cupos: 2, precio: 24000, dias: ['2026-11-13', '2026-11-18', '2026-11-20', '2026-11-26'], hasta_visible: '2026-11-27T00:00:00-05:00',
+    // 25 nov: el jueves 26 la tarifa es solo para la Rumba de las 5:00 pm (los demás días valen para todas las clases).
+    solo_horas: { '2026-11-26': ['17:00'] } },
   // Para decir «a $5.000 la clase»: el mismo número que usa la página de mensualidad (CLASES_MES_REF).
   CLASES_MES_REF: 25,
   // Cuánto se le guarda el cupo a quien reserva y todavía no avisa que
@@ -1881,7 +1883,7 @@ const CONFIG = {
       const meta = metaClase(c);
       return `<button class="clase" type="button" data-id="${esc(c.clase_id)}" ${libres === 0 ? 'disabled' : ''}>
                 <span class="hora">${esc(c.hora)}</span>
-                <span class="info">${tit ? `<span class="nom">${esc(tit)}${esNueva(c) ? '<span class="etq-nueva">Nueva</span>' : ''}</span>` : ''}<span class="meta">${esc(meta)}</span></span>
+                <span class="info">${tit ? `<span class="nom">${esc(tit)}${esNueva(c) ? '<span class="etq-nueva">Nueva</span>' : ''}${(tipo === 'suelta' && claseConPromo(fecha, c) && Date.now() < Date.parse(CONFIG.PROMO_DOS.hasta_visible)) ? '<span class="dia-promo">2×$24.000</span>' : ''}</span>` : ''}<span class="meta">${esc(meta)}</span></span>
                 <span class="cupos ${cls}">${txt}</span>
               </button>`;
     }).join('');
@@ -1987,9 +1989,21 @@ const CONFIG = {
 
   // Día de invitados: exactamente 2 cupos de suelta en una clase de la fecha de la promo. Otra cantidad, otro día o
   // otro tipo de pase: precio de siempre.
+  function horaBogota(iso){
+    try { return new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso)); }
+    catch (e) { return ''; }
+  }
+  // ¿Esta clase tiene la tarifa? Si el día trae «solo_horas», solo las clases de esas horas.
+  function claseConPromo(fecha, c){
+    const P = CONFIG.PROMO_DOS;
+    if (!P || P.dias.indexOf(fecha) < 0) return false;
+    const horas = P.solo_horas && P.solo_horas[fecha];
+    return !horas || (!!c && horas.indexOf(horaBogota(c.fecha_hora)) >= 0);
+  }
   function promoAplica(){
     const P = CONFIG.PROMO_DOS;
-    return !!(P && tipo === 'suelta' && diaActivo && P.dias.indexOf(diaActivo) >= 0);
+    if (!(P && tipo === 'suelta' && diaActivo && P.dias.indexOf(diaActivo) >= 0)) return false;
+    return claseConPromo(diaActivo, elegida);
   }
   function totalGrupo(){
     const unit = (elegida && elegida.precio_cop) || 0;

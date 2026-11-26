@@ -7,7 +7,7 @@ const ok = (n, c) => { if (!c) fallos++; console.log(`${c ? '✓' : '✗'} ${n}`
 const titulo = t => console.log(`\n-- ${t} ${'-'.repeat(Math.max(0, 54 - t.length))}`);
 
 titulo('1. La página');
-ok('la promo es de exactamente 2 cupos, $24.000, solo el 13, 18 y 20 de noviembre (el 19 no)', /PROMO_DOS: \{ cupos: 2, precio: 24000, dias: \['2026-11-13', '2026-11-18', '2026-11-20'\]/.test(idx));
+ok('la promo es de exactamente 2 cupos, $24.000, el 13, 18, 20 de noviembre y (solo la clase de las 5 pm) el jueves 26; el 19 no', /PROMO_DOS: \{ cupos: 2, precio: 24000, dias: \['2026-11-13', '2026-11-18', '2026-11-20', '2026-11-26'\]/.test(idx));
 ok('el total usa la promo por parejas (4 = $48.000, 6, 8) solo en clase suelta de los días de la promo', /function promoAplica/.test(idx) && /pares \* P\.precio \+ \(cuantos - pares \* P\.cupos\) \* unit/.test(idx));
 ok('la promo se anuncia dentro del flujo (sin tarjeta arriba): etiqueta en los días, nota en el contador y el aviso emergente', /dia-promo/.test(idx) && /id="promo-nota"/.test(idx) && /4 por \$48\.000/.test(idx) && /id="promo-pop"/.test(idx));
 ok('el resumen, la cuenta y el botón leen totalGrupo()', (idx.match(/totalGrupo\(\)/g) || []).length >= 3);
