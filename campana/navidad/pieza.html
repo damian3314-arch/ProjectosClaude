@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tumbao · Navidad</title>
+<!-- 27 nov: el saludo de Navidad con la promo de 45 días. Se DIBUJA con la marca (lila, naranja, magenta, el trazo amarillo),
+     igual que el resto de las piezas de campana/: sin generador de imágenes. El texto lo escribe el navegador y sale exacto.
+     ?f=story → 1080×1920 (estado de WhatsApp / historia)   ?f=feed → 1080×1350 (publicación y mensaje de WhatsApp) -->
+<style>
+  @font-face{font-family:Fredoka;src:url(../fuentes/Fredoka-400.ttf);font-weight:400}
+  @font-face{font-family:Fredoka;src:url(../fuentes/Fredoka-500.ttf);font-weight:500}
+  @font-face{font-family:Fredoka;src:url(../fuentes/Fredoka-600.ttf);font-weight:600}
+  @font-face{font-family:Caveat;src:url(../fuentes/Caveat-700.ttf);font-weight:700}
+  :root{--lila:#EADCFA;--naranja:#EE6B31;--magenta:#E8226A;--morado:#3B2258;--amarillo:#F7DE4A;--margen:88px}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--lila);color:var(--morado);font-family:Fredoka,sans-serif;-webkit-font-smoothing:antialiased;
+       position:relative;overflow:hidden;width:1080px}
+  body.story{height:1920px} body.feed{height:1350px}
+  /* La foto del salón, teñida de Tumbao (duotono, como la puerta de las otras piezas) y comida por el lila por abajo. */
+  #foto{position:absolute;left:0;right:0;top:0;overflow:hidden}
+  body.story #foto{height:900px} body.feed #foto{height:560px}
+  #foto .img{position:absolute;inset:0;background-size:cover;background-position:center 30%;filter:grayscale(1) contrast(1.02) brightness(1.08)}
+  #foto .a{position:absolute;inset:0;background:var(--magenta);mix-blend-mode:screen;opacity:.42}
+  #foto .b{position:absolute;inset:0;background:var(--lila);mix-blend-mode:multiply}
+  #fundido{position:absolute;left:0;right:0;background:linear-gradient(to bottom,rgba(234,220,250,0) 0%,rgba(234,220,250,.9) 60%,var(--lila) 100%)}
+  body.story #fundido{top:560px;height:360px} body.feed #fundido{top:330px;height:250px}
+  .cuerpo{position:absolute;left:var(--margen);right:var(--margen)}
+  body.story .cuerpo{top:250px} body.feed .cuerpo{top:96px}
+  .logo{font-size:60px;font-weight:600;color:var(--naranja);line-height:1;text-shadow:0 0 14px #EADCFA,0 0 28px #EADCFA}
+  .lema{font-family:Caveat,cursive;font-size:42px;font-weight:700;color:var(--magenta);margin-top:-6px}
+  .texto{position:absolute;left:var(--margen);right:var(--margen)}
+  body.story .texto{top:1010px} body.feed .texto{top:650px}
+  h1{font-weight:600;color:var(--naranja);line-height:1;letter-spacing:-.01em}
+  body.story h1{font-size:136px} body.feed h1{font-size:120px}
+  .gracias{font-weight:500;color:var(--morado);line-height:1.15;margin-top:18px}
+  body.story .gracias{font-size:48px} body.feed .gracias{font-size:41px}
+  .trazo{display:block;width:100%;margin:12px 0 26px}
+  body.story .trazo{height:26px} body.feed .trazo{height:22px}
+  .trazo path{fill:none;stroke:var(--amarillo);stroke-width:14;stroke-linecap:round}
+  .promo{font-weight:500;color:var(--morado);line-height:1.2}
+  body.story .promo{font-size:52px} body.feed .promo{font-size:46px}
+  .promo b{font-weight:600;color:var(--magenta)}
+  .web{font-family:Caveat,cursive;font-weight:700;color:var(--magenta);margin-top:22px}
+  body.story .web{font-size:56px} body.feed .web{font-size:48px}
+</style>
+<div id="foto"><div class="img" id="img"></div><div class="a"></div><div class="b"></div></div>
+<div id="fundido"></div>
+<div class="cuerpo"><div class="logo">TUMBAO</div><div class="lema">Baila pa' sanar</div></div>
+<div class="texto">
+  <h1>Feliz Navidad.</h1>
+  <div class="gracias">Gracias por bailar con nosotros todo el año.</div>
+  <svg class="trazo" viewBox="0 0 600 26" preserveAspectRatio="none"><path d="M6 18 C 120 6, 240 22, 360 11 S 520 6, 594 15"/></svg>
+  <div class="promo">Mensualidad y tiquetera con <b>45 días de vigencia</b>, comprando hasta el 31 de diciembre.</div>
+  <div class="web">tumbaobaila.com/mensualidad</div>
+</div>
+<script>
+  const f = new URLSearchParams(location.search).get('f') === 'feed' ? 'feed' : 'story';
+  document.body.className = f;
+  document.getElementById('img').style.backgroundImage = 'url(' + (f === 'feed' ? 'salon.jpg' : 'salon-alto.jpg') + ')';
+</script>
