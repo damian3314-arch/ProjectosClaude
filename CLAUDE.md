@@ -22,13 +22,15 @@ No aplica a Tumbao/Joyería: ahí no hay frontend que construir, hay flujos.
 
 ## 2. Autonomía — tabla explícita (aplica a los 3 proyectos)
 
-Nada de "tareas estándar" ambiguo. Lista cerrada:
+Nada de "tareas estándar" ambiguo. Lista cerrada.
+
+**Criterio de fondo: humano al volante.** Una acción es roja si es **irreversible o sale al mundo** (enviar, pagar, publicar, borrar, desplegar). La IA solo genera el **borrador**; la aprobación final siempre es tuya y manual. Ante la duda, trátala como roja.
 
 | Categoría | Ejemplos | Acción |
 |---|---|---|
 | **Verde — ejecutar sin preguntar** | linting, tipados, subcarpetas, responsive, refactor de UI sin tocar lógica de negocio, documentación interna | Ejecutar y reportar al final |
 | **Amarillo — ejecutar y avisar de inmediato** | cambios en queries de lectura, nuevos endpoints sin side-effects, ajustes de copy | Ejecutar, notificar en el mismo mensaje qué se cambió |
-| **Rojo — detenerse y pedir autorización explícita** | cualquier migración de esquema en Supabase, `DELETE`/`DROP`, scripts que tocan nómina/PILA/caja reales, envío de mensajes a clientes reales (WhatsApp, email), deploy a producción, cualquier cosa que mueva dinero o data de un cliente real | Nunca ejecutar sin confirmación tuya, sin excepción |
+| **Rojo — detenerse y pedir autorización explícita** | cualquier migración de esquema en Supabase, `DELETE`/`DROP`, scripts que tocan nómina/PILA/caja reales, envío de mensajes a clientes reales (WhatsApp, email), deploy a producción, cualquier cosa que mueva dinero o data de un cliente real, envío de facturas o recordatorios de cobro, broadcasts de Kapso, publicar posts, cambiar precios, publicar/modificar workflows de n8n que ya corren, escrituras en HubSpot sobre clientes reales | Nunca ejecutar sin confirmación tuya, sin excepción |
 
 Regla de oro: lotes largos (ej. refactor de 5 páginas) se procesan completos y se entregan con reporte consolidado — pero solo si están en verde/amarillo. Si algo del lote cae en rojo, se detiene ahí y pregunta.
 
@@ -41,6 +43,7 @@ Ya tienes una librería de 6 skills (`entrevistador-procesos`, `humanizador`, `p
 1. Revisa si ya existe un `.skill` que cubra el caso.
 2. Si no existe y la lógica se va a reusar más de una vez, propone un nuevo `.skill` — no lo crees sin decírmelo primero.
 3. Para Joyería/Tumbao, las integraciones externas (Dataico, WhatsApp Cloud API, tasas de cambio) ya corren por n8n, no por código de Beat. No reimplementes en Beat algo que ya vive en un workflow de n8n.
+4. **Del chat a conectores y skills.** Si el dato vive en una fuente conectada (Sheets, Drive, HubSpot, Supabase, Kapso, n8n), léelo desde ahí; no me pidas pegarlo ni lo reconstruyas de memoria. Si una tarea la hago a mano por segunda vez, propón empaquetarla como skill en vez de reescribir el prompt.
 
 ---
 
@@ -71,6 +74,16 @@ Antes de entregar:
 3. Corrige automáticamente lo que caiga en verde/amarillo de la tabla de la sección 2. Lo rojo se reporta, no se corrige solo.
 4. Entrega con log breve: qué se corrigió, qué quedó pendiente de tu autorización.
 
+### Muestra tu trabajo (trata a la IA como empleado nuevo)
+
+Toda cifra, estimación, cuadre o conciliación se entrega con su trazabilidad. Sin esto, no está terminado:
+
+1. **Fuente:** de dónde salió cada dato (hoja, rango, tabla, factura, workflow).
+2. **Cálculo a la vista:** fórmula y operaciones reales. Prohibido usar multiplicadores o promedios ocultos para "estimar" (ej. presupuestar por m² sin mostrar la matemática).
+3. **Estado de cada dato:** `verificado`, `supuesto` o `no verificado`. Los supuestos van listados aparte.
+4. **Discrepancias aisladas:** si no cuadra, señala las transacciones exactas que causan la diferencia, no solo el total.
+5. **Límite de confianza:** primeras veces con un proceso nuevo, revisa tú el 100% de la salida; baja el nivel de revisión solo cuando el proceso haya salido bien varias veces con datos reales.
+
 ---
 
 ## 6. Guardrail anti-parálisis (reemplaza el mantra decorativo)
@@ -81,6 +94,8 @@ Tu patrón documentado es construir infraestructura y documentación antes de qu
 > Si la respuesta es no, la prioridad es shippear lo mínimo usable, no seguir planificando.
 
 Esto aplica en frío: si pides documentar o diseñar algo nuevo sin que lo anterior esté en uso real, Claude Code te lo señala antes de ejecutar.
+
+**Un proceso a la vez (aplica a los 3 proyectos).** Para automatizar, elige un solo proceso repetitivo e incómodo (reporte contable, auditoría de facturas, borrador de cotización). Orden: (1) definir qué acciones requieren tu clic de confirmación, (2) conectar las fuentes de datos, (3) guardarlo como skill/workflow que corra solo. No se abre el siguiente proceso hasta que el anterior haya corrido con datos reales al menos una vez.
 
 ---
 
