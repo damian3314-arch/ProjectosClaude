@@ -73,6 +73,7 @@ const SUITES = [
   'promo-dia-invitados',
   'auditoria-caja',
   'experimento-6pm',
+  'por-validar-sin-liberar',
   'reprogramar-autogestion',
   'valor-especial',
   'promo-fin-de-ano',

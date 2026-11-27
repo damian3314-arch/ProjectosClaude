@@ -1608,6 +1608,25 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 27 nov (0224): el banco falla y a veces no avisa el depósito. A quien dijo «ya pagué» y sigue sin depósito se le pide el
+    // comprobante (a los ~8 y ~90 min): su clase queda en espera de validación y, sin comprobante, no se garantiza el cupo.
+    // Habla solo de SU reserva (utilidad), sin oferta. Si responde, el asistente de pagos sigue la conversación.
+    name: 'reserva_comprobante_pendiente',
+    language: 'es',
+    category: 'UTILITY',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}}, tu reserva en Tumbao para {{2}} está en espera de validación porque aún no nos llega tu comprobante de pago ⏳\n\n' +
+          'Envíalo por aquí o al WhatsApp de recepción 301 783 3550 para dejar tu cupo confirmado. ' +
+          'Si ya lo enviaste, respóndeme y lo verifico. Sin el comprobante no podemos garantizar tu cupo.',
+        example: { body_text: [['Laura', 'el viernes 27 de noviembre a las 7:00 am']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+    ],
+  },
+  {
     name: 'reserva_confirmada',
     language: 'es',
     category: 'UTILITY',
@@ -2169,6 +2188,24 @@ async function activarRecordatorioTiquetera(env) {
   if (!t || t.status !== 'APPROVED') return { ok: true, estado: 'esperando_plantilla', plantilla: t ? t.status : 'NO_EXISTE' };
   const r = await rpc(env, 'wa_recordar_tiquetera_activar', { p_aprobada: true });
   console.log('recordatorio de tiquetera encendido', t.category);
+  return { ok: true, estado: (r && r.estado) || null, categoria: t.category };
+}
+
+/* 0224 · El aviso a quien dijo «ya pagué» una clase suelta y sigue sin depósito (la base lo encola cada 2 minutos con
+ * reserva_recordar_comprobante). Nace en «esperando_plantilla»: cada 10 minutos el cron mira si Meta ya aprobó
+ * reserva_comprobante_pendiente y, si sí, la base lo pasa a «encendido». Con «apagado» no se toca. */
+async function activarRecordatorioComprobante(env) {
+  if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_WABA_ID) return { ok: false, error: 'SIN_CONFIG' };
+  const e = await rpc(env, 'wa_recordar_comprobante_activar', { p_aprobada: false });
+  if (!e || e.estado !== 'esperando_plantilla') return { ok: true, estado: (e && e.estado) || null };
+  const lista = await (await fetch(
+    `${GRAPH}/${env.WHATSAPP_WABA_ID}/message_templates?fields=name,status,category,language&limit=200`,
+    { headers: cabecerasWA(env) })).json().catch(() => ({}));
+  if (!lista || lista.error) return { ok: false, error: 'META' };
+  const t = (lista.data || []).find((x) => x.name === 'reserva_comprobante_pendiente' && x.language === 'es');
+  if (!t || t.status !== 'APPROVED') return { ok: true, estado: 'esperando_plantilla', plantilla: t ? t.status : 'NO_EXISTE' };
+  const r = await rpc(env, 'wa_recordar_comprobante_activar', { p_aprobada: true });
+  console.log('recordatorio de comprobante encendido', t.category);
   return { ok: true, estado: (r && r.estado) || null, categoria: t.category };
 }
 
@@ -4294,6 +4331,10 @@ export default {
       try { return json(await activarRecordatorioTiquetera(env), 200, origen); }
       catch (e) { console.log('recordar tiquetera', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
     }
+    if (ruta === '/wa/recordar-comprobante' && (request.method === 'POST' || request.method === 'GET')) {
+      try { return json(await activarRecordatorioComprobante(env), 200, origen); }
+      catch (e) { console.log('recordar comprobante', e && e.message); return json({ ok: false, error: 'FALLA' }, 200, origen); }
+    }
     if (ruta === '/wa/reactivar-encuesta' && request.method === 'POST') {
       try { return json(await reactivarEncuesta(env), 200, origen); }
       catch (e) { return json({ ok: false, error: String((e && e.message) || e).slice(0, 200) }, 500, origen); }
@@ -5040,6 +5081,7 @@ export default {
       await rpc(env, 'cron_latido', { p_cron: evento && evento.cron }).catch((e) => console.log('latido', e && e.message));
       await frenoAutomatico(env).catch((e) => console.log('freno', e && e.message));
       await activarRecordatorioTiquetera(env).catch((e) => console.log('recordar_tiquetera', e && e.message));
+      await activarRecordatorioComprobante(env).catch((e) => console.log('recordar_comprobante', e && e.message));
       // 0199 · Una vez por hora: crea en Meta las plantillas que falten y anota cuáles están aprobadas, para que el calendario de
       // campañas use la principal o la de respaldo.
       if (new Date().getUTCMinutes() < 10) {
