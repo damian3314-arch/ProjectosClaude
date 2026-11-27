@@ -1332,6 +1332,32 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 27 nov: saludo de Navidad + promo de fin de año (mensualidad y tiquetera con 45 días de vigencia, compras hasta el 31 de diciembre).
+    // Imagen del encabezado en IMAGEN_PLANTILLA. Se crea en Meta (gratis); enviarla cuesta (marketing). Sin precios ni descuentos nuevos.
+    name: 'navidad_45_dias',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      { type: 'HEADER', format: 'IMAGE', _url: 'https://tumbaobaila.com/img/campana/navidad-45-dias-historia.jpg' },
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 🎄 Gracias por bailar con Tumbao este año.\n\n' +
+          'Para cerrarlo con alegría, tu mensualidad o tu tiquetera ahora te dura 45 días: compra hasta el 31 de diciembre y baila a tu ritmo, sin afanes.\n\n' +
+          'Elige tu plan y empieza a bailar 💃',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Elegir mi plan', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov: versión con imagen de tiquetera_frecuentes para comparar (A/B) cuál convierte más. Sin descuentos: «premiamos tu constancia».
     name: 'tiquetera_premio_imagen',
     language: 'es',
@@ -2213,6 +2239,7 @@ async function activarRecordatorioComprobante(env) {
 const IMAGEN_PLANTILLA = {
   rumbo_2027_imagen: 'https://tumbaobaila.com/img/campana/feed-1-no-empieces-en-enero.jpg',
   tiquetera_premio_imagen: 'https://tumbaobaila.com/img/campana/feed-3-premiamos-tu-constancia.jpg',
+  navidad_45_dias: 'https://tumbaobaila.com/img/campana/navidad-45-dias-historia.jpg',
 };
 /* 2 nov · cuando alguien RESPONDE a una venta, Timba le comparte (una sola vez, dentro de la ventana gratis de 24 h) la imagen de la campaña
  * que va con su interés: así ve los pases sin tener que leer. */
