@@ -37,14 +37,14 @@
     "AGENT_ALLOWLIST": "off",   // línea propia de Alter: atiende a cualquiera que escriba (antes solo a quien dijera "holadami")
     "AUTO_CONTACT_LEADS": "false",
     "AGENDA_HOURS": "9,10,11,14,15,16", // horas de inicio que Alter puede ofrecer para demos (Colombia, lunes a viernes, sin festivos)
-    "OUTBOX_PER_DAY": "150",
+    "OUTBOX_PER_DAY": "1000",
     "OUTBOX_PER_RUN": "10",    // cuántos primeros mensajes salen en cada revisión (cada 5 min): así cada ola sale escalonada   // tope diario de primeros mensajes por plantilla mientras el número nuevo se calienta
     "OUTBOX_ALIAS": "{\"loggro_primer_contacto\":\"loggro_saludo_lead\"}",   // la rutina de HubSpot siempre escribe loggro_primer_contacto; aquí se cambia por la plantilla real de esta cuenta
     "OUTBOX_HEADERS": "{\"loggro_rescate_bw2\":\"https://holadami.com/promo-black-week.jpg\"}",   // plantillas con imagen en el encabezado      // p. ej. {"loggro_primer_contacto":"solicitud_loggro_en_proceso"} para cambiar de plantilla sin tocar la rutina
     "ALERT_OPEN_TEMPLATE": "alerta_nueva_solicitud",   // plantilla de utilidad aprobada: avisa a Damián cuando su ventana de 24 h está cerrada
     "ALERT_OPEN_TEXT": "on",                          // la plantilla lleva el resumen del aviso
     "ALTER_WHATSAPP": "",      // número público de Alter (solo dígitos, con 57). Vacío = la página no muestra botón ni número. Se llena cuando el número nuevo esté conectado en Kapso
-    "LOGGRO_OUTREACH": "off",  // "off": el servidor no le escribe a ningún lead de Loggro ni manda avisos de esa campaña. "on" la reactiva
+    "LOGGRO_OUTREACH": "on",  // "off": el servidor no le escribe a ningún lead de Loggro ni manda avisos de esa campaña. "on" la reactiva (encendida por Damián el 28 nov 2026 para la campaña Black Week)
     "RESCATE_ENVIOS": "off",   // campaña de rescate de leads viejos de Loggro (cola en loggro_leads); "off" la pausa
     "AGENT_V2": "on",   // agente conversacional (chat como Damián); "off" vuelve al flujo de botones
     "BOOKING_URL_LOGGRO": "",
