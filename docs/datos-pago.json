@@ -1,0 +1,12 @@
+{
+  "_nota": "Datos que la pagina muestra para que el alumno pague. Son los mismos que Tumbao ya comparte por WhatsApp.",
+  "banco": "Bancolombia",
+  "tipo_cuenta": "Ahorros",
+  "numero_cuenta": "91289724619",
+  "titular": "Luz Alejandra Santiago García",
+  "llave_breb": "1096803067",
+  "tipo_llave": "Cédula",
+  "qr": "img/qr-breb.png",
+  "qr_estatico": true,
+  "_qr_estatico_nota": "Verificado decodificando el payload EMVCo: tag 01 = '11' (estatico). El QR NO lleva el monto; la persona lo digita."
+}

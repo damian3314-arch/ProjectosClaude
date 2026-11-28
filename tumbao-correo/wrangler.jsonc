@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tumbao-correo",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+
+  // Aquí se guarda lo que llega, 7 días y se borra solo. Caduca a
+  // propósito: son alertas del banco con nombres y montos de clientes.
+  "kv_namespaces": [
+    {
+      "binding": "BUZON",
+      "id": "b070e9cfb606420db51c7bfdaaa151ac"
+    }
+  ],
+
+  "vars": {
+    "SUPABASE_URL": "https://fobpccreihcylpsullhu.supabase.co",
+
+    // EL RELEVO SE DIO EL 1 DE SEPTIEMBRE DE 2026, 15:23 (Bogotá).
+    //
+    // Desde aquí se registran los pagos del banco. El disparador de
+    // Gmail del workflow "Tumbao · Ingesta de pagos" quedó APAGADO en
+    // el mismo movimiento, y tiene que seguir así: los dos caminos usan
+    // identificadores distintos —n8n guarda el id de la API de Gmail y
+    // aquí va el Message-ID del correo— así que el índice único sobre
+    // hoja_fila NO los cruza y con los dos vivos el mismo pago entraría
+    // dos veces.
+    //
+    // PARA VOLVER ATRÁS: quitar esta variable y reactivar aquel nodo,
+    // otra vez en un solo movimiento.
+    "REGISTRAR": "1"
+  },
+
+  // Los secretos van por wrangler, nunca aquí:
+  //   npx wrangler secret put LLAVE_BUZON
+  //   npx wrangler secret put SUPABASE_SERVICE_KEY
+  //
+  // LLAVE_BUZON: sin ella /ultimos contesta 401 y no enseña nada. No se
+  // deja abierto ni "porque es una URL que nadie sabe": ahí dentro hay
+  // nombres de clientes y cuánto pagó cada uno.
+  //
+  // SUPABASE_SERVICE_KEY: solo hace falta para el relevo. Mientras no
+  // esté, aunque alguien pusiera REGISTRAR la llamada fallaría y se
+  // anotaría el error, sin perder el correo.
+
+  "observability": { "enabled": true }
+}

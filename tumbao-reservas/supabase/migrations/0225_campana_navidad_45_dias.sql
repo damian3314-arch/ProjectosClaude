@@ -1,0 +1,8 @@
+-- 0225 · Campaña «Feliz Navidad + 45 días de vigencia» (27 nov, Damián: «enviemos la 1 y un copy que empuje a comprar»).
+-- Aplicada en vivo en dos pasos:
+--  · campana_publico gana el público 'toda_la_base' (todo celular que alguna vez tuvo reserva confirmada, membresía o tiquetera),
+--    con los mismos filtros de siempre (bajas, dueños, fallos 131050, descanso, chat de ventas abierto, solicitud de mensualidad).
+--  · ajustes.campanas_calendario: entrada 2026-11-28 «navidad-45-dias» con la plantilla navidad_45_dias (sin respaldo distinto: si
+--    Meta no la ha aprobado, no sale nada). El cron de campanas_del_dia corre a las 10 am Bogotá, lunes a sábado.
+-- Con los filtros de siempre solo 42 de ~435 celulares cumplen hoy (356 están en descanso por campañas y mensajes de ventas de los
+-- últimos 14 días): ampliar eso es decisión de Damián.

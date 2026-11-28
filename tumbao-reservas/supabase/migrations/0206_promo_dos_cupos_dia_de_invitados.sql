@@ -1,0 +1,7 @@
+-- 0206 · Día de invitados (viernes 13 nov 2026, pedido de Damián y su jefe): 2 cupos de clase suelta por $24.000. Aplicada en vivo.
+-- · ajustes.promo_dos_cupos = {"activa":true,"cupos":2,"precio_cop":24000,"clases_desde":"2026-11-13","clases_hasta":"2026-11-13"}.
+--   Apagar sin tocar código: activa=false. Aplica por la FECHA DE LA CLASE (hora de Bogotá), no por la fecha de compra.
+-- · promo_total_cupos(n, precio_unitario, fecha_clase): 24.000 si n = 2 y la clase cae en el rango; si no, precio × n.
+-- · precio_del_grupo() y tomar_cupos() la usan: la reserva de 2 cupos nace con total_cop = 24000 y promo = true. Con 1, 3 o más cupos,
+--   u otro día, el precio es el de siempre. Probado dentro de una transacción que se deshizo (no quedó ninguna reserva de prueba).
+-- · La conciliación de pagos del banco no cambia: el pago de un grupo ya se valida a mano contra precio_del_grupo().

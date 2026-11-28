@@ -1,0 +1,11 @@
+-- 0226 · Replanteo de las campañas de diciembre (28 nov, Damián: «cancela la del lunes; con la de Navidad quedó cubierto; lo que siga
+-- tiene que servir para convertir»). Aplicada en vivo.
+--  · ajustes.campanas_calendario: se quitan navidad-fin-nov (lunes 30), regala-1 y regala-2 (Regala Tumbao), prima-2027 y cierre-2027
+--    (la de Navidad ya salió el 27 nov, entrada 28 nov retirada). Quedan dos envíos, ambos con la promo de 45 días de vigencia
+--    (compras hasta el 31 de diciembre), a quien NO tiene plan vigente:
+--       16 dic (prima)        · prima_45_dias    · público sin_plan
+--       29 dic (últimos días) · ultimos_dias_45  · público sin_plan
+--  · campana_publico gana el público 'sin_plan' (todo celular conocido sin mensualidad ni tiquetera vigente), con los filtros de siempre;
+--    un chat de ventas «abierto» solo estorba si tuvo movimiento en los últimos 7 días (hay ~730 aperturas sin respuesta que no cuentan).
+--  · wa_bajas: 4 números de negocios que contestaron con respuesta automática a la campaña de Navidad quedan fuera de toda campaña.
+-- Las plantillas prima_45_dias y ultimos_dias_45 las crea el Worker en Meta (gratis) y deben estar aprobadas antes de cada envío.

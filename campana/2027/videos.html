@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Videos · Rumbo a 2027</title>
+<!-- Videos verticales 1080×1920 hechos con animaciones CSS. `node videos.mjs` los renderiza cuadro a cuadro (mismo resultado siempre) y los une con ffmpeg. -->
+<style>
+  @font-face{font-family:'Outfit';font-weight:100 900;src:url(outfit-latin-wght.woff2) format('woff2')}
+  :root{--tx:#fff;--tx2:#d9cfe6}
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#000}
+  body{font-family:'Outfit',system-ui,sans-serif;color:var(--tx)}
+  .v{position:relative;overflow:hidden;width:1080px;height:1920px;background:#07040c;isolation:isolate}
+  .fondo{position:absolute;inset:-6%;z-index:-3;background:url(salon-alto.jpg) center/cover;filter:saturate(1.3);animation:zoom 20s linear both}
+  @keyframes zoom{from{transform:scale(1)}to{transform:scale(1.18)}}
+  .tinte{position:absolute;inset:0;z-index:-2;background:radial-gradient(90% 50% at 90% 0%,rgba(255,46,143,.5),transparent 62%),radial-gradient(80% 50% at 0% 100%,rgba(143,61,255,.5),transparent 64%),linear-gradient(180deg,rgba(7,4,12,.6),rgba(7,4,12,.88) 55%,rgba(7,4,12,.97))}
+  .logo{position:absolute;top:130px;left:50%;transform:translateX(-50%);width:260px}
+  .luces{position:absolute;left:0;right:0;top:0;height:140px;z-index:2;display:flex;justify-content:space-around;padding-top:40px}
+  .luces i{width:34px;height:50px;border-radius:50%;animation:luz 2.4s ease-in-out infinite}
+  .luces i:nth-child(odd){animation-delay:-1.2s}
+  @keyframes luz{0%,100%{opacity:1}50%{opacity:.35}}
+  .luces i:nth-child(4n+1){background:#ffd68c;box-shadow:0 0 30px #ffd68c}.luces i:nth-child(4n+2){background:#ff5a77;box-shadow:0 0 30px #ff5a77}
+  .luces i:nth-child(4n+3){background:#fff3d2;box-shadow:0 0 30px #fff3d2}.luces i:nth-child(4n){background:#ff9a3c;box-shadow:0 0 30px #ff9a3c}
+  .c{position:absolute;left:84px;right:84px}
+  .a{opacity:0;animation:ent .7s cubic-bezier(.23,1,.32,1) both;animation-delay:var(--d,0s)}
+  .a.sale{animation:ent .7s cubic-bezier(.23,1,.32,1) both,sal .5s ease-in forwards;animation-delay:var(--d,0s),var(--s,99s)}
+  @keyframes ent{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+  @keyframes sal{from{opacity:1}to{opacity:0;transform:translateY(-30px)}}
+  .chip{display:inline-flex;align-items:center;gap:16px;padding:16px 30px;border-radius:99px;font-size:34px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.28)}
+  .chip i{width:18px;height:18px;border-radius:50%;background:#c6ff3d;box-shadow:0 0 20px #c6ff3d}
+  .t1{font-size:112px;line-height:.98;letter-spacing:-.05em;font-weight:900}
+  .t2{font-size:132px;line-height:.93;letter-spacing:-.055em;font-weight:900}
+  .g{background:linear-gradient(100deg,#ffc14d 0%,#ff6b35 42%,#ff2e8f 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:48px;line-height:1.28;color:var(--tx2);font-weight:500}.sub b{color:#fff;font-weight:800}
+  .cta{display:inline-flex;padding:34px 54px;border-radius:99px;font-size:46px;font-weight:850;background:linear-gradient(100deg,#ff6b35,#ff2e8f);box-shadow:0 24px 54px -14px rgba(255,46,143,.8)}
+  .bolas{display:flex;gap:22px;flex-wrap:wrap}
+  .bola{width:150px;height:150px;border-radius:50%;border:6px solid rgba(255,161,79,.5);display:grid;place-items:center;font-size:62px;font-weight:900;color:transparent;animation:llena .5s cubic-bezier(.23,1,.32,1) both;animation-delay:var(--d)}
+  .bola.chica{width:104px;height:104px;font-size:44px;border-width:5px}
+  @keyframes llena{from{background:transparent;color:transparent;transform:scale(.9)}to{background:#ff6b35;border-color:#ff6b35;color:#1a0a02;transform:none}}
+  .bola.extra{border-style:dashed;border-color:#ffd479;animation:extra .7s cubic-bezier(.23,1,.32,1) both;animation-delay:var(--d)}
+  @keyframes extra{from{background:transparent;color:transparent}60%{transform:scale(1.15)}to{background:linear-gradient(135deg,#ffe7a8,#ffc14d);border-color:#ffc14d;color:#2a0a05;box-shadow:0 0 60px rgba(255,193,77,.7);transform:none}}
+  .num{font-size:420px;line-height:.9;font-weight:900;letter-spacing:-.08em;text-align:center}
+  .pase{position:relative;width:860px;height:542px;border-radius:50px;overflow:hidden;color:#fff;background:url(pase-8.jpg) center/cover;box-shadow:0 50px 90px -40px rgba(255,46,143,.7)}
+  .pase::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85),rgba(0,0,0,.4) 65%,rgba(0,0,0,.15))}
+  .pase b{position:absolute;left:52px;top:54px;font-size:86px;letter-spacing:-.04em;font-weight:900}.pase span{position:absolute;left:54px;bottom:50px;font-size:70px;font-weight:850}.pase i{position:absolute;left:54px;top:34px;font-style:normal;font-size:24px;letter-spacing:.28em;font-weight:800;opacity:.85}
+</style></head><body><div id="raiz"></div>
+<script>
+const LUCES = `<div class="luces">${'<i></i>'.repeat(12)}</div>`;
+const LOGO = `<img class="logo" src="logo-tumbao.png" alt="">`;
+const dias = () => { const h = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date()); return Math.round((Date.parse('2027-01-01T12:00:00-05:00') - Date.parse(h + 'T12:00:00-05:00')) / 86400000); };
+const base = (c, extra = '') => `<div class="v"><div class="fondo"></div><div class="tinte"></div>${LUCES}${LOGO}${c}${extra}</div>`;
+const VIDEOS = {
+  // V1 · «No empieces en enero» (15 s)
+  v1: { dur: 15, html: () => base(`
+    <div class="c" style="top:480px"><span class="chip a" style="--d:.3s"><i></i>Faltan ${dias()} días para 2027</span></div>
+    <div class="c" style="top:700px"><div class="t1 a sale" style="--d:.8s;--s:3.6s">Cada 1 de enero<br>prometes<br>moverte…</div></div>
+    <div class="c" style="top:700px"><div class="t1 a sale" style="--d:4.2s;--s:7.2s">…y en febrero<br>ya lo<br>dejaste.</div></div>
+    <div class="c" style="top:640px"><div class="t2 a" style="--d:7.8s">Este año,<br><span class="g">no empieces<br>en enero.</span></div>
+      <p class="sub a" style="--d:10.4s;margin-top:40px">Llega a 2027 con el hábito <b>ya hecho</b>.</p>
+      <span class="cta a" style="--d:12.4s;margin-top:60px">Empieza hoy · tumbaobaila.com</span></div>`) },
+  // V2 · «Premiamos tu constancia» (14 s)
+  v2: { dur: 14, html: () => base(`
+    <div class="c" style="top:470px"><span class="chip a" style="--d:.3s"><i></i>Tu tiquetera, tu hábito</span>
+      <div class="t1 a" style="--d:.8s;margin-top:34px">Cumple tus clases.<br><span class="g">Premiamos tu<br>constancia.</span></div></div>
+    <div class="c a sale" style="top:1040px;--d:2s;--s:7.6s"><p class="sub" style="margin-bottom:30px">Tiquetera de <b>4 clases</b></p>
+      <div class="bolas"><div class="bola" style="--d:2.6s">1</div><div class="bola" style="--d:3.4s">2</div><div class="bola" style="--d:4.2s">3</div><div class="bola" style="--d:5s">4</div><div class="bola extra" style="--d:6s">+1</div></div>
+      <p class="sub a" style="--d:6.4s;margin-top:34px"><b>1 clase más</b> por tu constancia</p></div>
+    <div class="c a" style="top:1040px;--d:8.2s"><p class="sub" style="margin-bottom:30px">Tiquetera de <b>8 clases</b></p>
+      <div class="bolas">${[1,2,3,4,5,6,7,8].map((n,i)=>`<div class="bola chica" style="--d:${8.7+i*.28}s">${n}</div>`).join('')}<div class="bola chica extra" style="--d:11.2s">+1</div><div class="bola chica extra" style="--d:11.5s">+1</div></div>
+      <p class="sub a" style="--d:11.6s;margin-top:34px"><b>2 clases más</b> por tu constancia</p></div>
+    <div class="c a" style="top:1560px;--d:12.6s"><span class="cta">tumbaobaila.com/mensualidad</span></div>`) },
+  // V3 · Cuenta regresiva (8 s) · se vuelve a sacar cada día
+  v3: { dur: 8, html: () => base(`
+    <div class="c" style="top:560px;text-align:center"><span class="chip a" style="--d:.3s"><i></i>Rumbo a 2027</span>
+      <div class="num g a" style="--d:.8s;margin-top:40px" id="n">${dias()}</div>
+      <div class="t1 a" style="--d:1.6s;font-size:104px">días para 2027.</div>
+      <p class="sub a" style="--d:2.8s;margin-top:34px">Cada clase cuenta. Empieza hoy.</p>
+      <span class="cta a" style="--d:4.6s;margin-top:60px">tumbaobaila.com</span></div>`) },
+  // V4 · Regala Tumbao (11 s)
+  v4: { dur: 11, html: () => base(`
+    <div class="c" style="top:470px"><span class="chip a" style="--d:.3s"><i></i>Esta Navidad</span>
+      <div class="t2 a" style="--d:.8s;margin-top:34px">Regala<br><span class="g">Tumbao.</span></div>
+      <p class="sub a" style="--d:2.4s;margin-top:34px">Una tiquetera para esa persona que quiere bailar más.</p></div>
+    <div class="c a" style="top:1010px;--d:4s"><div class="pase"><i>TUMBAO · PASE</i><b>Tiquetera<br>4 u 8 clases</b><span>desde $52.000</span></div></div>
+    <div class="c a" style="top:1620px;--d:6s"><p class="sub"><b>Tú pagas</b>, le mandas el código por WhatsApp y esa persona reserva cuando quiera.</p></div>
+    <div class="c a" style="top:1800px;--d:8.6s"></div>`) },
+};
+const q = new URLSearchParams(location.search).get('v') || 'v1';
+const V = VIDEOS[q];
+document.getElementById('raiz').innerHTML = V.html();
+window.__dur = V.dur;
+</script></body></html>
