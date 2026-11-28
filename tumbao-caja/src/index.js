@@ -1358,6 +1358,54 @@ const PLANTILLAS_WA = [
     ],
   },
   {
+    // 28 nov: reemplaza las campañas de diciembre (Damián: «con la de Navidad quedó cubierto; que lo que siga sirva para convertir»).
+    // 16 dic (prima): a quien no tiene plan vigente, los 45 días de vigencia (compras hasta el 31 de diciembre). Sin precios ni descuentos nuevos.
+    name: 'prima_45_dias',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} 💛 Llegó la prima y diciembre te pide movimiento.\n\n' +
+          'Tu mensualidad o tu tiquetera te dura 45 días si la compras hasta el 31 de diciembre: empiezas a bailar ya y sigues en enero, sin afanes.\n\n' +
+          'Elige tu plan y bailamos 💃',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Elegir mi plan', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
+    // 29 dic: últimos días de la vigencia de 45 días. A quien sigue sin plan. Sin precios ni descuentos nuevos.
+    name: 'ultimos_dias_45',
+    language: 'es',
+    category: 'MARKETING',
+    components: [
+      {
+        type: 'BODY',
+        text:
+          'Hola {{1}} ⏳ Últimos días del año: tu mensualidad o tu tiquetera con 45 días de vigencia solo hasta el 31 de diciembre.\n\n' +
+          'Si quieres empezar enero bailando, este es el momento. Elige tu plan 👇',
+        example: { body_text: [['Laura']] },
+      },
+      { type: 'FOOTER', text: "Tumbao · Baila pa' sanar" },
+      {
+        type: 'BUTTONS',
+        buttons: [
+          { type: 'URL', text: 'Elegir mi plan', url: 'https://tumbaobaila.com/mensualidad' },
+          { type: 'QUICK_REPLY', text: 'No quiero más mensajes' },
+        ],
+      },
+    ],
+  },
+  {
     // 2 nov: versión con imagen de tiquetera_frecuentes para comparar (A/B) cuál convierte más. Sin descuentos: «premiamos tu constancia».
     name: 'tiquetera_premio_imagen',
     language: 'es',
