@@ -36,7 +36,7 @@ const LABEL = {
   system: Object.fromEntries(SYSTEM.map(([id, t]) => [id, t])),
   urgency: { now: 'lo quiere esta semana', month: 'lo quiere este mes', later: 'solo está averiguando' },
 };
-const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero|(ya )?no me interesa)\s*[.!]*\s*$/i;
+const STOP_RE = /^\s*(stop|baja|cancelar|no me escriban|no me escribas|no quiero|(ya )?no me interesa|no m[aá]s mensajes|no quiero m[aá]s mensajes)\s*[.!]*\s*$/i;
 
 // Qué producto sugiere lo que escribió o el botón que tocó
 export function detectProducts(text) {
@@ -114,7 +114,7 @@ async function onDemo(c) {
   if (!msg) return;
   await save(c, { state: 'done', hot: 1, summary: 'Recordatorio de demo: se le envió la confirmación con el link.' });
   await sendText(c, msg);
-  return c.h.alertMessage(c.env, `📅 ${c.row.name || 'Tu cliente'} (+${c.row.phone}) respondió y ya le envié el link de la demo. Escribió: «${h2(c.h, c.inb.text, 120)}».`, c.env.WA_ALERT_TEMPLATE);
+  return c.h.alertMessage(c.env, `📅 ${c.row.name || 'Tu cliente'} (+${c.row.phone}) respondió y ya le envié el link de la demo. Escribió: «${h2(c.h, c.inb.text, 120)}».`, 'loggro');
 }
 
 const sizeOptions = product => (PRODUCTS[product] || PRODUCTS.pymes).sizes;
@@ -189,7 +189,7 @@ async function onAfterDone(c) {
   if (Date.now() - last < REPLY_ALERT_MINUTES * 60e3) return;
   await save(c, { reply_alert_at: new Date(Date.now()).toISOString().slice(0, 19).replace('T', ' ') });
   const text = `💬 ${c.row.name || 'Un lead'} (+${c.row.phone}) escribió: «${h2(c.h, c.inb.text, 160)}». Respóndele desde tu WhatsApp.`;
-  return c.h.alertMessage(c.env, text, c.env.WA_ALERT_TEMPLATE);
+  return c.h.alertMessage(c.env, text, 'loggro');
 }
 
 export const agentOn = env => env.AGENT_V2 === 'on' && !!env.OPENAI_API_KEY;
@@ -221,7 +221,7 @@ export function hotAlertText(row, ctx = {}) {
 export async function sendHotAlert(env, h, row) {
   const msgs = ((await env.DB.prepare('SELECT role, content FROM agent_log WHERE chat_key = ? ORDER BY id DESC LIMIT 6').bind(row.phone).all().catch(() => ({ results: [] }))).results) || [];
   const ctx = { lastUser: msgs.find(m => m.role === 'user')?.content, lastBot: msgs.find(m => m.role === 'assistant' && !m.content.startsWith('http') && !m.content.startsWith('Y esta es mi agenda'))?.content };
-  return h.alertMessage(env, hotAlertText(row, ctx), env.WA_ALERT_TEMPLATE);
+  return h.alertMessage(env, hotAlertText(row, ctx), 'loggro');
 }
 
 // Resumen de la mañana (8 am, una vez): solo lo que pide su atención hoy. Si no hay nada, no manda nada (no quiere ruido).
@@ -250,7 +250,7 @@ export async function morningBrief(env, h) {
   if (followUps.length) lines.push(`🗓 Tocaba retomar: ${followUps.map(who).join(' · ')}`);
   await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'morning_brief')").run().catch(() => {});
   if (!lines.length) return false;
-  return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), env.WA_ALERT_TEMPLATE);
+  return h.alertMessage(env, [`☀️ Buenos días. Hoy requiere tu atención:`, ...lines].join('\n'), 'loggro');
 }
 
 // Embudo de la semana (desde el lunes, hora de Bogotá): enviados → respondieron → calientes → link de agenda → demo agendada.
@@ -287,7 +287,7 @@ export async function reminderGuard(env, h) {
   for (const r of rows) await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('recmiss', ?)").bind(r.id).run().catch(() => {});
   const t = ms => new Date(new Date(r0(ms)).getTime() - 5 * 3600e3).toISOString().slice(11, 16);
   const list = rows.map(r => `${(r.label || 'Demo').slice(0, 40)} a las ${t(r.start_utc)}`).join('; ');
-  return h.alertMessage(env, `⏰ Sin recordatorio en cola para: ${list}. Revisa si tienen link de Teams y teléfono en HubSpot; si quieres, avísale tú.`, env.WA_ALERT_TEMPLATE);
+  return h.alertMessage(env, `⏰ Sin recordatorio en cola para: ${list}. Revisa si tienen link de Teams y teléfono en HubSpot; si quieres, avísale tú.`, 'loggro');
 }
 const r0 = s => String(s).replace(' ', 'T') + 'Z';
 
@@ -316,7 +316,7 @@ export async function dailyReport(env, h) {
     `Todo quedó registrado en HubSpot.`,
   ].filter(Boolean).join('\n');
   await env.DB.prepare("INSERT INTO events (session_id, type) VALUES ('reporte', 'daily_report')").run().catch(() => {});
-  return h.alertMessage(env, text, env.WA_ALERT_TEMPLATE);
+  return h.alertMessage(env, text, 'loggro');
 }
 
 function buildSummary(row, P) {
@@ -381,9 +381,17 @@ export async function rescueSend(env) {
   return { sent, reason: 'ok' };
 }
 
+// OUTBOX_HEADERS = {"nombre_de_plantilla":"https://…/imagen.jpg"}: plantillas con imagen en el encabezado (la imagen se sirve desde /public)
+function headerOf(env, name) { try { return JSON.parse(env.OUTBOX_HEADERS || '{}')[name] || null; } catch { return null; } }
+
 async function sendTemplate(env, phone, name, param) {
   const params = (Array.isArray(param) ? param : [param]).map(x => ({ type: 'text', text: String(x).replace(/\s*\n\s*/g, ' ').slice(0, 200) }));
-  return waSend(env, { messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components: params.length ? [{ type: 'body', parameters: params }] : [] } });
+  const img = headerOf(env, name);
+  const components = [
+    ...(img ? [{ type: 'header', parameters: [{ type: 'image', image: { link: img } }] }] : []),
+    ...(params.length ? [{ type: 'body', parameters: params }] : []),
+  ];
+  return waSend(env, { messaging_product: 'whatsapp', to: phone, type: 'template', template: { name, language: { code: 'es' }, components } });
 }
 
 // Lo usa el agente conversacional: aviso de lead caliente (con el horario de siempre) y aviso cuando un lead caliente vuelve a escribir

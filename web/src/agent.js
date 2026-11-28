@@ -107,7 +107,7 @@ export async function agentTurn(c) {
     console.error('agente', err?.message || 'desconocido');
     // Sin IA no se deja a la persona hablando sola: se avisa a Damián y se le dice que él la contacta
     if (c.source === 'loggro' && c.row?.hot) await alertReply(env, c.h, c.row, inb.text || content);
-    else if (c.source === 'loggro') await c.h.alertMessage(env, `⚠️ ${c.row?.name || 'Un lead'} (+${c.row?.phone}) escribió y la IA falló: «${c.h.clean(content, 120)}». Respóndele desde tu WhatsApp.`, env.WA_ALERT_TEMPLATE);
+    else if (c.source === 'loggro') await c.h.alertMessage(env, `⚠️ ${c.row?.name || 'Un lead'} (+${c.row?.phone}) escribió y la IA falló: «${c.h.clean(content, 120)}». Respóndele desde tu WhatsApp.`, 'loggro');
     return;
   }
 
@@ -180,7 +180,7 @@ async function escalateToDamian(c, out, content, why) {
     draft && `Borrador de Alter (no enviado): «${say(draft)}»`,
     c.row?.deal_id && `Negocio: https://app.hubspot.com/contacts/21089075/deal/${c.row.deal_id}`,
     `Respóndele tú por tu número directo: https://wa.me/${phone}`,
-  ].filter(Boolean).join('\n'), env.WA_ALERT_TEMPLATE);
+  ].filter(Boolean).join('\n'), 'loggro');
 }
 
 async function meetingSilence(c, guard, content) {
@@ -190,7 +190,7 @@ async function meetingSilence(c, guard, content) {
   if (Date.now() - last < 20 * 60e3) return; // un aviso cada 20 minutos por persona
   await env.DB.prepare("UPDATE loggro_leads SET reply_alert_at = datetime('now') WHERE phone = ?").bind(c.row?.phone || key).run().catch(() => {});
   const say = String(content).replace(/\s+/g, ' ').slice(0, 200);
-  await c.h.alertMessage(env, `📅 ${c.row?.name || 'Un cliente'} (+${c.row?.phone || key}) respondió: «${say}». ${guard.detail} No le contesté: respóndele tú por tu número directo. https://wa.me/${c.row?.phone || key}`, env.WA_ALERT_TEMPLATE);
+  await c.h.alertMessage(env, `📅 ${c.row?.name || 'Un cliente'} (+${c.row?.phone || key}) respondió: «${say}». ${guard.detail} No le contesté: respóndele tú por tu número directo. https://wa.me/${c.row?.phone || key}`, 'loggro');
 }
 
 async function loadChat(c) {

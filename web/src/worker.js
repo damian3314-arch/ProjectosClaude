@@ -644,7 +644,9 @@ async function alertMessage(env, text, templateName) {
   if (!waOn(env)) return tg;
   // Los avisos de Loggro van a UN solo destino: el número de trabajo (si existe). El BSUID del dueño y ese número son la misma persona: antes llegaba (o fallaba) dos veces.
   const dests = [];
-  const work = String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
+  // Los avisos de leads de Loggro (templateName === 'loggro') van al celular del trabajo (LOGGRO_NOTIFY_WHATSAPP, secreto) si existe
+  const loggroTo = templateName === 'loggro' ? String(env.LOGGRO_NOTIFY_WHATSAPP || '').replace(/\D/g, '') : '';
+  const work = loggroTo || String(env.LOGGRO_ALERT_WHATSAPP || '').replace(/\D/g, '');
   if (work) dests.push({ to: work });
   else if (env.OWNER_BSUID) dests.push({ recipient: String(env.OWNER_BSUID).trim() });
   else if (env.OWNER_WHATSAPP) dests.push({ to: String(env.OWNER_WHATSAPP).replace(/\D/g, '') });
